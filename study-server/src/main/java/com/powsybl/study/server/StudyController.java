@@ -7,11 +7,9 @@
 package com.powsybl.study.server;
 
 import com.powsybl.commons.PowsyblException;
-import com.powsybl.iidm.converter.model.NetworkIds;
+import com.powsybl.study.server.dto.NetworkIds;
 import com.powsybl.study.server.dto.Study;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
-import infrastructure.LineGraphic;
-import infrastructure.SubstationGraphic;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -59,8 +57,8 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
     public ResponseEntity<NetworkIds> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                              @PathVariable("caseName") String caseName,
-                                              @RequestParam("description") String description) {
+                                                                  @PathVariable("caseName") String caseName,
+                                                                  @RequestParam("description") String description) {
 
         if (studyService.studyExists(studyName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
@@ -164,33 +162,33 @@ public class StudyController {
     @GetMapping(value = "lines-graphics/{networkUuid}/")
     @ApiOperation(value = "Get Network lines graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
-    public ResponseEntity<List<LineGraphic>> getLinesGraphics(@PathVariable("networkUuid") UUID networkUuid) {
-        List<LineGraphic> lineGraphics = studyService.getLinesGraphics(networkUuid);
+    public ResponseEntity<String> getLinesGraphics(@PathVariable("networkUuid") UUID networkUuid) {
+        String lineGraphics = studyService.getLinesGraphics(networkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(lineGraphics);
     }
 
     @GetMapping(value = "lines-graphics-with-pagination/{networkUuid}")
     @ApiOperation(value = "Get Network Lines graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
-    public ResponseEntity<List<LineGraphic>> getLinesGraphicsWithPagination(@PathVariable("networkUuid") UUID networkUuid, @RequestParam(name = "page") int page, @RequestParam(name = "size") int size) {
-        List<LineGraphic> lineGraphics = studyService.getLinesGraphicsWithPagination(networkUuid, page, size);
+    public ResponseEntity<String> getLinesGraphicsWithPagination(@PathVariable("networkUuid") UUID networkUuid, @RequestParam(name = "page") int page, @RequestParam(name = "size") int size) {
+        String lineGraphics = studyService.getLinesGraphicsWithPagination(networkUuid, page, size);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(lineGraphics);
     }
 
     @GetMapping(value = "substations-graphics/{networkUuid}")
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
-    public ResponseEntity<List<SubstationGraphic>> getSubstationsGraphic(@PathVariable("networkUuid") UUID networkUuid) {
-        List<SubstationGraphic> substationGraphics = studyService.getSubstationsGraphics(networkUuid);
-        return  ResponseEntity.ok().body(substationGraphics);
+    public ResponseEntity<String> getSubstationsGraphic(@PathVariable("networkUuid") UUID networkUuid) {
+        String substationGraphics = studyService.getSubstationsGraphics(networkUuid);
+        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(substationGraphics);
     }
 
     @GetMapping(value = "substations-graphics-with-pagination/{networkUuid}")
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
-    public ResponseEntity<List<SubstationGraphic>> getSubstationsGraphicsWithPagination(@PathVariable("networkUuid") UUID networkUuid, @RequestParam(name = "page") int page, @RequestParam(name = "size") int size) {
-        List<SubstationGraphic> substationGraphics = studyService.getSubstationsGraphicsWithPagination(networkUuid, page, size);
-        return ResponseEntity.ok().body(substationGraphics);
+    public ResponseEntity<String> getSubstationsGraphicsWithPagination(@PathVariable("networkUuid") UUID networkUuid, @RequestParam(name = "page") int page, @RequestParam(name = "size") int size) {
+        String substationGraphics = studyService.getSubstationsGraphicsWithPagination(networkUuid, page, size);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(substationGraphics);
 
     }
 }

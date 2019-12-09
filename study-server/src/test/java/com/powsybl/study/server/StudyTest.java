@@ -1,13 +1,9 @@
 package com.powsybl.study.server;
 
-import com.powsybl.iidm.converter.model.NetworkIds;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
-import infrastructure.Coordinate;
-import infrastructure.LineGraphic;
-import infrastructure.SubstationGraphic;
-import javafx.scene.paint.Color;
+import com.powsybl.study.server.dto.NetworkIds;
 import org.cassandraunit.spring.CassandraDataSet;
 import org.cassandraunit.spring.CassandraUnitDependencyInjectionTestExecutionListener;
 import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
@@ -77,6 +73,14 @@ public class StudyTest {
 
     private final UUID networkUuid = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
     private final NetworkIds networkIds = new NetworkIds(networkUuid, "20140116_0830_2D4_UX1_pst");
+    private final String substationGraphicsString = "[{\"id\":\"id\",\"position\":{\"lat\":0.0,\"lon\":0.0}}]";
+    private final String lineGraphicsString = "[{\"id\":\"id\"," +
+            "\"drawOrder\":1," +
+            "\"voltage\":440," +
+            "\"color\":{\"red\":1.0,\"green\":1.0,\"blue\":1.0,\"opacity\":0.0}," +
+            "\"aerial\":false," +
+            "\"ordered\":false," +
+            "\"coordinates\":[]}]";
 
     public void setup() {
         studyService.setCaseServerRest(caseServerRest);
@@ -125,33 +129,29 @@ public class StudyTest {
                 any(HttpEntity.class),
                 eq(byte[].class))).willReturn(new ResponseEntity<>("byte".getBytes(), HttpStatus.OK));
 
-        ArrayList lineGraphics = new ArrayList<>();
-        lineGraphics.add(new LineGraphic("id", 1, new Color(1, 1, 1, 0), 440, false));
         given(geoDataServerRest.exchange(
                 eq("http://localhost:8087/v1/lines-graphics/" + networkUuid),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                eq(new ParameterizedTypeReference<List<LineGraphic>>() { }))).willReturn(new ResponseEntity<>(lineGraphics, HttpStatus.OK));
+                eq(String.class))).willReturn(new ResponseEntity<>(lineGraphicsString, HttpStatus.OK));
 
         given(geoDataServerRest.exchange(
                 eq("http://localhost:8087/v1/lines-graphics-with-pagination/" + networkUuid + "?page=1&size=1"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                eq(new ParameterizedTypeReference<List<LineGraphic>>() { }))).willReturn(new ResponseEntity<>(lineGraphics, HttpStatus.OK));
+                eq(String.class))).willReturn(new ResponseEntity<>(lineGraphicsString, HttpStatus.OK));
 
-        ArrayList substationGraphics = new ArrayList<>();
-        substationGraphics.add(new SubstationGraphic("id", new Coordinate()));
         given(geoDataServerRest.exchange(
                 eq("http://localhost:8087/v1/substations-graphics/" + networkUuid),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                eq(new ParameterizedTypeReference<List<SubstationGraphic>>() { }))).willReturn(new ResponseEntity<>(substationGraphics, HttpStatus.OK));
+                eq(String.class))).willReturn(new ResponseEntity<>(substationGraphicsString, HttpStatus.OK));
 
         given(geoDataServerRest.exchange(
                 eq("http://localhost:8087/v1/substations-graphics-with-pagination/" + networkUuid + "?page=1&size=1"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                eq(new ParameterizedTypeReference<List<SubstationGraphic>>() { }))).willReturn(new ResponseEntity<>(substationGraphics, HttpStatus.OK));
+                eq(String.class))).willReturn(new ResponseEntity<>(substationGraphicsString, HttpStatus.OK));
 
         InputStream inputStream = new ByteArrayInputStream(getNetworkAsByte());
         Network network = Importers.loadNetwork("test.xiidm", inputStream);
@@ -265,14 +265,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andReturn();
-        assertEquals("[{\"id\":\"id\"," +
-                        "\"drawOrder\":1," +
-                        "\"voltage\":440," +
-                        "\"country\":null," +
-                        "\"aerial\":false," +
-                        "\"ordered\":false," +
-                        "\"coordinates\":[]}]",
-                result.getResponse().getContentAsString());
+        assertEquals(lineGraphicsString, result.getResponse().getContentAsString());
 
         //get the lines-graphics of a network paginated
         result = mvc.perform(get("/v1/lines-graphics-with-pagination/{networkUuid}", "38400000-8cf0-11bd-b23e-10b96e4ef00d")
@@ -281,22 +274,14 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andReturn();
-        assertEquals("[{\"id\":\"id\"," +
-                        "\"drawOrder\":1," +
-                        "\"voltage\":440," +
-                        "\"country\":null," +
-                        "\"aerial\":false," +
-                        "\"ordered\":false," +
-                        "\"coordinates\":[]}]",
-                result.getResponse().getContentAsString());
+        assertEquals(lineGraphicsString, result.getResponse().getContentAsString());
 
         //get the substation-graphics of a network
         result = mvc.perform(get("/v1/substations-graphics/{networkUuid}", "38400000-8cf0-11bd-b23e-10b96e4ef00d"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andReturn();
-        assertEquals("[{\"country\":null,\"id\":\"id\",\"position\":{\"lat\":0.0,\"lon\":0.0},\"voltages\":null}]",
-                result.getResponse().getContentAsString());
+        assertEquals(substationGraphicsString, result.getResponse().getContentAsString());
 
         //get the substation-graphics of a network paginated
         result = mvc.perform(get("/v1/substations-graphics-with-pagination/{networkUuid}", "38400000-8cf0-11bd-b23e-10b96e4ef00d")
@@ -305,8 +290,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andReturn();
-        assertEquals("[{\"country\":null,\"id\":\"id\",\"position\":{\"lat\":0.0,\"lon\":0.0},\"voltages\":null}]",
-                result.getResponse().getContentAsString());
+        assertEquals(substationGraphicsString, result.getResponse().getContentAsString());
 
         //delete existing study s2
         mvc.perform(delete("/v1/studies/{studyName}", "s2"))

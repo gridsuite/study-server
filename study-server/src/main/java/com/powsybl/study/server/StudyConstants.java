@@ -10,7 +10,6 @@ package com.powsybl.study.server;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-
 public final class StudyConstants {
 
     private StudyConstants() {

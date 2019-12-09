@@ -35,21 +35,9 @@
             <version>${metricscore.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.rte-france.pgs</groupId>  <!-- remove -->
-            <artifactId>pgs-geo-data-model</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
             <version>${network-store-client.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.rte_france.pgs</groupId> <!-- remove -->
-            <artifactId>pgs-iidm-converter-model</artifactId>
-            <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -59,6 +47,18 @@
         </dependency>
 
         <!-- Test dependencies -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-iidm-xml-converter</artifactId>
+            <version>${powsybl-core.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-iidm-impl</artifactId>
+            <version>${powsybl-core.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -91,6 +91,7 @@
             <version>${springboot.version}</version>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
 
 </project>

@@ -19,7 +19,6 @@ import java.util.Optional;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-
 @Repository
 public interface StudyRepository extends CassandraRepository<Study, Integer> {
 

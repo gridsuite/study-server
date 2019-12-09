@@ -17,7 +17,6 @@ import java.util.UUID;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-
 @Table
 public class Study implements Serializable {
 

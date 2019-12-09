@@ -7,13 +7,11 @@
 package com.powsybl.study.server;
 
 import com.powsybl.commons.PowsyblException;
-import com.powsybl.iidm.converter.model.NetworkIds;
 import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.study.server.dto.NetworkIds;
 import com.powsybl.study.server.dto.Study;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
-import infrastructure.LineGraphic;
-import infrastructure.SubstationGraphic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +38,6 @@ import static com.powsybl.study.server.StudyConstants.*;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-
 
 @ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
 @Service
@@ -227,7 +224,7 @@ public class StudyService {
         return voltageLevelAttributes;
     }
 
-    List<LineGraphic> getLinesGraphicsWithPagination(UUID networkUuid, int page, int size) {
+    String getLinesGraphicsWithPagination(UUID networkUuid, int page, int size) {
         HttpHeaders requestHeaders = new HttpHeaders();
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
@@ -240,17 +237,15 @@ public class StudyService {
                 .queryParam("page", page)
                 .queryParam("size", size);
 
-        ParameterizedTypeReference<List<LineGraphic>> parameterizedTypeReference = new ParameterizedTypeReference<List<LineGraphic>>() { };
-
-        ResponseEntity<List<LineGraphic>> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET,
                 requestEntity,
-                parameterizedTypeReference);
+                String.class);
 
         return responseEntity.getBody();
     }
 
-    List<LineGraphic> getLinesGraphics(UUID networkUuid) {
+    String getLinesGraphics(UUID networkUuid) {
         HttpHeaders requestHeaders = new HttpHeaders();
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
@@ -260,17 +255,15 @@ public class StudyService {
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(geoDataServerBaseUri + "/" + GEO_DATA_API_VERSION +
                 "/lines-graphics/{networkUuid}").uriVariables(urlParams);
 
-        ParameterizedTypeReference<List<LineGraphic>> parameterizedTypeReference = new ParameterizedTypeReference<List<LineGraphic>>() { };
-
-        ResponseEntity<List<LineGraphic>> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET,
                 requestEntity,
-                parameterizedTypeReference);
+                String.class);
 
         return responseEntity.getBody();
     }
 
-    List<SubstationGraphic> getSubstationsGraphicsWithPagination(UUID networkUuid, int page, int size) {
+    String getSubstationsGraphicsWithPagination(UUID networkUuid, int page, int size) {
         HttpHeaders requestHeaders = new HttpHeaders();
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
@@ -283,17 +276,15 @@ public class StudyService {
                 .queryParam("page", page)
                 .queryParam("size", size);
 
-        ParameterizedTypeReference<List<SubstationGraphic>> parameterizedTypeReference = new ParameterizedTypeReference<List<SubstationGraphic>>() { };
-
-        ResponseEntity<List<SubstationGraphic>> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET,
                 requestEntity,
-                parameterizedTypeReference);
+                String.class);
 
         return responseEntity.getBody();
     }
 
-    List<SubstationGraphic> getSubstationsGraphics(UUID networkUuid) {
+    String getSubstationsGraphics(UUID networkUuid) {
         HttpHeaders requestHeaders = new HttpHeaders();
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
@@ -304,12 +295,10 @@ public class StudyService {
                 "/substations-graphics/{networkUuid}")
                 .uriVariables(urlParams);
 
-        ParameterizedTypeReference<List<SubstationGraphic>> parameterizedTypeReference = new ParameterizedTypeReference<List<SubstationGraphic>>() { };
-
-        ResponseEntity<List<SubstationGraphic>> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET,
                 requestEntity,
-                parameterizedTypeReference);
+                String.class);
 
         return responseEntity.getBody();
     }
