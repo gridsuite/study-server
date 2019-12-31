@@ -13,7 +13,7 @@ package com.powsybl.study.server;
 
 public final class CassandraConstants {
 
-    public static final String KEYSPACE_PGS = "pgs";
+    public static final String KEYSPACE_STUDY = "study";
 
     private CassandraConstants() {
     }

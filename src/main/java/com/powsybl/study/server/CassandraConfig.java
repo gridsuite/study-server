@@ -28,7 +28,7 @@ public class CassandraConfig extends AbstractCassandraConfiguration {
 
     @Override
     protected String getKeyspaceName() {
-        return CassandraConstants.KEYSPACE_PGS;
+        return CassandraConstants.KEYSPACE_STUDY;
     }
 
     @Override
@@ -47,7 +47,7 @@ public class CassandraConfig extends AbstractCassandraConfiguration {
     @Bean
     public CassandraMappingContext cassandraMapping(Environment env) {
         CassandraMappingContext mappingContext =  new CassandraMappingContext();
-        mappingContext.setUserTypeResolver(new SimpleUserTypeResolver(cluster(env).getObject(), CassandraConstants.KEYSPACE_PGS));
+        mappingContext.setUserTypeResolver(new SimpleUserTypeResolver(cluster(env).getObject(), CassandraConstants.KEYSPACE_STUDY));
         return mappingContext;
     }
 

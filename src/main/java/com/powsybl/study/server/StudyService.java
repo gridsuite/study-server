@@ -12,8 +12,6 @@ import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.study.server.dto.NetworkIds;
 import com.powsybl.study.server.dto.Study;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -42,8 +40,6 @@ import static com.powsybl.study.server.StudyConstants.*;
 @ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
 @Service
 public class StudyService {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
 
     private RestTemplate caseServerRest;
     private RestTemplate voltageLevelDiagramServerRest;
@@ -182,7 +178,7 @@ public class StudyService {
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
         Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put("networkUuid", networkUuid);
+        urlParams.put(NETWORK_UUID, networkUuid);
         urlParams.put("voltageLevelId", voltageLevelId);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(voltageLevelDiagramServerBaseUri + "/" + VOLTAGE_LEVEL_DIAGRAM_API_VERSION +
@@ -229,7 +225,7 @@ public class StudyService {
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
         Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put("networkUuid", networkUuid);
+        urlParams.put(NETWORK_UUID, networkUuid);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(geoDataServerBaseUri + "/" + GEO_DATA_API_VERSION +
                 "/lines-graphics-with-pagination/{networkUuid}")
@@ -250,7 +246,7 @@ public class StudyService {
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
         Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put("networkUuid", networkUuid);
+        urlParams.put(NETWORK_UUID, networkUuid);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(geoDataServerBaseUri + "/" + GEO_DATA_API_VERSION +
                 "/lines-graphics/{networkUuid}").uriVariables(urlParams);
@@ -268,7 +264,7 @@ public class StudyService {
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
         Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put("networkUuid", networkUuid);
+        urlParams.put(NETWORK_UUID, networkUuid);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(geoDataServerBaseUri + "/" + GEO_DATA_API_VERSION +
                 "/substations-graphics-with-pagination/{networkUuid}")
@@ -289,7 +285,7 @@ public class StudyService {
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
         Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put("networkUuid", networkUuid);
+        urlParams.put(NETWORK_UUID, networkUuid);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(geoDataServerBaseUri + "/" + GEO_DATA_API_VERSION +
                 "/substations-graphics/{networkUuid}")
