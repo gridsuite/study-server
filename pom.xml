@@ -24,6 +24,7 @@
         <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
         <maven.compiler.version>3.8.0</maven.compiler.version>
         <maven.install.version>2.5.2</maven.install.version>
+        <maven.jacoco.version>0.8.1</maven.jacoco.version>
         <maven.resources.version>3.1.0</maven.resources.version>
         <maven.site.version>3.7.1</maven.site.version>
         <maven.surefire.version>2.22.0</maven.surefire.version>
@@ -120,6 +121,38 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>jacoco</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${maven.jacoco.version}</version>
+                        <configuration>
+                            <excludes>
+                                <!-- exclude generated classes -->
+                                <exclude>**/generated/**/*</exclude>
+                            </excludes>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
