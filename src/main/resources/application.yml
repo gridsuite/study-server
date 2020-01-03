@@ -10,9 +10,9 @@ spring:
 backing-services:
   case:
     base-uri: http://localhost:5000
-  voltage-level-diagram:
+  single-line-diagram:
     base-uri: http://localhost:5005
-  iidm-converter:
+  network-conversion:
     base-uri: http://localhost:5003
   geo-data:
     base-uri: http://localhost:8087

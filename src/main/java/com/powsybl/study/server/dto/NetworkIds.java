@@ -20,7 +20,6 @@ public class NetworkIds implements Serializable {
 
     //needed for jackson deserialization
     public NetworkIds() {
-        super();
     }
 
     public NetworkIds(UUID networkUuid, String networkId) {

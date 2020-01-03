@@ -64,7 +64,7 @@ public class StudyController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
         }
 
-        if (!studyService.caseExists(caseName)) {
+        if (Boolean.TRUE.equals(!studyService.caseExists(caseName))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_DOESNT_EXISTS);
         }
         NetworkIds networkIds = studyService.createStudy(studyName, caseName, description);
@@ -125,12 +125,8 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The case list"),
             @ApiResponse(code = 500, message = "The storage is down")})
     public ResponseEntity<Map<String, String>> getCaseList() {
-        try {
-            Map<String, String> caseList = studyService.getCaseList();
-            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(caseList);
-        } catch (PowsyblException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-        }
+        Map<String, String> caseList = studyService.getCaseList();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(caseList);
     }
 
     @GetMapping(value = "/svg/{networkUuid}/{voltageLevelId}")
@@ -167,14 +163,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(lineGraphics);
     }
 
-    @GetMapping(value = "lines-graphics-with-pagination/{networkUuid}")
-    @ApiOperation(value = "Get Network Lines graphics", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
-    public ResponseEntity<String> getLinesGraphicsWithPagination(@PathVariable("networkUuid") UUID networkUuid, @RequestParam(name = "page") int page, @RequestParam(name = "size") int size) {
-        String lineGraphics = studyService.getLinesGraphicsWithPagination(networkUuid, page, size);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(lineGraphics);
-    }
-
     @GetMapping(value = "substations-graphics/{networkUuid}")
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
@@ -183,12 +171,4 @@ public class StudyController {
         return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(substationGraphics);
     }
 
-    @GetMapping(value = "substations-graphics-with-pagination/{networkUuid}")
-    @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
-    public ResponseEntity<String> getSubstationsGraphicsWithPagination(@PathVariable("networkUuid") UUID networkUuid, @RequestParam(name = "page") int page, @RequestParam(name = "size") int size) {
-        String substationGraphics = studyService.getSubstationsGraphicsWithPagination(networkUuid, page, size);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(substationGraphics);
-
-    }
 }

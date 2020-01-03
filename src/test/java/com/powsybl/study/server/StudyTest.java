@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2020, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package com.powsybl.study.server;
 
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
@@ -41,6 +47,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ */
+
 @RunWith(SpringRunner.class)
 @WebMvcTest(StudyController.class)
 @EnableWebMvc
@@ -62,10 +72,10 @@ public class StudyTest {
     private RestTemplate caseServerRest;
 
     @Mock
-    private RestTemplate iidmConverterServerRest;
+    private RestTemplate networkConversionServerRest;
 
     @Mock
-    private RestTemplate voltageLevelServerRest;
+    private RestTemplate singleLineDiagramServerRest;
 
     @Mock
     private RestTemplate geoDataServerRest;
@@ -90,18 +100,18 @@ public class StudyTest {
 
     public void setup() {
         studyService.setCaseServerRest(caseServerRest);
-        studyService.setIidmConverterServerRest(iidmConverterServerRest);
-        studyService.setVoltageLevelDiagramServerRest(voltageLevelServerRest);
+        studyService.setNetworkConversionServerRest(networkConversionServerRest);
+        studyService.setSingleLineDiagramServerRest(singleLineDiagramServerRest);
         studyService.setGeoDataServerRest(geoDataServerRest);
 
         given(caseServerRest.exchange(
-                eq("http://localhost:5000/v1/case-server/exists?caseName=caseName"),
+                eq("http://localhost:5000/v1/cases/caseName/exists"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(Boolean.class))).willReturn(new ResponseEntity<>(true, HttpStatus.OK));
 
         given(caseServerRest.exchange(
-                eq("/" + CASE_API_VERSION + "/case-server/import-case"),
+                eq("/" + CASE_API_VERSION + "/cases"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
@@ -112,49 +122,37 @@ public class StudyTest {
         caseList.put("case3Path", "case3");
 
         given(caseServerRest.exchange(
-                eq("/" + CASE_API_VERSION + "/case-server/cases"),
+                eq("/" + CASE_API_VERSION + "/cases"),
                 eq(HttpMethod.GET),
                 eq(null),
                 eq(new ParameterizedTypeReference<Map<String, String>>() { }))).willReturn(new ResponseEntity<>(caseList, HttpStatus.OK));
-
-        given(iidmConverterServerRest.exchange(
-                eq("http://localhost:5003/v1/iidm-converter-server/persistent-store/caseName"),
+        http://localhost:5003/v1/cases/caseName/to-network
+        given(networkConversionServerRest.exchange(
+                eq("http://localhost:5003/v1/cases/caseName/to-network"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(NetworkIds.class))).willReturn(new ResponseEntity<>(networkIds, HttpStatus.OK));
 
-        given(iidmConverterServerRest.exchange(
-                eq("http://localhost:5003/v1/iidm-converter-server/persistent-store/testCase.xiidm"),
+        given(networkConversionServerRest.exchange(
+                eq("http://localhost:5003/v1/cases/testCase.xiidm/to-network"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(NetworkIds.class))).willReturn(new ResponseEntity<>(networkIds, HttpStatus.OK));
 
-        given(voltageLevelServerRest.exchange(
-                eq("http://localhost:5005/v1/voltage-level-diagram-server/svg/" + networkUuid + "/voltageLevelId"),
+        given(singleLineDiagramServerRest.exchange(
+                eq("http://localhost:5005/v1/svg/" + networkUuid + "/voltageLevelId"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(byte[].class))).willReturn(new ResponseEntity<>("byte".getBytes(), HttpStatus.OK));
 
         given(geoDataServerRest.exchange(
-                eq("http://localhost:8087/v1/lines-graphics/" + networkUuid),
+                eq("http://localhost:8087/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>(LINE_GRAPHICS_STRING, HttpStatus.OK));
 
         given(geoDataServerRest.exchange(
-                eq("http://localhost:8087/v1/lines-graphics-with-pagination/" + networkUuid + "?page=1&size=1"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>(LINE_GRAPHICS_STRING, HttpStatus.OK));
-
-        given(geoDataServerRest.exchange(
-                eq("http://localhost:8087/v1/substations-graphics/" + networkUuid),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>(SUBSTATION_GRAPHICS_STRING, HttpStatus.OK));
-
-        given(geoDataServerRest.exchange(
-                eq("http://localhost:8087/v1/substations-graphics-with-pagination/" + networkUuid + "?page=1&size=1"),
+                eq("http://localhost:8087/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>(SUBSTATION_GRAPHICS_STRING, HttpStatus.OK));
@@ -272,26 +270,8 @@ public class StudyTest {
                 .andReturn();
         assertEquals(LINE_GRAPHICS_STRING, result.getResponse().getContentAsString());
 
-        //get the lines-graphics of a network paginated
-        result = mvc.perform(get("/v1/lines-graphics-with-pagination/{networkUuid}", TEST_UUID)
-                .param("page", "1")
-                .param("size", "1"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
-                .andReturn();
-        assertEquals(LINE_GRAPHICS_STRING, result.getResponse().getContentAsString());
-
         //get the substation-graphics of a network
         result = mvc.perform(get("/v1/substations-graphics/{networkUuid}", TEST_UUID))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
-                .andReturn();
-        assertEquals(SUBSTATION_GRAPHICS_STRING, result.getResponse().getContentAsString());
-
-        //get the substation-graphics of a network paginated
-        result = mvc.perform(get("/v1/substations-graphics-with-pagination/{networkUuid}", TEST_UUID)
-                .param("page", "1")
-                .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andReturn();

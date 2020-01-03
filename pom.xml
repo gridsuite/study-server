@@ -239,11 +239,6 @@
             <artifactId>springfox-swagger2</artifactId>
             <version>${springfox.version}</version>
         </dependency>
-        <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-api</artifactId>
-            <version>7.0</version>
-        </dependency>
 
         <!-- Test dependencies -->
         <dependency>

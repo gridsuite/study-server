@@ -17,14 +17,14 @@ final class StudyConstants {
     }
 
     static final String CASE_API_VERSION = "v1";
-    static final String VOLTAGE_LEVEL_DIAGRAM_API_VERSION = "v1";
-    static final String IIDM_CONVERTER_API_VERSION = "v1";
+    static final String SINGLE_LINE_DIAGRAM_API_VERSION = "v1";
+    static final String NETWORK_CONVERSION_API_VERSION = "v1";
     static final String GEO_DATA_API_VERSION = "v1";
 
     static final String CASE_PARAM = "caseName";
     static final String NETWORK_UUID = "networkUuid";
 
-    static final String STUDY_ALREADY_EXISTS = "STUDY ALREADY_EXISTS";
+    static final String STUDY_ALREADY_EXISTS = "STUDY ALREADY EXISTS";
     static final String CASE_DOESNT_EXISTS = "CASE DOESN'T EXISTS";
     static final String CASE_ALREADY_EXISTS = "CASE ALREADY EXISTS";
 
