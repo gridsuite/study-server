@@ -25,10 +25,10 @@ public interface StudyRepository extends CassandraRepository<Study, Integer> {
     @Override
     List<Study> findAll();
 
+    Optional<Study> findByName(String studyName);
+
     @Override
     <S extends Study> S insert(S s);
-
-    Optional<Study> findByName(String studyName);
 
     @Query("delete from study where studyname = :studyName")
     void deleteByName(@Param("studyName") String studyName);

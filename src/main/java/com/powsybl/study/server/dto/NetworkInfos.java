@@ -4,16 +4,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.study.server;
+package com.powsybl.study.server.dto;
+
+import lombok.Value;
+
+import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-final class StudyApi {
+@Value
+public class NetworkInfos {
 
-    private StudyApi() {
-    }
+    private UUID networkUuid;
 
-    static final String API_VERSION = "v1";
+    private String networkId;
+
 }

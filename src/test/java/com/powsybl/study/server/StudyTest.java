@@ -12,7 +12,7 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.study.server.dto.NetworkIds;
+import com.powsybl.study.server.dto.NetworkInfos;
 import org.cassandraunit.spring.CassandraDataSet;
 import org.cassandraunit.spring.CassandraUnitDependencyInjectionTestExecutionListener;
 import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
@@ -86,17 +86,10 @@ public class StudyTest {
     private static final String STUDIES_URL = "/v1/studies/{studyName}";
     private static final String DESCRIPTION = "description";
     private static final String TEST_FILE = "testCase.xiidm";
+    private static final String STUDY_NAME = "studyName";
     private static final String TEST_UUID = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private final UUID networkUuid = UUID.fromString(TEST_UUID);
-    private final NetworkIds networkIds = new NetworkIds(networkUuid, "20140116_0830_2D4_UX1_pst");
-    private static final String SUBSTATION_GRAPHICS_STRING = "[{\"id\":\"id\",\"position\":{\"lat\":0.0,\"lon\":0.0}}]";
-    private static final String LINE_GRAPHICS_STRING = "[{\"id\":\"id\"," +
-            "\"drawOrder\":1," +
-            "\"voltage\":440," +
-            "\"color\":{\"red\":1.0,\"green\":1.0,\"blue\":1.0,\"opacity\":0.0}," +
-            "\"aerial\":false," +
-            "\"ordered\":false," +
-            "\"coordinates\":[]}]";
+    private final NetworkInfos networkInfos = new NetworkInfos(networkUuid, "20140116_0830_2D4_UX1_pst");
 
     public void setup() {
         studyService.setCaseServerRest(caseServerRest);
@@ -126,18 +119,18 @@ public class StudyTest {
                 eq(HttpMethod.GET),
                 eq(null),
                 eq(new ParameterizedTypeReference<Map<String, String>>() { }))).willReturn(new ResponseEntity<>(caseList, HttpStatus.OK));
-        http://localhost:5003/v1/cases/caseName/to-network
-        given(networkConversionServerRest.exchange(
-                eq("http://localhost:5003/v1/cases/caseName/to-network"),
-                eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                eq(NetworkIds.class))).willReturn(new ResponseEntity<>(networkIds, HttpStatus.OK));
 
         given(networkConversionServerRest.exchange(
-                eq("http://localhost:5003/v1/cases/testCase.xiidm/to-network"),
+                eq("http://localhost:5003/v1/networks?caseName=caseName"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(NetworkIds.class))).willReturn(new ResponseEntity<>(networkIds, HttpStatus.OK));
+                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
+
+        given(networkConversionServerRest.exchange(
+                eq("http://localhost:5003/v1/networks?caseName=testCase.xiidm"),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
 
         given(singleLineDiagramServerRest.exchange(
                 eq("http://localhost:5005/v1/svg/" + networkUuid + "/voltageLevelId"),
@@ -149,13 +142,13 @@ public class StudyTest {
                 eq("http://localhost:8087/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>(LINE_GRAPHICS_STRING, HttpStatus.OK));
+                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
 
         given(geoDataServerRest.exchange(
                 eq("http://localhost:8087/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>(SUBSTATION_GRAPHICS_STRING, HttpStatus.OK));
+                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
 
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
                 new ResourceSet("", TEST_FILE));
@@ -169,28 +162,26 @@ public class StudyTest {
         //empty
         MvcResult result = mvc.perform(get("/v1/studies"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         assertEquals("[]", result.getResponse().getContentAsString());
 
         //insert a study
-        result = mvc.perform(post("/v1/studies/{studyName}/{caseName}", "studyName", "caseName")
+        mvc.perform(post("/v1/studies/{studyName}/{caseName}", STUDY_NAME, "caseName")
                 .param(DESCRIPTION, DESCRIPTION))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                 .andReturn();
-        assertEquals("{\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\"}", result.getResponse().getContentAsString());
 
         //1 study
         result = mvc.perform(get("/v1/studies"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("[{\"name\":\"studyName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"caseName\",\"description\":\"description\"}]",
+        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\"}]",
                 result.getResponse().getContentAsString());
 
         //insert the same study => 409 conflict
-        result = mvc.perform(post("/v1/studies/{studyName}/{caseName}", "studyName", "caseName")
+        result = mvc.perform(post("/v1/studies/{studyName}/{caseName}", STUDY_NAME, "caseName")
                 .param(DESCRIPTION, DESCRIPTION))
                 .andExpect(status().isConflict())
                 .andReturn();
@@ -203,9 +194,7 @@ public class StudyTest {
                     .file(mockFile)
                     .param(DESCRIPTION, "desc"))
                     .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
                     .andReturn();
-            assertEquals("{\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\"}", mvcResult.getResponse().getContentAsString());
         }
 
         //Import the same case -> 409 conflict
@@ -221,7 +210,7 @@ public class StudyTest {
 
         result = mvc.perform(get(STUDIES_URL, "s2"))
                  .andExpect(status().isOk())
-                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                  .andReturn();
         assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"testCase.xiidm\",\"description\":\"desc\"}",
                 result.getResponse().getContentAsString());
@@ -234,21 +223,21 @@ public class StudyTest {
         //get the case lists
         result = mvc.perform(get("/v1/cases"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         assertEquals("{\"case1Path\":\"case1\",\"case2Path\":\"case2\",\"case3Path\":\"case3\"}", result.getResponse().getContentAsString());
 
         //get the voltage level diagram svg
-        result = mvc.perform(get("/v1/svg/{networkUuid}/{voltageLevelId}", TEST_UUID, "voltageLevelId"))
+        result = mvc.perform(get("/v1/svg/{studyName}/{voltageLevelId}", STUDY_NAME, "voltageLevelId"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andReturn();
         assertEquals("byte", result.getResponse().getContentAsString());
 
         //get all the voltage levels of the network
-        result = mvc.perform(get("/v1/networks/{networkUuid}/voltage-levels", TEST_UUID))
+        result = mvc.perform(get("/v1/networks/{studyName}/voltage-levels", STUDY_NAME))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         assertEquals(
                 "[{\"id\":\"BBE1AA1\",\"name\":\"BBE1AA1\",\"substationId\":\"BBE1AA\"}," +
@@ -264,18 +253,14 @@ public class StudyTest {
                 result.getResponse().getContentAsString());
 
         //get the lines-graphics of a network
-        result = mvc.perform(get("/v1/lines-graphics/{networkUuid}/", TEST_UUID))
+        mvc.perform(get("/v1/lines-graphics/{studyName}/", STUDY_NAME))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
-                .andReturn();
-        assertEquals(LINE_GRAPHICS_STRING, result.getResponse().getContentAsString());
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
         //get the substation-graphics of a network
-        result = mvc.perform(get("/v1/substations-graphics/{networkUuid}", TEST_UUID))
+        mvc.perform(get("/v1/substations-graphics/{studyName}", STUDY_NAME))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
-                .andReturn();
-        assertEquals(SUBSTATION_GRAPHICS_STRING, result.getResponse().getContentAsString());
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
         //delete existing study s2
         mvc.perform(delete(STUDIES_URL, "s2"))
