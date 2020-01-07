@@ -7,8 +7,8 @@
 package com.powsybl.study.server;
 
 import com.powsybl.commons.PowsyblException;
-import com.powsybl.study.server.dto.NetworkIds;
 import com.powsybl.study.server.dto.Study;
+import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -46,9 +46,9 @@ public class StudyController {
     @GetMapping(value = "/studies")
     @ApiOperation(value = "Get all studies")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
-    public ResponseEntity<List<Study>> getStudyList() {
-        List<Study> studies = studyService.getStudyList();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(studies);
+    public ResponseEntity<List<StudyInfos>> getStudyList() {
+        List<StudyInfos> studies = studyService.getStudyList();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 
     @PostMapping(value = "/studies/{studyName}/{caseName}")
@@ -56,7 +56,7 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
-    public ResponseEntity<NetworkIds> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Void> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                   @PathVariable("caseName") String caseName,
                                                                   @RequestParam("description") String description) {
 
@@ -67,8 +67,8 @@ public class StudyController {
         if (Boolean.TRUE.equals(!studyService.caseExists(caseName))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_DOESNT_EXISTS);
         }
-        NetworkIds networkIds = studyService.createStudy(studyName, caseName, description);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(networkIds);
+        studyService.createStudy(studyName, caseName, description);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyName}")
@@ -77,7 +77,7 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<NetworkIds> createStudy(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Void> createStudy(@PathVariable("studyName") String studyName,
                                                   @RequestParam("caseFile") MultipartFile caseFile,
                                                   @RequestParam("description") String description) throws IOException {
 
@@ -89,13 +89,12 @@ public class StudyController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_ALREADY_EXISTS);
         }
 
-        NetworkIds networkIds;
         try {
-            networkIds = studyService.createStudy(studyName, caseFile, description);
+            studyService.createStudy(studyName, caseFile, description);
         } catch (PowsyblException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(networkIds);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyName}")
@@ -108,7 +107,7 @@ public class StudyController {
         if (study == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(study);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study);
     }
 
     @DeleteMapping(value = "/studies/{studyName}")
@@ -126,15 +125,16 @@ public class StudyController {
             @ApiResponse(code = 500, message = "The storage is down")})
     public ResponseEntity<Map<String, String>> getCaseList() {
         Map<String, String> caseList = studyService.getCaseList();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(caseList);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(caseList);
     }
 
-    @GetMapping(value = "/svg/{networkUuid}/{voltageLevelId}")
+    @GetMapping(value = "/svg/{studyName}/{voltageLevelId}")
     @ApiOperation(value = "get the voltage level diagram for the given network and voltage level")
     @ApiResponse(code = 200, message = "The svg")
     public ResponseEntity<byte[]> getVoltageLevelDiagram(
-            @PathVariable("networkUuid") UUID networkUuid,
+            @PathVariable("studyName") String studyName,
             @PathVariable("voltageLevelId") String voltageLevelId) {
+        UUID networkUuid = studyService.getStudyUuid(studyName);
         try {
             byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId);
 
@@ -144,31 +144,34 @@ public class StudyController {
         }
     }
 
-    @GetMapping(value = "/networks/{networkUuid}/voltage-levels")
+    @GetMapping(value = "/networks/{studyName}/voltage-levels")
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
-    public ResponseEntity<List<VoltageLevelAttributes>> getNetworkVoltyutageLevels(@PathVariable("networkUuid") UUID networkUuid) {
+    public ResponseEntity<List<VoltageLevelAttributes>> getNetworkVoltyutageLevels(@PathVariable("studyName") String studyName) {
+        UUID networkUuid = studyService.getStudyUuid(studyName);
         try {
-            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(studyService.getNetworkVoltageLevels(networkUuid));
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkVoltageLevels(networkUuid));
         } catch (PowsyblException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-    @GetMapping(value = "lines-graphics/{networkUuid}/")
+    @GetMapping(value = "lines-graphics/{studyName}/")
     @ApiOperation(value = "Get Network lines graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
-    public ResponseEntity<String> getLinesGraphics(@PathVariable("networkUuid") UUID networkUuid) {
+    public ResponseEntity<String> getLinesGraphics(@PathVariable("studyName") String studyName) {
+        UUID networkUuid = studyService.getStudyUuid(studyName);
         String lineGraphics = studyService.getLinesGraphics(networkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(lineGraphics);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics);
     }
 
-    @GetMapping(value = "substations-graphics/{networkUuid}")
+    @GetMapping(value = "substations-graphics/{studyName}")
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
-    public ResponseEntity<String> getSubstationsGraphic(@PathVariable("networkUuid") UUID networkUuid) {
+    public ResponseEntity<String> getSubstationsGraphic(@PathVariable("studyName") String studyName) {
+        UUID networkUuid = studyService.getStudyUuid(studyName);
         String substationGraphics = studyService.getSubstationsGraphics(networkUuid);
-        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON_UTF8).body(substationGraphics);
+        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationGraphics);
     }
 
 }

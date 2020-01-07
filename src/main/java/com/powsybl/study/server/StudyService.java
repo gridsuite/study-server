@@ -10,6 +10,7 @@ import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.study.server.dto.NetworkIds;
 import com.powsybl.study.server.dto.Study;
+import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +30,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.powsybl.study.server.StudyConstants.*;
 
@@ -83,26 +85,22 @@ public class StudyService {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
     }
 
-    List<Study> getStudyList() {
-        List<Study> studies;
-        studies = studyRepository.findAll();
-
-        return studies;
+    List<StudyInfos> getStudyList() {
+        List<Study> studyList = studyRepository.findAll();
+        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription())).collect(Collectors.toList());
     }
 
-    NetworkIds createStudy(String studyName, String caseName, String description) {
+    void createStudy(String studyName, String caseName, String description) {
         NetworkIds networkIds = persistentStore(caseName);
         Study study = new Study(studyName, networkIds.getNetworkUuid(), networkIds.getNetworkId(), caseName, description);
         studyRepository.insert(study);
-        return networkIds;
     }
 
-    NetworkIds createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
+    void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
         importCase(caseFile);
         NetworkIds networkIds = persistentStore(caseFile.getOriginalFilename());
         Study study = new Study(studyName, networkIds.getNetworkUuid(), networkIds.getNetworkId(), caseFile.getOriginalFilename(), description);
         studyRepository.insert(study);
-        return networkIds;
     }
 
     Study getStudy(String studyName) {
@@ -159,7 +157,7 @@ public class StudyService {
                     String.class);
             return responseEntity.getBody();
         } catch (HttpStatusCodeException e) {
-            throw new StudyException("importCase HttpStatusCodeException", e);
+            throw new StudyException("importCase " + e.getStatusCode() + " : " + e.getResponseBodyAsString(), e);
         }
     }
 
@@ -182,7 +180,7 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
-    NetworkIds persistentStore(String caseName) {
+    private NetworkIds persistentStore(String caseName) {
         HttpHeaders requestHeaders = new HttpHeaders();
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
@@ -190,7 +188,7 @@ public class StudyService {
         urlParams.put("caseName", caseName);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(networkConversionServerBaseUri + "/" + NETWORK_CONVERSION_API_VERSION +
-                "/cases/{caseName}/to-network").uriVariables(urlParams);
+                "/networks").queryParam("caseName", caseName);
         ResponseEntity<NetworkIds> responseEntity = networkConversionServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.POST,
                 requestEntity,
@@ -258,6 +256,15 @@ public class StudyService {
                 Boolean.class);
 
         return responseEntity.getBody();
+    }
+
+    UUID getStudyUuid(String studyName) {
+        Optional<Study> study = studyRepository.findByName(studyName);
+        if (study.isPresent()) {
+            return study.get().getNetworkUuid();
+        } else {
+            throw new StudyException("study doesn't exist");
+        }
     }
 
     boolean studyExists(String studyName) {

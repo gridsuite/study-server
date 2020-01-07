@@ -6,6 +6,8 @@
  */
 package com.powsybl.study.server.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKey;
 import org.springframework.data.cassandra.core.mapping.Table;
@@ -16,7 +18,8 @@ import java.util.UUID;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-
+@Data
+@AllArgsConstructor
 @Table
 public class Study implements Serializable {
 
@@ -35,51 +38,4 @@ public class Study implements Serializable {
     @Column("description")
     private String description;
 
-    public Study(String name, UUID networkUuid, String networkId, String networkCase, String description) {
-        this.name = name;
-        this.networkUuid = networkUuid;
-        this.networkId = networkId;
-        this.networkCase = networkCase;
-        this.description = description;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public UUID getNetworkUuid() {
-        return networkUuid;
-    }
-
-    public void setNetworkUuid(UUID networkUuid) {
-        this.networkUuid = networkUuid;
-    }
-
-    public String getNetworkId() {
-        return networkId;
-    }
-
-    public void setNetworkId(String networkId) {
-        this.networkId = networkId;
-    }
-
-    public String getNetworkCase() {
-        return networkCase;
-    }
-
-    public void setNetworkCase(String networkCase) {
-        this.networkCase = networkCase;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
 }

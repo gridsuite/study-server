@@ -10,10 +10,10 @@ package com.powsybl.study.server;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-public final class StudyApi {
+final class StudyApi {
 
-    StudyApi() {
+    private StudyApi() {
     }
 
-    public static final String API_VERSION = "v1";
+    static final String API_VERSION = "v1";
 }

@@ -1,6 +1,6 @@
 package com.powsybl.study.server;
 
-public class StudyException  extends RuntimeException {
+class StudyException  extends RuntimeException {
 
     StudyException(String msg) {
         super(msg);
