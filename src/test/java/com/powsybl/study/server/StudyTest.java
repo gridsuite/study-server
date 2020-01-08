@@ -54,7 +54,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @WebMvcTest(StudyController.class)
 @EnableWebMvc
-@ContextConfiguration(classes = {StudyApplication.class, StudyService.class})
+@ContextConfiguration(classes = {StudyApplication.class, StudyService.class, CassandraConfig.class})
 @TestExecutionListeners(listeners = {CassandraUnitDependencyInjectionTestExecutionListener.class,
         CassandraUnitTestExecutionListener.class},
         mergeMode = MERGE_WITH_DEFAULTS)
@@ -167,7 +167,7 @@ public class StudyTest {
         assertEquals("[]", result.getResponse().getContentAsString());
 
         //insert a study
-        mvc.perform(post("/v1/studies/{studyName}/{caseName}", STUDY_NAME, "caseName")
+        mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", STUDY_NAME, "caseName")
                 .param(DESCRIPTION, DESCRIPTION))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -181,7 +181,7 @@ public class StudyTest {
                 result.getResponse().getContentAsString());
 
         //insert the same study => 409 conflict
-        result = mvc.perform(post("/v1/studies/{studyName}/{caseName}", STUDY_NAME, "caseName")
+        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", STUDY_NAME, "caseName")
                 .param(DESCRIPTION, DESCRIPTION))
                 .andExpect(status().isConflict())
                 .andReturn();
@@ -228,14 +228,14 @@ public class StudyTest {
         assertEquals("{\"case1Path\":\"case1\",\"case2Path\":\"case2\",\"case3Path\":\"case3\"}", result.getResponse().getContentAsString());
 
         //get the voltage level diagram svg
-        result = mvc.perform(get("/v1/svg/{studyName}/{voltageLevelId}", STUDY_NAME, "voltageLevelId"))
+        result = mvc.perform(get("/v1/studies/{studyName}/networks/{voltageLevelId}", STUDY_NAME, "voltageLevelId"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andReturn();
         assertEquals("byte", result.getResponse().getContentAsString());
 
         //get all the voltage levels of the network
-        result = mvc.perform(get("/v1/networks/{studyName}/voltage-levels", STUDY_NAME))
+        result = mvc.perform(get("/v1/studies/{studyName}/networks/voltage-levels", STUDY_NAME))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
@@ -253,12 +253,12 @@ public class StudyTest {
                 result.getResponse().getContentAsString());
 
         //get the lines-graphics of a network
-        mvc.perform(get("/v1/lines-graphics/{studyName}/", STUDY_NAME))
+        mvc.perform(get("/v1/studies/{studyName}/networks/lines-graphics/", STUDY_NAME))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
         //get the substation-graphics of a network
-        mvc.perform(get("/v1/substations-graphics/{studyName}", STUDY_NAME))
+        mvc.perform(get("/v1/studies/{studyName}/networks/substations-graphics/", STUDY_NAME))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 

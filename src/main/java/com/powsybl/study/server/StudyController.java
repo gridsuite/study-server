@@ -7,9 +7,9 @@
 package com.powsybl.study.server;
 
 import com.powsybl.commons.PowsyblException;
-import com.powsybl.study.server.dto.Study;
 import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
+import com.powsybl.study.server.repository.Study;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -51,7 +51,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 
-    @PostMapping(value = "/studies/{studyName}/{caseName}")
+    @PostMapping(value = "/studies/{studyName}/cases/{caseName}")
     @ApiOperation(value = "create a study from an existing case")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
@@ -128,7 +128,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(caseList);
     }
 
-    @GetMapping(value = "/svg/{studyName}/{voltageLevelId}")
+    @GetMapping(value = "/studies/{studyName}/networks/{voltageLevelId}")
     @ApiOperation(value = "get the voltage level diagram for the given network and voltage level")
     @ApiResponse(code = 200, message = "The svg")
     public ResponseEntity<byte[]> getVoltageLevelDiagram(
@@ -144,7 +144,7 @@ public class StudyController {
         }
     }
 
-    @GetMapping(value = "/networks/{studyName}/voltage-levels")
+    @GetMapping(value = "/studies/{studyName}/networks/voltage-levels")
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
     public ResponseEntity<List<VoltageLevelAttributes>> getNetworkVoltyutageLevels(@PathVariable("studyName") String studyName) {
@@ -156,7 +156,7 @@ public class StudyController {
         }
     }
 
-    @GetMapping(value = "lines-graphics/{studyName}/")
+    @GetMapping(value = "/studies/{studyName}/networks/lines-graphics")
     @ApiOperation(value = "Get Network lines graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
     public ResponseEntity<String> getLinesGraphics(@PathVariable("studyName") String studyName) {
@@ -165,7 +165,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics);
     }
 
-    @GetMapping(value = "substations-graphics/{studyName}")
+    @GetMapping(value = "/studies/{studyName}/networks/substations-graphics")
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
     public ResponseEntity<String> getSubstationsGraphic(@PathVariable("studyName") String studyName) {
