@@ -69,21 +69,6 @@
         <pluginManagement>
             <plugins>
                 <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>${springboot.version}</version>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>repackage</goal>
-                            </goals>
-                            <configuration>
-                                <classifier>exec</classifier>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-clean-plugin</artifactId>
                     <version>${maven.clean.version}</version>
@@ -137,6 +122,21 @@
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>
                             <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${springboot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>exec</classifier>
                         </configuration>
                     </execution>
                 </executions>
