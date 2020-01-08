@@ -12,7 +12,7 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.study.server.dto.NetworkIds;
+import com.powsybl.study.server.dto.NetworkInfos;
 import org.cassandraunit.spring.CassandraDataSet;
 import org.cassandraunit.spring.CassandraUnitDependencyInjectionTestExecutionListener;
 import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
@@ -89,7 +89,7 @@ public class StudyTest {
     private static final String STUDY_NAME = "studyName";
     private static final String TEST_UUID = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private final UUID networkUuid = UUID.fromString(TEST_UUID);
-    private final NetworkIds networkIds = new NetworkIds(networkUuid, "20140116_0830_2D4_UX1_pst");
+    private final NetworkInfos networkInfos = new NetworkInfos(networkUuid, "20140116_0830_2D4_UX1_pst");
 
     public void setup() {
         studyService.setCaseServerRest(caseServerRest);
@@ -124,13 +124,13 @@ public class StudyTest {
                 eq("http://localhost:5003/v1/networks?caseName=caseName"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(NetworkIds.class))).willReturn(new ResponseEntity<>(networkIds, HttpStatus.OK));
+                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
 
         given(networkConversionServerRest.exchange(
                 eq("http://localhost:5003/v1/networks?caseName=testCase.xiidm"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(NetworkIds.class))).willReturn(new ResponseEntity<>(networkIds, HttpStatus.OK));
+                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
 
         given(singleLineDiagramServerRest.exchange(
                 eq("http://localhost:5005/v1/svg/" + networkUuid + "/voltageLevelId"),

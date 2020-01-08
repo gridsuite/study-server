@@ -15,7 +15,7 @@ import java.util.UUID;
  */
 
 @Value
-public class NetworkIds {
+public class NetworkInfos {
 
     private UUID networkUuid;
 

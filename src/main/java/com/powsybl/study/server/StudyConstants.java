@@ -21,6 +21,7 @@ final class StudyConstants {
     static final String NETWORK_CONVERSION_API_VERSION = "v1";
     static final String GEO_DATA_API_VERSION = "v1";
 
+    static final String CASE_NAME = "caseName";
     static final String NETWORK_UUID = "networkUuid";
 
     static final String STUDY_ALREADY_EXISTS = "STUDY ALREADY EXISTS";

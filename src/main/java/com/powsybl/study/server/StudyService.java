@@ -8,7 +8,7 @@ package com.powsybl.study.server;
 
 import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.study.server.dto.NetworkIds;
+import com.powsybl.study.server.dto.NetworkInfos;
 import com.powsybl.study.server.dto.Study;
 import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
@@ -91,15 +91,15 @@ public class StudyService {
     }
 
     void createStudy(String studyName, String caseName, String description) {
-        NetworkIds networkIds = persistentStore(caseName);
-        Study study = new Study(studyName, networkIds.getNetworkUuid(), networkIds.getNetworkId(), caseName, description);
+        NetworkInfos networkInfos = persistentStore(caseName);
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseName, description);
         studyRepository.insert(study);
     }
 
     void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
         importCase(caseFile);
-        NetworkIds networkIds = persistentStore(caseFile.getOriginalFilename());
-        Study study = new Study(studyName, networkIds.getNetworkUuid(), networkIds.getNetworkId(), caseFile.getOriginalFilename(), description);
+        NetworkInfos networkInfos = persistentStore(caseFile.getOriginalFilename());
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFile.getOriginalFilename(), description);
         studyRepository.insert(study);
     }
 
@@ -180,19 +180,19 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
-    private NetworkIds persistentStore(String caseName) {
+    private NetworkInfos persistentStore(String caseName) {
         HttpHeaders requestHeaders = new HttpHeaders();
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
         Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put("caseName", caseName);
+        urlParams.put(CASE_NAME, caseName);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(networkConversionServerBaseUri + "/" + NETWORK_CONVERSION_API_VERSION +
-                "/networks").queryParam("caseName", caseName);
-        ResponseEntity<NetworkIds> responseEntity = networkConversionServerRest.exchange(uriBuilder.toUriString(),
+                "/networks").queryParam(CASE_NAME, caseName);
+        ResponseEntity<NetworkInfos> responseEntity = networkConversionServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.POST,
                 requestEntity,
-                NetworkIds.class);
+                NetworkInfos.class);
         return responseEntity.getBody();
     }
 
@@ -245,7 +245,7 @@ public class StudyService {
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
         Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put("caseName", caseName);
+        urlParams.put(CASE_NAME, caseName);
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/{caseName}/exists")
                 .uriVariables(urlParams);
