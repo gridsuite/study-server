@@ -65,8 +65,8 @@ public class StudyController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
         }
 
-        if (Boolean.TRUE.equals(!studyService.caseExists(caseName))) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_DOESNT_EXISTS);
+        if (Boolean.FALSE.equals(studyService.caseExists(caseName))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS);
         }
         studyService.createStudy(studyName, caseName, description);
         return ResponseEntity.ok().build();

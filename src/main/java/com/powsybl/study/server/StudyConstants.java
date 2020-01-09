@@ -13,7 +13,6 @@ package com.powsybl.study.server;
 final class StudyConstants {
 
     private StudyConstants() {
-
     }
 
     static final String CASE_API_VERSION = "v1";
@@ -25,6 +24,7 @@ final class StudyConstants {
     static final String NETWORK_UUID = "networkUuid";
 
     static final String STUDY_ALREADY_EXISTS = "STUDY ALREADY EXISTS";
+    static final String STUDY_DOESNT_EXISTS = "STUDY DOESN'T EXISTS";
     static final String CASE_DOESNT_EXISTS = "CASE DOESN'T EXISTS";
     static final String CASE_ALREADY_EXISTS = "CASE ALREADY EXISTS";
 

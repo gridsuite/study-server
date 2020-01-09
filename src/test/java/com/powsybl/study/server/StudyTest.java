@@ -38,7 +38,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import java.io.InputStream;
 import java.util.*;
 
-import static com.powsybl.study.server.StudyConstants.CASE_API_VERSION;
+import static com.powsybl.study.server.StudyConstants.*;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
@@ -102,6 +102,12 @@ public class StudyTest {
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(Boolean.class))).willReturn(new ResponseEntity<>(true, HttpStatus.OK));
+
+        given(caseServerRest.exchange(
+                eq("http://localhost:5000/v1/cases/notExistingCase/exists"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(Boolean.class))).willReturn(new ResponseEntity<>(false, HttpStatus.OK));
 
         given(caseServerRest.exchange(
                 eq("/" + CASE_API_VERSION + "/cases"),
@@ -169,8 +175,15 @@ public class StudyTest {
         //insert a study
         mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", STUDY_NAME, "caseName")
                 .param(DESCRIPTION, DESCRIPTION))
-                .andExpect(status().isOk())
+                .andExpect(status().isOk());
+
+        //insert a study with a non existing case and except exception
+        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", "randomStudy", "notExistingCase")
+                .param(DESCRIPTION, DESCRIPTION))
+                .andExpect(status().isNotFound())
                 .andReturn();
+
+        assertEquals(CASE_DOESNT_EXISTS, result.getResponse().getErrorMessage());
 
         //1 study
         result = mvc.perform(get("/v1/studies"))
@@ -234,6 +247,14 @@ public class StudyTest {
                 .andReturn();
         assertEquals("byte", result.getResponse().getContentAsString());
 
+        //get the voltage level diagram svg from a study that doesn't exist
+
+        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", "notExistingStudy", "voltageLevelId"))
+                .andExpect(status().isNotFound())
+                .andReturn();
+
+        assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
+
         //get all the voltage levels of the network
         result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels", STUDY_NAME))
                 .andExpect(status().isOk())
@@ -268,5 +289,4 @@ public class StudyTest {
                 .andReturn();
 
     }
-
 }
