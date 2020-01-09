@@ -228,14 +228,14 @@ public class StudyTest {
         assertEquals("{\"case1Path\":\"case1\",\"case2Path\":\"case2\",\"case3Path\":\"case3\"}", result.getResponse().getContentAsString());
 
         //get the voltage level diagram svg
-        result = mvc.perform(get("/v1/studies/{studyName}/networks/{voltageLevelId}", STUDY_NAME, "voltageLevelId"))
+        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", STUDY_NAME, "voltageLevelId"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andReturn();
         assertEquals("byte", result.getResponse().getContentAsString());
 
         //get all the voltage levels of the network
-        result = mvc.perform(get("/v1/studies/{studyName}/networks/voltage-levels", STUDY_NAME))
+        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels", STUDY_NAME))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
@@ -253,12 +253,12 @@ public class StudyTest {
                 result.getResponse().getContentAsString());
 
         //get the lines-graphics of a network
-        mvc.perform(get("/v1/studies/{studyName}/networks/lines-graphics/", STUDY_NAME))
+        mvc.perform(get("/v1/studies/{studyName}/geo-data/lines/", STUDY_NAME))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
         //get the substation-graphics of a network
-        mvc.perform(get("/v1/studies/{studyName}/networks/substations-graphics/", STUDY_NAME))
+        mvc.perform(get("/v1/studies/{studyName}/geo-data/substations/", STUDY_NAME))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 

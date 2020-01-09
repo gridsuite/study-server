@@ -128,7 +128,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(caseList);
     }
 
-    @GetMapping(value = "/studies/{studyName}/networks/{voltageLevelId}")
+    @GetMapping(value = "/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg")
     @ApiOperation(value = "get the voltage level diagram for the given network and voltage level")
     @ApiResponse(code = 200, message = "The svg")
     public ResponseEntity<byte[]> getVoltageLevelDiagram(
@@ -144,7 +144,7 @@ public class StudyController {
         }
     }
 
-    @GetMapping(value = "/studies/{studyName}/networks/voltage-levels")
+    @GetMapping(value = "/studies/{studyName}/network/voltage-levels")
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
     public ResponseEntity<List<VoltageLevelAttributes>> getNetworkVoltyutageLevels(@PathVariable("studyName") String studyName) {
@@ -156,7 +156,7 @@ public class StudyController {
         }
     }
 
-    @GetMapping(value = "/studies/{studyName}/networks/lines-graphics")
+    @GetMapping(value = "/studies/{studyName}/geo-data/lines")
     @ApiOperation(value = "Get Network lines graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
     public ResponseEntity<String> getLinesGraphics(@PathVariable("studyName") String studyName) {
@@ -165,7 +165,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics);
     }
 
-    @GetMapping(value = "/studies/{studyName}/networks/substations-graphics")
+    @GetMapping(value = "/studies/{studyName}/geo-data/substations")
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
     public ResponseEntity<String> getSubstationsGraphic(@PathVariable("studyName") String studyName) {

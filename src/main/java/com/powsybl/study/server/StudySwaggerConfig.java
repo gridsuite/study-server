@@ -38,7 +38,7 @@ public class StudySwaggerConfig {
     // Describe your apis
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
-                .title("STUDY API")
+                .title("Study API")
                 .description("This is the documentation of the Study REST API")
                 .build();
     }

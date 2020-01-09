@@ -66,23 +66,20 @@ public class StudyService {
             @Value("${backing-services.geo-data.base-uri:http://geo-data-store-server/}") String geoDataServerBaseUri
     ) {
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
-        this.caseServerRest = restTemplateBuilder.build();
-        this.caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
+        caseServerRest = restTemplateBuilder.build();
+        caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
         this.caseServerBaseUri = caseServerBaseUri;
 
-        restTemplateBuilder = new RestTemplateBuilder();
-        this.singleLineDiagramServerRest = restTemplateBuilder.build();
-        this.singleLineDiagramServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(singleLineDiagramServerBaseUri));
+        singleLineDiagramServerRest = restTemplateBuilder.build();
+        singleLineDiagramServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(singleLineDiagramServerBaseUri));
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
 
-        restTemplateBuilder = new RestTemplateBuilder();
-        this.networkConversionServerRest = restTemplateBuilder.build();
-        this.networkConversionServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkConversionServerBaseUri));
+        networkConversionServerRest = restTemplateBuilder.build();
+        networkConversionServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkConversionServerBaseUri));
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
 
-        restTemplateBuilder = new RestTemplateBuilder();
-        this.geoDataServerRest = restTemplateBuilder.build();
-        this.geoDataServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(geoDataServerBaseUri));
+        geoDataServerRest = restTemplateBuilder.build();
+        geoDataServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(geoDataServerBaseUri));
         this.geoDataServerBaseUri = geoDataServerBaseUri;
     }
 
@@ -105,8 +102,7 @@ public class StudyService {
     }
 
     Study getStudy(String studyName) {
-        Optional<Study> study = studyRepository.findByName(studyName);
-        return study.orElse(null);
+        return studyRepository.findByName(studyName).orElse(null);
     }
 
     void deleteStudy(String studyName) {
@@ -273,19 +269,19 @@ public class StudyService {
     }
 
     void setCaseServerRest(RestTemplate caseServerRest) {
-        this.caseServerRest = caseServerRest;
+        this.caseServerRest = Objects.requireNonNull(caseServerRest);
     }
 
     void setSingleLineDiagramServerRest(RestTemplate singleLineDiagramServerRest) {
-        this.singleLineDiagramServerRest = singleLineDiagramServerRest;
+        this.singleLineDiagramServerRest = Objects.requireNonNull(singleLineDiagramServerRest);
     }
 
     void setNetworkConversionServerRest(RestTemplate networkConversionServerRest) {
-        this.networkConversionServerRest = networkConversionServerRest;
+        this.networkConversionServerRest = Objects.requireNonNull(networkConversionServerRest);
     }
 
     void setGeoDataServerRest(RestTemplate geoDataServerRest) {
-        this.geoDataServerRest = geoDataServerRest;
+        this.geoDataServerRest = Objects.requireNonNull(geoDataServerRest);
     }
 
 }
