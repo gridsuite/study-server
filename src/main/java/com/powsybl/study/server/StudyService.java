@@ -237,7 +237,7 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
-    Boolean caseExists(String caseName) {
+    boolean caseExists(String caseName) {
         HttpHeaders requestHeaders = new HttpHeaders();
         HttpEntity requestEntity = new HttpEntity(requestHeaders);
 
@@ -252,7 +252,7 @@ public class StudyService {
                 requestEntity,
                 Boolean.class);
 
-        return responseEntity.getBody();
+        return Boolean.TRUE.equals(responseEntity.getBody());
     }
 
     UUID getStudyUuid(String studyName) {
