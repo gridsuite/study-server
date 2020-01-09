@@ -260,7 +260,7 @@ public class StudyService {
         if (study.isPresent()) {
             return study.get().getNetworkUuid();
         } else {
-            throw new StudyException("study doesn't exist");
+            throw new StudyException(STUDY_DOESNT_EXISTS);
         }
     }
 
