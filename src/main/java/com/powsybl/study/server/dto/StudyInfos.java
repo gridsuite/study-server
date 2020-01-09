@@ -7,13 +7,15 @@
 package com.powsybl.study.server.dto;
 
 import io.swagger.annotations.ApiModel;
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-@Value
+@AllArgsConstructor
+@Getter
 @ApiModel("Study attributes")
 public class StudyInfos {
 

@@ -15,7 +15,8 @@ import lombok.*;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-@Value
+@AllArgsConstructor
+@Getter
 @ApiModel("Voltage level attributes")
 public class VoltageLevelAttributes {
 

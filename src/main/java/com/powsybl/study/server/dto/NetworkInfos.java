@@ -6,7 +6,8 @@
  */
 package com.powsybl.study.server.dto;
 
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 import java.util.UUID;
 
@@ -14,7 +15,8 @@ import java.util.UUID;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-@Value
+@AllArgsConstructor
+@Getter
 public class NetworkInfos {
 
     private UUID networkUuid;
