@@ -6,7 +6,6 @@
  */
 package com.powsybl.study.server;
 
-import com.powsybl.commons.PowsyblException;
 import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import com.powsybl.study.server.repository.Study;
@@ -15,6 +14,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +38,7 @@ import static com.powsybl.study.server.StudyConstants.*;
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Transactional
 @Api(value = "Study server")
+@ComponentScan(basePackageClasses = StudyService.class)
 public class StudyController {
 
     @Autowired
@@ -89,11 +90,7 @@ public class StudyController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_ALREADY_EXISTS);
         }
 
-        try {
-            studyService.createStudy(studyName, caseFile, description);
-        } catch (PowsyblException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-        }
+        studyService.createStudy(studyName, caseFile, description);
         return ResponseEntity.ok().build();
     }
 
@@ -135,13 +132,9 @@ public class StudyController {
             @PathVariable("studyName") String studyName,
             @PathVariable("voltageLevelId") String voltageLevelId) {
         UUID networkUuid = studyService.getStudyUuid(studyName);
-        try {
-            byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId);
 
-            return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg);
-        } catch (PowsyblException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-        }
+        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg);
     }
 
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels")
@@ -149,11 +142,8 @@ public class StudyController {
     @ApiResponse(code = 200, message = "The voltage level list of the network")
     public ResponseEntity<List<VoltageLevelAttributes>> getNetworkVoltyutageLevels(@PathVariable("studyName") String studyName) {
         UUID networkUuid = studyService.getStudyUuid(studyName);
-        try {
-            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkVoltageLevels(networkUuid));
-        } catch (PowsyblException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkVoltageLevels(networkUuid));
+
     }
 
     @GetMapping(value = "/studies/{studyName}/geo-data/lines")
