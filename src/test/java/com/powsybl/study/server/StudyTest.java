@@ -59,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         CassandraUnitTestExecutionListener.class},
         mergeMode = MERGE_WITH_DEFAULTS)
 @CassandraDataSet(value = "study.cql", keyspace = "study")
-@EmbeddedCassandra
+@EmbeddedCassandra(timeout = 50000L)
 public class StudyTest {
 
     @Autowired
