@@ -6,7 +6,6 @@
  */
 package com.powsybl.study.server;
 
-import com.powsybl.commons.PowsyblException;
 import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import com.powsybl.study.server.repository.Study;
