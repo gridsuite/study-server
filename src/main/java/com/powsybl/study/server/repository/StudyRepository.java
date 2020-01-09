@@ -4,9 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.study.server;
+package com.powsybl.study.server.repository;
 
-import com.powsybl.study.server.dto.Study;
 import org.springframework.data.cassandra.repository.CassandraRepository;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.repository.query.Param;

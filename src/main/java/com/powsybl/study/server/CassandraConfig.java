@@ -6,6 +6,7 @@
  */
 package com.powsybl.study.server;
 
+import com.powsybl.study.server.repository.StudyRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
