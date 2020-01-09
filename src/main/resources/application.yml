@@ -1,0 +1,23 @@
+server :
+  port : 5001
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 103MB
+
+backing-services:
+  case:
+    base-uri: http://localhost:5000
+  single-line-diagram:
+    base-uri: http://localhost:5005
+  network-conversion:
+    base-uri: http://localhost:5003
+  geo-data:
+    base-uri: http://localhost:8087
+
+network-store-server:
+  preloading-strategy: COLLECTION
+  base-uri: http://localhost:8080/
+
