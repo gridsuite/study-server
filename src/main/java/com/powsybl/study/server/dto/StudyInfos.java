@@ -9,12 +9,14 @@ package com.powsybl.study.server.dto;
 import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @ApiModel("Study attributes")
 public class StudyInfos {

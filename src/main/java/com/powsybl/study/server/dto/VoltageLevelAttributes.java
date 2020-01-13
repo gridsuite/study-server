@@ -16,6 +16,7 @@ import lombok.*;
  */
 
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @ApiModel("Voltage level attributes")
 public class VoltageLevelAttributes {
