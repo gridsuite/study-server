@@ -86,7 +86,7 @@ public class StudyService {
 
     List<StudyInfos> getStudyList() {
         List<Study> studyList = studyRepository.findAll();
-        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseName())).collect(Collectors.toList());
+        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat())).collect(Collectors.toList());
     }
 
     void createStudy(String studyName, String caseName, String description) {

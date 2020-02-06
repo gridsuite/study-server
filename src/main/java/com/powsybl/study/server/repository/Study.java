@@ -38,6 +38,6 @@ public class Study implements Serializable {
     @Column("description")
     private String description;
 
-    @Column("caseName")
-    private String caseName;
+    @Column("caseFormat")
+    private String caseFormat;
 }

@@ -173,7 +173,7 @@ public class StudyTest {
         assertEquals("[]", result.getResponse().getContentAsString());
 
         //insert a study
-        mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", STUDY_NAME, "caseName")
+        mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", STUDY_NAME, "caseName.xiidm")
                 .param(DESCRIPTION, DESCRIPTION))
                 .andExpect(status().isOk());
 
@@ -190,7 +190,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\"}]",
+        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"\"}]",
                 result.getResponse().getContentAsString());
 
         //insert the same study => 409 conflict
@@ -225,7 +225,7 @@ public class StudyTest {
                  .andExpect(status().isOk())
                  .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                  .andReturn();
-        assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"testCase.xiidm\",\"description\":\"desc\"}",
+        assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"testCase.xiidm\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\"}",
                 result.getResponse().getContentAsString());
 
         //get a non existing study -> 404 not found
