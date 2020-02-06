@@ -13,6 +13,7 @@ import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import com.powsybl.study.server.repository.Study;
 import com.powsybl.study.server.repository.StudyRepository;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -85,19 +86,25 @@ public class StudyService {
 
     List<StudyInfos> getStudyList() {
         List<Study> studyList = studyRepository.findAll();
-        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription())).collect(Collectors.toList());
+        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseName())).collect(Collectors.toList());
     }
 
     void createStudy(String studyName, String caseName, String description) {
         NetworkInfos networkInfos = persistentStore(caseName);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseName, description);
+        String caseFormat = getCaseFormat(caseName);
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseName, description, caseFormat);
         studyRepository.insert(study);
+    }
+
+    private String getCaseFormat(String caseName) {
+        return FilenameUtils.getExtension(caseName).toUpperCase();
     }
 
     void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
         importCase(caseFile);
         NetworkInfos networkInfos = persistentStore(caseFile.getOriginalFilename());
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFile.getOriginalFilename(), description);
+        String caseFormat = getCaseFormat(caseFile.getOriginalFilename());
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFile.getOriginalFilename(), description, caseFormat);
         studyRepository.insert(study);
     }
 
