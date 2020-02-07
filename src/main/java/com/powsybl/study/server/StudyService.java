@@ -294,14 +294,11 @@ public class StudyService {
     }
 
     String getSubstationsMapData(UUID networkUuid) {
-        Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put(NETWORK_UUID, networkUuid);
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/substations/{networkUuid}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(networkMapServerBaseUri + "/" + NETWORK_MAP_API_VERSION +
-                "/substations/{networkUuid}")
-                .uriVariables(urlParams);
-
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 String.class);
@@ -310,14 +307,11 @@ public class StudyService {
     }
 
     String getLinesMapData(UUID networkUuid) {
-        Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put(NETWORK_UUID, networkUuid);
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/lines/{networkUuid}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(networkMapServerBaseUri + "/" + NETWORK_MAP_API_VERSION +
-                "/lines/{networkUuid}")
-                .uriVariables(urlParams);
-
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 String.class);

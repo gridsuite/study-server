@@ -175,13 +175,13 @@ public class StudyTest {
                 eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
 
         given(networkMapServerRest.exchange(
-                eq("http://localhost:5006/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
+                eq("/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
 
         given(networkMapServerRest.exchange(
-                eq("http://localhost:5006/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
+                eq("/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
