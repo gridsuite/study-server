@@ -98,6 +98,18 @@ public class StudyTest {
         studyService.setGeoDataServerRest(geoDataServerRest);
 
         given(caseServerRest.exchange(
+                eq("http://localhost:5000/v1/cases/caseName/format"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
+
+        given(caseServerRest.exchange(
+                eq("http://localhost:5000/v1/cases/testCase.xiidm/format"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class))).willReturn(new ResponseEntity<>("XIIDM", HttpStatus.OK));
+
+        given(caseServerRest.exchange(
                 eq("http://localhost:5000/v1/cases/caseName/exists"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
@@ -190,7 +202,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\"}]",
+        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"\"}]",
                 result.getResponse().getContentAsString());
 
         //insert the same study => 409 conflict
@@ -222,10 +234,10 @@ public class StudyTest {
         }
 
         result = mvc.perform(get(STUDIES_URL, "s2"))
-                 .andExpect(status().isOk())
-                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                 .andReturn();
-        assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"testCase.xiidm\",\"description\":\"desc\"}",
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"testCase.xiidm\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\"}",
                 result.getResponse().getContentAsString());
 
         //get a non existing study -> 404 not found

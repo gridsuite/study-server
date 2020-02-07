@@ -3,5 +3,6 @@ CREATE TABLE IF NOT EXISTS study.study (
     networkUuid uuid,
     networkId text,
     caseName text,
-    description text
+    description text,
+    caseFormat text
 );

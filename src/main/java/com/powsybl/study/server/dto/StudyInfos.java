@@ -24,4 +24,6 @@ public class StudyInfos {
     String studyName;
 
     String description;
+
+    String caseFormat;
 }

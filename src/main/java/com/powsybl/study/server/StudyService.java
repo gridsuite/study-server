@@ -85,19 +85,39 @@ public class StudyService {
 
     List<StudyInfos> getStudyList() {
         List<Study> studyList = studyRepository.findAll();
-        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription())).collect(Collectors.toList());
+        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat())).collect(Collectors.toList());
     }
 
     void createStudy(String studyName, String caseName, String description) {
         NetworkInfos networkInfos = persistentStore(caseName);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseName, description);
+        String caseFormat = getCaseFormat(caseName);
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseName, description, caseFormat);
         studyRepository.insert(study);
+    }
+
+    private String getCaseFormat(String caseName) {
+        HttpHeaders requestHeaders = new HttpHeaders();
+        HttpEntity requestEntity = new HttpEntity(requestHeaders);
+
+        Map<String, Object> urlParams = new HashMap<>();
+        urlParams.put(CASE_NAME, caseName);
+
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/{caseName}/format")
+                .uriVariables(urlParams);
+
+        ResponseEntity<String> responseEntity = caseServerRest.exchange(uriBuilder.toUriString(),
+                HttpMethod.GET,
+                requestEntity,
+                String.class);
+
+        return responseEntity.getBody();
     }
 
     void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
         importCase(caseFile);
         NetworkInfos networkInfos = persistentStore(caseFile.getOriginalFilename());
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFile.getOriginalFilename(), description);
+        String caseFormat = getCaseFormat(caseFile.getOriginalFilename());
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFile.getOriginalFilename(), description, caseFormat);
         studyRepository.insert(study);
     }
 
