@@ -13,7 +13,6 @@ import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import com.powsybl.study.server.repository.Study;
 import com.powsybl.study.server.repository.StudyRepository;
-import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -97,7 +96,21 @@ public class StudyService {
     }
 
     private String getCaseFormat(String caseName) {
-        return FilenameUtils.getExtension(caseName).toUpperCase();
+        HttpHeaders requestHeaders = new HttpHeaders();
+        HttpEntity requestEntity = new HttpEntity(requestHeaders);
+
+        Map<String, Object> urlParams = new HashMap<>();
+        urlParams.put(CASE_NAME, caseName);
+
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/{caseName}/format")
+                .uriVariables(urlParams);
+
+        ResponseEntity<String> responseEntity = caseServerRest.exchange(uriBuilder.toUriString(),
+                HttpMethod.GET,
+                requestEntity,
+                String.class);
+
+        return responseEntity.getBody();
     }
 
     void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
