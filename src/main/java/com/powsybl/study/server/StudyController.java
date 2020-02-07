@@ -164,4 +164,22 @@ public class StudyController {
         return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationGraphics);
     }
 
+    @GetMapping(value = "/studies/{studyName}/network-map/lines")
+    @ApiOperation(value = "Get Network lines description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
+    public ResponseEntity<String> getLinesMapData(@PathVariable("studyName") String studyName) {
+        UUID networkUuid = studyService.getStudyUuid(studyName);
+        String linesMapData = studyService.getLinesMapData(networkUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(linesMapData);
+    }
+
+    @GetMapping(value = "/studies/{studyName}/network-map/substations")
+    @ApiOperation(value = "Get Network substations description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
+    public ResponseEntity<String> getSubstationsMapData(@PathVariable("studyName") String studyName) {
+        UUID networkUuid = studyService.getStudyUuid(studyName);
+        String substationMapData = studyService.getSubstationsMapData(networkUuid);
+        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationMapData);
+    }
+
 }
