@@ -17,6 +17,7 @@ import org.cassandraunit.spring.CassandraDataSet;
 import org.cassandraunit.spring.CassandraUnitDependencyInjectionTestExecutionListener;
 import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
 import org.cassandraunit.spring.EmbeddedCassandra;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -80,6 +81,9 @@ public class StudyTest {
     @Mock
     private RestTemplate geoDataServerRest;
 
+    @Mock
+    private RestTemplate networkMapServerRest;
+
     @MockBean
     private NetworkStoreService networkStoreClient;
 
@@ -91,11 +95,13 @@ public class StudyTest {
     private final UUID networkUuid = UUID.fromString(TEST_UUID);
     private final NetworkInfos networkInfos = new NetworkInfos(networkUuid, "20140116_0830_2D4_UX1_pst");
 
+    @Before
     public void setup() {
         studyService.setCaseServerRest(caseServerRest);
         studyService.setNetworkConversionServerRest(networkConversionServerRest);
         studyService.setSingleLineDiagramServerRest(singleLineDiagramServerRest);
         studyService.setGeoDataServerRest(geoDataServerRest);
+        studyService.setNetworkMapServerRest(networkMapServerRest);
 
         given(caseServerRest.exchange(
                 eq("http://localhost:5000/v1/cases/caseName/format"),
@@ -168,6 +174,18 @@ public class StudyTest {
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
 
+        given(networkMapServerRest.exchange(
+                eq("http://localhost:5006/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
+
+        given(networkMapServerRest.exchange(
+                eq("http://localhost:5006/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
+
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
                 new ResourceSet("", TEST_FILE));
         Network network = Importers.importData("XIIDM", dataSource, null);
@@ -176,7 +194,6 @@ public class StudyTest {
 
     @Test
     public void test() throws Exception {
-        setup();
         //empty
         MvcResult result = mvc.perform(get("/v1/studies"))
                 .andExpect(status().isOk())
@@ -292,6 +309,16 @@ public class StudyTest {
 
         //get the substation-graphics of a network
         mvc.perform(get("/v1/studies/{studyName}/geo-data/substations/", STUDY_NAME))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        //get the lines map data of a network
+        mvc.perform(get("/v1/studies/{studyName}/network-map/lines/", STUDY_NAME))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        //get the substation map data of a network
+        mvc.perform(get("/v1/studies/{studyName}/network-map/substations/", STUDY_NAME))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 

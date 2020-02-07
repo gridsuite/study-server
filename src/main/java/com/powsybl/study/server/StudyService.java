@@ -103,9 +103,6 @@ public class StudyService {
     }
 
     private String getCaseFormat(String caseName) {
-        HttpHeaders requestHeaders = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity(requestHeaders);
-
         Map<String, Object> urlParams = new HashMap<>();
         urlParams.put(CASE_NAME, caseName);
 
@@ -114,7 +111,7 @@ public class StudyService {
 
         ResponseEntity<String> responseEntity = caseServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET,
-                requestEntity,
+                HttpEntity.EMPTY,
                 String.class);
 
         return responseEntity.getBody();
@@ -155,7 +152,7 @@ public class StudyService {
         }
     }
 
-    String importCase(MultipartFile multipartFile) throws IOException {
+    void importCase(MultipartFile multipartFile) throws IOException {
         HttpHeaders requestHeaders = new HttpHeaders();
         requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
 
@@ -175,20 +172,16 @@ public class StudyService {
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(map, requestHeaders);
 
         try {
-            ResponseEntity<String> responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
+            caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
                     HttpMethod.POST,
                     requestEntity,
                     String.class);
-            return responseEntity.getBody();
         } catch (HttpStatusCodeException e) {
             throw new StudyException("importCase " + e.getStatusCode() + " : " + e.getResponseBodyAsString(), e);
         }
     }
 
     byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId) {
-        HttpHeaders requestHeaders = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity(requestHeaders);
-
         Map<String, Object> urlParams = new HashMap<>();
         urlParams.put(NETWORK_UUID, networkUuid);
         urlParams.put("voltageLevelId", voltageLevelId);
@@ -199,23 +192,17 @@ public class StudyService {
 
         ResponseEntity<byte[]> responseEntity = singleLineDiagramServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET,
-                requestEntity,
+                HttpEntity.EMPTY,
                 byte[].class);
         return responseEntity.getBody();
     }
 
     private NetworkInfos persistentStore(String caseName) {
-        HttpHeaders requestHeaders = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity(requestHeaders);
-
-        Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put(CASE_NAME, caseName);
-
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(networkConversionServerBaseUri + "/" + NETWORK_CONVERSION_API_VERSION +
                 "/networks").queryParam(CASE_NAME, caseName);
         ResponseEntity<NetworkInfos> responseEntity = networkConversionServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.POST,
-                requestEntity,
+                HttpEntity.EMPTY,
                 NetworkInfos.class);
         return responseEntity.getBody();
     }
@@ -259,9 +246,6 @@ public class StudyService {
     }
 
     boolean caseExists(String caseName) {
-        HttpHeaders requestHeaders = new HttpHeaders();
-        HttpEntity requestEntity = new HttpEntity(requestHeaders);
-
         Map<String, Object> urlParams = new HashMap<>();
         urlParams.put(CASE_NAME, caseName);
 
@@ -270,7 +254,7 @@ public class StudyService {
 
         ResponseEntity<Boolean> responseEntity = caseServerRest.exchange(uriBuilder.toUriString(),
                 HttpMethod.GET,
-                requestEntity,
+                HttpEntity.EMPTY,
                 Boolean.class);
 
         return Boolean.TRUE.equals(responseEntity.getBody());
@@ -305,8 +289,11 @@ public class StudyService {
         this.geoDataServerRest = Objects.requireNonNull(geoDataServerRest);
     }
 
-    String getSubstationsMapData(UUID networkUuid) {
+    void setNetworkMapServerRest(RestTemplate networkMapServerRest) {
+        this.networkMapServerRest = Objects.requireNonNull(networkMapServerRest);
+    }
 
+    String getSubstationsMapData(UUID networkUuid) {
         Map<String, Object> urlParams = new HashMap<>();
         urlParams.put(NETWORK_UUID, networkUuid);
 
@@ -323,7 +310,6 @@ public class StudyService {
     }
 
     String getLinesMapData(UUID networkUuid) {
-
         Map<String, Object> urlParams = new HashMap<>();
         urlParams.put(NETWORK_UUID, networkUuid);
 
@@ -338,5 +324,4 @@ public class StudyService {
 
         return responseEntity.getBody();
     }
-
 }
