@@ -49,12 +49,6 @@ public class StudyService {
     private RestTemplate geoDataServerRest;
     private RestTemplate networkMapServerRest;
 
-    private String caseServerBaseUri;
-    private String singleLineDiagramServerBaseUri;
-    private String networkConversionServerBaseUri;
-    private String geoDataServerBaseUri;
-    private String networkMapServerBaseUri;
-
     @Autowired
     private NetworkStoreService networkStoreClient;
 
@@ -71,23 +65,18 @@ public class StudyService {
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
         caseServerRest = restTemplateBuilder.build();
         caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
-        this.caseServerBaseUri = caseServerBaseUri;
 
         singleLineDiagramServerRest = restTemplateBuilder.build();
         singleLineDiagramServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(singleLineDiagramServerBaseUri));
-        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
 
         networkConversionServerRest = restTemplateBuilder.build();
         networkConversionServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkConversionServerBaseUri));
-        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
 
         geoDataServerRest = restTemplateBuilder.build();
         geoDataServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(geoDataServerBaseUri));
-        this.geoDataServerBaseUri = geoDataServerBaseUri;
 
         networkMapServerRest = restTemplateBuilder.build();
         networkMapServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkMapServerBaseUri));
-        this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
 
     List<StudyInfos> getStudyList() {
@@ -103,13 +92,11 @@ public class StudyService {
     }
 
     private String getCaseFormat(String caseName) {
-        Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put(CASE_NAME, caseName);
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseName}/format")
+                .buildAndExpand(caseName)
+                .toUriString();
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/{caseName}/format")
-                .uriVariables(urlParams);
-
-        ResponseEntity<String> responseEntity = caseServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = caseServerRest.exchange(path,
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 String.class);
@@ -182,15 +169,11 @@ public class StudyService {
     }
 
     byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId) {
-        Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put(NETWORK_UUID, networkUuid);
-        urlParams.put("voltageLevelId", voltageLevelId);
+        String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
+                .buildAndExpand(networkUuid, voltageLevelId)
+                .toUriString();
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(singleLineDiagramServerBaseUri + "/" + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/svg/{networkUuid}/{voltageLevelId}")
-                .uriVariables(urlParams);
-
-        ResponseEntity<byte[]> responseEntity = singleLineDiagramServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<byte[]> responseEntity = singleLineDiagramServerRest.exchange(path,
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 byte[].class);
@@ -198,9 +181,12 @@ public class StudyService {
     }
 
     private NetworkInfos persistentStore(String caseName) {
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(networkConversionServerBaseUri + "/" + NETWORK_CONVERSION_API_VERSION +
-                "/networks").queryParam(CASE_NAME, caseName);
-        ResponseEntity<NetworkInfos> responseEntity = networkConversionServerRest.exchange(uriBuilder.toUriString(),
+        String path = UriComponentsBuilder.fromPath("/" + NETWORK_CONVERSION_API_VERSION + "/networks")
+                .queryParam(CASE_NAME, caseName)
+                .buildAndExpand()
+                .toUriString();
+
+        ResponseEntity<NetworkInfos> responseEntity = networkConversionServerRest.exchange(path,
                 HttpMethod.POST,
                 HttpEntity.EMPTY,
                 NetworkInfos.class);
@@ -220,11 +206,12 @@ public class StudyService {
     }
 
     String getLinesGraphics(UUID networkUuid) {
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(geoDataServerBaseUri + "/" + GEO_DATA_API_VERSION +
-                "/lines")
-                .queryParam("networkUuid", networkUuid);
+        String path = UriComponentsBuilder.fromPath("/" + GEO_DATA_API_VERSION + "/lines")
+                .queryParam(NETWORK_UUID, networkUuid)
+                .buildAndExpand()
+                .toUriString();
 
-        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 String.class);
@@ -233,11 +220,12 @@ public class StudyService {
     }
 
     String getSubstationsGraphics(UUID networkUuid) {
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(geoDataServerBaseUri + "/" + GEO_DATA_API_VERSION +
-                "/substations")
-                .queryParam("networkUuid", networkUuid);
+        String path = UriComponentsBuilder.fromPath("/" + GEO_DATA_API_VERSION + "/substations")
+                .queryParam(NETWORK_UUID, networkUuid)
+                .buildAndExpand()
+                .toUriString();
 
-        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 String.class);
@@ -246,18 +234,42 @@ public class StudyService {
     }
 
     boolean caseExists(String caseName) {
-        Map<String, Object> urlParams = new HashMap<>();
-        urlParams.put(CASE_NAME, caseName);
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseName}/exists")
+                .buildAndExpand(caseName)
+                .toUriString();
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/{caseName}/exists")
-                .uriVariables(urlParams);
-
-        ResponseEntity<Boolean> responseEntity = caseServerRest.exchange(uriBuilder.toUriString(),
+        ResponseEntity<Boolean> responseEntity = caseServerRest.exchange(path,
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 Boolean.class);
 
         return Boolean.TRUE.equals(responseEntity.getBody());
+    }
+
+    String getSubstationsMapData(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/substations/{networkUuid}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
+                HttpMethod.GET,
+                RequestEntity.EMPTY,
+                String.class);
+
+        return responseEntity.getBody();
+    }
+
+    String getLinesMapData(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/lines/{networkUuid}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
+                HttpMethod.GET,
+                RequestEntity.EMPTY,
+                String.class);
+
+        return responseEntity.getBody();
     }
 
     UUID getStudyUuid(String studyName) {
@@ -291,31 +303,5 @@ public class StudyService {
 
     void setNetworkMapServerRest(RestTemplate networkMapServerRest) {
         this.networkMapServerRest = Objects.requireNonNull(networkMapServerRest);
-    }
-
-    String getSubstationsMapData(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/substations/{networkUuid}")
-                .buildAndExpand(networkUuid)
-                .toUriString();
-
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
-                HttpMethod.GET,
-                RequestEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
-    }
-
-    String getLinesMapData(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/lines/{networkUuid}")
-                .buildAndExpand(networkUuid)
-                .toUriString();
-
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
-                HttpMethod.GET,
-                RequestEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
     }
 }
