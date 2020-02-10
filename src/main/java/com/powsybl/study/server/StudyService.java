@@ -213,7 +213,7 @@ public class StudyService {
 
         ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
                 HttpMethod.GET,
-                RequestEntity.EMPTY,
+                HttpEntity.EMPTY,
                 String.class);
 
         return responseEntity.getBody();
@@ -227,7 +227,7 @@ public class StudyService {
 
         ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
                 HttpMethod.GET,
-                RequestEntity.EMPTY,
+                HttpEntity.EMPTY,
                 String.class);
 
         return responseEntity.getBody();
@@ -253,7 +253,7 @@ public class StudyService {
 
         ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
                 HttpMethod.GET,
-                RequestEntity.EMPTY,
+                HttpEntity.EMPTY,
                 String.class);
 
         return responseEntity.getBody();
@@ -266,7 +266,7 @@ public class StudyService {
 
         ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
                 HttpMethod.GET,
-                RequestEntity.EMPTY,
+                HttpEntity.EMPTY,
                 String.class);
 
         return responseEntity.getBody();
