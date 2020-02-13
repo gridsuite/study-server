@@ -12,6 +12,7 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.study.server.dto.CaseInfos;
 import com.powsybl.study.server.dto.NetworkInfos;
 import org.cassandraunit.spring.CassandraDataSet;
 import org.cassandraunit.spring.CassandraUnitDependencyInjectionTestExecutionListener;
@@ -133,16 +134,15 @@ public class StudyTest {
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
 
-        Map<String, String> caseList = new HashMap<>();
-        caseList.put("case1Path", "case1");
-        caseList.put("case2Path", "case2");
-        caseList.put("case3Path", "case3");
+        List<CaseInfos> caseList = new ArrayList<>();
+        caseList.add(new CaseInfos("case1", "XIIDM"));
+        caseList.add(new CaseInfos("case2", "XIIDM"));
 
         given(caseServerRest.exchange(
                 eq("/" + CASE_API_VERSION + "/cases"),
                 eq(HttpMethod.GET),
                 eq(null),
-                eq(new ParameterizedTypeReference<Map<String, String>>() { }))).willReturn(new ResponseEntity<>(caseList, HttpStatus.OK));
+                eq(new ParameterizedTypeReference<List<CaseInfos>>() { }))).willReturn(new ResponseEntity<>(caseList, HttpStatus.OK));
 
         given(networkConversionServerRest.exchange(
                 eq("/v1/networks?caseName=caseName"),
@@ -267,7 +267,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("{\"case1Path\":\"case1\",\"case2Path\":\"case2\",\"case3Path\":\"case3\"}", result.getResponse().getContentAsString());
+        assertEquals("[{\"name\":\"case1\",\"format\":\"XIIDM\"},{\"name\":\"case2\",\"format\":\"XIIDM\"}]", result.getResponse().getContentAsString());
 
         //get the voltage level diagram svg
         result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", STUDY_NAME, "voltageLevelId"))

@@ -8,6 +8,7 @@ package com.powsybl.study.server;
 
 import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.study.server.dto.CaseInfos;
 import com.powsybl.study.server.dto.NetworkInfos;
 import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
@@ -120,9 +121,9 @@ public class StudyService {
         studyRepository.deleteByName(studyName);
     }
 
-    Map<String, String> getCaseList() {
-        ParameterizedTypeReference<Map<String, String>> parameterizedTypeReference = new ParameterizedTypeReference<Map<String, String>>() { };
-        ResponseEntity<Map<String, String>> responseEntity;
+    List<CaseInfos> getCaseList() {
+        ParameterizedTypeReference<List<CaseInfos>> parameterizedTypeReference = new ParameterizedTypeReference<List<CaseInfos>>() { };
+        ResponseEntity<List<CaseInfos>> responseEntity;
         try {
             responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
                     HttpMethod.GET,
@@ -132,7 +133,7 @@ public class StudyService {
             if (responseEntity.getStatusCode() == HttpStatus.OK) {
                 return responseEntity.getBody();
             } else {
-                return null;
+                return Collections.emptyList();
             }
         } catch (HttpStatusCodeException e) {
             throw new StudyException("getCaseList HttpStatusCodeException", e);
