@@ -6,6 +6,7 @@
  */
 package com.powsybl.study.server;
 
+import com.powsybl.study.server.dto.CaseInfos;
 import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import com.powsybl.study.server.repository.Study;
@@ -25,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static com.powsybl.study.server.StudyConstants.*;
@@ -120,8 +120,8 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The case list"),
             @ApiResponse(code = 500, message = "The storage is down")})
-    public ResponseEntity<Map<String, String>> getCaseList() {
-        Map<String, String> caseList = studyService.getCaseList();
+    public ResponseEntity<List<CaseInfos>> getCaseList() {
+        List<CaseInfos> caseList = studyService.getCaseList();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(caseList);
     }
 
