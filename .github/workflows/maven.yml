@@ -49,3 +49,10 @@ jobs:
           -Djib.to.image=docker.io/powsybl/study-server
           -Djib.to.auth.username=powsyblci
           -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Broadcast update event
+        if: github.ref == 'refs/heads/master'
+        uses: geofjamg/broadcast-event@master
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          event-type: study_server_updated
