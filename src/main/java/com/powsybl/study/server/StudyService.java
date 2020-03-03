@@ -169,8 +169,9 @@ public class StudyService {
         }
     }
 
-    byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId) {
+    byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName) {
         String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
+                .queryParam("useName", useName)
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 

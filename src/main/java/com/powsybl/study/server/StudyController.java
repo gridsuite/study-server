@@ -10,10 +10,7 @@ import com.powsybl.study.server.dto.CaseInfos;
 import com.powsybl.study.server.dto.StudyInfos;
 import com.powsybl.study.server.dto.VoltageLevelAttributes;
 import com.powsybl.study.server.repository.Study;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
@@ -130,10 +127,11 @@ public class StudyController {
     @ApiResponse(code = 200, message = "The svg")
     public ResponseEntity<byte[]> getVoltageLevelDiagram(
             @PathVariable("studyName") String studyName,
-            @PathVariable("voltageLevelId") String voltageLevelId) {
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName) {
         UUID networkUuid = studyService.getStudyUuid(studyName);
 
-        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId);
+        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId, useName);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg);
     }
 

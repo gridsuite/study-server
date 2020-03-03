@@ -157,7 +157,7 @@ public class StudyTest {
                 eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
 
         given(singleLineDiagramServerRest.exchange(
-                eq("/v1/svg/" + networkUuid + "/voltageLevelId"),
+                eq("/v1/svg/" + networkUuid + "/voltageLevelId?useName=false"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(byte[].class))).willReturn(new ResponseEntity<>("byte".getBytes(), HttpStatus.OK));
@@ -270,7 +270,7 @@ public class StudyTest {
         assertEquals("[{\"name\":\"case1\",\"format\":\"XIIDM\"},{\"name\":\"case2\",\"format\":\"XIIDM\"}]", result.getResponse().getContentAsString());
 
         //get the voltage level diagram svg
-        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", STUDY_NAME, "voltageLevelId"))
+        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", STUDY_NAME, "voltageLevelId"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andReturn();
