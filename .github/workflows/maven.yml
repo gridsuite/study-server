@@ -16,6 +16,12 @@ jobs:
         with:
           java-version: 11
 
+      - name: Download cassandra 4.0-alpha3
+        run : cd && wget "https://downloads.apache.org/cassandra/4.0-alpha3/apache-cassandra-4.0-alpha3-bin.tar.gz"
+
+      - name: untar cassandra
+        run: cd && tar xvzf apache-cassandra-4.0-alpha3-bin.tar.gz
+
       - name: Checkout network store sources
         uses: actions/checkout@v1
         with:

@@ -59,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class)
 @WebMvcTest(StudyController.class)
-@EmbeddedCassandra(scripts = "study_test.cql")
+@EmbeddedCassandra(scripts = "study.cql")
 @EnableWebMvc
 @ContextConfiguration(classes = {StudyApplication.class, StudyService.class, CassandraConfig.class})
 public class StudyTest {
@@ -71,7 +71,7 @@ public class StudyTest {
         CassandraFactory cassandraFactory() throws UnknownHostException {
             EmbeddedCassandraFactory cassandraFactory = new EmbeddedCassandraFactory();
             Version version = Version.of("4.0-alpha3");
-            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha3-bin/apache-cassandra-4.0-alpha3");
+            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha3");
             cassandraFactory.setArtifact(new DefaultArtifact(version, directory));
             cassandraFactory.setPort(9142);
             cassandraFactory.setAddress(InetAddress.getByName("localhost"));
