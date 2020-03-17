@@ -55,6 +55,7 @@
         <guava.version>20.0</guava.version>
         <cassandraunit.version>3.11.2.0</cassandraunit.version>
         <datastax.version>3.7.2</datastax.version>
+        <embedded-cassandra.version>3.0.3</embedded-cassandra.version>
         <lombok.version>1.18.8</lombok.version>
         <metricscore.version>3.2.6</metricscore.version>
         <springboot.version>2.2.2.RELEASE</springboot.version>
@@ -107,7 +108,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven.surefire.version}</version>
                     <configuration>
-                        <forkCount>1</forkCount>
+                        <forkCount>0</forkCount>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -270,15 +271,9 @@
         <dependency>
             <groupId>com.github.nosan</groupId>
             <artifactId>embedded-cassandra-spring-test</artifactId>
-            <version>3.0.3</version>
+            <version>${embedded-cassandra.version}</version>
             <scope>test</scope>
         </dependency>
- <!--       <dependency>
-            <groupId>com.datastax.oss</groupId>
-            <artifactId>java-driver-core</artifactId>
-            <version>4.0.0</version>
-            <scope>test</scope>
-        </dependency> -->
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-iidm-xml-converter</artifactId>

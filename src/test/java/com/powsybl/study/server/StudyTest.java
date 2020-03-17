@@ -59,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class)
 @WebMvcTest(StudyController.class)
-@EmbeddedCassandra(scripts = "study.cql")
+@EmbeddedCassandra(scripts = "classpath:study_test.cql")
 @EnableWebMvc
 @ContextConfiguration(classes = {StudyApplication.class, StudyService.class, CassandraConfig.class})
 public class StudyTest {
