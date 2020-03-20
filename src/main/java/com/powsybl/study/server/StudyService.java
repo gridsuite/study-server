@@ -182,6 +182,19 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
+    String getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName) {
+        String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
+                .queryParam("useName", useName)
+                .buildAndExpand(networkUuid, voltageLevelId)
+                .toUriString();
+
+        ResponseEntity<String> responseEntity = singleLineDiagramServerRest.exchange(path,
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class);
+        return responseEntity.getBody();
+    }
+
     private NetworkInfos persistentStore(String caseName) {
         String path = UriComponentsBuilder.fromPath("/" + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_NAME, caseName)
