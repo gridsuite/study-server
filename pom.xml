@@ -65,6 +65,8 @@
 
         <powsybl-core.version>3.1.0</powsybl-core.version>
         <network-store-client.version>1.0.0-SNAPSHOT</network-store-client.version>
+
+        <integration.skip>true</integration.skip>
     </properties>
 
     <build>
@@ -109,6 +111,7 @@
                     <version>${maven.surefire.version}</version>
                     <configuration>
                         <forkCount>0</forkCount>
+                        <skipTests>${integration.skip}</skipTests>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -194,6 +197,12 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>integration-test</id>
+            <properties>
+                <integration.skip>false</integration.skip>
+            </properties>
         </profile>
     </profiles>
 
