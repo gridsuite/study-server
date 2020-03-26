@@ -26,7 +26,7 @@ jobs:
         run: >
           cd
           && cd ./apache-cassandra-4.0-alpha3/conf/
-          && sed -i 's/- seeds: "127.0.0.1:7000/- seeds: "127.0.0.1:16432"' ./cassandra.yaml
+          && sed -i 's/- seeds: "127.0.0.1:7000"/- seeds: "127.0.0.1:16432"/' ./cassandra.yaml
 
       - name: Checkout network store sources
         uses: actions/checkout@v1

@@ -182,6 +182,12 @@ public class StudyTest {
                 any(HttpEntity.class),
                 eq(byte[].class))).willReturn(new ResponseEntity<>("byte".getBytes(), HttpStatus.OK));
 
+        given(singleLineDiagramServerRest.exchange(
+                eq("/v1/svg-and-metadata/" + networkUuid + "/voltageLevelId?useName=false"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(String.class))).willReturn(new ResponseEntity<>("svgandmetadata", HttpStatus.OK));
+
         given(geoDataServerRest.exchange(
                 eq("/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d"),
                 eq(HttpMethod.GET),
@@ -299,6 +305,18 @@ public class StudyTest {
         //get the voltage level diagram svg from a study that doesn't exist
 
         result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", "notExistingStudy", "voltageLevelId"))
+                .andExpect(status().isNotFound())
+                .andReturn();
+
+        //get the voltage level diagram svg and metadata
+        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", STUDY_NAME, "voltageLevelId"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        assertEquals("svgandmetadata", result.getResponse().getContentAsString());
+
+        //get the voltage level diagram svg and metadata from a study that doesn't exist
+        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "notExistingStudy", "voltageLevelId"))
                 .andExpect(status().isNotFound())
                 .andReturn();
 
