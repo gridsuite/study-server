@@ -135,6 +135,18 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg);
     }
 
+    @GetMapping(value = "/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
+    @ApiOperation(value = "get the voltage level diagram for the given network and voltage level", produces = "application/json")
+    @ApiResponse(code = 200, message = "The svg and metadata")
+    public ResponseEntity<String> getVoltageLevelDiagramAndMetadata(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName) {
+        UUID networkUuid = studyService.getStudyUuid(studyName);
+        String svgAndMetadata = studyService.getVoltageLevelSvgAndMetadata(networkUuid, voltageLevelId, useName);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(svgAndMetadata);
+    }
+
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels")
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
