@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -62,6 +63,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EmbeddedCassandra(scripts = {"classpath:create_keyspace.cql", "classpath:study.cql"})
 @EnableWebMvc
 @ContextConfiguration(classes = {StudyApplication.class, StudyService.class, CassandraConfig.class})
+@DirtiesContext
 public class StudyTest {
 
     @Configuration
@@ -71,9 +73,11 @@ public class StudyTest {
         CassandraFactory cassandraFactory() throws UnknownHostException {
             EmbeddedCassandraFactory cassandraFactory = new EmbeddedCassandraFactory();
             Version version = Version.of("4.0-alpha3");
-            Path directory = Paths.get("/home/hedhiliabd/apache-cassandra-4.0-alpha3");
+            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha3");
             cassandraFactory.setArtifact(new DefaultArtifact(version, directory));
             cassandraFactory.setPort(9142);
+            cassandraFactory.setJmxLocalPort(0);
+            cassandraFactory.setRpcPort(0);
             cassandraFactory.setAddress(InetAddress.getByName("localhost"));
             return cassandraFactory;
         }
