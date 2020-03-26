@@ -22,6 +22,12 @@ jobs:
       - name: untar cassandra
         run: cd && tar xvzf apache-cassandra-4.0-alpha3-bin.tar.gz
 
+      - name: Change cassandra storage port
+        run: >
+          cd
+          && cd ./apache-cassandra-4.0-alpha3/conf/
+          && sed -i 's/- seeds: "127.0.0.1:7000/- seeds: "127.0.0.1:16432"' ./cassandra.yaml
+
       - name: Checkout network store sources
         uses: actions/checkout@v1
         with:
