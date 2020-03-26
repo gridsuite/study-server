@@ -199,7 +199,7 @@
             </build>
         </profile>
         <profile>
-            <id>integration-test</id>
+            <id>perform-integration-test</id>
             <properties>
                 <integration.skip>false</integration.skip>
             </properties>
