@@ -6,6 +6,11 @@
  */
 package com.powsybl.study.server;
 
+import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory;
+import com.github.nosan.embedded.cassandra.api.CassandraFactory;
+import com.github.nosan.embedded.cassandra.api.Version;
+import com.github.nosan.embedded.cassandra.artifact.DefaultArtifact;
+import com.github.nosan.embedded.cassandra.spring.test.EmbeddedCassandra;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -14,10 +19,6 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.study.server.dto.CaseInfos;
 import com.powsybl.study.server.dto.NetworkInfos;
-import org.cassandraunit.spring.CassandraDataSet;
-import org.cassandraunit.spring.CassandraUnitDependencyInjectionTestExecutionListener;
-import org.cassandraunit.spring.CassandraUnitTestExecutionListener;
-import org.cassandraunit.spring.EmbeddedCassandra;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,11 +26,13 @@ import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -38,13 +41,20 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.io.InputStream;
-import java.util.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import static com.powsybl.study.server.StudyConstants.*;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.context.TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,14 +65,32 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class)
 @WebMvcTest(StudyController.class)
+@EmbeddedCassandra(scripts = {"classpath:create_keyspace.cql", "classpath:study.cql"})
 @EnableWebMvc
 @ContextConfiguration(classes = {StudyApplication.class, StudyService.class, CassandraConfig.class})
-@TestExecutionListeners(listeners = {CassandraUnitDependencyInjectionTestExecutionListener.class,
-        CassandraUnitTestExecutionListener.class},
-        mergeMode = MERGE_WITH_DEFAULTS)
-@CassandraDataSet(value = "study.cql", keyspace = "study")
-@EmbeddedCassandra(timeout = 50000L)
+@DirtiesContext
 public class StudyTest {
+
+    @Configuration
+    static class TestConfig {
+
+        @Bean
+        CassandraFactory cassandraFactory() throws UnknownHostException {
+            EmbeddedCassandraFactory cassandraFactory = new EmbeddedCassandraFactory();
+            Version version = Version.of("4.0-alpha3");
+            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha3");
+            if (!Files.isDirectory(directory)) {
+                throw new IllegalStateException("directory : " + directory + " doesn't exist. You must install a cassandra in your home directory to run the integrations tests");
+            }
+            cassandraFactory.setArtifact(new DefaultArtifact(version, directory));
+            cassandraFactory.setPort(9142);
+            cassandraFactory.setJmxLocalPort(0);
+            cassandraFactory.setRpcPort(0);
+            cassandraFactory.setStoragePort(16432);
+            cassandraFactory.setAddress(InetAddress.getByName("localhost"));
+            return cassandraFactory;
+        }
+    }
 
     @Autowired
     private MockMvc mvc;
