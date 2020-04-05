@@ -19,7 +19,7 @@ jobs:
       - name: Download cassandra 4.0-alpha3
         run : cd && wget "https://downloads.apache.org/cassandra/4.0-alpha3/apache-cassandra-4.0-alpha3-bin.tar.gz"
 
-      - name: untar cassandra
+      - name: Untar cassandra
         run: cd && tar xvzf apache-cassandra-4.0-alpha3-bin.tar.gz
 
       - name: Change cassandra storage port
