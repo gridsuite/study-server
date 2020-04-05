@@ -41,14 +41,19 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.io.InputStream;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import static com.powsybl.study.server.StudyConstants.*;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -74,6 +79,9 @@ public class StudyTest {
             EmbeddedCassandraFactory cassandraFactory = new EmbeddedCassandraFactory();
             Version version = Version.of("4.0-alpha3");
             Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha3");
+            if (!Files.isDirectory(directory)) {
+                throw new IllegalStateException("directory : " + directory + " doesn't exist. You must install a cassandra in your home directory to run the integrations tests");
+            }
             cassandraFactory.setArtifact(new DefaultArtifact(version, directory));
             cassandraFactory.setPort(9142);
             cassandraFactory.setJmxLocalPort(0);
