@@ -109,7 +109,6 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven.surefire.version}</version>
                     <configuration>
-                        <forkCount>0</forkCount>
                         <skipTests>${integration.skip}</skipTests>
                     </configuration>
                 </plugin>
