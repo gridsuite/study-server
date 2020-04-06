@@ -1,4 +1,4 @@
-package com.powsybl.study.server;
+package org.gridsuite.study.server;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import static com.powsybl.study.server.StudyConstants.STUDY_DOESNT_EXISTS;
+import static org.gridsuite.study.server.StudyConstants.STUDY_DOESNT_EXISTS;
 
 @ControllerAdvice
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
