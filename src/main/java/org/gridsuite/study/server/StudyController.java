@@ -4,12 +4,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.study.server;
+package org.gridsuite.study.server;
 
-import com.powsybl.study.server.dto.CaseInfos;
-import com.powsybl.study.server.dto.StudyInfos;
-import com.powsybl.study.server.dto.VoltageLevelAttributes;
-import com.powsybl.study.server.repository.Study;
+import org.gridsuite.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.StudyInfos;
+import org.gridsuite.study.server.dto.VoltageLevelAttributes;
+import org.gridsuite.study.server.repository.Study;
 import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-import static com.powsybl.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>

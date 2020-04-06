@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.study.server;
+package org.gridsuite.study.server;
 
 import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory;
 import com.github.nosan.embedded.cassandra.api.CassandraFactory;
@@ -17,8 +17,8 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.study.server.dto.CaseInfos;
-import com.powsybl.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.NetworkInfos;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,7 +50,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static com.powsybl.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;

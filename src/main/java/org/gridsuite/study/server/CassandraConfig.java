@@ -4,9 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.study.server;
+package org.gridsuite.study.server;
 
-import com.powsybl.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;

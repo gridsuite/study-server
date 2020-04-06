@@ -1,6 +1,6 @@
-package com.powsybl.study.server;
+package org.gridsuite.study.server;
 
-import com.powsybl.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.CaseInfos;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

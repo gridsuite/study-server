@@ -1,4 +1,4 @@
-package com.powsybl.study.server;
+package org.gridsuite.study.server;
 
 class StudyException  extends RuntimeException {
 

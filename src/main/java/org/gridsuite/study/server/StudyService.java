@@ -4,16 +4,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.study.server;
+package org.gridsuite.study.server;
 
 import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.study.server.dto.CaseInfos;
-import com.powsybl.study.server.dto.NetworkInfos;
-import com.powsybl.study.server.dto.StudyInfos;
-import com.powsybl.study.server.dto.VoltageLevelAttributes;
-import com.powsybl.study.server.repository.Study;
-import com.powsybl.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.dto.CaseInfos;
+import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.StudyInfos;
+import org.gridsuite.study.server.dto.VoltageLevelAttributes;
+import org.gridsuite.study.server.repository.Study;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.powsybl.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
