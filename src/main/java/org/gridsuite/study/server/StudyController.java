@@ -128,10 +128,12 @@ public class StudyController {
     public ResponseEntity<byte[]> getVoltageLevelDiagram(
             @PathVariable("studyName") String studyName,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName) {
+            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
+            @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
+            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel) {
         UUID networkUuid = studyService.getStudyUuid(studyName);
 
-        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId, useName);
+        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg);
     }
 
@@ -141,9 +143,11 @@ public class StudyController {
     public ResponseEntity<String> getVoltageLevelDiagramAndMetadata(
             @PathVariable("studyName") String studyName,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName) {
+            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
+            @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
+            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel) {
         UUID networkUuid = studyService.getStudyUuid(studyName);
-        String svgAndMetadata = studyService.getVoltageLevelSvgAndMetadata(networkUuid, voltageLevelId, useName);
+        String svgAndMetadata = studyService.getVoltageLevelSvgAndMetadata(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(svgAndMetadata);
     }
 

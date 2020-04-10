@@ -169,9 +169,11 @@ public class StudyService {
         }
     }
 
-    byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName) {
+    byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel) {
         String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
@@ -182,9 +184,11 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
-    String getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName) {
+    String getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel) {
         String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
