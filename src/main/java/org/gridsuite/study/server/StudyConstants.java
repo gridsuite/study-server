@@ -23,6 +23,7 @@ final class StudyConstants {
 
     static final String CASE_NAME = "caseName";
     static final String NETWORK_UUID = "networkUuid";
+    static final String CASE_UUID = "caseUuid";
 
     static final String STUDY_ALREADY_EXISTS = "STUDY ALREADY EXISTS";
     static final String STUDY_DOESNT_EXISTS = "STUDY DOESN'T EXISTS";

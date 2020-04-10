@@ -85,16 +85,16 @@ public class StudyService {
         return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat())).collect(Collectors.toList());
     }
 
-    void createStudy(String studyName, String caseName, String description) {
-        NetworkInfos networkInfos = persistentStore(caseName);
-        String caseFormat = getCaseFormat(caseName);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseName, description, caseFormat);
+    void createStudy(String studyName, UUID caseUuid, String description) {
+        NetworkInfos networkInfos = persistentStore(caseUuid);
+        String caseFormat = getCaseFormat(caseUuid);
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUuid);
         studyRepository.insert(study);
     }
 
-    private String getCaseFormat(String caseName) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseName}/format")
-                .buildAndExpand(caseName)
+    private String getCaseFormat(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}/format")
+                .buildAndExpand(caseUuid)
                 .toUriString();
 
         ResponseEntity<String> responseEntity = caseServerRest.exchange(path,
@@ -106,10 +106,10 @@ public class StudyService {
     }
 
     void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
-        importCase(caseFile);
-        NetworkInfos networkInfos = persistentStore(caseFile.getOriginalFilename());
-        String caseFormat = getCaseFormat(caseFile.getOriginalFilename());
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFile.getOriginalFilename(), description, caseFormat);
+        UUID caseUUid = importCase(caseFile);
+        NetworkInfos networkInfos = persistentStore(caseUUid);
+        String caseFormat = getCaseFormat(caseUUid);
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUUid);
         studyRepository.insert(study);
     }
 
@@ -140,7 +140,7 @@ public class StudyService {
         }
     }
 
-    void importCase(MultipartFile multipartFile) throws IOException {
+    UUID importCase(MultipartFile multipartFile) throws IOException {
         HttpHeaders requestHeaders = new HttpHeaders();
         requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
 
@@ -160,10 +160,11 @@ public class StudyService {
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(map, requestHeaders);
 
         try {
-            caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
+            ResponseEntity<UUID> responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
                     HttpMethod.POST,
                     requestEntity,
-                    String.class);
+                    UUID.class);
+            return responseEntity.getBody();
         } catch (HttpStatusCodeException e) {
             throw new StudyException("importCase " + e.getStatusCode() + " : " + e.getResponseBodyAsString(), e);
         }
@@ -195,9 +196,9 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
-    private NetworkInfos persistentStore(String caseName) {
+    private NetworkInfos persistentStore(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath("/" + NETWORK_CONVERSION_API_VERSION + "/networks")
-                .queryParam(CASE_NAME, caseName)
+                .queryParam(CASE_UUID, caseUuid)
                 .buildAndExpand()
                 .toUriString();
 
@@ -248,9 +249,9 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
-    boolean caseExists(String caseName) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseName}/exists")
-                .buildAndExpand(caseName)
+    boolean caseExists(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}/exists")
+                .buildAndExpand(caseUuid)
                 .toUriString();
 
         ResponseEntity<Boolean> responseEntity = caseServerRest.exchange(path,

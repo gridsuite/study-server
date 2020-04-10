@@ -68,7 +68,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EmbeddedCassandra(scripts = {"classpath:create_keyspace.cql", "classpath:study.cql"})
 @EnableWebMvc
 @ContextConfiguration(classes = {StudyApplication.class, StudyService.class, CassandraConfig.class})
-@DirtiesContext
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class StudyTest {
 
     @Configuration
@@ -120,8 +120,13 @@ public class StudyTest {
     private static final String DESCRIPTION = "description";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String STUDY_NAME = "studyName";
-    private static final String TEST_UUID = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private final UUID networkUuid = UUID.fromString(TEST_UUID);
+    private static final String NETWORK_UUID = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String CASE_UUID = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String IMPORTED_CASE_UUID = "11111111-0000-0000-0000-000000000000";
+    private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
+    private final UUID networkUuid = UUID.fromString(NETWORK_UUID);
+    private final UUID caseUuid = UUID.fromString(CASE_UUID);
+    private final UUID importedCaseUuid = UUID.fromString(IMPORTED_CASE_UUID);
     private final NetworkInfos networkInfos = new NetworkInfos(networkUuid, "20140116_0830_2D4_UX1_pst");
 
     @Before
@@ -133,25 +138,25 @@ public class StudyTest {
         studyService.setNetworkMapServerRest(networkMapServerRest);
 
         given(caseServerRest.exchange(
-                eq("/v1/cases/caseName/format"),
+                eq("/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
 
         given(caseServerRest.exchange(
-                eq("/v1/cases/testCase.xiidm/format"),
+                eq("/v1/cases/" + IMPORTED_CASE_UUID + "/format"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("XIIDM", HttpStatus.OK));
 
         given(caseServerRest.exchange(
-                eq("/v1/cases/caseName/exists"),
+                eq("/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(Boolean.class))).willReturn(new ResponseEntity<>(true, HttpStatus.OK));
 
         given(caseServerRest.exchange(
-                eq("/v1/cases/notExistingCase/exists"),
+                eq("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(Boolean.class))).willReturn(new ResponseEntity<>(false, HttpStatus.OK));
@@ -160,11 +165,11 @@ public class StudyTest {
                 eq("/" + CASE_API_VERSION + "/cases"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
+                eq(UUID.class))).willReturn(new ResponseEntity<>(importedCaseUuid, HttpStatus.OK));
 
         List<CaseInfos> caseList = new ArrayList<>();
-        caseList.add(new CaseInfos("case1", "XIIDM"));
-        caseList.add(new CaseInfos("case2", "XIIDM"));
+        caseList.add(new CaseInfos("case1", "XIIDM", UUID.fromString("2b72f3ac-031e-412b-b9e6-0ba7d588dc9d")));
+        caseList.add(new CaseInfos("case2", "XIIDM", UUID.fromString("2925b172-1dc0-40bc-9d1a-1243cf196082")));
 
         given(caseServerRest.exchange(
                 eq("/" + CASE_API_VERSION + "/cases"),
@@ -173,13 +178,19 @@ public class StudyTest {
                 eq(new ParameterizedTypeReference<List<CaseInfos>>() { }))).willReturn(new ResponseEntity<>(caseList, HttpStatus.OK));
 
         given(networkConversionServerRest.exchange(
-                eq("/v1/networks?caseName=caseName"),
+                eq("/v1/networks?caseUuid=" + CASE_UUID),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
 
         given(networkConversionServerRest.exchange(
-                eq("/v1/networks?caseName=testCase.xiidm"),
+                eq("/v1/networks?caseUuid=" + IMPORTED_CASE_UUID),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
+
+        given(networkConversionServerRest.exchange(
+                eq("/v1/networks?caseName=" + IMPORTED_CASE_UUID),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
@@ -236,14 +247,14 @@ public class StudyTest {
         assertEquals("[]", result.getResponse().getContentAsString());
 
         //insert a study
-        mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", STUDY_NAME, "caseName")
+        mvc.perform(post("/v1/studies/{studyName}/cases/{caseUuid}", STUDY_NAME, caseUuid)
                 .param(DESCRIPTION, DESCRIPTION))
                 .andExpect(status().isOk());
 
         //insert a study with a non existing case and except exception
-        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", "randomStudy", "notExistingCase")
+        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseUuid}", "randomStudy", "00000000-0000-0000-0000-000000000000")
                 .param(DESCRIPTION, DESCRIPTION))
-                .andExpect(status().isNotFound())
+                .andExpect(status().isConflict())
                 .andReturn();
 
         assertEquals(CASE_DOESNT_EXISTS, result.getResponse().getErrorMessage());
@@ -257,7 +268,7 @@ public class StudyTest {
                 result.getResponse().getContentAsString());
 
         //insert the same study => 409 conflict
-        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseName}", STUDY_NAME, "caseName")
+        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseUuid}", STUDY_NAME, caseUuid)
                 .param(DESCRIPTION, DESCRIPTION))
                 .andExpect(status().isConflict())
                 .andReturn();
@@ -288,7 +299,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"testCase.xiidm\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\"}",
+        assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\"}",
                 result.getResponse().getContentAsString());
 
         //get a non existing study -> 404 not found
@@ -301,7 +312,7 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("[{\"name\":\"case1\",\"format\":\"XIIDM\"},{\"name\":\"case2\",\"format\":\"XIIDM\"}]", result.getResponse().getContentAsString());
+        assertEquals("[{\"name\":\"case1\",\"format\":\"XIIDM\",\"uuid\":\"2b72f3ac-031e-412b-b9e6-0ba7d588dc9d\"},{\"name\":\"case2\",\"format\":\"XIIDM\",\"uuid\":\"2925b172-1dc0-40bc-9d1a-1243cf196082\"}]", result.getResponse().getContentAsString());
 
         //get the voltage level diagram svg
         result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", STUDY_NAME, "voltageLevelId"))

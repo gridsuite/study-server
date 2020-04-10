@@ -49,23 +49,24 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 
-    @PostMapping(value = "/studies/{studyName}/cases/{caseName}")
+    @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
     @ApiOperation(value = "create a study from an existing case")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Void> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                                  @PathVariable("caseName") String caseName,
+                                                                  @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description) {
 
         if (studyService.studyExists(studyName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
         }
 
-        if (!studyService.caseExists(caseName)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS);
+        if (!studyService.caseExists(caseUuid)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_DOESNT_EXISTS);
         }
-        studyService.createStudy(studyName, caseName, description);
+
+        studyService.createStudy(studyName, caseUuid, description);
         return ResponseEntity.ok().build();
     }
 
@@ -81,10 +82,6 @@ public class StudyController {
 
         if (studyService.studyExists(studyName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
-        }
-
-        if (studyService.studyExists(caseFile.getOriginalFilename())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_ALREADY_EXISTS);
         }
 
         studyService.createStudy(studyName, caseFile, description);
