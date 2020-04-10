@@ -254,7 +254,7 @@ public class StudyTest {
         //insert a study with a non existing case and except exception
         result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseUuid}", "randomStudy", "00000000-0000-0000-0000-000000000000")
                 .param(DESCRIPTION, DESCRIPTION))
-                .andExpect(status().isConflict())
+                .andExpect(status().isNotFound())
                 .andReturn();
 
         assertEquals(CASE_DOESNT_EXISTS, result.getResponse().getErrorMessage());

@@ -63,7 +63,7 @@ public class StudyController {
         }
 
         if (!studyService.caseExists(caseUuid)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_DOESNT_EXISTS);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS);
         }
 
         studyService.createStudy(studyName, caseUuid, description);
