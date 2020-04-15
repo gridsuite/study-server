@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
 import org.gridsuite.study.server.repository.Study;
@@ -110,16 +109,6 @@ public class StudyController {
     public ResponseEntity<Study> deleteStudy(@PathVariable("studyName") String studyName) {
         studyService.deleteStudy(studyName);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/cases")
-    @ApiOperation(value = "Get the case list")
-    @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "The case list"),
-            @ApiResponse(code = 500, message = "The storage is down")})
-    public ResponseEntity<List<CaseInfos>> getCaseList() {
-        List<CaseInfos> caseList = studyService.getCaseList();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(caseList);
     }
 
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg")
