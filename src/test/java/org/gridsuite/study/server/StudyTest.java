@@ -156,12 +156,6 @@ public class StudyTest {
                 any(HttpEntity.class),
                 eq(Boolean.class))).willReturn(new ResponseEntity<>(false, HttpStatus.OK));
 
-        given(caseServerRest.exchange(
-                eq("/" + CASE_API_VERSION + "/cases"),
-                eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
-
         List<CaseInfos> caseList = new ArrayList<>();
         caseList.add(new CaseInfos("case1", "XIIDM"));
         caseList.add(new CaseInfos("case2", "XIIDM"));
@@ -295,13 +289,6 @@ public class StudyTest {
         mvc.perform(get(STUDIES_URL, "s3"))
                 .andExpect(status().isNotFound())
                 .andReturn();
-
-        //get the case lists
-        result = mvc.perform(get("/v1/cases"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("[{\"name\":\"case1\",\"format\":\"XIIDM\"},{\"name\":\"case2\",\"format\":\"XIIDM\"}]", result.getResponse().getContentAsString());
 
         //get the voltage level diagram svg
         result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", STUDY_NAME, "voltageLevelId"))
