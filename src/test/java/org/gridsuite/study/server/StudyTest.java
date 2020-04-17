@@ -373,5 +373,25 @@ public class StudyTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
+        //insert 1 study
+        result = mvc.perform(get("/v1/studies"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"\"}]",
+                result.getResponse().getContentAsString());
+
+        //rename the study
+        result = mvc.perform(put("/v1/studies/" + STUDY_NAME + "?newStudyName=newName"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        assertEquals("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"networkCase\":\"caseName\",\"description\":\"description\",\"caseFormat\":\"\"}",
+                result.getResponse().getContentAsString());
+
+        result = mvc.perform(put("/v1/studies/aaa?newStudyName=newName"))
+                .andExpect(status().isNotFound())
+                .andReturn();
+        assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
     }
 }

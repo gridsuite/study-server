@@ -22,6 +22,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -289,6 +290,19 @@ public class StudyService {
                 String.class);
 
         return responseEntity.getBody();
+    }
+
+    @Transactional
+    Study renameStudy(String studyName, String newStudyName) {
+        Optional<Study> studyOpt = studyRepository.findByName(studyName);
+        if (studyOpt.isEmpty()) {
+            throw new StudyException(STUDY_DOESNT_EXISTS);
+        }
+        Study study = studyOpt.get();
+        study.setName(newStudyName);
+        studyRepository.insert(study);
+        studyRepository.deleteByName(studyName);
+        return study;
     }
 
     UUID getStudyUuid(String studyName) {

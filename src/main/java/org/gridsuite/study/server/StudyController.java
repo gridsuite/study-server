@@ -196,4 +196,13 @@ public class StudyController {
         return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationMapData);
     }
 
+    @PutMapping(value = "/studies/{studyName}")
+    @ApiOperation(value = "Update the study name", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
+    public ResponseEntity<Study> putStudyName(@PathVariable("studyName") String studyName,
+                                                        @RequestParam(name = "newStudyName") String newStudyName) {
+        Study study = studyService.renameStudy(studyName, newStudyName);
+        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study);
+    }
+
 }
