@@ -307,13 +307,6 @@ public class StudyTest {
                 .andExpect(status().isNotFound())
                 .andReturn();
 
-        //get the case lists
-        result = mvc.perform(get("/v1/cases"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("[{\"name\":\"case1\",\"format\":\"XIIDM\",\"uuid\":\"2b72f3ac-031e-412b-b9e6-0ba7d588dc9d\"},{\"name\":\"case2\",\"format\":\"XIIDM\",\"uuid\":\"2925b172-1dc0-40bc-9d1a-1243cf196082\"}]", result.getResponse().getContentAsString());
-
         //get the voltage level diagram svg
         result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", STUDY_NAME, "voltageLevelId"))
                 .andExpect(status().isOk())
