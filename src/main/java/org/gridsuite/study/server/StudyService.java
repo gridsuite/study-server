@@ -118,6 +118,16 @@ public class StudyService {
     }
 
     void deleteStudy(String studyName) {
+        Optional<Study> studyOpt = studyRepository.findByName(studyName);
+        if (studyOpt.isEmpty()) {
+            return;
+        }
+        Study study = studyOpt.get();
+        try {
+            caseServerRest.delete("/" + CASE_API_VERSION + "/cases/{caseUuid}?onlyPrivate=true", study.getCaseUuid());
+        } catch (HttpStatusCodeException e) {
+            throw new StudyException("deleteStudy HttpStatusCodeException", e);
+        }
         studyRepository.deleteByName(studyName);
     }
 
