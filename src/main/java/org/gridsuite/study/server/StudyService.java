@@ -88,7 +88,7 @@ public class StudyService {
     void createStudy(String studyName, UUID caseUuid, String description) {
         NetworkInfos networkInfos = persistentStore(caseUuid);
         String caseFormat = getCaseFormat(caseUuid);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUuid);
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUuid, false);
         studyRepository.insert(study);
     }
 
@@ -109,7 +109,7 @@ public class StudyService {
         UUID caseUUid = importCase(caseFile);
         NetworkInfos networkInfos = persistentStore(caseUUid);
         String caseFormat = getCaseFormat(caseUUid);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUUid);
+        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUUid, true);
         studyRepository.insert(study);
     }
 
@@ -123,10 +123,12 @@ public class StudyService {
             return;
         }
         Study study = studyOpt.get();
-        try {
-            caseServerRest.delete("/" + CASE_API_VERSION + "/cases/{caseUuid}?onlyPrivate=true", study.getCaseUuid());
-        } catch (HttpStatusCodeException e) {
-            throw new StudyException("deleteStudy HttpStatusCodeException", e);
+        if (study.isCasePrivate()) {
+            try {
+                caseServerRest.delete("/" + CASE_API_VERSION + "/cases/{caseUuid}", study.getCaseUuid());
+            } catch (HttpStatusCodeException e) {
+                throw new StudyException("deleteStudy HttpStatusCodeException", e);
+            }
         }
         studyRepository.deleteByName(studyName);
     }

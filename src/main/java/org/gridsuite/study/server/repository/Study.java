@@ -40,4 +40,7 @@ public class Study implements Serializable {
 
     @Column("caseUuid")
     private UUID caseUuid;
+
+    @Column("casePrivate")
+    private boolean casePrivate;
 }
