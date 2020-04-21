@@ -19,16 +19,12 @@ final class StudyConstants {
     static final String SINGLE_LINE_DIAGRAM_API_VERSION = "v1";
     static final String NETWORK_CONVERSION_API_VERSION = "v1";
     static final String GEO_DATA_API_VERSION = "v1";
-    static final String NETWORK_MAP_API_VERSION = "v1";
 
-    static final String CASE_NAME = "caseName";
     static final String NETWORK_UUID = "networkUuid";
     static final String CASE_UUID = "caseUuid";
 
     static final String STUDY_ALREADY_EXISTS = "STUDY ALREADY EXISTS";
     static final String STUDY_DOESNT_EXISTS = "STUDY DOESN'T EXISTS";
     static final String CASE_DOESNT_EXISTS = "CASE DOESN'T EXISTS";
-    static final String CASE_ALREADY_EXISTS = "CASE ALREADY EXISTS";
-
 
 }
