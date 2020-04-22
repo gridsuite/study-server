@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS study.study (
     studyName text PRIMARY KEY,
     networkUuid uuid,
     networkId text,
-    caseName text,
     description text,
-    caseFormat text
+    caseFormat text,
+    caseUuid uuid,
+    casePrivate boolean
 );
