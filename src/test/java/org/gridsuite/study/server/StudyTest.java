@@ -162,7 +162,7 @@ public class StudyTest {
                 eq(Boolean.class))).willReturn(new ResponseEntity<>(false, HttpStatus.OK));
 
         given(caseServerRest.exchange(
-                eq("/" + CASE_API_VERSION + "/cases"),
+                eq("/" + CASE_API_VERSION + "/cases/private"),
                 eq(HttpMethod.POST),
                 any(HttpEntity.class),
                 eq(UUID.class))).willReturn(new ResponseEntity<>(importedCaseUuid, HttpStatus.OK));

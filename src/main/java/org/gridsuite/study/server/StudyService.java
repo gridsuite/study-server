@@ -172,7 +172,7 @@ public class StudyService {
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(map, requestHeaders);
 
         try {
-            ResponseEntity<UUID> responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
+            ResponseEntity<UUID> responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases/private",
                     HttpMethod.POST,
                     requestEntity,
                     UUID.class);
