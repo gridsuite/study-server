@@ -34,12 +34,15 @@ public class Study implements Serializable {
     @Column("networkId")
     private String networkId;
 
-    @Column("caseName")
-    private String networkCase;
-
     @Column("description")
     private String description;
 
     @Column("caseFormat")
     private String caseFormat;
+
+    @Column("caseUuid")
+    private UUID caseUuid;
+
+    @Column("casePrivate")
+    private boolean casePrivate;
 }

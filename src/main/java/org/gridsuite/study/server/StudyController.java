@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
 import org.gridsuite.study.server.repository.Study;
@@ -49,23 +48,24 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 
-    @PostMapping(value = "/studies/{studyName}/cases/{caseName}")
+    @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
     @ApiOperation(value = "create a study from an existing case")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Void> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                                  @PathVariable("caseName") String caseName,
+                                                                  @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description) {
 
         if (studyService.studyExists(studyName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
         }
 
-        if (!studyService.caseExists(caseName)) {
+        if (!studyService.caseExists(caseUuid)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS);
         }
-        studyService.createStudy(studyName, caseName, description);
+
+        studyService.createStudy(studyName, caseUuid, description);
         return ResponseEntity.ok().build();
     }
 
@@ -81,10 +81,6 @@ public class StudyController {
 
         if (studyService.studyExists(studyName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
-        }
-
-        if (studyService.studyExists(caseFile.getOriginalFilename())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, CASE_ALREADY_EXISTS);
         }
 
         studyService.createStudy(studyName, caseFile, description);
@@ -110,16 +106,6 @@ public class StudyController {
     public ResponseEntity<Study> deleteStudy(@PathVariable("studyName") String studyName) {
         studyService.deleteStudy(studyName);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/cases")
-    @ApiOperation(value = "Get the case list")
-    @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "The case list"),
-            @ApiResponse(code = 500, message = "The storage is down")})
-    public ResponseEntity<List<CaseInfos>> getCaseList() {
-        List<CaseInfos> caseList = studyService.getCaseList();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(caseList);
     }
 
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg")
