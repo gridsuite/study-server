@@ -5,9 +5,9 @@
 
 ### Run integration tests
 
-To run the integration tests, you need to install a [Cassandra 4.0-alpha3](https://downloads.apache.org/cassandra/4.0-alpha3/) in your home directory.
+To run the integration tests, you need to install a [Cassandra 4.0-alpha4](https://downloads.apache.org/cassandra/4.0-alpha4/) in your home directory.
 
-When it's done you'll have to modify some configuration in the cassandra you just installed. Go to the ~/apache-cassandra-4.0-alpha3/conf/cassandra.yaml file and enable the materialized views by changing :
+When it's done you'll have to modify some configuration in the cassandra you just installed. Go to the ~/apache-cassandra-4.0-alpha4/conf/cassandra.yaml file and enable the materialized views by changing :
 
 ```yaml
 enable_materialized_views: false
