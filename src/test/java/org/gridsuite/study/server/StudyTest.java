@@ -77,8 +77,8 @@ public class StudyTest {
         @Bean
         CassandraFactory cassandraFactory() throws UnknownHostException {
             EmbeddedCassandraFactory cassandraFactory = new EmbeddedCassandraFactory();
-            Version version = Version.of("4.0-alpha3");
-            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha3");
+            Version version = Version.of("4.0-alpha4");
+            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha4");
             if (!Files.isDirectory(directory)) {
                 throw new IllegalStateException("directory : " + directory + " doesn't exist. You must install a cassandra in your home directory to run the integrations tests");
             }
