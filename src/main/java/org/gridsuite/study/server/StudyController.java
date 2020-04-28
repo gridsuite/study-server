@@ -116,10 +116,11 @@ public class StudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel) {
+            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
+            @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
         UUID networkUuid = studyService.getStudyUuid(studyName);
 
-        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel);
+        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg);
     }
 
@@ -131,9 +132,10 @@ public class StudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel) {
+            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
+            @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
         UUID networkUuid = studyService.getStudyUuid(studyName);
-        String svgAndMetadata = studyService.getVoltageLevelSvgAndMetadata(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel);
+        String svgAndMetadata = studyService.getVoltageLevelSvgAndMetadata(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(svgAndMetadata);
     }
 
