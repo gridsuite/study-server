@@ -320,7 +320,7 @@ public class StudyService {
         networkModificationServerRest.exchange(path,
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
-                String.class);
+                Void.class);
     }
 
     UUID getStudyUuid(String studyName) {
@@ -354,5 +354,9 @@ public class StudyService {
 
     void setNetworkMapServerRest(RestTemplate networkMapServerRest) {
         this.networkMapServerRest = Objects.requireNonNull(networkMapServerRest);
+    }
+
+    void setNetworkModificationServerRest(RestTemplate networkModificationServerRest) {
+        this.networkModificationServerRest = Objects.requireNonNull(networkModificationServerRest);
     }
 }
