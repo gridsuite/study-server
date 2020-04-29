@@ -16,16 +16,16 @@ jobs:
         with:
           java-version: 11
 
-      - name: Download cassandra 4.0-alpha3
-        run : cd && wget "https://downloads.apache.org/cassandra/4.0-alpha3/apache-cassandra-4.0-alpha3-bin.tar.gz"
+      - name: Download cassandra 4.0-alpha4
+        run : cd && wget "https://downloads.apache.org/cassandra/4.0-alpha4/apache-cassandra-4.0-alpha4-bin.tar.gz"
 
       - name: Untar cassandra
-        run: cd && tar xvzf apache-cassandra-4.0-alpha3-bin.tar.gz
+        run: cd && tar xvzf apache-cassandra-4.0-alpha4-bin.tar.gz
 
       - name: Change cassandra storage port
         run: >
           cd
-          && cd ./apache-cassandra-4.0-alpha3/conf/
+          && cd ./apache-cassandra-4.0-alpha4/conf/
           && sed -i 's/- seeds: "127.0.0.1:7000"/- seeds: "127.0.0.1:16432"/' ./cassandra.yaml
 
       - name: Checkout network store sources
