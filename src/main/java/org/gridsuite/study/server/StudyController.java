@@ -182,4 +182,14 @@ public class StudyController {
         return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationMapData);
     }
 
+    @PutMapping(value = "/studies/{studyName}/network-modification/switches/{switchId}")
+    @ApiOperation(value = "update a switch position", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
+    public ResponseEntity<Void> changeSwitchState(@PathVariable("studyName") String studyName,
+                                                    @PathVariable("switchId") String switchId,
+                                                    @RequestParam("open") boolean open) {
+        studyService.changeSwitchState(studyName, switchId, open);
+        return  ResponseEntity.ok().build();
+    }
+
 }
