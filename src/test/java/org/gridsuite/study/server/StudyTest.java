@@ -77,8 +77,8 @@ public class StudyTest {
         @Bean
         CassandraFactory cassandraFactory() throws UnknownHostException {
             EmbeddedCassandraFactory cassandraFactory = new EmbeddedCassandraFactory();
-            Version version = Version.of("4.0-alpha3");
-            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha3");
+            Version version = Version.of("4.0-alpha4");
+            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha4");
             if (!Files.isDirectory(directory)) {
                 throw new IllegalStateException("directory : " + directory + " doesn't exist. You must install a cassandra in your home directory to run the integrations tests");
             }
@@ -196,13 +196,13 @@ public class StudyTest {
                 eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
 
         given(singleLineDiagramServerRest.exchange(
-                eq("/v1/svg/" + networkUuid + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false"),
+                eq("/v1/svg/" + networkUuid + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(byte[].class))).willReturn(new ResponseEntity<>("byte".getBytes(), HttpStatus.OK));
 
         given(singleLineDiagramServerRest.exchange(
-                eq("/v1/svg-and-metadata/" + networkUuid + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false"),
+                eq("/v1/svg-and-metadata/" + networkUuid + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false"),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(String.class))).willReturn(new ResponseEntity<>("svgandmetadata", HttpStatus.OK));
