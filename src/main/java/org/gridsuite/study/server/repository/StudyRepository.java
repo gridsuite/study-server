@@ -29,7 +29,7 @@ public interface StudyRepository extends CassandraRepository<Study, Integer> {
     @Override
     <S extends Study> S insert(S s);
 
-    @Query("delete from study where studyname = :studyName")
+    @Query("DELETE FROM study WHERE studyname = :studyName")
     void deleteByName(@Param("studyName") String studyName);
 
 }
