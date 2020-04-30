@@ -5,30 +5,15 @@
 
 ### Run integration tests
 
-To run the integration tests, you need to install a [Cassandra 4.0-alpha4](https://downloads.apache.org/cassandra/4.0-alpha4/) in your home directory.
+To run the integration tests, a cassandra distribution is downloaded automatically once for all the projects at the first execution for your user. It is stored in $HOME/.embedded-cassandra . For this first execution, you need http internet access, and if you are a on a restricted network requiring a proxy, you need to set the proxy details. In addition to the standard java system properties -DproxyHost, -DproxyPort, we use -DproxyUser and -DproxyPassword for authenticated proxies. In IDEs, set them in the tests system properties (usually in the "Edit run configuration" menu). For maven CLI, either set them in MAVEN_OPTS or directly on the command line:
 
-When it's done you'll have to modify some configuration in the cassandra you just installed. Go to the ~/apache-cassandra-4.0-alpha4/conf/cassandra.yaml file and enable the materialized views by changing :
-
-```yaml
-enable_materialized_views: false
+```bash
+$ export MAVEN_OPTS="-DproxyHost=proxy.com -DproxyPort=8080 -DproxyUser=user -DproxyPassword=XXXX"
+$ mvn verify
 ```
 
-to
+OR
 
-```yaml
-enable_materialized_views: true
+```bash
+$ mvn verify -DproxyHost=proxy.com -DproxyPort=8080 -DproxyUser=user -DproxyPassword=XXXX
 ```
-
-and change the storage port by replacing :
-
-```yaml
-- seeds: "127.0.0.1:7000"
-```
-
-by
-
-```yaml
-- seeds: "127.0.0.1:16432"
-```
-
-You can then run the integration tests by activating the maven profile perform-integration-test
