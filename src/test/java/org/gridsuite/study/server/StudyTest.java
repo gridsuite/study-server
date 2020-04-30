@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory;
 import com.github.nosan.embedded.cassandra.api.CassandraFactory;
 import com.github.nosan.embedded.cassandra.api.Version;
@@ -19,6 +20,7 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -390,5 +392,32 @@ public class StudyTest {
         mvc.perform(put("/v1/studies/{studyName}/network-modification/switches/{switchId}?open=true", STUDY_NAME, "switchId"))
                 .andExpect(status().isOk());
 
+        //insert 1 study
+        result = mvc.perform(get("/v1/studies"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"\"}]",
+                result.getResponse().getContentAsString());
+
+        //rename the study
+        ObjectMapper objMapper = new ObjectMapper();
+        String newStudyName = "newName";
+        RenameStudyAttributes renameStudyAttributes = new RenameStudyAttributes(newStudyName);
+        result = mvc.perform(post("/v1/studies/" + STUDY_NAME + "/rename")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objMapper.writeValueAsString(renameStudyAttributes)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        assertEquals("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false}",
+                result.getResponse().getContentAsString());
+
+        result = mvc.perform(post("/v1/studies/aaa/rename")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objMapper.writeValueAsString(renameStudyAttributes)))
+                .andExpect(status().isNotFound())
+                .andReturn();
+        assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
     }
 }

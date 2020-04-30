@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
 import org.gridsuite.study.server.repository.Study;
@@ -192,6 +193,15 @@ public class StudyController {
                                                     @RequestParam("open") boolean open) {
         studyService.changeSwitchState(studyName, switchId, open);
         return  ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyName}/rename")
+    @ApiOperation(value = "Update the study name", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
+    public ResponseEntity<Study> renameStudy(@PathVariable("studyName") String studyName,
+                                                        @RequestBody RenameStudyAttributes renameStudyAttributes) {
+        Study study = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
+        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study);
     }
 
 }
