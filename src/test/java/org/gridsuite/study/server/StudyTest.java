@@ -115,6 +115,9 @@ public class StudyTest {
     @Mock
     private RestTemplate networkMapServerRest;
 
+    @Mock
+    private RestTemplate networkModificationServerRest;
+
     @MockBean
     private NetworkStoreService networkStoreClient;
 
@@ -138,6 +141,7 @@ public class StudyTest {
         studyService.setSingleLineDiagramServerRest(singleLineDiagramServerRest);
         studyService.setGeoDataServerRest(geoDataServerRest);
         studyService.setNetworkMapServerRest(networkMapServerRest);
+        studyService.setNetworkModificationServerRest(networkModificationServerRest);
 
         given(caseServerRest.exchange(
                 eq("/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format"),
@@ -237,6 +241,12 @@ public class StudyTest {
                 new ResourceSet("", TEST_FILE));
         Network network = Importers.importData("XIIDM", dataSource, null);
         given(networkStoreClient.getNetwork(networkUuid)).willReturn(network);
+
+        given(networkModificationServerRest.exchange(
+                eq("/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true"),
+                eq(HttpMethod.PUT),
+                eq(HttpEntity.EMPTY),
+                eq(Void.class))).willReturn(new ResponseEntity<Void>(HttpStatus.OK));
     }
 
     @Test
@@ -378,6 +388,9 @@ public class StudyTest {
         mvc.perform(delete(STUDIES_URL, "s2"))
                 .andExpect(status().isOk())
                 .andReturn();
+
+        mvc.perform(put("/v1/studies/{studyName}/network-modification/switches/{switchId}?open=true", STUDY_NAME, "switchId"))
+                .andExpect(status().isOk());
 
         //insert 1 study
         result = mvc.perform(get("/v1/studies"))
