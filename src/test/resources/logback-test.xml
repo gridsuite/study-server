@@ -1,0 +1,55 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+    </root>
+    <!--
+        suppress the following logs at the end of the tests:
+            ERROR com.datastax.driver.core.ControlConnection - [Control connection] Cannot connect to any host, scheduling retry in 1000 milliseconds
+    -->
+    <logger name="com.datastax.driver.core.ControlConnection" level="off"/>
+
+    <!--
+        suppress the following logs at the end of the tests:
+16:07:28.503 [cluster-nio-worker-0] WARN  io.netty.channel.AbstractChannelHandlerContext - An exception 'java.util.concurrent.RejectedExecutionException: Task com.google.common.util.concurrent.TrustedListenableFutureTask@6a91bfa4 (delegate = java.util.concurrent.Executors$RunnableAdapter@466afa5c[Wrapped task = com.datastax.driver.core.Cluster$Manager$5@6436dc03]) rejected from java.util.concurrent.ThreadPoolExecutor@78cabf[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]' [enable DEBUG level for full stacktrace] was thrown by a user handler's exceptionCaught() method while handling the following exception:
+java.io.IOException: Connexion ré-initialisée par le correspondant
+	at java.base/sun.nio.ch.FileDispatcherImpl.read0(Native Method)
+	at java.base/sun.nio.ch.SocketDispatcher.read(SocketDispatcher.java:39)
+	at java.base/sun.nio.ch.IOUtil.readIntoNativeBuffer(IOUtil.java:276)
+	at java.base/sun.nio.ch.IOUtil.read(IOUtil.java:233)
+	at java.base/sun.nio.ch.IOUtil.read(IOUtil.java:223)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:358)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:247)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1147)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:350)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:148)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:700)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:635)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:552)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:514)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$6.run(SingleThreadEventExecutor.java:1050)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+    -->
+    <logger name="io.netty.channel.AbstractChannelHandlerContext" level="error"/>
+
+
+    <!--
+        suppress unreadable huge logs..
+    -->
+    <logger name="org.springframework.test" level="warn"/>
+    <logger name="org.springframework.boot.test" level="warn"/>
+    <logger name="com.datastax.driver.core" level="warn"/>
+
+    <!--
+        suppress forked cassandra stdout output
+    -->
+    <logger name="com.github.nosan.embedded.cassandra.api.Cassandra" level="warn"/>
+
+</configuration>

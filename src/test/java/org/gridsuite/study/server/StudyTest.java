@@ -7,11 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory;
-import com.github.nosan.embedded.cassandra.api.CassandraFactory;
-import com.github.nosan.embedded.cassandra.api.Version;
-import com.github.nosan.embedded.cassandra.artifact.DefaultArtifact;
-import com.github.nosan.embedded.cassandra.spring.test.EmbeddedCassandra;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -28,13 +23,11 @@ import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -43,11 +36,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -67,32 +55,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class)
 @WebMvcTest(StudyController.class)
-@EmbeddedCassandra(scripts = {"classpath:create_keyspace.cql", "classpath:study.cql"})
 @EnableWebMvc
-@ContextConfiguration(classes = {StudyApplication.class, StudyService.class, CassandraConfig.class})
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class StudyTest {
-
-    @Configuration
-    static class TestConfig {
-
-        @Bean
-        CassandraFactory cassandraFactory() throws UnknownHostException {
-            EmbeddedCassandraFactory cassandraFactory = new EmbeddedCassandraFactory();
-            Version version = Version.of("4.0-alpha4");
-            Path directory = Paths.get(System.getProperty("user.home") + "/apache-cassandra-4.0-alpha4");
-            if (!Files.isDirectory(directory)) {
-                throw new IllegalStateException("directory : " + directory + " doesn't exist. You must install a cassandra in your home directory to run the integrations tests");
-            }
-            cassandraFactory.setArtifact(new DefaultArtifact(version, directory));
-            cassandraFactory.setPort(9142);
-            cassandraFactory.setJmxLocalPort(0);
-            cassandraFactory.setRpcPort(0);
-            cassandraFactory.setStoragePort(16432);
-            cassandraFactory.setAddress(InetAddress.getByName("localhost"));
-            return cassandraFactory;
-        }
-    }
+@ContextHierarchy({
+    @ContextConfiguration(classes = {StudyApplication.class, StudyService.class})
+    })
+public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
     @Autowired
     private MockMvc mvc;
