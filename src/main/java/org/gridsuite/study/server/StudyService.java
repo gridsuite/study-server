@@ -50,6 +50,7 @@ public class StudyService {
     private RestTemplate networkConversionServerRest;
     private RestTemplate geoDataServerRest;
     private RestTemplate networkMapServerRest;
+    private RestTemplate networkModificationServerRest;
 
     @Autowired
     private NetworkStoreService networkStoreClient;
@@ -63,7 +64,8 @@ public class StudyService {
             @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
             @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
             @Value("${backing-services.geo-data.base-uri:http://geo-data-store-server/}") String geoDataServerBaseUri,
-            @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri) {
+            @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
+            @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri) {
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
         caseServerRest = restTemplateBuilder.build();
         caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
@@ -79,6 +81,9 @@ public class StudyService {
 
         networkMapServerRest = restTemplateBuilder.build();
         networkMapServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkMapServerBaseUri));
+
+        networkModificationServerRest = restTemplateBuilder.build();
+        networkModificationServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkModificationServerBaseUri));
     }
 
     List<StudyInfos> getStudyList() {
@@ -309,6 +314,20 @@ public class StudyService {
         return responseEntity.getBody();
     }
 
+    void changeSwitchState(String studyName, String switchId, boolean open) {
+        UUID networkUuid = getStudyUuid(studyName);
+
+        String path = UriComponentsBuilder.fromPath("/" + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
+                .queryParam("open", open)
+                .buildAndExpand(networkUuid, switchId)
+                .toUriString();
+
+        networkModificationServerRest.exchange(path,
+                HttpMethod.PUT,
+                HttpEntity.EMPTY,
+                Void.class);
+    }
+
     @Transactional
     Study renameStudy(String studyName, String newStudyName) {
         Optional<Study> studyOpt = studyRepository.findByName(studyName);
@@ -353,5 +372,9 @@ public class StudyService {
 
     void setNetworkMapServerRest(RestTemplate networkMapServerRest) {
         this.networkMapServerRest = Objects.requireNonNull(networkMapServerRest);
+    }
+
+    void setNetworkModificationServerRest(RestTemplate networkModificationServerRest) {
+        this.networkModificationServerRest = Objects.requireNonNull(networkModificationServerRest);
     }
 }
