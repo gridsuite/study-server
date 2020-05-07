@@ -14,6 +14,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.gridsuite.study.test.EmbeddedCassandraFactoryConfig;
 
+import java.io.IOException;
+
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  *
@@ -30,7 +32,7 @@ public abstract class AbstractEmbeddedCassandraSetup {
     private ClusterCassandraConnection clusterCassandraConnection;
 
     @Before
-    public void setup() {
+    public void setup() throws IOException {
         CqlDataSet.ofClasspaths("truncate.cql").forEachStatement(clusterCassandraConnection::execute);
     }
 

@@ -8,7 +8,6 @@ package org.gridsuite.study.server;
 
 import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
-import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -18,16 +17,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -52,6 +51,15 @@ public class StudyService {
     private RestTemplate networkMapServerRest;
     private RestTemplate networkModificationServerRest;
 
+    private WebClient webClient = WebClient.create();
+
+    String caseServerBaseUri;
+    String singleLineDiagramServerBaseUri;
+    String networkConversionServerBaseUri;
+    String geoDataServerBaseUri;
+    String networkMapServerBaseUri;
+    String networkModificationServerBaseUri;
+
     @Autowired
     private NetworkStoreService networkStoreClient;
 
@@ -66,6 +74,13 @@ public class StudyService {
             @Value("${backing-services.geo-data.base-uri:http://geo-data-store-server/}") String geoDataServerBaseUri,
             @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri) {
+        this.caseServerBaseUri = caseServerBaseUri;
+        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
+        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
+        this.geoDataServerBaseUri = geoDataServerBaseUri;
+        this.networkMapServerBaseUri = networkMapServerBaseUri;
+        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
+
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
         caseServerRest = restTemplateBuilder.build();
         caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
@@ -103,12 +118,11 @@ public class StudyService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = caseServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(caseServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
     void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
@@ -129,39 +143,20 @@ public class StudyService {
             return;
         }
         Study study = studyOpt.get();
+
+        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}")
+                .buildAndExpand(study.getCaseUuid())
+                .toUriString();
+
         if (study.isCasePrivate()) {
-            try {
-                caseServerRest.delete("/" + CASE_API_VERSION + "/cases/{caseUuid}", study.getCaseUuid());
-            } catch (HttpStatusCodeException e) {
-                throw new StudyException("deleteStudy HttpStatusCodeException", e);
-            }
+            webClient.delete()
+                    .uri(caseServerBaseUri + path)
+                    .retrieve();
         }
         studyRepository.deleteByName(studyName);
     }
 
-    List<CaseInfos> getCaseList() {
-        ParameterizedTypeReference<List<CaseInfos>> parameterizedTypeReference = new ParameterizedTypeReference<List<CaseInfos>>() { };
-        ResponseEntity<List<CaseInfos>> responseEntity;
-        try {
-            responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
-                    HttpMethod.GET,
-                    null,
-                    parameterizedTypeReference);
-
-            if (responseEntity.getStatusCode() == HttpStatus.OK) {
-                return responseEntity.getBody();
-            } else {
-                return Collections.emptyList();
-            }
-        } catch (HttpStatusCodeException e) {
-            throw new StudyException("getCaseList HttpStatusCodeException", e);
-        }
-    }
-
     UUID importCase(MultipartFile multipartFile) throws IOException {
-        HttpHeaders requestHeaders = new HttpHeaders();
-        requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-
         MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
         final String filename = multipartFile.getOriginalFilename();
         map.add("name", filename);
@@ -175,17 +170,14 @@ public class StudyService {
 
         map.add("file", contentsAsResource);
 
-        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(map, requestHeaders);
-
-        try {
-            ResponseEntity<UUID> responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases/private",
-                    HttpMethod.POST,
-                    requestEntity,
-                    UUID.class);
-            return responseEntity.getBody();
-        } catch (HttpStatusCodeException e) {
-            throw new StudyException("importCase " + e.getStatusCode() + " : " + e.getResponseBodyAsString(), e);
-        }
+        String uuid = webClient.post()
+                .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                .body(BodyInserters.fromValue(map))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+        return UUID.fromString(uuid);
     }
 
     byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
@@ -280,12 +272,13 @@ public class StudyService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        ResponseEntity<Boolean> responseEntity = caseServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                Boolean.class);
+        String caseExists = webClient.get()
+                .uri(caseServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
 
-        return Boolean.TRUE.equals(responseEntity.getBody());
+        return Boolean.TRUE.equals(Boolean.parseBoolean(caseExists));
     }
 
     String getSubstationsMapData(UUID networkUuid) {
@@ -356,6 +349,10 @@ public class StudyService {
 
     void setCaseServerRest(RestTemplate caseServerRest) {
         this.caseServerRest = Objects.requireNonNull(caseServerRest);
+    }
+
+    void setCaseServerBaseUri(String caseServerBaseUri) {
+        this.caseServerBaseUri = caseServerBaseUri;
     }
 
     void setSingleLineDiagramServerRest(RestTemplate singleLineDiagramServerRest) {

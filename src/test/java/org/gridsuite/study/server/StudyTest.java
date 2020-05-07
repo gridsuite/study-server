@@ -13,6 +13,11 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
@@ -38,6 +43,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -218,6 +224,44 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
     @Test
     public void test() throws Exception {
+        MockWebServer server = new MockWebServer();
+        // Start the server.
+        server.start();
+
+        // Ask the server for its URL. You'll need this to make HTTP requests.
+        HttpUrl baseUrl = server.url("");
+
+        studyService.setCaseServerBaseUri(baseUrl.toString().substring(0, baseUrl.toString().length() - 1));
+
+        final Dispatcher dispatcher = new Dispatcher() {
+            @Override
+            public MockResponse dispatch (RecordedRequest request) throws InterruptedException {
+                switch (Objects.requireNonNull(request.getPath())) {
+                    case "/v1/studies/{studyName}/cases/{caseUuid}":
+                        return new MockResponse().setResponseCode(200).setBody("CGMES");
+
+                    case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
+                        return new MockResponse().setResponseCode(200).setBody("true");
+
+                    case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format":
+                        return new MockResponse().setResponseCode(200).setBody("UCTE");
+
+                    case "/v1/cases/" + IMPORTED_CASE_UUID + "/format":
+                        return new MockResponse().setResponseCode(200).setBody("XIIDM");
+
+                    case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
+                        return new MockResponse().setResponseCode(200).setBody("false");
+
+                    case "/" + CASE_API_VERSION + "/cases/private":
+                        return new MockResponse().setResponseCode(200).setBody(importedCaseUuid.toString());
+                    case "/" + CASE_API_VERSION + "v1/cases/11111111-0000-0000-0000-000000000000":
+                        return new MockResponse().setResponseCode(200);
+                }
+                return new MockResponse().setResponseCode(404);
+            }
+        };
+        server.setDispatcher(dispatcher);
+
         //empty
         MvcResult result = mvc.perform(get("/v1/studies"))
                 .andExpect(status().isOk())
@@ -243,7 +287,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"\"}]",
+        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]",
                 result.getResponse().getContentAsString());
 
         //insert the same study => 409 conflict
@@ -364,7 +408,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"\"}]",
+        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]",
                 result.getResponse().getContentAsString());
 
         //rename the study
@@ -377,7 +421,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
-        assertEquals("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false}",
+        assertEquals("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false}",
                 result.getResponse().getContentAsString());
 
         result = mvc.perform(post("/v1/studies/aaa/rename")
@@ -386,5 +430,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .andExpect(status().isNotFound())
                 .andReturn();
         assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
+
+        // Shut down the server. Instances cannot be reused.
+        server.shutdown();
     }
 }
