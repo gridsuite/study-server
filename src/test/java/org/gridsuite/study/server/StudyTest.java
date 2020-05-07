@@ -18,7 +18,6 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
@@ -28,7 +27,6 @@ import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
@@ -41,8 +39,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -109,52 +105,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
     @Before
     public void setup() {
-        studyService.setCaseServerRest(caseServerRest);
         studyService.setNetworkConversionServerRest(networkConversionServerRest);
         studyService.setSingleLineDiagramServerRest(singleLineDiagramServerRest);
         studyService.setGeoDataServerRest(geoDataServerRest);
         studyService.setNetworkMapServerRest(networkMapServerRest);
         studyService.setNetworkModificationServerRest(networkModificationServerRest);
-
-        given(caseServerRest.exchange(
-                eq("/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
-
-        given(caseServerRest.exchange(
-                eq("/v1/cases/" + IMPORTED_CASE_UUID + "/format"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("XIIDM", HttpStatus.OK));
-
-        given(caseServerRest.exchange(
-                eq("/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(Boolean.class))).willReturn(new ResponseEntity<>(true, HttpStatus.OK));
-
-        given(caseServerRest.exchange(
-                eq("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(Boolean.class))).willReturn(new ResponseEntity<>(false, HttpStatus.OK));
-
-        given(caseServerRest.exchange(
-                eq("/" + CASE_API_VERSION + "/cases/private"),
-                eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                eq(UUID.class))).willReturn(new ResponseEntity<>(importedCaseUuid, HttpStatus.OK));
-
-        List<CaseInfos> caseList = new ArrayList<>();
-        caseList.add(new CaseInfos("case1", "XIIDM", UUID.fromString("2b72f3ac-031e-412b-b9e6-0ba7d588dc9d")));
-        caseList.add(new CaseInfos("case2", "XIIDM", UUID.fromString("2925b172-1dc0-40bc-9d1a-1243cf196082")));
-
-        given(caseServerRest.exchange(
-                eq("/" + CASE_API_VERSION + "/cases"),
-                eq(HttpMethod.GET),
-                eq(null),
-                eq(new ParameterizedTypeReference<List<CaseInfos>>() { }))).willReturn(new ResponseEntity<>(caseList, HttpStatus.OK));
 
         given(networkConversionServerRest.exchange(
                 eq("/v1/networks?caseUuid=" + CASE_UUID),
@@ -235,7 +190,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
-            public MockResponse dispatch (RecordedRequest request) throws InterruptedException {
+            public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 switch (Objects.requireNonNull(request.getPath())) {
                     case "/v1/studies/{studyName}/cases/{caseUuid}":
                         return new MockResponse().setResponseCode(200).setBody("CGMES");

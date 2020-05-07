@@ -44,7 +44,6 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class StudyService {
 
-    private RestTemplate caseServerRest;
     private RestTemplate singleLineDiagramServerRest;
     private RestTemplate networkConversionServerRest;
     private RestTemplate geoDataServerRest;
@@ -82,8 +81,6 @@ public class StudyService {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
 
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
-        caseServerRest = restTemplateBuilder.build();
-        caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
 
         singleLineDiagramServerRest = restTemplateBuilder.build();
         singleLineDiagramServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(singleLineDiagramServerBaseUri));
@@ -345,10 +342,6 @@ public class StudyService {
 
     boolean studyExists(String studyName) {
         return getStudy(studyName) != null;
-    }
-
-    void setCaseServerRest(RestTemplate caseServerRest) {
-        this.caseServerRest = Objects.requireNonNull(caseServerRest);
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {
