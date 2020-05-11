@@ -140,14 +140,13 @@ public class StudyService {
 
         map.add("file", contentsAsResource);
 
-        String uuid = webClient.post()
+        return webClient.post()
                 .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
                 .body(BodyInserters.fromValue(map))
                 .retrieve()
-                .bodyToMono(String.class)
+                .bodyToMono(UUID.class)
                 .block();
-        return UUID.fromString(uuid);
     }
 
     byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,

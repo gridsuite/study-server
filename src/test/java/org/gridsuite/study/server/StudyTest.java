@@ -107,6 +107,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         ObjectMapper mapper = new ObjectMapper();
         String networkInfosAsString = mapper.writeValueAsString(networkInfos);
+        String importedCaseUuidAsString = mapper.writeValueAsString(importedCaseUuid);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
@@ -133,7 +134,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/" + CASE_API_VERSION + "/cases/private":
-                        return new MockResponse().setResponseCode(200).setBody(importedCaseUuid.toString())
+                        return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/" + CASE_API_VERSION + "v1/cases/11111111-0000-0000-0000-000000000000":
