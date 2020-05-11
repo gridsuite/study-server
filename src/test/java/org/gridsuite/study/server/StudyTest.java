@@ -23,7 +23,6 @@ import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -35,7 +34,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.io.InputStream;
@@ -44,8 +42,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -69,24 +65,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     @Autowired
     private StudyService studyService;
 
-    @Mock
-    private RestTemplate caseServerRest;
-
-    @Mock
-    private RestTemplate networkConversionServerRest;
-
-    @Mock
-    private RestTemplate singleLineDiagramServerRest;
-
-    @Mock
-    private RestTemplate geoDataServerRest;
-
-    @Mock
-    private RestTemplate networkMapServerRest;
-
-    @Mock
-    private RestTemplate networkModificationServerRest;
-
     @MockBean
     private NetworkStoreService networkStoreClient;
 
@@ -105,76 +83,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
     @Before
     public void setup() {
-        studyService.setNetworkConversionServerRest(networkConversionServerRest);
-        studyService.setSingleLineDiagramServerRest(singleLineDiagramServerRest);
-        studyService.setGeoDataServerRest(geoDataServerRest);
-        studyService.setNetworkMapServerRest(networkMapServerRest);
-        studyService.setNetworkModificationServerRest(networkModificationServerRest);
-
-        given(networkConversionServerRest.exchange(
-                eq("/v1/networks?caseUuid=" + CASE_UUID),
-                eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
-
-        given(networkConversionServerRest.exchange(
-                eq("/v1/networks?caseUuid=" + IMPORTED_CASE_UUID),
-                eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
-
-        given(networkConversionServerRest.exchange(
-                eq("/v1/networks?caseName=" + IMPORTED_CASE_UUID),
-                eq(HttpMethod.POST),
-                any(HttpEntity.class),
-                eq(NetworkInfos.class))).willReturn(new ResponseEntity<>(networkInfos, HttpStatus.OK));
-
-        given(singleLineDiagramServerRest.exchange(
-                eq("/v1/svg/" + networkUuid + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(byte[].class))).willReturn(new ResponseEntity<>("byte".getBytes(), HttpStatus.OK));
-
-        given(singleLineDiagramServerRest.exchange(
-                eq("/v1/svg-and-metadata/" + networkUuid + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("svgandmetadata", HttpStatus.OK));
-
-        given(geoDataServerRest.exchange(
-                eq("/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
-
-        given(geoDataServerRest.exchange(
-                eq("/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
-
-        given(networkMapServerRest.exchange(
-                eq("/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
-
-        given(networkMapServerRest.exchange(
-                eq("/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d"),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(String.class))).willReturn(new ResponseEntity<>("", HttpStatus.OK));
-
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
                 new ResourceSet("", TEST_FILE));
         Network network = Importers.importData("XIIDM", dataSource, null);
         given(networkStoreClient.getNetwork(networkUuid)).willReturn(network);
-
-        given(networkModificationServerRest.exchange(
-                eq("/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true"),
-                eq(HttpMethod.PUT),
-                eq(HttpEntity.EMPTY),
-                eq(Void.class))).willReturn(new ResponseEntity<Void>(HttpStatus.OK));
     }
 
     @Test
@@ -184,33 +96,72 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         server.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
-        HttpUrl baseUrl = server.url("");
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+        studyService.setCaseServerBaseUri(baseUrl);
+        studyService.setNetworkConversionServerBaseUri(baseUrl);
+        studyService.setNetworkModificationServerBaseUri(baseUrl);
+        studyService.setSingleLineDiagramServerBaseUri(baseUrl);
+        studyService.setGeoDataServerBaseUri(baseUrl);
+        studyService.setNetworkMapServerBaseUri(baseUrl);
 
-        studyService.setCaseServerBaseUri(baseUrl.toString().substring(0, baseUrl.toString().length() - 1));
+        ObjectMapper mapper = new ObjectMapper();
+        String networkInfosAsString = mapper.writeValueAsString(networkInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 switch (Objects.requireNonNull(request.getPath())) {
                     case "/v1/studies/{studyName}/cases/{caseUuid}":
-                        return new MockResponse().setResponseCode(200).setBody("CGMES");
+                        return new MockResponse().setResponseCode(200).setBody("CGMES")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
-                        return new MockResponse().setResponseCode(200).setBody("true");
+                        return new MockResponse().setResponseCode(200).setBody("true")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format":
-                        return new MockResponse().setResponseCode(200).setBody("UCTE");
+                        return new MockResponse().setResponseCode(200).setBody("UCTE")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/" + IMPORTED_CASE_UUID + "/format":
-                        return new MockResponse().setResponseCode(200).setBody("XIIDM");
+                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
-                        return new MockResponse().setResponseCode(200).setBody("false");
+                        return new MockResponse().setResponseCode(200).setBody("false")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/" + CASE_API_VERSION + "/cases/private":
-                        return new MockResponse().setResponseCode(200).setBody(importedCaseUuid.toString());
+                        return new MockResponse().setResponseCode(200).setBody(importedCaseUuid.toString())
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/" + CASE_API_VERSION + "v1/cases/11111111-0000-0000-0000-000000000000":
-                        return new MockResponse().setResponseCode(200);
+
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks?caseUuid=" + CASE_UUID:
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID:
+                    case "/v1/networks?caseName=" + IMPORTED_CASE_UUID:
+                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        return new MockResponse().setBody(" ").setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/svg/" + NETWORK_UUID + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
+                        return new MockResponse().setResponseCode(200).setBody("byte")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
+                        return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
                 return new MockResponse().setResponseCode(404);
             }

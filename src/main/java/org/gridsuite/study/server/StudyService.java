@@ -15,7 +15,6 @@ import org.gridsuite.study.server.repository.Study;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -23,11 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
@@ -43,13 +40,6 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
 @Service
 public class StudyService {
-
-    private RestTemplate singleLineDiagramServerRest;
-    private RestTemplate networkConversionServerRest;
-    private RestTemplate geoDataServerRest;
-    private RestTemplate networkMapServerRest;
-    private RestTemplate networkModificationServerRest;
-
     private WebClient webClient = WebClient.create();
 
     String caseServerBaseUri;
@@ -79,23 +69,6 @@ public class StudyService {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
         this.networkMapServerBaseUri = networkMapServerBaseUri;
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
-
-        RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
-
-        singleLineDiagramServerRest = restTemplateBuilder.build();
-        singleLineDiagramServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(singleLineDiagramServerBaseUri));
-
-        networkConversionServerRest = restTemplateBuilder.build();
-        networkConversionServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkConversionServerBaseUri));
-
-        geoDataServerRest = restTemplateBuilder.build();
-        geoDataServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(geoDataServerBaseUri));
-
-        networkMapServerRest = restTemplateBuilder.build();
-        networkMapServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkMapServerBaseUri));
-
-        networkModificationServerRest = restTemplateBuilder.build();
-        networkModificationServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkModificationServerBaseUri));
     }
 
     List<StudyInfos> getStudyList() {
@@ -187,11 +160,11 @@ public class StudyService {
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
-        ResponseEntity<byte[]> responseEntity = singleLineDiagramServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                byte[].class);
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(byte[].class)
+                .block();
     }
 
     String getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
@@ -204,11 +177,11 @@ public class StudyService {
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = singleLineDiagramServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
     private NetworkInfos persistentStore(UUID caseUuid) {
@@ -217,11 +190,12 @@ public class StudyService {
                 .buildAndExpand()
                 .toUriString();
 
-        ResponseEntity<NetworkInfos> responseEntity = networkConversionServerRest.exchange(path,
-                HttpMethod.POST,
-                HttpEntity.EMPTY,
-                NetworkInfos.class);
-        return responseEntity.getBody();
+        return webClient.post()
+                .uri(networkConversionServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(NetworkInfos.class)
+                .block();
+
     }
 
     List<VoltageLevelAttributes> getNetworkVoltageLevels(UUID networkUuid) {
@@ -242,12 +216,11 @@ public class StudyService {
                 .buildAndExpand()
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(geoDataServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
     String getSubstationsGraphics(UUID networkUuid) {
@@ -256,12 +229,11 @@ public class StudyService {
                 .buildAndExpand()
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(geoDataServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
     boolean caseExists(UUID caseUuid) {
@@ -283,12 +255,11 @@ public class StudyService {
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
     String getLinesMapData(UUID networkUuid) {
@@ -296,12 +267,11 @@ public class StudyService {
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
     void changeSwitchState(String studyName, String switchId, boolean open) {
@@ -312,10 +282,11 @@ public class StudyService {
                 .buildAndExpand(networkUuid, switchId)
                 .toUriString();
 
-        networkModificationServerRest.exchange(path,
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Void.class);
+        webClient.put()
+                .uri(networkModificationServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .block();
     }
 
     @Transactional
@@ -348,23 +319,23 @@ public class StudyService {
         this.caseServerBaseUri = caseServerBaseUri;
     }
 
-    void setSingleLineDiagramServerRest(RestTemplate singleLineDiagramServerRest) {
-        this.singleLineDiagramServerRest = Objects.requireNonNull(singleLineDiagramServerRest);
+    void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
+        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
     }
 
-    void setNetworkConversionServerRest(RestTemplate networkConversionServerRest) {
-        this.networkConversionServerRest = Objects.requireNonNull(networkConversionServerRest);
+    void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
+        this.geoDataServerBaseUri = geoDataServerBaseUri;
     }
 
-    void setGeoDataServerRest(RestTemplate geoDataServerRest) {
-        this.geoDataServerRest = Objects.requireNonNull(geoDataServerRest);
+    void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
+        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
     }
 
-    void setNetworkMapServerRest(RestTemplate networkMapServerRest) {
-        this.networkMapServerRest = Objects.requireNonNull(networkMapServerRest);
+    void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
+        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
     }
 
-    void setNetworkModificationServerRest(RestTemplate networkModificationServerRest) {
-        this.networkModificationServerRest = Objects.requireNonNull(networkModificationServerRest);
+    void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
+        this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
 }
