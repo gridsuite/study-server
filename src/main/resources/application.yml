@@ -6,6 +6,8 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 103MB
+  codec:
+    max-in-memory-size: 10MB
 
 backing-services:
   case:
