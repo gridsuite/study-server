@@ -11,7 +11,6 @@ import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -21,13 +20,7 @@ import java.util.Optional;
 @Repository
 public interface StudyRepository extends CassandraRepository<Study, Integer> {
 
-    @Override
-    List<Study> findAll();
-
     Optional<Study> findByName(String studyName);
-
-    @Override
-    <S extends Study> S insert(S s);
 
     @Query("DELETE FROM study WHERE studyname = :studyName")
     void deleteByName(@Param("studyName") String studyName);
