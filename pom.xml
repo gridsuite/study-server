@@ -306,6 +306,11 @@
             <version>${reactor.spring.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>

@@ -27,10 +27,11 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -76,16 +77,16 @@ public class StudyService {
         this.webClient =  WebClient.builder().exchangeStrategies(exchangeStrategies).build();
     }
 
-    List<StudyInfos> getStudyList() {
-        List<Study> studyList = studyRepository.findAll();
-        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat())).collect(Collectors.toList());
+    Flux<StudyInfos> getStudyList() {
+        Flux<Study> studyList = studyRepository.findAll();
+        return studyList.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
     }
 
     void createStudy(String studyName, UUID caseUuid, String description) {
         NetworkInfos networkInfos = persistentStore(caseUuid);
         String caseFormat = getCaseFormat(caseUuid);
         Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUuid, false);
-        studyRepository.insert(study);
+        studyRepository.insert(study).subscribe();
     }
 
     private String getCaseFormat(UUID caseUuid) {
@@ -105,30 +106,29 @@ public class StudyService {
         NetworkInfos networkInfos = persistentStore(caseUUid);
         String caseFormat = getCaseFormat(caseUUid);
         Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUUid, true);
-        studyRepository.insert(study);
+        studyRepository.insert(study).subscribe();
     }
 
     Study getStudy(String studyName) {
-        return studyRepository.findByName(studyName).orElse(null);
+        return studyRepository.findByName(studyName).block();
     }
 
     void deleteStudy(String studyName) {
-        Optional<Study> studyOpt = studyRepository.findByName(studyName);
-        if (studyOpt.isEmpty()) {
-            return;
-        }
-        Study study = studyOpt.get();
+        Mono<Study> studyMono = studyRepository.findByName(studyName);
 
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}")
-                .buildAndExpand(study.getCaseUuid())
-                .toUriString();
+        studyMono.map(study -> {
+            String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}")
+                    .buildAndExpand(study.getCaseUuid())
+                    .toUriString();
 
-        if (study.isCasePrivate()) {
-            webClient.delete()
-                    .uri(caseServerBaseUri + path)
-                    .retrieve();
-        }
-        studyRepository.deleteByName(studyName);
+            if (study.isCasePrivate()) {
+                webClient.delete()
+                        .uri(caseServerBaseUri + path)
+                        .retrieve();
+            }
+            studyRepository.deleteByName(studyName).subscribe();
+            return Mono.empty();
+        }).subscribe();
     }
 
     UUID importCase(MultipartFile multipartFile) throws IOException {
@@ -279,11 +279,11 @@ public class StudyService {
     }
 
     void changeSwitchState(String studyName, String switchId, boolean open) {
-        UUID networkUuid = getStudyUuid(studyName);
+        Mono<UUID> networkUuid = getStudyUuid(studyName);
 
         String path = UriComponentsBuilder.fromPath("/" + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
                 .queryParam("open", open)
-                .buildAndExpand(networkUuid, switchId)
+                .buildAndExpand(networkUuid.block(), switchId)
                 .toUriString();
 
         webClient.put()
@@ -294,25 +294,21 @@ public class StudyService {
     }
 
     @Transactional
-    Study renameStudy(String studyName, String newStudyName) {
-        Optional<Study> studyOpt = studyRepository.findByName(studyName);
-        if (studyOpt.isEmpty()) {
-            throw new StudyException(STUDY_DOESNT_EXISTS);
-        }
-        Study study = studyOpt.get();
-        study.setName(newStudyName);
-        studyRepository.insert(study);
-        studyRepository.deleteByName(studyName);
-        return study;
+    Mono<Study> renameStudy(String studyName, String newStudyName) {
+        Mono<Study> studyMono = studyRepository.findByName(studyName);
+        return studyMono.flatMap(study -> {
+            study.setName(newStudyName);
+            studyRepository.insert(study).subscribe();
+            studyRepository.deleteByName(studyName).subscribe();
+            return Mono.just(study);
+        }).switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
     }
 
-    UUID getStudyUuid(String studyName) {
-        Optional<Study> study = studyRepository.findByName(studyName);
-        if (study.isPresent()) {
-            return study.get().getNetworkUuid();
-        } else {
-            throw new StudyException(STUDY_DOESNT_EXISTS);
-        }
+    Mono<UUID> getStudyUuid(String studyName) {
+        Mono<Study> studyMono = studyRepository.findByName(studyName);
+        return studyMono.flatMap(study -> Mono.just(study.getNetworkUuid()))
+                .switchIfEmpty(Mono.defer(() ->  Mono.error(new StudyException(STUDY_DOESNT_EXISTS))));
+
     }
 
     boolean studyExists(String studyName) {

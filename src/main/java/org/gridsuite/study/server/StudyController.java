@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.List;
@@ -45,8 +47,8 @@ public class StudyController {
     @ApiOperation(value = "Get all studies")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
     public ResponseEntity<List<StudyInfos>> getStudyList() {
-        List<StudyInfos> studies = studyService.getStudyList();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
+        Flux<StudyInfos> studies = studyService.getStudyList();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies.collectList().block());
     }
 
     @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
@@ -55,8 +57,8 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Void> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                                  @PathVariable("caseUuid") UUID caseUuid,
-                                                                  @RequestParam("description") String description) {
+                                                            @PathVariable("caseUuid") UUID caseUuid,
+                                                            @RequestParam("description") String description) {
 
         if (studyService.studyExists(studyName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
@@ -77,8 +79,8 @@ public class StudyController {
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<Void> createStudy(@PathVariable("studyName") String studyName,
-                                                  @RequestParam("caseFile") MultipartFile caseFile,
-                                                  @RequestParam("description") String description) throws IOException {
+                                            @RequestParam("caseFile") MultipartFile caseFile,
+                                            @RequestParam("description") String description) throws IOException {
 
         if (studyService.studyExists(studyName)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
@@ -119,9 +121,9 @@ public class StudyController {
             @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
-        UUID networkUuid = studyService.getStudyUuid(studyName);
+        Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
 
-        byte[] svg = studyService.getVoltageLevelSvg(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring);
+        byte[] svg = studyService.getVoltageLevelSvg(networkUuid.block(), voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg);
     }
 
@@ -135,8 +137,8 @@ public class StudyController {
             @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
-        UUID networkUuid = studyService.getStudyUuid(studyName);
-        String svgAndMetadata = studyService.getVoltageLevelSvgAndMetadata(networkUuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring);
+        Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
+        String svgAndMetadata = studyService.getVoltageLevelSvgAndMetadata(networkUuid.block(), voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(svgAndMetadata);
     }
 
@@ -144,8 +146,8 @@ public class StudyController {
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
     public ResponseEntity<List<VoltageLevelAttributes>> getNetworkVoltyutageLevels(@PathVariable("studyName") String studyName) {
-        UUID networkUuid = studyService.getStudyUuid(studyName);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkVoltageLevels(networkUuid));
+        Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkVoltageLevels(networkUuid.block()));
 
     }
 
@@ -153,8 +155,8 @@ public class StudyController {
     @ApiOperation(value = "Get Network lines graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
     public ResponseEntity<String> getLinesGraphics(@PathVariable("studyName") String studyName) {
-        UUID networkUuid = studyService.getStudyUuid(studyName);
-        String lineGraphics = studyService.getLinesGraphics(networkUuid);
+        Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
+        String lineGraphics = studyService.getLinesGraphics(networkUuid.block());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics);
     }
 
@@ -162,8 +164,8 @@ public class StudyController {
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
     public ResponseEntity<String> getSubstationsGraphic(@PathVariable("studyName") String studyName) {
-        UUID networkUuid = studyService.getStudyUuid(studyName);
-        String substationGraphics = studyService.getSubstationsGraphics(networkUuid);
+        Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
+        String substationGraphics = studyService.getSubstationsGraphics(networkUuid.block());
         return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationGraphics);
     }
 
@@ -171,8 +173,8 @@ public class StudyController {
     @ApiOperation(value = "Get Network lines description", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
     public ResponseEntity<String> getLinesMapData(@PathVariable("studyName") String studyName) {
-        UUID networkUuid = studyService.getStudyUuid(studyName);
-        String linesMapData = studyService.getLinesMapData(networkUuid);
+        Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
+        String linesMapData = studyService.getLinesMapData(networkUuid.block());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(linesMapData);
     }
 
@@ -180,8 +182,8 @@ public class StudyController {
     @ApiOperation(value = "Get Network substations description", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
     public ResponseEntity<String> getSubstationsMapData(@PathVariable("studyName") String studyName) {
-        UUID networkUuid = studyService.getStudyUuid(studyName);
-        String substationMapData = studyService.getSubstationsMapData(networkUuid);
+        Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
+        String substationMapData = studyService.getSubstationsMapData(networkUuid.block());
         return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationMapData);
     }
 
@@ -189,8 +191,8 @@ public class StudyController {
     @ApiOperation(value = "update a switch position", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
     public ResponseEntity<Void> changeSwitchState(@PathVariable("studyName") String studyName,
-                                                    @PathVariable("switchId") String switchId,
-                                                    @RequestParam("open") boolean open) {
+                                                  @PathVariable("switchId") String switchId,
+                                                  @RequestParam("open") boolean open) {
         studyService.changeSwitchState(studyName, switchId, open);
         return  ResponseEntity.ok().build();
     }
@@ -199,9 +201,9 @@ public class StudyController {
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
     public ResponseEntity<Study> renameStudy(@PathVariable("studyName") String studyName,
-                                                        @RequestBody RenameStudyAttributes renameStudyAttributes) {
-        Study study = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
-        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study);
+                                             @RequestBody RenameStudyAttributes renameStudyAttributes) {
+        Mono<Study> study = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
+        return  ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study.block());
     }
 
 }
