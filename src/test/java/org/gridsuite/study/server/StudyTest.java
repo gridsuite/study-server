@@ -137,7 +137,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/" + CASE_API_VERSION + "v1/cases/11111111-0000-0000-0000-000000000000":
+                    case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
                         return new MockResponse().setResponseCode(200)

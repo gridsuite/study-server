@@ -82,14 +82,18 @@ public class StudyService {
         return studyList.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
     }
 
-    void createStudy(String studyName, UUID caseUuid, String description) {
-        NetworkInfos networkInfos = persistentStore(caseUuid);
-        String caseFormat = getCaseFormat(caseUuid);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUuid, false);
-        studyRepository.insert(study).subscribe();
+    Mono<Study> createStudy(String studyName, UUID caseUuid, String description) {
+        Mono<NetworkInfos> networkInfos = persistentStore(caseUuid);
+        Mono<String> caseFormat = getCaseFormat(caseUuid);
+
+        return Mono.zip(networkInfos, caseFormat)
+                .flatMap(t -> {
+                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false);
+                    return studyRepository.insert(study);
+                });
     }
 
-    private String getCaseFormat(UUID caseUuid) {
+    private Mono<String> getCaseFormat(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}/format")
                 .buildAndExpand(caseUuid)
                 .toUriString();
@@ -97,26 +101,30 @@ public class StudyService {
         return webClient.get()
                 .uri(caseServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToMono(String.class);
     }
 
-    void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
-        UUID caseUUid = importCase(caseFile);
-        NetworkInfos networkInfos = persistentStore(caseUUid);
-        String caseFormat = getCaseFormat(caseUUid);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUUid, true);
-        studyRepository.insert(study).subscribe();
+    Mono<Study> createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
+        Mono<UUID> caseUUid = importCase(caseFile);
+        return caseUUid.flatMap(uuid -> {
+            Mono<NetworkInfos> networkInfos = persistentStore(uuid);
+            Mono<String> caseFormat = getCaseFormat(uuid);
+            return Mono.zip(networkInfos, caseFormat)
+                    .flatMap(t -> {
+                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true);
+                        return studyRepository.insert(study);
+                    });
+        });
     }
 
-    Study getStudy(String studyName) {
-        return studyRepository.findByName(studyName).block();
+    Mono<Study> getStudy(String studyName) {
+        return studyRepository.findByName(studyName);
     }
 
-    void deleteStudy(String studyName) {
+    Mono<Void> deleteStudy(String studyName) {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
 
-        studyMono.map(study -> {
+        return studyMono.flatMap(study -> {
             String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}")
                     .buildAndExpand(study.getCaseUuid())
                     .toUriString();
@@ -124,14 +132,15 @@ public class StudyService {
             if (study.isCasePrivate()) {
                 webClient.delete()
                         .uri(caseServerBaseUri + path)
-                        .retrieve();
+                        .retrieve()
+                        .bodyToMono(Void.class)
+                        .subscribe();
             }
-            studyRepository.deleteByName(studyName).subscribe();
-            return Mono.empty();
-        }).subscribe();
+            return studyRepository.deleteByName(studyName);
+        });
     }
 
-    UUID importCase(MultipartFile multipartFile) throws IOException {
+    Mono<UUID> importCase(MultipartFile multipartFile) throws IOException {
         MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
         final String filename = multipartFile.getOriginalFilename();
         map.add("name", filename);
@@ -150,12 +159,11 @@ public class StudyService {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
                 .body(BodyInserters.fromValue(map))
                 .retrieve()
-                .bodyToMono(UUID.class)
-                .block();
+                .bodyToMono(UUID.class);
     }
 
-    byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
-                              boolean topologicalColoring) {
+    Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
+                                    boolean topologicalColoring) {
         String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
@@ -167,12 +175,11 @@ public class StudyService {
         return webClient.get()
                 .uri(singleLineDiagramServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(byte[].class)
-                .block();
+                .bodyToMono(byte[].class);
     }
 
-    String getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
-                                         boolean topologicalColoring) {
+    Mono<String> getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
+                                               boolean topologicalColoring) {
         String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
@@ -184,11 +191,10 @@ public class StudyService {
         return webClient.get()
                 .uri(singleLineDiagramServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToMono(String.class);
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid) {
+    private Mono<NetworkInfos> persistentStore(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath("/" + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_UUID, caseUuid)
                 .buildAndExpand()
@@ -197,9 +203,7 @@ public class StudyService {
         return webClient.post()
                 .uri(networkConversionServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(NetworkInfos.class)
-                .block();
-
+                .bodyToMono(NetworkInfos.class);
     }
 
     List<VoltageLevelAttributes> getNetworkVoltageLevels(UUID networkUuid) {
@@ -214,7 +218,7 @@ public class StudyService {
         return voltageLevelAttributes;
     }
 
-    String getLinesGraphics(UUID networkUuid) {
+    Mono<String> getLinesGraphics(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath("/" + GEO_DATA_API_VERSION + "/lines")
                 .queryParam(NETWORK_UUID, networkUuid)
                 .buildAndExpand()
@@ -223,11 +227,10 @@ public class StudyService {
         return webClient.get()
                 .uri(geoDataServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToMono(String.class);
     }
 
-    String getSubstationsGraphics(UUID networkUuid) {
+    Mono<String> getSubstationsGraphics(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath("/" + GEO_DATA_API_VERSION + "/substations")
                 .queryParam(NETWORK_UUID, networkUuid)
                 .buildAndExpand()
@@ -236,25 +239,21 @@ public class StudyService {
         return webClient.get()
                 .uri(geoDataServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToMono(String.class);
     }
 
-    boolean caseExists(UUID caseUuid) {
+    Mono<Boolean> caseExists(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}/exists")
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        String caseExists = webClient.get()
+        return webClient.get()
                 .uri(caseServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
-
-        return Boolean.TRUE.equals(Boolean.parseBoolean(caseExists));
+                .bodyToMono(Boolean.class);
     }
 
-    String getSubstationsMapData(UUID networkUuid) {
+    Mono<String> getSubstationsMapData(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/substations/{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
@@ -262,11 +261,10 @@ public class StudyService {
         return webClient.get()
                 .uri(networkMapServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToMono(String.class);
     }
 
-    String getLinesMapData(UUID networkUuid) {
+    Mono<String> getLinesMapData(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/lines/{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
@@ -274,11 +272,10 @@ public class StudyService {
         return webClient.get()
                 .uri(networkMapServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToMono(String.class);
     }
 
-    void changeSwitchState(String studyName, String switchId, boolean open) {
+    Mono<Void> changeSwitchState(String studyName, String switchId, boolean open) {
         Mono<UUID> networkUuid = getStudyUuid(studyName);
 
         String path = UriComponentsBuilder.fromPath("/" + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
@@ -286,11 +283,10 @@ public class StudyService {
                 .buildAndExpand(networkUuid.block(), switchId)
                 .toUriString();
 
-        webClient.put()
+        return webClient.put()
                 .uri(networkModificationServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(Void.class)
-                .block();
+                .bodyToMono(Void.class);
     }
 
     @Transactional
@@ -307,12 +303,13 @@ public class StudyService {
     Mono<UUID> getStudyUuid(String studyName) {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
         return studyMono.flatMap(study -> Mono.just(study.getNetworkUuid()))
-                .switchIfEmpty(Mono.defer(() ->  Mono.error(new StudyException(STUDY_DOESNT_EXISTS))));
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
 
     }
 
-    boolean studyExists(String studyName) {
-        return getStudy(studyName) != null;
+    Mono<Boolean> studyExists(String studyName) {
+        return getStudy(studyName).map(s -> true)
+                .switchIfEmpty(Mono.just(false));
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {
