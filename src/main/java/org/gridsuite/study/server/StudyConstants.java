@@ -20,6 +20,7 @@ final class StudyConstants {
     static final String NETWORK_CONVERSION_API_VERSION = "v1";
     static final String GEO_DATA_API_VERSION = "v1";
     static final String NETWORK_MODIFICATION_API_VERSION = "v1";
+    static final String LOADFLOW_API_VERSION = "v1";
 
     static final String NETWORK_UUID = "networkUuid";
     static final String CASE_UUID = "caseUuid";

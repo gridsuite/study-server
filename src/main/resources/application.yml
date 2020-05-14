@@ -20,6 +20,8 @@ backing-services:
     base-uri: http://localhost:5006
   network-modification:
     base-uri: http://localhost:5007
+  loadflow:
+    base-uri: http://localhost:5008
 
 
 network-store-server:

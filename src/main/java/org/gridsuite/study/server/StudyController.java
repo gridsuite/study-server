@@ -189,9 +189,17 @@ public class StudyController {
     @ApiOperation(value = "update a switch position", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
     public ResponseEntity<Void> changeSwitchState(@PathVariable("studyName") String studyName,
-                                                    @PathVariable("switchId") String switchId,
-                                                    @RequestParam("open") boolean open) {
+                                                  @PathVariable("switchId") String switchId,
+                                                  @RequestParam("open") boolean open) {
         studyService.changeSwitchState(studyName, switchId, open);
+        return  ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyName}/loadflow/run")
+    @ApiOperation(value = "run loadflow on study", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
+    public ResponseEntity<Void> runLoadFlow(@PathVariable("studyName") String studyName) {
+        studyService.runLoadFlow(studyName);
         return  ResponseEntity.ok().build();
     }
 
