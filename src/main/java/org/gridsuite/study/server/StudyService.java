@@ -51,6 +51,7 @@ public class StudyService {
     private RestTemplate geoDataServerRest;
     private RestTemplate networkMapServerRest;
     private RestTemplate networkModificationServerRest;
+    private RestTemplate loadFlowServerRest;
 
     @Autowired
     private NetworkStoreService networkStoreClient;
@@ -65,7 +66,8 @@ public class StudyService {
             @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
             @Value("${backing-services.geo-data.base-uri:http://geo-data-store-server/}") String geoDataServerBaseUri,
             @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
-            @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri) {
+            @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
+            @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri) {
         RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
         caseServerRest = restTemplateBuilder.build();
         caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
@@ -84,6 +86,9 @@ public class StudyService {
 
         networkModificationServerRest = restTemplateBuilder.build();
         networkModificationServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkModificationServerBaseUri));
+
+        loadFlowServerRest = restTemplateBuilder.build();
+        loadFlowServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(loadFlowServerBaseUri));
     }
 
     List<StudyInfos> getStudyList() {
@@ -323,6 +328,19 @@ public class StudyService {
                 .toUriString();
 
         networkModificationServerRest.exchange(path,
+                HttpMethod.PUT,
+                HttpEntity.EMPTY,
+                Void.class);
+    }
+
+    void runLoadFlow(String studyName) {
+        UUID networkUuid = getStudyUuid(studyName);
+
+        String path = UriComponentsBuilder.fromPath("/" + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        loadFlowServerRest.exchange(path,
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Void.class);
