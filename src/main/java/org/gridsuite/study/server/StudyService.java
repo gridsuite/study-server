@@ -297,7 +297,7 @@ public class StudyService {
             studyRepository.insert(study).subscribe();
             studyRepository.deleteByName(studyName).subscribe();
             return Mono.just(study);
-        }).switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
+        });
     }
 
     Mono<UUID> getStudyUuid(String studyName) {

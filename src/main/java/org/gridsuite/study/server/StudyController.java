@@ -81,6 +81,7 @@ public class StudyController {
     public ResponseEntity<Void> createStudy(@PathVariable("studyName") String studyName,
                                               @RequestPart("caseFile") MultipartFile caseFile,
                                               @RequestParam("description") String description) throws IOException {
+        studyService.studyExists(studyName).flatMap(b -> b ? Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS)) : Mono.empty());
 
         if (studyService.studyExists(studyName).block()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
@@ -95,18 +96,16 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The study information"),
             @ApiResponse(code = 404, message = "The study doesn't exist")})
-    public ResponseEntity<Study> getStudy(@PathVariable("studyName") String studyName) {
-        Study study = studyService.getStudy(studyName).block();
-        if (study == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study);
+    public Mono<ResponseEntity<Study>> getStudy(@PathVariable("studyName") String studyName) {
+        Mono<Study> studyMono = studyService.getStudy(studyName);
+        return studyMono.flatMap(s -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(s)))
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
     @DeleteMapping(value = "/studies/{studyName}")
     @ApiOperation(value = "delete the study")
     @ApiResponse(code = 200, message = "Study deleted")
-    public Mono<ResponseEntity<Object>> deleteStudy(@PathVariable("studyName") String studyName) {
+    public Mono<ResponseEntity<Void>> deleteStudy(@PathVariable("studyName") String studyName) {
         return studyService.deleteStudy(studyName).flatMap(e -> Mono.just(ResponseEntity.ok().build()));
     }
 
@@ -154,37 +153,37 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyName}/geo-data/lines")
     @ApiOperation(value = "Get Network lines graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
-    public ResponseEntity<String> getLinesGraphics(@PathVariable("studyName") String studyName) {
+    public Mono<ResponseEntity<String>> getLinesGraphics(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
                 .flatMap(uuid -> studyService.getSubstationsGraphics(uuid))
-                .flatMap(lineGraphics -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics))).block();
+                .flatMap(lineGraphics -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics)));
     }
 
     @GetMapping(value = "/studies/{studyName}/geo-data/substations")
     @ApiOperation(value = "Get Network substations graphics", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
-    public ResponseEntity<String> getSubstationsGraphic(@PathVariable("studyName") String studyName) {
+    public Mono<ResponseEntity<String>> getSubstationsGraphic(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
                 .flatMap(uuid -> studyService.getSubstationsGraphics(uuid))
-                .flatMap(substationGraphics -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationGraphics))).block();
+                .flatMap(substationGraphics -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationGraphics)));
     }
 
     @GetMapping(value = "/studies/{studyName}/network-map/lines")
     @ApiOperation(value = "Get Network lines description", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
-    public ResponseEntity<String> getLinesMapData(@PathVariable("studyName") String studyName) {
+    public Mono<ResponseEntity<String>> getLinesMapData(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
                 .flatMap(uuid -> studyService.getLinesMapData(uuid))
-                .flatMap(linesMapData -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(linesMapData))).block();
+                .flatMap(linesMapData -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(linesMapData)));
     }
 
     @GetMapping(value = "/studies/{studyName}/network-map/substations")
     @ApiOperation(value = "Get Network substations description", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
-    public ResponseEntity<String> getSubstationsMapData(@PathVariable("studyName") String studyName) {
+    public Mono<ResponseEntity<String>> getSubstationsMapData(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
                 .flatMap(uuid -> studyService.getSubstationsMapData(uuid))
-                .flatMap(substationMapData -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationMapData))).block();
+                .flatMap(substationMapData -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationMapData)));
     }
 
     @PutMapping(value = "/studies/{studyName}/network-modification/switches/{switchId}")
@@ -203,7 +202,6 @@ public class StudyController {
                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
         Mono<Study> studyMono = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
         return studyMono.flatMap(study -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study)))
-                .onErrorResume(e -> Mono.just(ResponseEntity.notFound().build()));
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
-
 }

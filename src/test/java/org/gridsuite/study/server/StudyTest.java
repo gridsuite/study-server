@@ -221,7 +221,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .exchange()
                     .expectStatus().isOk();
         }
-
         */
 
         // temp insert : to be replaced with second insert method (with multipart file)
@@ -328,6 +327,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk();
 
+        //update switch
         webTestClient.put()
                 .uri("/v1/studies/{studyName}/network-modification/switches/{switchId}?open=true", STUDY_NAME, "switchId")
                 .exchange()
@@ -359,7 +359,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
                 .expectStatus().isNotFound();
-        //assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();
