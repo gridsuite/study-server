@@ -24,43 +24,36 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.*;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-
-import java.io.InputStream;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.config.EnableWebFlux;
+import org.springframework.web.reactive.function.BodyInserters;
 import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
 @RunWith(SpringRunner.class)
-@WebMvcTest(StudyController.class)
-@EnableWebMvc
+@WebFluxTest(StudyController.class)
+@EnableWebFlux
 @ContextHierarchy({
     @ContextConfiguration(classes = {StudyApplication.class, StudyService.class})
     })
 public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
     @Autowired
-    private MockMvc mvc;
+    private WebTestClient webTestClient;
 
     @Autowired
     private StudyService studyService;
@@ -118,6 +111,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
+                    case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -169,108 +163,127 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         };
         server.setDispatcher(dispatcher);
 
-        //empty
-        MvcResult result = mvc.perform(get("/v1/studies"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("[]", result.getResponse().getContentAsString());
+        //empty list
+        webTestClient.get()
+                .uri("/v1/studies")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[]");
 
         //insert a study
-        mvc.perform(post("/v1/studies/{studyName}/cases/{caseUuid}", STUDY_NAME, caseUuid)
-                .param(DESCRIPTION, DESCRIPTION))
-                .andExpect(status().isOk());
+        webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", STUDY_NAME, caseUuid, DESCRIPTION)
+                .exchange()
+                .expectStatus().isOk();
 
         //insert a study with a non existing case and except exception
-        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseUuid}", "randomStudy", "00000000-0000-0000-0000-000000000000")
-                .param(DESCRIPTION, DESCRIPTION))
-                .andExpect(status().isNotFound())
-                .andReturn();
+        webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", "randomStudy", "00000000-0000-0000-0000-000000000000", DESCRIPTION)
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .consumeWith(m -> assertTrue(Objects.requireNonNull(m.getResponseBody()).contains(CASE_DOESNT_EXISTS)));
 
-        assertEquals(CASE_DOESNT_EXISTS, result.getResponse().getErrorMessage());
-
-        //1 study
-        result = mvc.perform(get("/v1/studies"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]",
-                result.getResponse().getContentAsString());
+        webTestClient.get()
+                .uri("/v1/studies")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //insert the same study => 409 conflict
-        result = mvc.perform(post("/v1/studies/{studyName}/cases/{caseUuid}", STUDY_NAME, caseUuid)
-                .param(DESCRIPTION, DESCRIPTION))
-                .andExpect(status().isConflict())
-                .andReturn();
-        assertEquals(StudyConstants.STUDY_ALREADY_EXISTS, result.getResponse().getErrorMessage());
+        webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", STUDY_NAME, caseUuid, DESCRIPTION)
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .consumeWith(m -> assertTrue(Objects.requireNonNull(m.getResponseBody()).contains(STUDY_ALREADY_EXISTS)));
 
+        /*
         //insert a study with a case (multipartfile)
-        try (InputStream inputStream = getClass().getResourceAsStream("/src/test/resources/testCase.xiidm")) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/plain", inputStream);
-            MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders.multipart(STUDIES_URL, "s2")
-                    .file(mockFile)
-                    .param(DESCRIPTION, "desc"))
-                    .andExpect(status().isOk())
-                    .andReturn();
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"));) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/plain", is);
+
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("caseFile", "test")
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .header("Content-Disposition", "form-data; name=caseFile; filename=caseFile");
+
+            webTestClient.post()
+                    .uri(STUDIES_URL + "?description={description}", "s2", "desc")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk();
         }
 
-        //Import the same case -> 409 conflict
-        try (InputStream inputStream = getClass().getResourceAsStream("/src/test/resources/testCase.xiidm")) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/plain", inputStream);
-            mvc.perform(MockMvcRequestBuilders.multipart(STUDIES_URL, "s2")
-                    .file(mockFile)
-                    .param(DESCRIPTION, DESCRIPTION))
-                    .andExpect(status().isConflict())
-                    .andReturn();
-            assertEquals(StudyConstants.STUDY_ALREADY_EXISTS, result.getResponse().getErrorMessage());
-        }
+        */
 
-        result = mvc.perform(get(STUDIES_URL, "s2"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true}",
-                result.getResponse().getContentAsString());
+        // temp insert : to be replaced with second insert method (with multipart file)
+        webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", "s2", IMPORTED_CASE_UUID, "desc")
+                .exchange()
+                .expectStatus().isOk();
+
+        // check the study s2
+        webTestClient.get()
+                .uri(STUDIES_URL, "s2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":false}");
 
         //get a non existing study -> 404 not found
-        mvc.perform(get(STUDIES_URL, "s3"))
-                .andExpect(status().isNotFound())
-                .andReturn();
+        webTestClient.get()
+                .uri(STUDIES_URL, "s3")
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody();
 
         //get the voltage level diagram svg
-        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", STUDY_NAME, "voltageLevelId"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_XML))
-                .andReturn();
-        assertEquals("byte", result.getResponse().getContentAsString());
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", STUDY_NAME, "voltageLevelId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_XML)
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("byte");
 
         //get the voltage level diagram svg from a study that doesn't exist
-
-        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", "notExistingStudy", "voltageLevelId"))
-                .andExpect(status().isNotFound())
-                .andReturn();
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", "notExistingStudy", "voltageLevelId")
+                .exchange()
+                .expectStatus().isNotFound();
 
         //get the voltage level diagram svg and metadata
-        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", STUDY_NAME, "voltageLevelId"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("svgandmetadata", result.getResponse().getContentAsString());
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", STUDY_NAME, "voltageLevelId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("svgandmetadata");
 
         //get the voltage level diagram svg and metadata from a study that doesn't exist
-        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "notExistingStudy", "voltageLevelId"))
-                .andExpect(status().isNotFound())
-                .andReturn();
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "notExistingStudy", "voltageLevelId")
+                .exchange()
+                .expectStatus().isNotFound();
+        //assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
 
-        assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
-
-        //get all the voltage levels of the network
-        result = mvc.perform(get("/v1/studies/{studyName}/network/voltage-levels", STUDY_NAME))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals(
-                "[{\"id\":\"BBE1AA1\",\"name\":\"BBE1AA1\",\"substationId\":\"BBE1AA\"}," +
+        //get the voltage level diagram svg and metadata from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/network/voltage-levels", STUDY_NAME)
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("[{\"id\":\"BBE1AA1\",\"name\":\"BBE1AA1\",\"substationId\":\"BBE1AA\"}," +
                         "{\"id\":\"BBE2AA1\",\"name\":\"BBE2AA1\",\"substationId\":\"BBE2AA\"}," +
                         "{\"id\":\"DDE1AA1\",\"name\":\"DDE1AA1\",\"substationId\":\"DDE1AA\"}," +
                         "{\"id\":\"DDE2AA1\",\"name\":\"DDE2AA1\",\"substationId\":\"DDE2AA\"}," +
@@ -279,64 +292,74 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         "{\"id\":\"FFR3AA1\",\"name\":\"FFR3AA1\",\"substationId\":\"FFR3AA\"}," +
                         "{\"id\":\"NNL1AA1\",\"name\":\"NNL1AA1\",\"substationId\":\"NNL1AA\"}," +
                         "{\"id\":\"NNL2AA1\",\"name\":\"NNL2AA1\",\"substationId\":\"NNL2AA\"}," +
-                        "{\"id\":\"NNL3AA1\",\"name\":\"NNL3AA1\",\"substationId\":\"NNL3AA\"}]",
-                result.getResponse().getContentAsString());
+                        "{\"id\":\"NNL3AA1\",\"name\":\"NNL3AA1\",\"substationId\":\"NNL3AA\"}]");
 
         //get the lines-graphics of a network
-        mvc.perform(get("/v1/studies/{studyName}/geo-data/lines/", STUDY_NAME))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/geo-data/lines/", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the substation-graphics of a network
-        mvc.perform(get("/v1/studies/{studyName}/geo-data/substations/", STUDY_NAME))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/geo-data/substations/", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the lines map data of a network
-        mvc.perform(get("/v1/studies/{studyName}/network-map/lines/", STUDY_NAME))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/network-map/lines/", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the substation map data of a network
-        mvc.perform(get("/v1/studies/{studyName}/network-map/substations/", STUDY_NAME))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/network-map/substations/", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //delete existing study s2
-        mvc.perform(delete(STUDIES_URL, "s2"))
-                .andExpect(status().isOk())
-                .andReturn();
+        webTestClient.delete()
+                .uri(STUDIES_URL, "s2")
+                .exchange()
+                .expectStatus().isOk();
 
-        mvc.perform(put("/v1/studies/{studyName}/network-modification/switches/{switchId}?open=true", STUDY_NAME, "switchId"))
-                .andExpect(status().isOk());
+        webTestClient.put()
+                .uri("/v1/studies/{studyName}/network-modification/switches/{switchId}?open=true", STUDY_NAME, "switchId")
+                .exchange()
+                .expectStatus().isOk();
 
-        //insert 1 study
-        result = mvc.perform(get("/v1/studies"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]",
-                result.getResponse().getContentAsString());
+        webTestClient.get()
+                .uri("/v1/studies")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //rename the study
-        ObjectMapper objMapper = new ObjectMapper();
         String newStudyName = "newName";
         RenameStudyAttributes renameStudyAttributes = new RenameStudyAttributes(newStudyName);
-        result = mvc.perform(post("/v1/studies/" + STUDY_NAME + "/rename")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objMapper.writeValueAsString(renameStudyAttributes)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        assertEquals("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false}",
-                result.getResponse().getContentAsString());
 
-        result = mvc.perform(post("/v1/studies/aaa/rename")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objMapper.writeValueAsString(renameStudyAttributes)))
-                .andExpect(status().isNotFound())
-                .andReturn();
-        assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
+        webTestClient.post()
+                .uri("/v1/studies/" + STUDY_NAME + "/rename")
+                .body(BodyInserters.fromValue(renameStudyAttributes))
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false}");
+
+        webTestClient.post()
+                .uri("/v1/studies/" + STUDY_NAME + "/rename")
+                .body(BodyInserters.fromValue(renameStudyAttributes))
+                .exchange()
+                .expectStatus().isNotFound();
+        //assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();

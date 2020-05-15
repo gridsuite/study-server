@@ -198,9 +198,9 @@
         <profile>
             <id>proxy</id>
             <activation>
-              <property>
-                <name>proxyHost</name>
-              </property>
+                <property>
+                    <name>proxyHost</name>
+                </property>
             </activation>
             <build>
                 <pluginManagement>
@@ -364,6 +364,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-test-autoconfigure</artifactId>
             <version>${springboot.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.skyscreamer</groupId>
+            <artifactId>jsonassert</artifactId>
+            <version>1.5.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
