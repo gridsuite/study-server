@@ -11,7 +11,6 @@ import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
 import org.gridsuite.study.server.repository.Study;
 import io.swagger.annotations.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -40,8 +38,11 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @ComponentScan(basePackageClasses = StudyService.class)
 public class StudyController {
 
-    @Autowired
-    private StudyService studyService;
+    private final StudyService studyService;
+
+    public StudyController(StudyService studyService) {
+        this.studyService = studyService;
+    }
 
     @GetMapping(value = "/studies")
     @ApiOperation(value = "Get all studies")
@@ -56,20 +57,23 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
-    public ResponseEntity<Void> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                              @PathVariable("caseUuid") UUID caseUuid,
-                                                              @RequestParam("description") String description) {
+    public Mono<ResponseEntity<Object>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
+                                                    @PathVariable("caseUuid") UUID caseUuid,
+                                                    @RequestParam("description") String description) {
+        Mono<Boolean> studyExists = studyService.studyExists(studyName);
+        Mono<Boolean> caseExists = studyService.caseExists(caseUuid);
 
-        if (studyService.studyExists(studyName).block()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
-        }
-
-        if (!studyService.caseExists(caseUuid).block()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS);
-        }
-
-        Study studyMono = studyService.createStudy(studyName, caseUuid, description).block();
-        return ResponseEntity.ok().build();
+        return Mono.zip(studyExists, caseExists)
+                .flatMap(t -> {
+                    if (t.getT1().equals(Boolean.TRUE)) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.CONFLICT).body(STUDY_ALREADY_EXISTS));
+                    } else if (t.getT2().equals(Boolean.FALSE)) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(CASE_DOESNT_EXISTS));
+                    } else {
+                        return studyService.createStudy(studyName, caseUuid, description)
+                                .flatMap(s -> Mono.just(ResponseEntity.ok().build()));
+                    }
+                });
     }
 
     @PostMapping(value = "/studies/{studyName}")
@@ -78,17 +82,22 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<Void> createStudy(@PathVariable("studyName") String studyName,
-                                              @RequestPart("caseFile") MultipartFile caseFile,
-                                              @RequestParam("description") String description) throws IOException {
-        studyService.studyExists(studyName).flatMap(b -> b ? Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS)) : Mono.empty());
+    public Mono<ResponseEntity<Object>> createStudy(@PathVariable("studyName") String studyName,
+                                    @RequestPart("caseFile") MultipartFile caseFile,
+                                    @RequestParam("description") String description) throws IOException {
+        Mono<Boolean> studyExists = studyService.studyExists(studyName);
 
-        if (studyService.studyExists(studyName).block()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS);
-        }
-
-        Study studyMono = studyService.createStudy(studyName, caseFile, description).block();
-        return ResponseEntity.ok().build();
+        return studyExists.flatMap(b -> {
+            if (b.equals(Boolean.TRUE)) {
+                return Mono.just(ResponseEntity.status(HttpStatus.CONFLICT).body(STUDY_ALREADY_EXISTS));
+            }
+            try {
+                Mono<Study> studyMono = studyService.createStudy(studyName, caseFile, description);
+                return studyMono.flatMap(s -> Mono.just(ResponseEntity.ok().build()));
+            } catch (IOException e) {
+                return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error when crating the study"));
+            }
+        });
     }
 
     @GetMapping(value = "/studies/{studyName}")
@@ -155,7 +164,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
     public Mono<ResponseEntity<String>> getLinesGraphics(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
-                .flatMap(uuid -> studyService.getSubstationsGraphics(uuid))
+                .flatMap(studyService::getSubstationsGraphics)
                 .flatMap(lineGraphics -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics)));
     }
 
@@ -164,7 +173,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
     public Mono<ResponseEntity<String>> getSubstationsGraphic(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
-                .flatMap(uuid -> studyService.getSubstationsGraphics(uuid))
+                .flatMap(studyService::getSubstationsGraphics)
                 .flatMap(substationGraphics -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationGraphics)));
     }
 
@@ -173,7 +182,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
     public Mono<ResponseEntity<String>> getLinesMapData(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
-                .flatMap(uuid -> studyService.getLinesMapData(uuid))
+                .flatMap(studyService::getLinesMapData)
                 .flatMap(linesMapData -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(linesMapData)));
     }
 
@@ -182,7 +191,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
     public Mono<ResponseEntity<String>> getSubstationsMapData(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
-                .flatMap(uuid -> studyService.getSubstationsMapData(uuid))
+                .flatMap(studyService::getSubstationsMapData)
                 .flatMap(substationMapData -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(substationMapData)));
     }
 

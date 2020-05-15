@@ -37,7 +37,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -183,9 +182,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", "randomStudy", "00000000-0000-0000-0000-000000000000", DESCRIPTION)
                 .exchange()
                 .expectStatus().isNotFound()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .consumeWith(m -> assertTrue(Objects.requireNonNull(m.getResponseBody()).contains(CASE_DOESNT_EXISTS)));
+                .isEqualTo(CASE_DOESNT_EXISTS);
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -200,9 +198,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", STUDY_NAME, caseUuid, DESCRIPTION)
                 .exchange()
                 .expectStatus().isEqualTo(409)
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .consumeWith(m -> assertTrue(Objects.requireNonNull(m.getResponseBody()).contains(STUDY_ALREADY_EXISTS)));
+                .isEqualTo(STUDY_ALREADY_EXISTS);
 
         /*
         //insert a study with a case (multipartfile)
