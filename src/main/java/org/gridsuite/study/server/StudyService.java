@@ -50,6 +50,7 @@ public class StudyService {
     String geoDataServerBaseUri;
     String networkMapServerBaseUri;
     String networkModificationServerBaseUri;
+    String loadFlowServerBaseUri;
 
     private final NetworkStoreService networkStoreClient;
 
@@ -63,6 +64,7 @@ public class StudyService {
             @Value("${backing-services.geo-data.base-uri:http://geo-data-store-server/}") String geoDataServerBaseUri,
             @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
+            @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             NetworkStoreService networkStoreClient,
             StudyRepository studyRepository) {
         this.caseServerBaseUri = caseServerBaseUri;
@@ -71,6 +73,7 @@ public class StudyService {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
         this.networkMapServerBaseUri = networkMapServerBaseUri;
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
+        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
 
         ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
                 .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024 * 10)).build();
@@ -287,6 +290,21 @@ public class StudyService {
                     .toUriString();
             return webClient.put()
                     .uri(networkModificationServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(Void.class);
+        });
+    }
+
+    Mono<Void> runLoadFlow(String studyName) {
+        Mono<UUID> networkUuid = getStudyUuid(studyName);
+
+        return networkUuid.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMETER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+                    .buildAndExpand(networkUuid)
+                    .toUriString();
+
+            return webClient.put()
+                    .uri(loadFlowServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
         });

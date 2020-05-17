@@ -204,6 +204,13 @@ public class StudyController {
         return studyService.changeSwitchState(studyName, switchId, open).flatMap(e -> Mono.just(ResponseEntity.ok().build()));
     }
 
+    @PutMapping(value = "/studies/{studyName}/loadflow/run")
+    @ApiOperation(value = "run loadflow on study", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
+    public Mono<ResponseEntity<Object>> runLoadFlow(@PathVariable("studyName") String studyName) {
+        return studyService.runLoadFlow(studyName).flatMap(e -> Mono.just(ResponseEntity.ok().build()));
+    }
+
     @PostMapping(value = "/studies/{studyName}/rename")
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
