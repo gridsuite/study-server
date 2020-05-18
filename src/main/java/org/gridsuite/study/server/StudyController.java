@@ -207,7 +207,7 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyName}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
-    public Mono<ResponseEntity<Object>> runLoadFlow(@PathVariable("studyName") String studyName) {
+    public Mono<ResponseEntity<Void>> runLoadFlow(@PathVariable("studyName") String studyName) {
         return studyService.runLoadFlow(studyName).flatMap(e -> Mono.just(ResponseEntity.ok().build()));
     }
 

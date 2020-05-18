@@ -300,7 +300,7 @@ public class StudyService {
 
         return networkUuid.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMETER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                    .buildAndExpand(networkUuid)
+                    .buildAndExpand(uuid)
                     .toUriString();
 
             return webClient.put()
@@ -354,5 +354,9 @@ public class StudyService {
 
     void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
+    }
+
+    void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
+        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
     }
 }

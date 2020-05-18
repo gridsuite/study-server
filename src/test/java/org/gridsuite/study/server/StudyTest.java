@@ -96,6 +96,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         studyService.setSingleLineDiagramServerBaseUri(baseUrl);
         studyService.setGeoDataServerBaseUri(baseUrl);
         studyService.setNetworkMapServerBaseUri(baseUrl);
+        studyService.setLoadFlowServerBaseUri(baseUrl);
 
         ObjectMapper mapper = new ObjectMapper();
         String networkInfosAsString = mapper.writeValueAsString(networkInfos);
@@ -133,6 +134,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -356,6 +358,12 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
                 .expectStatus().isNotFound();
+
+        //run a loadflow
+        webTestClient.put()
+                .uri("/v1/studies/" + "newName" + "/loadflow/run")
+                .exchange()
+                .expectStatus().isOk();
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();
