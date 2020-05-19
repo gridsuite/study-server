@@ -9,6 +9,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>com.powsybl</groupId>
+        <artifactId>powsybl-parent-ws</artifactId>
+        <version>3</version>
+    </parent>
 
     <groupId>org.gridsuite</groupId>
     <artifactId>gridsuite-study-server</artifactId>
@@ -39,18 +45,14 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        
-        <maven.compiler.source>11</maven.compiler.source>
-    	<maven.compiler.target>11</maven.compiler.target>
 
-		
+        <java.version>11</java.version>
+
         <guava.version>20.0</guava.version>
         <datastax.version>3.7.2</datastax.version>
         <embedded-cassandra.version>3.0.3</embedded-cassandra.version>
         <lombok.version>1.18.8</lombok.version>
         <metricscore.version>3.2.6</metricscore.version>
-        
-<!--         <maven.spring-boot.version>2.2.2.RELEASE</maven.spring-boot.version> -->
         <springboot.version>2.2.2.RELEASE</springboot.version>
         <springdata.version>2.2.3.RELEASE</springdata.version>
         <springfox.version>2.9.2</springfox.version>
@@ -105,24 +107,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-
-
-					<plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                        <configuration>
-                            <classifier>exec</classifier>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-
         </plugins>
     </build>
 
@@ -137,28 +121,6 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>${maven.jacoco.version}</version>
-                        <configuration>
-                            <excludes>
-                                <!-- exclude generated classes -->
-                                <exclude>**/generated/**/*</exclude>
-                            </excludes>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>prepare-agent</id>
-                                <goals>
-                                    <goal>prepare-agent</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>report</id>
-                                <phase>test</phase>
-                                <goals>
-                                    <goal>report</goal>
-                                </goals>
-                            </execution>
-                        </executions>
                     </plugin>
                 </plugins>
             </build>
