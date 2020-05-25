@@ -16,6 +16,12 @@ jobs:
         with:
           java-version: 11
 
+      - name: checkout powsybl-single-line-diagram
+          uses: actions/checkout@v1
+          with:
+            repository: powsybl/powsybl-single-line-diagram
+            ref: refs/heads/master
+
       - name: Checkout network store sources
         uses: actions/checkout@v1
         with:
