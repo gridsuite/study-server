@@ -153,10 +153,11 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels")
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
-    public ResponseEntity<List<VoltageLevelAttributes>> getNetworkVoltageLevels(@PathVariable("studyName") String studyName) {
+    public Mono<ResponseEntity<List<VoltageLevelAttributes>>> getNetworkVoltageLevels(@PathVariable("studyName") String studyName) {
         Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkVoltageLevels(networkUuid.block()));
-
+        return networkUuid.flatMap(uuid -> {
+            return Mono.just(studyService.getNetworkVoltageLevels(uuid));
+        }).flatMap(vls -> Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(vls)));
     }
 
     @GetMapping(value = "/studies/{studyName}/geo-data/lines")
