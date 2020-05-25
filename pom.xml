@@ -65,7 +65,7 @@
         <reactor.spring.version>1.0.1.RELEASE</reactor.spring.version>
         <mock.web.server.version>4.6.0</mock.web.server.version>
 
-        <powsybl-core.version>3.1.0</powsybl-core.version>
+        <powsybl-core.version>3.3.0</powsybl-core.version>
         <network-store-client.version>1.0.0-SNAPSHOT</network-store-client.version>
 
     </properties>
@@ -110,6 +110,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven.surefire.version}</version>
+                    <configuration>
+                        <classpathDependencyExcludes>
+                            <classpathDependencyExclude>com.powsybl:powsybl-config-classic</classpathDependencyExclude>
+                        </classpathDependencyExcludes>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -198,9 +203,9 @@
         <profile>
             <id>proxy</id>
             <activation>
-                <property>
-                    <name>proxyHost</name>
-                </property>
+              <property>
+                <name>proxyHost</name>
+              </property>
             </activation>
             <build>
                 <pluginManagement>
@@ -243,11 +248,6 @@
 
     <dependencies>
         <!-- Compilation dependencies -->
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-config-classic</artifactId>
-            <version>${powsybl-core.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-commons</artifactId>
@@ -311,6 +311,20 @@
             <artifactId>reactor-core</artifactId>
         </dependency>
 
+        <!-- Runtime dependencies -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-config-classic</artifactId>
+            <version>${powsybl-core.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-iidm-api</artifactId>
+            <version>${powsybl-core.version}</version>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -334,6 +348,12 @@
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-config-test</artifactId>
+            <version>${powsybl-core.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
             <artifactId>powsybl-iidm-xml-converter</artifactId>
             <version>${powsybl-core.version}</version>
             <scope>test</scope>
@@ -344,6 +364,7 @@
             <version>${powsybl-core.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
