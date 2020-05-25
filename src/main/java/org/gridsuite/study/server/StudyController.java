@@ -83,7 +83,7 @@ public class StudyController {
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
     public Mono<ResponseEntity<Object>> createStudy(@PathVariable("studyName") String studyName,
-                                    @RequestPart("caseFile") MultipartFile caseFile,
+                                    @RequestParam("caseFile") MultipartFile caseFile,
                                     @RequestParam("description") String description) throws IOException {
         Mono<Boolean> studyExists = studyService.studyExists(studyName);
 
@@ -221,3 +221,4 @@ public class StudyController {
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 }
+

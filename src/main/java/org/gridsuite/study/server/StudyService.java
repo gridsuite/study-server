@@ -157,7 +157,7 @@ public class StudyService {
             }
         };
 
-        map.add("file", multipartFile);
+        map.add("file", contentsAsResource);
 
         return webClient.post()
                 .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")

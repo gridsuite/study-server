@@ -203,26 +203,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectBody(String.class)
                 .isEqualTo(STUDY_ALREADY_EXISTS);
 
-        /*
-        //insert a study with a case (multipartfile)
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"));) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/plain", is);
-
-            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-            bodyBuilder.part("caseFile", "test")
-                    .contentType(MediaType.TEXT_PLAIN)
-                    .header("Content-Disposition", "form-data; name=caseFile; filename=caseFile");
-
-            webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}", "s2", "desc")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .exchange()
-                    .expectStatus().isOk();
-        }
-        */
-
-        // temp insert : to be replaced with second insert method (with multipart file)
+        // to be replaced with second insert method (with multipart file)
         webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", "s2", IMPORTED_CASE_UUID, "desc")
                 .exchange()
