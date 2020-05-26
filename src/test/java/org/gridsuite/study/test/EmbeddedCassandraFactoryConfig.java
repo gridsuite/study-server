@@ -85,7 +85,7 @@ public class EmbeddedCassandraFactoryConfig {
         cassandraFactory.setRpcPort(0);
         cassandraFactory.setStoragePort(16432);
         cassandraFactory.setAddress(InetAddress.getByName("localhost"));
-        cassandraFactory.setTimeout(Duration.ofSeconds(180)); //default is 90, we are getting timeouts on GH actions
+        cassandraFactory.setTimeout(Duration.ofSeconds(900)); //default is 90, we are getting timeouts on GH actions
         return cassandraFactory;
     }
 }
