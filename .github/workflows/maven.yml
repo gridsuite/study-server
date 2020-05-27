@@ -53,7 +53,7 @@ jobs:
       - name: Build Docker image
         if: github.ref == 'refs/heads/master'
         run: >
-          mvn --batch-mode jib:build
+          mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
           -Djib.httpTimeout=60000
           -Djib.to.image=docker.io/powsybl/study-server
           -Djib.to.auth.username=powsyblci
