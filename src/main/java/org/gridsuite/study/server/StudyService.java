@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -335,6 +336,16 @@ public class StudyService {
     Mono<Boolean> studyExists(String studyName) {
         return getStudy(studyName).map(s -> true)
                 .switchIfEmpty(Mono.just(false));
+    }
+
+    public Mono<Void> assertCaseExists(UUID caseUuid) {
+        Mono<Boolean> caseExists = caseExists(caseUuid);
+        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS)));
+    }
+
+    public Mono<Void> assertStudyNotExists(String studyName) {
+        Mono<Boolean> studyExists = studyExists(studyName);
+        return studyExists.flatMap(s -> (boolean) s ? Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS)) : Mono.empty());
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {

@@ -60,19 +60,8 @@ public class StudyController {
     public Mono<ResponseEntity<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                     @PathVariable("caseUuid") UUID caseUuid,
                                                     @RequestParam("description") String description) {
-        Mono<Boolean> studyExists = studyService.studyExists(studyName);
-        Mono<Boolean> caseExists = studyService.caseExists(caseUuid);
-        return Mono.zip(studyExists, caseExists)
-                .flatMap(t -> {
-                    if (t.getT1().equals(Boolean.TRUE)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS));
-                    } else if (t.getT2().equals(Boolean.FALSE)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS));
-                    } else {
-                        return studyService.createStudy(studyName, caseUuid, description)
-                                .map(s -> ResponseEntity.ok().build());
-                    }
-                });
+        return Mono.when(studyService.assertStudyNotExists(studyName), studyService.assertCaseExists(caseUuid))
+                .then(studyService.createStudy(studyName, caseUuid, description).map(s -> ResponseEntity.ok().build()));
     }
 
     @PostMapping(value = "/studies/{studyName}")
@@ -84,9 +73,7 @@ public class StudyController {
     public Mono<ResponseEntity<Void>> createStudy(@PathVariable("studyName") String studyName,
                                     @RequestParam("caseFile") MultipartFile caseFile,
                                     @RequestParam("description") String description) {
-        Mono<Boolean> studyExists = studyService.studyExists(studyName);
-
-        return studyExists.flatMap(exists -> exists ? Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS)) : Mono.empty())
+        return studyService.assertStudyNotExists(studyName)
                 .flatMap(e -> studyService.createStudy(studyName, caseFile, description).map(s -> ResponseEntity.ok().build()));
     }
 
