@@ -110,12 +110,17 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    Mono<Study> createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
-        Mono<UUID> caseUUid = importCase(caseFile);
+    Mono<Study> createStudy(String studyName, MultipartFile caseFile, String description) {
+        Mono<UUID> caseUUid;
+        try {
+            caseUUid = importCase(caseFile);
+        } catch (IOException e) {
+            return Mono.error(new StudyException("error when importing the case"));
+        }
         return caseUUid.flatMap(uuid -> {
             Mono<NetworkInfos> networkInfos = persistentStore(uuid);
             Mono<String> caseFormat = getCaseFormat(uuid);
-            return Mono.zip(networkInfos, caseFormat)
+            return networkInfos.zipWith(caseFormat)
                     .flatMap(t -> {
                         Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true);
                         return studyRepository.insert(study);

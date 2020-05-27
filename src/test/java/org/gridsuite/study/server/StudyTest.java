@@ -184,7 +184,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", "randomStudy", "00000000-0000-0000-0000-000000000000", DESCRIPTION)
                 .exchange()
                 .expectStatus().isNotFound()
-                .expectBody(String.class)
+                .expectBody()
+                .jsonPath("$.message")
                 .isEqualTo(CASE_DOESNT_EXISTS);
 
         webTestClient.get()
@@ -200,7 +201,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", STUDY_NAME, caseUuid, DESCRIPTION)
                 .exchange()
                 .expectStatus().isEqualTo(409)
-                .expectBody(String.class)
+                .expectBody()
+                .jsonPath("$.message")
                 .isEqualTo(STUDY_ALREADY_EXISTS);
 
         // to be replaced with second insert method (with multipart file)
