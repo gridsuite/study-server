@@ -101,7 +101,7 @@ public class StudyService {
     }
 
     private Mono<String> getCaseFormat(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + CASE_API_VERSION + "/cases/{caseUuid}/format")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
@@ -121,7 +121,7 @@ public class StudyService {
         return caseUUid.flatMap(uuid -> {
             Mono<NetworkInfos> networkInfos = persistentStore(uuid);
             Mono<String> caseFormat = getCaseFormat(uuid);
-            return networkInfos.zipWith(caseFormat)
+            return Mono.zip(networkInfos, caseFormat)
                     .flatMap(t -> {
                         Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true);
                         return studyRepository.insert(study);
@@ -137,7 +137,7 @@ public class StudyService {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
 
         return studyMono.flatMap(study -> {
-            String path = UriComponentsBuilder.fromPath(DELIMETER + CASE_API_VERSION + "/cases/{caseUuid}")
+            String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
                     .buildAndExpand(study.getCaseUuid())
                     .toUriString();
 
@@ -175,7 +175,7 @@ public class StudyService {
 
     Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
                                     boolean topologicalColoring) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
@@ -191,7 +191,7 @@ public class StudyService {
 
     Mono<String> getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
                                                boolean topologicalColoring) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
@@ -206,7 +206,7 @@ public class StudyService {
     }
 
     private Mono<NetworkInfos> persistentStore(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + NETWORK_CONVERSION_API_VERSION + "/networks")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_UUID, caseUuid)
                 .buildAndExpand()
                 .toUriString();
@@ -230,7 +230,7 @@ public class StudyService {
     }
 
     Mono<String> getLinesGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + GEO_DATA_API_VERSION + "/lines")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
                 .queryParam(NETWORK_UUID, networkUuid)
                 .buildAndExpand()
                 .toUriString();
@@ -242,7 +242,7 @@ public class StudyService {
     }
 
     Mono<String> getSubstationsGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + GEO_DATA_API_VERSION + "/substations")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
                 .queryParam(NETWORK_UUID, networkUuid)
                 .buildAndExpand()
                 .toUriString();
@@ -254,7 +254,7 @@ public class StudyService {
     }
 
     Mono<Boolean> caseExists(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + CASE_API_VERSION + "/cases/{caseUuid}/exists")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/exists")
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
@@ -265,7 +265,7 @@ public class StudyService {
     }
 
     Mono<String> getSubstationsMapData(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + CASE_API_VERSION + "/substations/{networkUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/substations/{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -276,7 +276,7 @@ public class StudyService {
     }
 
     Mono<String> getLinesMapData(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMETER + CASE_API_VERSION + "/lines/{networkUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/lines/{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -290,7 +290,7 @@ public class StudyService {
         Mono<UUID> networkUuid = getStudyUuid(studyName);
 
         return networkUuid.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMETER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
                     .queryParam("open", open)
                     .buildAndExpand(uuid, switchId)
                     .toUriString();
@@ -305,7 +305,7 @@ public class StudyService {
         Mono<UUID> networkUuid = getStudyUuid(studyName);
 
         return networkUuid.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMETER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                     .buildAndExpand(uuid)
                     .toUriString();
 

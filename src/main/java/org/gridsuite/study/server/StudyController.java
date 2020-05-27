@@ -25,8 +25,6 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.*;
-
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */

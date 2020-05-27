@@ -29,5 +29,5 @@ final class StudyConstants {
     static final String STUDY_DOESNT_EXISTS = "STUDY DOESN'T EXISTS";
     static final String CASE_DOESNT_EXISTS = "CASE DOESN'T EXISTS";
 
-    static final String DELIMETER = "/";
+    static final String DELIMITER = "/";
 }
