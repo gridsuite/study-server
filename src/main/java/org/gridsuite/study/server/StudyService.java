@@ -16,13 +16,11 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -31,7 +29,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -111,13 +108,9 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    Mono<Study> createStudy(String studyName, MultipartFile caseFile, String description) {
+    Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description) {
         Mono<UUID> caseUUid;
-        try {
-            caseUUid = importCase(caseFile);
-        } catch (IOException e) {
-            return Mono.error(new StudyException("error when importing the case"));
-        }
+        caseUUid = importCase(caseFile);
         return caseUUid.flatMap(uuid -> {
             Mono<NetworkInfos> networkInfos = persistentStore(uuid);
             Mono<String> caseFormat = getCaseFormat(uuid);
@@ -140,37 +133,29 @@ public class StudyService {
             String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
                     .buildAndExpand(study.getCaseUuid())
                     .toUriString();
-
             if (study.isCasePrivate()) {
                 return webClient.delete()
                         .uri(caseServerBaseUri + path)
                         .retrieve()
-                        .bodyToMono(Void.class);
+                        .bodyToMono(Void.class)
+                        .then(studyRepository.deleteByName(studyName));
             }
-            return studyRepository.deleteByName(studyName);
-        });
+            return Mono.empty();
+        }).then(studyRepository.deleteByName(studyName));
     }
 
-    Mono<UUID> importCase(MultipartFile multipartFile) throws IOException {
-        MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
-        final String filename = multipartFile.getOriginalFilename();
-        map.add("name", filename);
-        map.add("filename", filename);
-        ByteArrayResource contentsAsResource = new ByteArrayResource(multipartFile.getBytes()) {
-            @Override
-            public String getFilename() {
-                return filename;
-            }
-        };
+    Mono<UUID> importCase(Mono<FilePart> multipartFile) {
+        return multipartFile.flatMap(file -> {
+            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+            multipartBodyBuilder.part("file", file);
 
-        map.add("file", contentsAsResource);
-
-        return webClient.post()
-                .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
-                .body(BodyInserters.fromValue(map))
-                .retrieve()
-                .bodyToMono(UUID.class);
+            return webClient.post()
+                    .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                    .retrieve()
+                    .bodyToMono(UUID.class);
+        });
     }
 
     Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
@@ -217,6 +202,7 @@ public class StudyService {
                 .bodyToMono(NetworkInfos.class);
     }
 
+    // TO CONVERT TO NON BLOCKING CALL
     List<VoltageLevelAttributes> getNetworkVoltageLevels(UUID networkUuid) {
         ArrayList<VoltageLevelAttributes> voltageLevelAttributes = new ArrayList<>();
         Iterable<VoltageLevel> voltageLevels = networkStoreClient.getNetwork(networkUuid).getVoltageLevels();
@@ -319,23 +305,23 @@ public class StudyService {
     @Transactional
     public Mono<Study> renameStudy(String studyName, String newStudyName) {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
-        return studyMono.flatMap(study -> {
+        return studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, STUDY_DOESNT_EXISTS))).flatMap(study -> {
             study.setName(newStudyName);
-            studyRepository.deleteByName(studyName).subscribe();
-            return Mono.just(study);
-        }).flatMap(studyRepository::insert);
+            Mono<Study> newStudyMono = studyRepository.insert(study);
+            Mono<Void> deleted = studyRepository.deleteByName(studyName);
+            return deleted.then(newStudyMono);
+        });
     }
 
     Mono<UUID> getStudyUuid(String studyName) {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
-        return studyMono.flatMap(study -> Mono.just(study.getNetworkUuid()))
-                .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
+        return studyMono.map(Study::getNetworkUuid)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, STUDY_DOESNT_EXISTS)));
 
     }
 
     Mono<Boolean> studyExists(String studyName) {
-        return getStudy(studyName).map(s -> true)
-                .switchIfEmpty(Mono.just(false));
+        return getStudy(studyName).hasElement();
     }
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {

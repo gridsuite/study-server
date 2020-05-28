@@ -19,6 +19,8 @@ import springfox.documentation.spring.web.plugins.Docket;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
+// This class is now disabled due to incompatibility problems between springFox 2.9.2 and webFlux
+// Waiting for the 3.0.0 springFox release to solve the problem
 
 //@Configuration
 //@EnableSwagger2

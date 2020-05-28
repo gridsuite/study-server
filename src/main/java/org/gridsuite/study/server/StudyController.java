@@ -15,9 +15,9 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -45,9 +45,9 @@ public class StudyController {
     @GetMapping(value = "/studies")
     @ApiOperation(value = "Get all studies")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
-    public ResponseEntity<Flux<StudyInfos>> getStudyList() {
+    public Mono<ResponseEntity<Flux<StudyInfos>>> getStudyList() {
         Flux<StudyInfos> studies = studyService.getStudyList();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
+        return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies));
     }
 
     @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
@@ -59,7 +59,7 @@ public class StudyController {
                                                     @PathVariable("caseUuid") UUID caseUuid,
                                                     @RequestParam("description") String description) {
         return Mono.when(studyService.assertStudyNotExists(studyName), studyService.assertCaseExists(caseUuid))
-                .then(studyService.createStudy(studyName, caseUuid, description).map(s -> ResponseEntity.ok().build()));
+                .then(studyService.createStudy(studyName, caseUuid, description).thenReturn(ResponseEntity.ok().build()));
     }
 
     @PostMapping(value = "/studies/{studyName}")
@@ -69,10 +69,10 @@ public class StudyController {
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
     public Mono<ResponseEntity<Void>> createStudy(@PathVariable("studyName") String studyName,
-                                    @RequestParam("caseFile") MultipartFile caseFile,
+                                    @RequestPart("caseFile") Mono<FilePart> caseFile,
                                     @RequestParam("description") String description) {
         return studyService.assertStudyNotExists(studyName)
-                .flatMap(e -> studyService.createStudy(studyName, caseFile, description).map(s -> ResponseEntity.ok().build()));
+                .then(studyService.createStudy(studyName, caseFile, description).thenReturn(ResponseEntity.ok().build()));
     }
 
     @GetMapping(value = "/studies/{studyName}")
@@ -82,15 +82,15 @@ public class StudyController {
             @ApiResponse(code = 404, message = "The study doesn't exist")})
     public Mono<ResponseEntity<Study>> getStudy(@PathVariable("studyName") String studyName) {
         Mono<Study> studyMono = studyService.getStudy(studyName);
-        return studyMono.map(s -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(s))
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));
+        return studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
+                .map(s -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(s));
     }
 
     @DeleteMapping(value = "/studies/{studyName}")
     @ApiOperation(value = "delete the study")
     @ApiResponse(code = 200, message = "Study deleted")
     public Mono<ResponseEntity<Void>> deleteStudy(@PathVariable("studyName") String studyName) {
-        return studyService.deleteStudy(studyName).map(e -> ResponseEntity.ok().build());
+        return studyService.deleteStudy(studyName).thenReturn(ResponseEntity.ok().build());
     }
 
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg")
@@ -105,8 +105,7 @@ public class StudyController {
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
         return studyService.getStudyUuid(studyName)
                 .flatMap(uuid -> studyService.getVoltageLevelSvg(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring))
-                .map(svg -> ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg))
-                .onErrorReturn(ResponseEntity.notFound().build());
+                .map(svg -> ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(svg));
     }
 
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
@@ -121,8 +120,7 @@ public class StudyController {
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
         return studyService.getStudyUuid(studyName)
                 .flatMap(uuid -> studyService.getVoltageLevelSvgAndMetadata(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring))
-                .map(svgAndMetadata -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(svgAndMetadata))
-                .onErrorReturn(ResponseEntity.notFound().build());
+                .map(svgAndMetadata -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(svgAndMetadata));
     }
 
     @GetMapping(value = "/studies/{studyName}/network/voltage-levels")
@@ -176,14 +174,14 @@ public class StudyController {
     public Mono<ResponseEntity<Void>> changeSwitchState(@PathVariable("studyName") String studyName,
                                                           @PathVariable("switchId") String switchId,
                                                           @RequestParam("open") boolean open) {
-        return studyService.changeSwitchState(studyName, switchId, open).map(e -> ResponseEntity.ok().build());
+        return studyService.changeSwitchState(studyName, switchId, open).thenReturn(ResponseEntity.ok().build());
     }
 
     @PutMapping(value = "/studies/{studyName}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
     public Mono<ResponseEntity<Void>> runLoadFlow(@PathVariable("studyName") String studyName) {
-        return studyService.runLoadFlow(studyName).map(e -> ResponseEntity.ok().build());
+        return studyService.runLoadFlow(studyName).thenReturn(ResponseEntity.ok().build());
     }
 
     @PostMapping(value = "/studies/{studyName}/rename")
@@ -192,8 +190,8 @@ public class StudyController {
     public Mono<ResponseEntity<Study>> renameStudy(@PathVariable("studyName") String studyName,
                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
         Mono<Study> studyMono = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
-        return studyMono.map(study -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study))
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));
+        //Mono<Study> studyMono = Mono.just(new Study("dd", UUID.randomUUID(), "jj", "ss", "ss", UUID.randomUUID(), true));
+        return studyMono.map(study -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study));
     }
 }
 
