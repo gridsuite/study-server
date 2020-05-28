@@ -190,7 +190,6 @@ public class StudyController {
     public Mono<ResponseEntity<Study>> renameStudy(@PathVariable("studyName") String studyName,
                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
         Mono<Study> studyMono = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
-        //Mono<Study> studyMono = Mono.just(new Study("dd", UUID.randomUUID(), "jj", "ss", "ss", UUID.randomUUID(), true));
         return studyMono.map(study -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study));
     }
 }
