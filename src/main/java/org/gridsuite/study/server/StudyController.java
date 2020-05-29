@@ -19,7 +19,6 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -45,9 +44,9 @@ public class StudyController {
     @GetMapping(value = "/studies")
     @ApiOperation(value = "Get all studies")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
-    public Mono<ResponseEntity<Flux<StudyInfos>>> getStudyList() {
-        Flux<StudyInfos> studies = studyService.getStudyList();
-        return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies));
+    public Mono<ResponseEntity<List<StudyInfos>>> getStudyList() {
+        Mono<List<StudyInfos>> studies = studyService.getStudyList().collectList();
+        return studies.map(studyList -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyList));
     }
 
     @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
