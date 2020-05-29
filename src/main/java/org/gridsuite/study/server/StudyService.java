@@ -6,8 +6,8 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -16,6 +16,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
@@ -30,6 +31,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -49,13 +51,13 @@ public class StudyService {
     String networkMapServerBaseUri;
     String networkModificationServerBaseUri;
     String loadFlowServerBaseUri;
-
-    private final NetworkStoreService networkStoreClient;
+    String networkStoreServerBaseUri;
 
     private final StudyRepository studyRepository;
 
     @Autowired
     public StudyService(
+            @Value("${network-store-server.base-uri:http://network-store-server/}") String networkStoreServerBaseUri,
             @Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri,
             @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
             @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
@@ -63,7 +65,6 @@ public class StudyService {
             @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
-            NetworkStoreService networkStoreClient,
             StudyRepository studyRepository) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
@@ -72,12 +73,12 @@ public class StudyService {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
+        this.networkStoreServerBaseUri = networkStoreServerBaseUri;
 
         ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
                 .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024 * 10)).build();
         this.webClient =  WebClient.builder().exchangeStrategies(exchangeStrategies).build();
 
-        this.networkStoreClient = networkStoreClient;
         this.studyRepository = studyRepository;
     }
 
@@ -202,17 +203,19 @@ public class StudyService {
                 .bodyToMono(NetworkInfos.class);
     }
 
-    // TO CONVERT TO NON BLOCKING CALL
-    List<VoltageLevelAttributes> getNetworkVoltageLevels(UUID networkUuid) {
-        ArrayList<VoltageLevelAttributes> voltageLevelAttributes = new ArrayList<>();
-        Iterable<VoltageLevel> voltageLevels = networkStoreClient.getNetwork(networkUuid).getVoltageLevels();
-        for (VoltageLevel voltageLevel : voltageLevels) {
-            String voltageLevelId = voltageLevel.getId();
-            String voltageName = voltageLevel.getName();
-            String substationId = voltageLevel.getSubstation().getId();
-            voltageLevelAttributes.add(new VoltageLevelAttributes(voltageLevelId, voltageName, substationId));
-        }
-        return voltageLevelAttributes;
+    // This function call directly the network store server without using the dedicated client because it's a blocking client.
+    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
+    Mono<List<VoltageLevelAttributes>> getNetworkVoltageLevels(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath("v1/networks/{networkId}/voltage-levels")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        Mono<TopLevelDocument<com.powsybl.network.store.model.VoltageLevelAttributes>> mono = webClient.get()
+                .uri(networkStoreServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.VoltageLevelAttributes>>() { });
+
+        return mono.map(t -> t.getData().stream().map(e -> new VoltageLevelAttributes(e.getId(), e.getAttributes().getName(), e.getAttributes().getSubstationId())).collect(Collectors.toList()));
     }
 
     Mono<String> getLinesGraphics(UUID networkUuid) {
@@ -360,5 +363,9 @@ public class StudyService {
 
     void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
+    }
+
+    void setNetworkStoreServerBaseUri(String networkStoreServerBaseUri) {
+        this.networkStoreServerBaseUri = networkStoreServerBaseUri + DELIMITER;
     }
 }

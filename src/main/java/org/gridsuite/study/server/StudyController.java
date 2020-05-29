@@ -128,7 +128,7 @@ public class StudyController {
     @ApiResponse(code = 200, message = "The voltage level list of the network")
     public Mono<ResponseEntity<List<VoltageLevelAttributes>>> getNetworkVoltageLevels(@PathVariable("studyName") String studyName) {
         Mono<UUID> networkUuid = studyService.getStudyUuid(studyName);
-        return networkUuid.map(studyService::getNetworkVoltageLevels)
+        return networkUuid.flatMap(studyService::getNetworkVoltageLevels)
         .map(vls -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(vls));
     }
 

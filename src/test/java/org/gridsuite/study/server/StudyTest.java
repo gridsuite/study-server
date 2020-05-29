@@ -12,7 +12,12 @@ import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.model.Resource;
+import com.powsybl.network.store.model.ResourceType;
+import com.powsybl.network.store.model.TopLevelDocument;
+import com.powsybl.network.store.model.VoltageLevelAttributes;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -39,6 +44,8 @@ import org.springframework.web.reactive.function.BodyInserters;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -79,12 +86,21 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private final UUID importedCaseUuid = UUID.fromString(IMPORTED_CASE_UUID);
     private final NetworkInfos networkInfos = new NetworkInfos(networkUuid, "20140116_0830_2D4_UX1_pst");
 
+    TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
+
     @Before
     public void setup() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
                 new ResourceSet("", TEST_FILE));
         Network network = Importers.importData("XIIDM", dataSource, null);
         given(networkStoreClient.getNetwork(networkUuid)).willReturn(network);
+
+        List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
+
+        Iterable<VoltageLevel> vls = network.getVoltageLevels();
+        vls.forEach(vl -> data.add(new Resource<>(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build(), null, null)));
+
+        topLevelDocument = new TopLevelDocument<>(data, null);
     }
 
     @Test
@@ -103,15 +119,20 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         studyService.setGeoDataServerBaseUri(baseUrl);
         studyService.setNetworkMapServerBaseUri(baseUrl);
         studyService.setLoadFlowServerBaseUri(baseUrl);
+        studyService.setNetworkStoreServerBaseUri(baseUrl);
 
         ObjectMapper mapper = new ObjectMapper();
         String networkInfosAsString = mapper.writeValueAsString(networkInfos);
         String importedCaseUuidAsString = mapper.writeValueAsString(importedCaseUuid);
+        String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 switch (Objects.requireNonNull(request.getPath())) {
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
+                        return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/studies/{studyName}/cases/{caseUuid}":
                         return new MockResponse().setResponseCode(200).setBody("CGMES")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -273,13 +294,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "notExistingStudy", "voltageLevelId")
                 .exchange()
                 .expectStatus().isNotFound();
-        //assertEquals(STUDY_DOESNT_EXISTS, result.getResponse().getContentAsString());
 
-        //get the voltage level diagram svg and metadata from a study that doesn't exist
+        //get voltage levels
         webTestClient.get()
                 .uri("/v1/studies/{studyName}/network/voltage-levels", STUDY_NAME)
                 .exchange()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectStatus().isOk()
                 .expectBody(String.class)
                 .isEqualTo("[{\"id\":\"BBE1AA1\",\"name\":\"BBE1AA1\",\"substationId\":\"BBE1AA\"}," +
