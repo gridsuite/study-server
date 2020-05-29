@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -310,7 +309,7 @@ public class StudyService {
     @Transactional
     public Mono<Study> renameStudy(String studyName, String newStudyName) {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
-        return studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, STUDY_DOESNT_EXISTS))).flatMap(study -> {
+        return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS))).flatMap(study -> {
             study.setName(newStudyName);
             Mono<Study> newStudyMono = studyRepository.insert(study);
             Mono<Void> deleted = studyRepository.deleteByName(studyName);
@@ -321,7 +320,7 @@ public class StudyService {
     Mono<UUID> getStudyUuid(String studyName) {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
         return studyMono.map(Study::getNetworkUuid)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, STUDY_DOESNT_EXISTS)));
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
 
     }
 
@@ -331,12 +330,12 @@ public class StudyService {
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {
         Mono<Boolean> caseExists = caseExists(caseUuid);
-        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, CASE_DOESNT_EXISTS)));
+        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new StudyException(CASE_DOESNT_EXISTS)));
     }
 
     public Mono<Void> assertStudyNotExists(String studyName) {
         Mono<Boolean> studyExists = studyExists(studyName);
-        return studyExists.flatMap(s -> (boolean) s ? Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, STUDY_ALREADY_EXISTS)) : Mono.empty());
+        return studyExists.flatMap(s -> (boolean) s ? Mono.error(new StudyException(STUDY_ALREADY_EXISTS)) : Mono.empty());
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {

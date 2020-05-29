@@ -128,7 +128,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
-            public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
+            public MockResponse dispatch(RecordedRequest request) {
                 switch (Objects.requireNonNull(request.getPath())) {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                         return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
@@ -212,7 +212,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectBody()
-                .jsonPath("$.message")
+                .jsonPath("$")
                 .isEqualTo(CASE_DOESNT_EXISTS);
 
         webTestClient.get()
@@ -229,7 +229,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isEqualTo(409)
                 .expectBody()
-                .jsonPath("$.message")
+                .jsonPath("$")
                 .isEqualTo(STUDY_ALREADY_EXISTS);
 
         //insert a study with a case (multipartfile)
@@ -265,7 +265,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .exchange()
                     .expectStatus().isEqualTo(409)
                     .expectBody()
-                    .jsonPath("$.message")
+                    .jsonPath("$")
                     .isEqualTo(STUDY_ALREADY_EXISTS);
         }
 
