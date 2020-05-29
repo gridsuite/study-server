@@ -140,9 +140,10 @@ public class StudyService {
                         .retrieve()
                         .bodyToMono(Void.class)
                         .then(studyRepository.deleteByName(studyName));
+            } else {
+                return studyRepository.deleteByName(studyName);
             }
-            return Mono.empty();
-        }).then(studyRepository.deleteByName(studyName));
+        });
     }
 
     Mono<UUID> importCase(Mono<FilePart> multipartFile) {
