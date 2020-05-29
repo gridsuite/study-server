@@ -131,10 +131,11 @@ public class StudyService {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
 
         return studyMono.flatMap(study -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
-                    .buildAndExpand(study.getCaseUuid())
-                    .toUriString();
             if (study.isCasePrivate()) {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
+                        .buildAndExpand(study.getCaseUuid())
+                        .toUriString();
+
                 return webClient.delete()
                         .uri(caseServerBaseUri + path)
                         .retrieve()

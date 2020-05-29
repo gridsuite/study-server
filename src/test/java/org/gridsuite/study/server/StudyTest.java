@@ -232,7 +232,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .jsonPath("$.message")
                 .isEqualTo(STUDY_ALREADY_EXISTS);
 
-        // to be replaced with second insert method (with multipart file)
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
@@ -248,6 +247,26 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .exchange()
                     .expectStatus().isOk();
+        }
+
+        //Import the same case -> 409 conflict
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
+
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("caseFile", mockFile.getBytes())
+                    .filename("caseFile")
+                    .contentType(MediaType.TEXT_XML);
+
+            webTestClient.post()
+                    .uri(STUDIES_URL + "?description={description}", "s2", "desc")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isEqualTo(409)
+                    .expectBody()
+                    .jsonPath("$.message")
+                    .isEqualTo(STUDY_ALREADY_EXISTS);
         }
 
         // check the study s2
