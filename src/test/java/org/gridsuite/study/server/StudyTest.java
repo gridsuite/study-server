@@ -210,7 +210,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}", "randomStudy", "00000000-0000-0000-0000-000000000000", DESCRIPTION)
                 .exchange()
-                .expectStatus().isNotFound()
+                .expectStatus().isEqualTo(424)
                 .expectBody()
                 .jsonPath("$")
                 .isEqualTo(CASE_DOESNT_EXISTS);

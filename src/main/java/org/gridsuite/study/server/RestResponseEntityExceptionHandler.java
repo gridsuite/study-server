@@ -16,7 +16,7 @@ public class RestResponseEntityExceptionHandler {
         if (errorMessage.equals(STUDY_DOESNT_EXISTS)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(STUDY_DOESNT_EXISTS);
         } else if (errorMessage.equals(CASE_DOESNT_EXISTS)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(CASE_DOESNT_EXISTS);
+            return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(CASE_DOESNT_EXISTS);
         } else if (errorMessage.equals(STUDY_ALREADY_EXISTS)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(STUDY_ALREADY_EXISTS);
         }
