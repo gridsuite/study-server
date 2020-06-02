@@ -23,7 +23,6 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
@@ -64,7 +63,8 @@ public class StudyService {
             @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
-            StudyRepository studyRepository) {
+            StudyRepository studyRepository,
+            WebClient.Builder webClientBuilder) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
@@ -74,9 +74,7 @@ public class StudyService {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
         this.networkStoreServerBaseUri = networkStoreServerBaseUri;
 
-        ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
-                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024 * 10)).build();
-        this.webClient =  WebClient.builder().exchangeStrategies(exchangeStrategies).build();
+        this.webClient =  webClientBuilder.build();
 
         this.studyRepository = studyRepository;
     }
