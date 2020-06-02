@@ -2,7 +2,6 @@ package org.gridsuite.study.server;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -10,7 +9,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ServerWebExchange;
 
 @ControllerAdvice
-@RequiredArgsConstructor
 public class RestResponseEntityExceptionHandler {
 
     @ExceptionHandler(value = {StudyException.class})
