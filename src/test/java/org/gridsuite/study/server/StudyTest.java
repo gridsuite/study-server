@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -57,7 +57,7 @@ import static org.mockito.BDDMockito.given;
  */
 
 @RunWith(SpringRunner.class)
-@WebFluxTest(StudyController.class)
+@AutoConfigureWebTestClient
 @EnableWebFlux
 @ContextHierarchy({
     @ContextConfiguration(classes = {StudyApplication.class, StudyService.class})
