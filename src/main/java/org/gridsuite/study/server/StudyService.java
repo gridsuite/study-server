@@ -6,9 +6,8 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.network.store.client.NetworkStoreService;
-import org.gridsuite.study.server.dto.CaseInfos;
+import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -16,22 +15,19 @@ import org.gridsuite.study.server.repository.Study;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.util.DefaultUriBuilderFactory;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,158 +40,127 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
 @Service
 public class StudyService {
+    private WebClient webClient;
 
-    private RestTemplate caseServerRest;
-    private RestTemplate singleLineDiagramServerRest;
-    private RestTemplate networkConversionServerRest;
-    private RestTemplate geoDataServerRest;
-    private RestTemplate networkMapServerRest;
-    private RestTemplate networkModificationServerRest;
-    private RestTemplate loadFlowServerRest;
+    String caseServerBaseUri;
+    String singleLineDiagramServerBaseUri;
+    String networkConversionServerBaseUri;
+    String geoDataServerBaseUri;
+    String networkMapServerBaseUri;
+    String networkModificationServerBaseUri;
+    String loadFlowServerBaseUri;
+    String networkStoreServerBaseUri;
 
-    @Autowired
-    private NetworkStoreService networkStoreClient;
-
-    @Autowired
-    private StudyRepository studyRepository;
+    private final StudyRepository studyRepository;
 
     @Autowired
     public StudyService(
+            @Value("${network-store-server.base-uri:http://network-store-server/}") String networkStoreServerBaseUri,
             @Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri,
             @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
             @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
             @Value("${backing-services.geo-data.base-uri:http://geo-data-store-server/}") String geoDataServerBaseUri,
             @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
-            @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri) {
-        RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
-        caseServerRest = restTemplateBuilder.build();
-        caseServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(caseServerBaseUri));
+            @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
+            StudyRepository studyRepository,
+            WebClient.Builder webClientBuilder) {
+        this.caseServerBaseUri = caseServerBaseUri;
+        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
+        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
+        this.geoDataServerBaseUri = geoDataServerBaseUri;
+        this.networkMapServerBaseUri = networkMapServerBaseUri;
+        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
+        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
+        this.networkStoreServerBaseUri = networkStoreServerBaseUri;
 
-        singleLineDiagramServerRest = restTemplateBuilder.build();
-        singleLineDiagramServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(singleLineDiagramServerBaseUri));
+        this.webClient =  webClientBuilder.build();
 
-        networkConversionServerRest = restTemplateBuilder.build();
-        networkConversionServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkConversionServerBaseUri));
-
-        geoDataServerRest = restTemplateBuilder.build();
-        geoDataServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(geoDataServerBaseUri));
-
-        networkMapServerRest = restTemplateBuilder.build();
-        networkMapServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkMapServerBaseUri));
-
-        networkModificationServerRest = restTemplateBuilder.build();
-        networkModificationServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(networkModificationServerBaseUri));
-
-        loadFlowServerRest = restTemplateBuilder.build();
-        loadFlowServerRest.setUriTemplateHandler(new DefaultUriBuilderFactory(loadFlowServerBaseUri));
+        this.studyRepository = studyRepository;
     }
 
-    List<StudyInfos> getStudyList() {
-        List<Study> studyList = studyRepository.findAll();
-        return studyList.stream().map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat())).collect(Collectors.toList());
+    Flux<StudyInfos> getStudyList() {
+        Flux<Study> studyList = studyRepository.findAll();
+        return studyList.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
     }
 
-    void createStudy(String studyName, UUID caseUuid, String description) {
-        NetworkInfos networkInfos = persistentStore(caseUuid);
-        String caseFormat = getCaseFormat(caseUuid);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUuid, false);
-        studyRepository.insert(study);
+    Mono<Study> createStudy(String studyName, UUID caseUuid, String description) {
+        Mono<NetworkInfos> networkInfos = persistentStore(caseUuid);
+        Mono<String> caseFormat = getCaseFormat(caseUuid);
+
+        return Mono.zip(networkInfos, caseFormat)
+                .flatMap(t -> {
+                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false);
+                    return studyRepository.insert(study);
+                });
     }
 
-    private String getCaseFormat(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}/format")
+    private Mono<String> getCaseFormat(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = caseServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(caseServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
-    void createStudy(String studyName, MultipartFile caseFile, String description) throws IOException {
-        UUID caseUUid = importCase(caseFile);
-        NetworkInfos networkInfos = persistentStore(caseUUid);
-        String caseFormat = getCaseFormat(caseUUid);
-        Study study = new Study(studyName, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), description, caseFormat, caseUUid, true);
-        studyRepository.insert(study);
+    Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description) {
+        Mono<UUID> caseUUid;
+        caseUUid = importCase(caseFile);
+        return caseUUid.flatMap(uuid -> {
+            Mono<NetworkInfos> networkInfos = persistentStore(uuid);
+            Mono<String> caseFormat = getCaseFormat(uuid);
+            return Mono.zip(networkInfos, caseFormat)
+                    .flatMap(t -> {
+                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true);
+                        return studyRepository.insert(study);
+                    });
+        });
     }
 
-    Study getStudy(String studyName) {
-        return studyRepository.findByName(studyName).orElse(null);
+    Mono<Study> getStudy(String studyName) {
+        return studyRepository.findByName(studyName);
     }
 
-    void deleteStudy(String studyName) {
-        Optional<Study> studyOpt = studyRepository.findByName(studyName);
-        if (studyOpt.isEmpty()) {
-            return;
-        }
-        Study study = studyOpt.get();
-        if (study.isCasePrivate()) {
-            try {
-                caseServerRest.delete("/" + CASE_API_VERSION + "/cases/{caseUuid}", study.getCaseUuid());
-            } catch (HttpStatusCodeException e) {
-                throw new StudyException("deleteStudy HttpStatusCodeException", e);
-            }
-        }
-        studyRepository.deleteByName(studyName);
-    }
+    Mono<Void> deleteStudy(String studyName) {
+        Mono<Study> studyMono = studyRepository.findByName(studyName);
 
-    List<CaseInfos> getCaseList() {
-        ParameterizedTypeReference<List<CaseInfos>> parameterizedTypeReference = new ParameterizedTypeReference<List<CaseInfos>>() { };
-        ResponseEntity<List<CaseInfos>> responseEntity;
-        try {
-            responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases",
-                    HttpMethod.GET,
-                    null,
-                    parameterizedTypeReference);
+        return studyMono.flatMap(study -> {
+            if (study.isCasePrivate()) {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
+                        .buildAndExpand(study.getCaseUuid())
+                        .toUriString();
 
-            if (responseEntity.getStatusCode() == HttpStatus.OK) {
-                return responseEntity.getBody();
+                return webClient.delete()
+                        .uri(caseServerBaseUri + path)
+                        .retrieve()
+                        .bodyToMono(Void.class)
+                        .then(studyRepository.deleteByName(studyName));
             } else {
-                return Collections.emptyList();
+                return studyRepository.deleteByName(studyName);
             }
-        } catch (HttpStatusCodeException e) {
-            throw new StudyException("getCaseList HttpStatusCodeException", e);
-        }
+        });
     }
 
-    UUID importCase(MultipartFile multipartFile) throws IOException {
-        HttpHeaders requestHeaders = new HttpHeaders();
-        requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+    Mono<UUID> importCase(Mono<FilePart> multipartFile) {
+        return multipartFile.flatMap(file -> {
+            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+            multipartBodyBuilder.part("file", file);
 
-        MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
-        final String filename = multipartFile.getOriginalFilename();
-        map.add("name", filename);
-        map.add("filename", filename);
-        ByteArrayResource contentsAsResource = new ByteArrayResource(multipartFile.getBytes()) {
-            @Override
-            public String getFilename() {
-                return filename;
-            }
-        };
-
-        map.add("file", contentsAsResource);
-
-        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(map, requestHeaders);
-
-        try {
-            ResponseEntity<UUID> responseEntity = caseServerRest.exchange("/" + CASE_API_VERSION + "/cases/private",
-                    HttpMethod.POST,
-                    requestEntity,
-                    UUID.class);
-            return responseEntity.getBody();
-        } catch (HttpStatusCodeException e) {
-            throw new StudyException("importCase " + e.getStatusCode() + " : " + e.getResponseBodyAsString(), e);
-        }
+            return webClient.post()
+                    .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                    .retrieve()
+                    .bodyToMono(UUID.class);
+        });
     }
 
-    byte[] getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
-                              boolean topologicalColoring) {
-        String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
+    Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
+                                    boolean topologicalColoring) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
@@ -203,16 +168,15 @@ public class StudyService {
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
-        ResponseEntity<byte[]> responseEntity = singleLineDiagramServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                byte[].class);
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(byte[].class);
     }
 
-    String getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
-                                         boolean topologicalColoring) {
-        String path = UriComponentsBuilder.fromPath("/" + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
+    Mono<String> getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
+                                               boolean topologicalColoring) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
@@ -220,179 +184,187 @@ public class StudyService {
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = singleLineDiagramServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + NETWORK_CONVERSION_API_VERSION + "/networks")
+    private Mono<NetworkInfos> persistentStore(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_UUID, caseUuid)
                 .buildAndExpand()
                 .toUriString();
 
-        ResponseEntity<NetworkInfos> responseEntity = networkConversionServerRest.exchange(path,
-                HttpMethod.POST,
-                HttpEntity.EMPTY,
-                NetworkInfos.class);
-        return responseEntity.getBody();
+        return webClient.post()
+                .uri(networkConversionServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(NetworkInfos.class);
     }
 
-    List<VoltageLevelAttributes> getNetworkVoltageLevels(UUID networkUuid) {
-        ArrayList<VoltageLevelAttributes> voltageLevelAttributes = new ArrayList<>();
-        Iterable<VoltageLevel> voltageLevels = networkStoreClient.getNetwork(networkUuid).getVoltageLevels();
-        for (VoltageLevel voltageLevel : voltageLevels) {
-            String voltageLevelId = voltageLevel.getId();
-            String voltageName = voltageLevel.getName();
-            String substationId = voltageLevel.getSubstation().getId();
-            voltageLevelAttributes.add(new VoltageLevelAttributes(voltageLevelId, voltageName, substationId));
-        }
-        return voltageLevelAttributes;
+    // This function call directly the network store server without using the dedicated client because it's a blocking client.
+    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
+    Mono<List<VoltageLevelAttributes>> getNetworkVoltageLevels(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath("v1/networks/{networkId}/voltage-levels")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        Mono<TopLevelDocument<com.powsybl.network.store.model.VoltageLevelAttributes>> mono = webClient.get()
+                .uri(networkStoreServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.VoltageLevelAttributes>>() { });
+
+        return mono.map(t -> t.getData().stream().map(e -> new VoltageLevelAttributes(e.getId(), e.getAttributes().getName(), e.getAttributes().getSubstationId())).collect(Collectors.toList()));
     }
 
-    String getLinesGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + GEO_DATA_API_VERSION + "/lines")
+    Mono<String> getLinesGraphics(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
                 .queryParam(NETWORK_UUID, networkUuid)
                 .buildAndExpand()
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(geoDataServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
-    String getSubstationsGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + GEO_DATA_API_VERSION + "/substations")
+    Mono<String> getSubstationsGraphics(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
                 .queryParam(NETWORK_UUID, networkUuid)
                 .buildAndExpand()
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = geoDataServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(geoDataServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
-    boolean caseExists(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/cases/{caseUuid}/exists")
+    Mono<Boolean> caseExists(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/exists")
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        ResponseEntity<Boolean> responseEntity = caseServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                Boolean.class);
-
-        return Boolean.TRUE.equals(responseEntity.getBody());
+        return webClient.get()
+                .uri(caseServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(Boolean.class);
     }
 
-    String getSubstationsMapData(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/substations/{networkUuid}")
+    Mono<String> getSubstationsMapData(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/substations/{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
-    String getLinesMapData(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("/" + CASE_API_VERSION + "/lines/{networkUuid}")
+    Mono<String> getLinesMapData(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/lines/{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
-        ResponseEntity<String> responseEntity = networkMapServerRest.exchange(path,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class);
-
-        return responseEntity.getBody();
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
-    void changeSwitchState(String studyName, String switchId, boolean open) {
-        UUID networkUuid = getStudyUuid(studyName);
+    Mono<Void> changeSwitchState(String studyName, String switchId, boolean open) {
+        Mono<UUID> networkUuid = getStudyUuid(studyName);
 
-        String path = UriComponentsBuilder.fromPath("/" + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
-                .queryParam("open", open)
-                .buildAndExpand(networkUuid, switchId)
-                .toUriString();
-
-        networkModificationServerRest.exchange(path,
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Void.class);
+        return networkUuid.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
+                    .queryParam("open", open)
+                    .buildAndExpand(uuid, switchId)
+                    .toUriString();
+            return webClient.put()
+                    .uri(networkModificationServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(Void.class);
+        });
     }
 
-    void runLoadFlow(String studyName) {
-        UUID networkUuid = getStudyUuid(studyName);
+    Mono<Void> runLoadFlow(String studyName) {
+        Mono<UUID> networkUuid = getStudyUuid(studyName);
 
-        String path = UriComponentsBuilder.fromPath("/" + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                .buildAndExpand(networkUuid)
-                .toUriString();
+        return networkUuid.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+                    .buildAndExpand(uuid)
+                    .toUriString();
 
-        loadFlowServerRest.exchange(path,
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Void.class);
+            return webClient.put()
+                    .uri(loadFlowServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(Void.class);
+        });
     }
 
     @Transactional
-    Study renameStudy(String studyName, String newStudyName) {
-        Optional<Study> studyOpt = studyRepository.findByName(studyName);
-        if (studyOpt.isEmpty()) {
-            throw new StudyException(STUDY_DOESNT_EXISTS);
-        }
-        Study study = studyOpt.get();
-        study.setName(newStudyName);
-        studyRepository.insert(study);
-        studyRepository.deleteByName(studyName);
-        return study;
+    public Mono<Study> renameStudy(String studyName, String newStudyName) {
+        Mono<Study> studyMono = studyRepository.findByName(studyName);
+        return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS))).flatMap(study -> {
+            study.setName(newStudyName);
+            Mono<Study> newStudyMono = studyRepository.insert(study);
+            Mono<Void> deleted = studyRepository.deleteByName(studyName);
+            return deleted.then(newStudyMono);
+        });
     }
 
-    UUID getStudyUuid(String studyName) {
-        Optional<Study> study = studyRepository.findByName(studyName);
-        if (study.isPresent()) {
-            return study.get().getNetworkUuid();
-        } else {
-            throw new StudyException(STUDY_DOESNT_EXISTS);
-        }
+    Mono<UUID> getStudyUuid(String studyName) {
+        Mono<Study> studyMono = studyRepository.findByName(studyName);
+        return studyMono.map(Study::getNetworkUuid)
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
+
     }
 
-    boolean studyExists(String studyName) {
-        return getStudy(studyName) != null;
+    Mono<Boolean> studyExists(String studyName) {
+        return getStudy(studyName).hasElement();
     }
 
-    void setCaseServerRest(RestTemplate caseServerRest) {
-        this.caseServerRest = Objects.requireNonNull(caseServerRest);
+    public Mono<Void> assertCaseExists(UUID caseUuid) {
+        Mono<Boolean> caseExists = caseExists(caseUuid);
+        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new StudyException(CASE_DOESNT_EXISTS)));
     }
 
-    void setSingleLineDiagramServerRest(RestTemplate singleLineDiagramServerRest) {
-        this.singleLineDiagramServerRest = Objects.requireNonNull(singleLineDiagramServerRest);
+    public Mono<Void> assertStudyNotExists(String studyName) {
+        Mono<Boolean> studyExists = studyExists(studyName);
+        return studyExists.flatMap(s -> (boolean) s ? Mono.error(new StudyException(STUDY_ALREADY_EXISTS)) : Mono.empty());
     }
 
-    void setNetworkConversionServerRest(RestTemplate networkConversionServerRest) {
-        this.networkConversionServerRest = Objects.requireNonNull(networkConversionServerRest);
+    void setCaseServerBaseUri(String caseServerBaseUri) {
+        this.caseServerBaseUri = caseServerBaseUri;
     }
 
-    void setGeoDataServerRest(RestTemplate geoDataServerRest) {
-        this.geoDataServerRest = Objects.requireNonNull(geoDataServerRest);
+    void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
+        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
     }
 
-    void setNetworkMapServerRest(RestTemplate networkMapServerRest) {
-        this.networkMapServerRest = Objects.requireNonNull(networkMapServerRest);
+    void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
+        this.geoDataServerBaseUri = geoDataServerBaseUri;
     }
 
-    void setNetworkModificationServerRest(RestTemplate networkModificationServerRest) {
-        this.networkModificationServerRest = Objects.requireNonNull(networkModificationServerRest);
+    void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
+        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
+    }
+
+    void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
+        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
+    }
+
+    void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
+        this.networkMapServerBaseUri = networkMapServerBaseUri;
+    }
+
+    void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
+        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
+    }
+
+    void setNetworkStoreServerBaseUri(String networkStoreServerBaseUri) {
+        this.networkStoreServerBaseUri = networkStoreServerBaseUri + DELIMITER;
     }
 }

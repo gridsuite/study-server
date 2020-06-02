@@ -6,30 +6,22 @@
  */
 package org.gridsuite.study.server.repository;
 
-import org.springframework.data.cassandra.repository.CassandraRepository;
 import org.springframework.data.cassandra.repository.Query;
+import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
 @Repository
-public interface StudyRepository extends CassandraRepository<Study, Integer> {
+public interface StudyRepository extends ReactiveCassandraRepository<Study, Integer> {
 
-    @Override
-    List<Study> findAll();
-
-    Optional<Study> findByName(String studyName);
-
-    @Override
-    <S extends Study> S insert(S s);
+    Mono<Study> findByName(String studyName);
 
     @Query("DELETE FROM study WHERE studyname = :studyName")
-    void deleteByName(@Param("studyName") String studyName);
+    Mono<Void> deleteByName(@Param("studyName") String studyName);
 
 }
