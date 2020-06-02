@@ -6,13 +6,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.server.ServerWebExchange;
 
 @ControllerAdvice
 public class RestResponseEntityExceptionHandler {
 
     @ExceptionHandler(value = {StudyException.class})
-    protected ResponseEntity<Object> handleException(RuntimeException ex, ServerWebExchange exchange) {
+    protected ResponseEntity<Object> handleException(RuntimeException ex) {
         String errorMessage = ex.getMessage();
         if (errorMessage.equals(STUDY_DOESNT_EXISTS)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(STUDY_DOESNT_EXISTS);
