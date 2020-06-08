@@ -136,7 +136,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
     public Mono<ResponseEntity<String>> getLinesGraphics(@PathVariable("studyName") String studyName) {
         return studyService.getStudyUuid(studyName)
-                .flatMap(studyService::getSubstationsGraphics)
+                .flatMap(studyService::getLinesGraphics)
                 .map(lineGraphics -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(lineGraphics));
     }
 
