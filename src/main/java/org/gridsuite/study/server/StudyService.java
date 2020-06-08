@@ -25,10 +25,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import org.springframework.messaging.Message;
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.context.annotation.Bean;
 
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -40,6 +45,12 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
 @Service
 public class StudyService {
+
+    private static final String STUDY_NAME = "studyName";
+    private static final String UPDATE_TYPE = "updateType";
+    private static final String UPDATE_TYPE_LOADFLOW = "loadflow";
+    private static final String UPDATE_TYPE_SWITCH = "switch";
+
     private WebClient webClient;
 
     String caseServerBaseUri;
@@ -52,6 +63,13 @@ public class StudyService {
     String networkStoreServerBaseUri;
 
     private final StudyRepository studyRepository;
+
+    private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
+
+    @Bean
+    public Supplier<Flux<Message<String>>> publishStudyUpdate() {
+        return () -> studyUpdatePublisher;
+    }
 
     @Autowired
     public StudyService(
@@ -286,7 +304,12 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        });
+        }).doOnSuccess(s ->
+            studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(STUDY_NAME, studyName)
+                .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
+                .build())
+        );
     }
 
     Mono<Void> runLoadFlow(String studyName) {
@@ -301,7 +324,12 @@ public class StudyService {
                     .uri(loadFlowServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        });
+        }).doOnSuccess(s ->
+            studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(STUDY_NAME, studyName)
+                .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
+                .build())
+        );
     }
 
     @Transactional

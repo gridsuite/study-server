@@ -9,6 +9,18 @@ spring:
   codec:
     max-in-memory-size: 100MB
 
+  rabbitmq:
+    addresses: localhost
+    port: 5672
+
+  cloud:
+    function:
+      definition: publishStudyUpdate
+    stream:
+      bindings:
+        publishStudyUpdate-out-0:
+          destination: study.update
+
 backing-services:
   case:
     base-uri: http://localhost:5000
