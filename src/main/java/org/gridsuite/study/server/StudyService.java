@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
+import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -312,6 +313,33 @@ public class StudyService {
             Mono<Study> newStudyMono = studyRepository.insert(study);
             Mono<Void> deleted = studyRepository.deleteByName(studyName);
             return deleted.then(newStudyMono);
+        });
+    }
+
+    public Mono<Collection<String>> getExportFormats() {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
+                .toUriString();
+
+        ParameterizedTypeReference<Collection<String>> typeRef = new ParameterizedTypeReference<Collection<String>>() { };
+
+        return webClient.get()
+                .uri(networkConversionServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(typeRef);
+    }
+
+    public Mono<ExportNetworkInfos> exportNetwork(String studyName, String format) {
+        Mono<UUID> networkUuidMono = getStudyUuid(studyName);
+
+        return networkUuidMono.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/{format}")
+                    .buildAndExpand(uuid, format)
+                    .toUriString();
+
+            return webClient.get()
+                    .uri(networkConversionServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(ExportNetworkInfos.class);
         });
     }
 

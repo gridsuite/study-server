@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -190,6 +192,23 @@ public class StudyController {
                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
         Mono<Study> studyMono = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
         return studyMono.map(study -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(study));
+    }
+
+    @GetMapping(value = "/studies/network-conversion/export/format")
+    @ApiOperation(value = "get the available export format", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The available export format")})
+    public Mono<ResponseEntity<Collection<String>>> getExportFormats() {
+        Mono<Collection<String>> formatsMono = studyService.getExportFormats();
+        return formatsMono.map(formats -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formats));
+    }
+
+    @GetMapping(value = "/studies/network-conversion/{studyName}/{format}")
+    @ApiOperation(value = "export the study's network in the given format", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
+    public Mono<ResponseEntity<byte[]>> exportNetwork(@PathVariable("studyName") String studyName, @PathVariable("format") String format) {
+        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyName, format);
+        return exportNetworkInfosMono.map(exportNetworkInfos -> ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + exportNetworkInfos.getNetworkName())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM).body(exportNetworkInfos.getNetworkData()));
     }
 }
 
