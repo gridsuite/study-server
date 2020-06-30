@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -31,8 +32,12 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
@@ -50,8 +55,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.BDDMockito.given;
-
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
@@ -60,9 +65,12 @@ import static org.mockito.BDDMockito.given;
 @AutoConfigureWebTestClient
 @EnableWebFlux
 @ContextHierarchy({
-    @ContextConfiguration(classes = {StudyApplication.class, StudyService.class})
+    @ContextConfiguration(classes = {StudyApplication.class, StudyService.class, TestChannelBinderConfiguration.class})
     })
 public class StudyTest extends AbstractEmbeddedCassandraSetup {
+
+    @Autowired
+    private OutputDestination output;
 
     @Autowired
     private WebTestClient webTestClient;
@@ -81,6 +89,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String CASE_UUID = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID = "11111111-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
+    private static final String HEADER_STUDY_NAME = "studyName";
+    private static final String HEADER_UPDATE_TYPE = "updateType";
     private final UUID networkUuid = UUID.fromString(NETWORK_UUID);
     private final UUID caseUuid = UUID.fromString(CASE_UUID);
     private final UUID importedCaseUuid = UUID.fromString(IMPORTED_CASE_UUID);
@@ -371,6 +381,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk();
 
+        // assert that the broker message has been sent
+        Message<byte[]> messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        MessageHeaders headersSwitch = messageSwitch.getHeaders();
+        assertEquals(STUDY_NAME, headersSwitch.get(HEADER_STUDY_NAME));
+        assertEquals("switch", headersSwitch.get(HEADER_UPDATE_TYPE));
+
         webTestClient.get()
                 .uri("/v1/studies")
                 .exchange()
@@ -403,6 +420,12 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/studies/" + "newName" + "/loadflow/run")
                 .exchange()
                 .expectStatus().isOk();
+        // assert that the broker message has been sent
+        Message<byte[]> messageLF = output.receive(1000);
+        assertEquals("", new String(messageLF.getPayload()));
+        MessageHeaders headersLF = messageLF.getHeaders();
+        assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
+        assertEquals("loadflow", headersLF.get(HEADER_UPDATE_TYPE));
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();
