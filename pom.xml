@@ -54,6 +54,7 @@
         <lombok.version>1.18.8</lombok.version>
         <metricscore.version>3.2.6</metricscore.version>
         <springboot.version>2.2.7.RELEASE</springboot.version>
+        <spring-cloud.version>Hoxton.SR3</spring-cloud.version>
         <springdata.version>2.2.3.RELEASE</springdata.version>
         <springfox.version>2.9.2</springfox.version>
         <springtest.version>5.1.5.RELEASE</springtest.version>
@@ -138,6 +139,13 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
@@ -156,12 +164,6 @@
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
             <version>${network-store-client.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-web</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
@@ -198,6 +200,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
             <version>${springboot.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
         </dependency>
 
         <dependency>
@@ -286,6 +297,13 @@
             <artifactId>jsonassert</artifactId>
             <version>1.5.0</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <classifier>test-binder</classifier>
         </dependency>
     </dependencies>
 
