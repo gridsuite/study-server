@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
@@ -29,6 +30,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -331,7 +334,7 @@ public class StudyService {
     public Mono<ExportNetworkInfos> exportNetwork(String studyName, String format) {
         Mono<UUID> networkUuidMono = getStudyUuid(studyName);
 
-        return networkUuidMono.flatMap(uuid -> {
+        Mono<byte[]> networkDataMono = networkUuidMono.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/{format}")
                     .buildAndExpand(uuid, format)
                     .toUriString();
@@ -339,7 +342,15 @@ public class StudyService {
             return webClient.get()
                     .uri(networkConversionServerBaseUri + path)
                     .retrieve()
-                    .bodyToMono(ExportNetworkInfos.class);
+                    .bodyToMono(byte[].class);
+        });
+
+        return networkDataMono.map(networkData -> {
+            try {
+                return new ObjectMapper().readValue(networkData, ExportNetworkInfos.class);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         });
     }
 

@@ -423,7 +423,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectBody(String.class)
                 .isEqualTo("[\"CGMES\",\"UCTE\",\"XIIDM\"]");
 
-        //get available export format
+        //export a network
         webTestClient.get()
                 .uri("/v1/studies/network-conversion/{studyName}/{format}", newStudyName, "XIIDM")
                 .exchange()
