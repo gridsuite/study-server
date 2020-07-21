@@ -45,4 +45,10 @@ public class Study implements Serializable {
 
     @Column("casePrivate")
     private boolean casePrivate;
+
+    @Column("ownerId")
+    private String ownerId;
+
+    @Column("ownerName")
+    private String ownerName;
 }

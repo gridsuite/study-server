@@ -55,22 +55,26 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                    @PathVariable("caseUuid") UUID caseUuid,
-                                                    @RequestParam("description") String description) {
+                                                                  @PathVariable("caseUuid") UUID caseUuid,
+                                                                  @RequestParam("description") String description,
+                                                                  @RequestParam("ownerId") String ownerId,
+                                                                  @RequestParam("ownerName") String ownerName) {
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName), studyService.assertCaseExists(caseUuid))
-.then(studyService.createStudy(studyName, caseUuid, description).then()));
+                .then(studyService.createStudy(studyName, caseUuid, description, ownerId, ownerName).then()));
     }
 
-    @PostMapping(value = "/studies/{studyName}")
+    @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ApiOperation(value = "create a study and import the case")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
-                                    @RequestPart("caseFile") Mono<FilePart> caseFile,
-                                    @RequestParam("description") String description) {
-        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName).then(studyService.createStudy(studyName, caseFile, description).then()));
+                                                  @RequestPart("caseFile") Mono<FilePart> caseFile,
+                                                  @RequestParam("description") String description,
+                                                  @RequestParam("ownerId") String ownerId,
+                                                  @RequestParam("ownerName") String ownerName) {
+        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName).then(studyService.createStudy(studyName, caseFile, description, ownerId, ownerName).then()));
     }
 
     @GetMapping(value = "/studies/{studyName}")
