@@ -190,13 +190,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsMono);
     }
 
-    @GetMapping(value = "/studies/network-conversion/{studyName}/{format}")
+    @GetMapping(value = "/studies/network-conversion/{studyName}/export/{format}")
     @ApiOperation(value = "export the study's network in the given format", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
-    public ResponseEntity<Mono<byte[]>> exportNetwork(@PathVariable("studyName") String studyName, @PathVariable("format") String format) {
+    public ResponseEntity<byte[]> exportNetwork(@PathVariable("studyName") String studyName, @PathVariable("format") String format) {
         Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyName, format);
-        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + exportNetworkInfosMono.map(ExportNetworkInfos::getNetworkName))
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM).body(exportNetworkInfosMono.map(ExportNetworkInfos::getNetworkData));
+        //if we don't block and the networkName is not ready yet the front will get some weird value for the filename
+        ExportNetworkInfos exportNetworkInfos = exportNetworkInfosMono.block();
+        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + exportNetworkInfos.getNetworkName())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM).body(exportNetworkInfos.getNetworkData());
     }
 }
 

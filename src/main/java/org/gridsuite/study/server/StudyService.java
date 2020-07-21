@@ -363,7 +363,7 @@ public class StudyService {
         Mono<UUID> networkUuidMono = getStudyUuid(studyName);
 
         Mono<byte[]> networkDataMono = networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/{format}")
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
                     .buildAndExpand(uuid, format)
                     .toUriString();
 

@@ -203,7 +203,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/XIIDM":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
                         return new MockResponse().setResponseCode(200).setBody(exportedNetworkInfosAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
@@ -448,7 +448,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //export a network
         webTestClient.get()
-                .uri("/v1/studies/network-conversion/{studyName}/{format}", newStudyName, "XIIDM")
+                .uri("/v1/studies/network-conversion/{studyName}/export/{format}", newStudyName, "XIIDM")
                 .exchange()
                 .expectStatus().isOk();
 
