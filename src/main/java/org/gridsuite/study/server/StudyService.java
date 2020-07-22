@@ -102,13 +102,13 @@ public class StudyService {
         return studyList.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
     }
 
-    Mono<Study> createStudy(String studyName, UUID caseUuid, String description, String ownerId, String ownerName) {
+    Mono<Study> createStudy(String studyName, UUID caseUuid, String description, String ownerEmail) {
         Mono<NetworkInfos> networkInfos = persistentStore(caseUuid);
         Mono<String> caseFormat = getCaseFormat(caseUuid);
 
         return Mono.zip(networkInfos, caseFormat)
                 .flatMap(t -> {
-                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, ownerId, ownerName);
+                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, ownerEmail);
                     return studyRepository.insert(study);
                 });
     }
@@ -124,7 +124,7 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description, String ownerId, String ownerName) {
+    Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description, String ownerEmail) {
         Mono<UUID> caseUUid;
         caseUUid = importCase(caseFile);
         return caseUUid.flatMap(uuid -> {
@@ -132,7 +132,7 @@ public class StudyService {
             Mono<String> caseFormat = getCaseFormat(uuid);
             return Mono.zip(networkInfos, caseFormat)
                     .flatMap(t -> {
-                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true, ownerId, ownerName);
+                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true, ownerEmail);
                         return studyRepository.insert(study);
                     });
         });

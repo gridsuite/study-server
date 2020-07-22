@@ -48,7 +48,4 @@ public class Study implements Serializable {
 
     @Column("ownerEmail")
     private String ownerEmail;
-
-    @Column("ownerName")
-    private String ownerName;
 }
