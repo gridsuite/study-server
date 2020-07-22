@@ -6,6 +6,6 @@ CREATE TABLE IF NOT EXISTS study.study (
     caseFormat text,
     caseUuid uuid,
     casePrivate boolean,
-    ownerId text,
+    ownerEmail text,
     ownerName text
 );

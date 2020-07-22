@@ -57,10 +57,10 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                   @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description,
-                                                                  @RequestParam("ownerId") String ownerId,
+                                                                  @RequestParam("ownerEmail") String ownerEmail,
                                                                   @RequestParam("ownerName") String ownerName) {
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName), studyService.assertCaseExists(caseUuid))
-                .then(studyService.createStudy(studyName, caseUuid, description, ownerId, ownerName).then()));
+                .then(studyService.createStudy(studyName, caseUuid, description, ownerEmail, ownerName).then()));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -72,9 +72,9 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
                                                   @RequestPart("caseFile") Mono<FilePart> caseFile,
                                                   @RequestParam("description") String description,
-                                                  @RequestParam("ownerId") String ownerId,
+                                                  @RequestParam("ownerEmail") String ownerEmail,
                                                   @RequestParam("ownerName") String ownerName) {
-        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName).then(studyService.createStudy(studyName, caseFile, description, ownerId, ownerName).then()));
+        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName).then(studyService.createStudy(studyName, caseFile, description, ownerEmail, ownerName).then()));
     }
 
     @GetMapping(value = "/studies/{studyName}")
