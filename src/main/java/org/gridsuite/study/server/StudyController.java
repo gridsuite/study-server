@@ -187,7 +187,7 @@ public class StudyController {
         try {
             return java.net.URLDecoder.decode(parameter, StandardCharsets.UTF_8.name());
         } catch (UnsupportedEncodingException e) {
-            LOGGER.error(Arrays.toString(e.getStackTrace()));
+            LOGGER.error(e.toString(), e);
             return null;
         }
     }
