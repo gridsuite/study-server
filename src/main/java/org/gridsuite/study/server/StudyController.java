@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -186,7 +187,7 @@ public class StudyController {
         try {
             return java.net.URLDecoder.decode(parameter, StandardCharsets.UTF_8.name());
         } catch (UnsupportedEncodingException e) {
-            LOGGER.error(e.getStackTrace().toString());
+            LOGGER.error(Arrays.toString(e.getStackTrace()));
             return null;
         }
     }
