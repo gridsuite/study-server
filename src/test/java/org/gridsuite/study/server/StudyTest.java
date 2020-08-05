@@ -24,7 +24,6 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
@@ -96,7 +95,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private final UUID caseUuid = UUID.fromString(CASE_UUID);
     private final UUID importedCaseUuid = UUID.fromString(IMPORTED_CASE_UUID);
     private final NetworkInfos networkInfos = new NetworkInfos(networkUuid, "20140116_0830_2D4_UX1_pst");
-    private final ExportNetworkInfos exportNetworkInfos = new ExportNetworkInfos("20140116_0830_2D4_UX1_pst.xiidm", "networkData".getBytes());
 
     TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
 
@@ -137,7 +135,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         String networkInfosAsString = mapper.writeValueAsString(networkInfos);
         String importedCaseUuidAsString = mapper.writeValueAsString(importedCaseUuid);
         String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
-        String exportedNetworkInfosAsString = mapper.writeValueAsString(exportNetworkInfos);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
@@ -204,7 +201,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
-                        return new MockResponse().setResponseCode(200).setBody(exportedNetworkInfosAsString)
+                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
                 return new MockResponse().setResponseCode(404);
@@ -440,7 +437,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //get available export format
         webTestClient.get()
-                .uri("/v1/studies/network-conversion/export/format")
+                .uri("/v1/export-network-formats")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)
@@ -448,7 +445,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //export a network
         webTestClient.get()
-                .uri("/v1/studies/network-conversion/{studyName}/export/{format}", newStudyName, "XIIDM")
+                .uri("/v1/studies/{studyName}/export-network/{format}", newStudyName, "XIIDM")
                 .exchange()
                 .expectStatus().isOk();
 

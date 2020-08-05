@@ -6,10 +6,8 @@
  */
 package org.gridsuite.study.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
-import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -34,8 +32,6 @@ import org.springframework.messaging.Message;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.context.annotation.Bean;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -359,10 +355,10 @@ public class StudyService {
                 .bodyToMono(typeRef);
     }
 
-    public Mono<ExportNetworkInfos> exportNetwork(String studyName, String format) {
+    public Mono<ResponseEntity<byte[]>> exportNetwork(String studyName, String format) {
         Mono<UUID> networkUuidMono = getStudyUuid(studyName);
 
-        Mono<byte[]> networkDataMono = networkUuidMono.flatMap(uuid -> {
+        return networkUuidMono.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
                     .buildAndExpand(uuid, format)
                     .toUriString();
@@ -370,15 +366,7 @@ public class StudyService {
             return webClient.get()
                     .uri(networkConversionServerBaseUri + path)
                     .retrieve()
-                    .bodyToMono(byte[].class);
-        });
-
-        return networkDataMono.map(networkData -> {
-            try {
-                return new ObjectMapper().readValue(networkData, ExportNetworkInfos.class);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+                    .toEntity(byte[].class);
         });
     }
 
