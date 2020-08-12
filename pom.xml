@@ -164,12 +164,6 @@
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
             <version>${network-store-client.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework</groupId>
-                    <artifactId>spring-webmvc</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
