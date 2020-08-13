@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -193,7 +194,8 @@ public class StudyController {
     @ApiOperation(value = "export the study's network in the given format", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
     public Mono<ResponseEntity<byte[]>> exportNetwork(@PathVariable("studyName") String studyName, @PathVariable("format") String format) {
-        return studyService.exportNetwork(studyName, format);
+        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyName, format);
+        return exportNetworkInfosMono.map(exportNetworkInfos -> ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + exportNetworkInfos.getFileName()).contentType(MediaType.APPLICATION_OCTET_STREAM).body(exportNetworkInfos.getNetworkData()));
     }
 }
 

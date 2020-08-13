@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
+import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -355,7 +356,7 @@ public class StudyService {
                 .bodyToMono(typeRef);
     }
 
-    public Mono<ResponseEntity<byte[]>> exportNetwork(String studyName, String format) {
+    public Mono<ExportNetworkInfos> exportNetwork(String studyName, String format) {
         Mono<UUID> networkUuidMono = getStudyUuid(studyName);
 
         return networkUuidMono.flatMap(uuid -> {
@@ -363,10 +364,17 @@ public class StudyService {
                     .buildAndExpand(uuid, format)
                     .toUriString();
 
-            return webClient.get()
+            Mono<ResponseEntity<byte[]>> responseEntity = webClient.get()
                     .uri(networkConversionServerBaseUri + path)
                     .retrieve()
                     .toEntity(byte[].class);
+
+            return responseEntity.map(res -> {
+                byte[] bytes = res.getBody();
+                String filename = res.getHeaders().getContentDisposition().getFilename();
+                return new ExportNetworkInfos(filename, bytes);
+            });
+
         });
     }
 
