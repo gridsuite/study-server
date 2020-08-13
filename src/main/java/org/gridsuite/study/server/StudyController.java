@@ -6,21 +6,22 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
 import org.gridsuite.study.server.repository.Study;
 import io.swagger.annotations.*;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -178,6 +179,26 @@ public class StudyController {
         Mono<Study> studyMono = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
 
+    }
+
+    @GetMapping(value = "/export-network-formats")
+    @ApiOperation(value = "get the available export format", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The available export format")})
+    public ResponseEntity<Mono<Collection<String>>> getExportFormats() {
+        Mono<Collection<String>> formatsMono = studyService.getExportFormats();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsMono);
+    }
+
+    @GetMapping(value = "/studies/{studyName}/export-network/{format}")
+    @ApiOperation(value = "export the study's network in the given format", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
+    public Mono<ResponseEntity<byte[]>> exportNetwork(@PathVariable("studyName") String studyName, @PathVariable("format") String format) {
+        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyName, format);
+        return exportNetworkInfosMono.map(exportNetworkInfos -> {
+            HttpHeaders header = new HttpHeaders();
+            header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
+            return ResponseEntity.ok().headers(header).contentType(MediaType.APPLICATION_OCTET_STREAM).body(exportNetworkInfos.getNetworkData());
+        });
     }
 }
 

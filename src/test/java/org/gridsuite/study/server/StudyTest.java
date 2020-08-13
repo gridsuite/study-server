@@ -195,6 +195,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/svg-and-metadata/" + NETWORK_UUID + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
                         return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/export/formats":
+                        return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
+                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
                 return new MockResponse().setResponseCode(404);
             }
@@ -426,6 +434,20 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         MessageHeaders headersLF = messageLF.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals("loadflow", headersLF.get(HEADER_UPDATE_TYPE));
+
+        //get available export format
+        webTestClient.get()
+                .uri("/v1/export-network-formats")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("[\"CGMES\",\"UCTE\",\"XIIDM\"]");
+
+        //export a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyName}/export-network/{format}", newStudyName, "XIIDM")
+                .exchange()
+                .expectStatus().isOk();
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();
