@@ -120,7 +120,8 @@ public class StudyService {
         });
     }
 
-    Mono<Study> createStudy(String studyName, UUID caseUuid, String description, String subject, Boolean isPrivate) {
+    @Transactional
+    public Mono<Study> createStudy(String studyName, UUID caseUuid, String description, String subject, Boolean isPrivate) {
         Mono<NetworkInfos> networkInfos = persistentStore(caseUuid);
         Mono<String> caseFormat = getCaseFormat(caseUuid);
 
@@ -145,7 +146,7 @@ public class StudyService {
     }
 
     @Transactional
-     Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description, String subject, Boolean isPrivate) {
+     public Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description, String subject, Boolean isPrivate) {
         Mono<UUID> caseUUid;
         caseUUid = importCase(caseFile);
 
