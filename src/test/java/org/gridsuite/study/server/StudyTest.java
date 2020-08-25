@@ -204,6 +204,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //empty list
         webTestClient.get()
                 .uri("/v1/studies")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -212,13 +213,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //insert a study
         webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&ownerEmail={ownerEmail}&ownerName={ownerName}", STUDY_NAME, caseUuid, DESCRIPTION, "ownerId", "ownerName")
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "false")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isOk();
 
         //insert a study with a non existing case and except exception
         webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&ownerEmail={ownerEmail}&ownerName={ownerName}", "randomStudy", "00000000-0000-0000-0000-000000000000", DESCRIPTION, "ownerId", "ownerName")
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", "randomStudy", "00000000-0000-0000-0000-000000000000", DESCRIPTION, "false")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isEqualTo(424)
                 .expectBody()
@@ -227,15 +230,17 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         webTestClient.get()
                 .uri("/v1/studies")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"},{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //insert the same study => 409 conflict
         webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&ownerEmail={ownerEmail}&ownerName={ownerName}", STUDY_NAME, caseUuid, DESCRIPTION, "ownerId", "ownerName")
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "false")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isEqualTo(409)
                 .expectBody()
@@ -252,7 +257,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .contentType(MediaType.TEXT_XML);
 
             webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&ownerEmail={ownerEmail}&ownerName={ownerName}", "s2", "desc", "ownerId", "ownerName")
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s2", "desc", "true")
+                    .header("subject", "subject")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .exchange()
@@ -269,7 +275,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .contentType(MediaType.TEXT_XML);
 
             webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&ownerEmail={ownerEmail}&ownerName={ownerName}", "s2", "desc", "ownerId", "ownerName")
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s2", "desc", "false")
+                    .header("subject", "subject")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .exchange()
@@ -282,15 +289,17 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         // check the study s2
         webTestClient.get()
                 .uri(STUDIES_URL, "s2", "ownerId", "ownerName")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"ownerEmail\":\"ownerId\"}");
+                .isEqualTo("{\"name\":\"s2\",\"subject\":\"subject\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"private\":true}");
 
         //get a non existing study -> 404 not found
         webTestClient.get()
                 .uri(STUDIES_URL, "s3")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectBody();
@@ -390,11 +399,12 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         webTestClient.get()
                 .uri("/v1/studies")
+                .header("subject", "subject")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"},{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //rename the study
         String newStudyName = "newName";
@@ -407,7 +417,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"ownerEmail\":\"ownerId\"}");
+                .isEqualTo("{\"name\":\"newName\",\"subject\":\"subject\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"private\":false}");
 
         webTestClient.post()
                 .uri("/v1/studies/" + STUDY_NAME + "/rename")

@@ -11,8 +11,7 @@ import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
-import org.gridsuite.study.server.repository.Study;
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
@@ -42,7 +41,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-@ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
+@ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class, StudyBySubjectRepository.class})
 @Service
 public class StudyService {
 
@@ -63,6 +62,8 @@ public class StudyService {
     String networkStoreServerBaseUri;
 
     private final StudyRepository studyRepository;
+    private final StudyBySubjectRepository studyBySubjectRepository;
+    private final StudyByAccessRightsRepository studyByAccessRightsRepository;
 
     private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
 
@@ -82,6 +83,8 @@ public class StudyService {
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             StudyRepository studyRepository,
+            StudyBySubjectRepository studyBySubjectRepository,
+            StudyByAccessRightsRepository studyByAccessRightsRepository,
             WebClient.Builder webClientBuilder) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
@@ -95,22 +98,38 @@ public class StudyService {
         this.webClient =  webClientBuilder.build();
 
         this.studyRepository = studyRepository;
+        this.studyBySubjectRepository = studyBySubjectRepository;
+        this.studyByAccessRightsRepository = studyByAccessRightsRepository;
     }
 
-    Flux<StudyInfos> getStudyList() {
-        Flux<Study> studyList = studyRepository.findAll();
-        return studyList.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
+    Flux<StudyInfos> getStudyList(String subject) {
+        Flux<StudyBySubject> studyBySubjectFlux = studyBySubjectRepository.findAllBySubject(subject);
+
+        return Flux.concat(studyBySubjectFlux.flatMap(studyBySubject -> {
+            Mono<Study> studyMono = studyRepository.findByName(studyBySubject.getStudyName());
+            return studyMono.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
+        }), getPublicStudyList());
     }
 
-    Mono<Study> createStudy(String studyName, UUID caseUuid, String description, String ownerEmail) {
+    Flux<StudyInfos> getPublicStudyList() {
+        Flux<StudyByAccessRights> studyByAccessRightsFlux = studyByAccessRightsRepository.findAllByIsPrivate(false);
+        return studyByAccessRightsFlux.flatMap(studyByAccessRights -> {
+            Mono<Study> studyMono = studyRepository.findByName(studyByAccessRights.getStudyName());
+            return studyMono.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
+        });
+    }
+
+    Mono<Study> createStudy(String studyName, UUID caseUuid, String description, String subject, Boolean isPrivate) {
         Mono<NetworkInfos> networkInfos = persistentStore(caseUuid);
         Mono<String> caseFormat = getCaseFormat(caseUuid);
 
         return Mono.zip(networkInfos, caseFormat)
-                .flatMap(t -> {
-                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, ownerEmail);
-                    return studyRepository.insert(study);
-                });
+            .flatMap(t -> {
+                final StudyByAccessRights studyByAccessRights = new StudyByAccessRights(isPrivate, studyName);
+                final StudyBySubject studyBySubject = new StudyBySubject(subject, studyName);
+                final Study study = new Study(studyName, subject, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, isPrivate);
+                return studyBySubjectRepository.insert(studyBySubject).then(studyByAccessRightsRepository.insert(studyByAccessRights).then(studyRepository.insert(study)));
+            });
     }
 
     private Mono<String> getCaseFormat(UUID caseUuid) {
@@ -124,22 +143,34 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description, String ownerEmail) {
+    @Transactional
+     Mono<Study> createStudy(String studyName, Mono<FilePart> caseFile, String description, String subject, Boolean isPrivate) {
         Mono<UUID> caseUUid;
         caseUUid = importCase(caseFile);
+
         return caseUUid.flatMap(uuid -> {
             Mono<NetworkInfos> networkInfos = persistentStore(uuid);
             Mono<String> caseFormat = getCaseFormat(uuid);
             return Mono.zip(networkInfos, caseFormat)
                     .flatMap(t -> {
-                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true, ownerEmail);
-                        return studyRepository.insert(study);
+                        final StudyBySubject studyBySubject = new StudyBySubject(subject, studyName);
+                        final StudyByAccessRights studyByAccessRights = new StudyByAccessRights(isPrivate, studyName);
+                        final Study study = new Study(studyName, subject, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true, isPrivate);
+                        return studyBySubjectRepository.insert(studyBySubject).then(
+                                studyByAccessRightsRepository.insert(studyByAccessRights).then(
+                                        studyRepository.insert(study)
+                                )
+                        );
                     });
         });
     }
 
     Mono<Study> getStudy(String studyName) {
         return studyRepository.findByName(studyName);
+    }
+
+    Mono<Study> getUserStudy(String studyName, String subject) {
+        return studyRepository.findByNameAndSubject(studyName, subject);
     }
 
     Mono<Void> deleteStudy(String studyName) {

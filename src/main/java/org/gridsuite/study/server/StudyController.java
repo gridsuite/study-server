@@ -19,6 +19,7 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -44,9 +45,8 @@ public class StudyController {
     @GetMapping(value = "/studies")
     @ApiOperation(value = "Get all studies")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
-    public ResponseEntity<Mono<List<StudyInfos>>> getStudyList() {
-        Mono<List<StudyInfos>> studies = studyService.getStudyList().collectList();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
+    public ResponseEntity<Flux<StudyInfos>> getStudyList(@RequestHeader("subject") String subject) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(subject));
     }
 
     @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
@@ -57,9 +57,10 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                   @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description,
-                                                                  @RequestParam("ownerEmail") String ownerEmail) {
+                                                                  @RequestParam("isPrivate") Boolean isPrivate,
+                                                                  @RequestHeader("subject") String subject) {
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName), studyService.assertCaseExists(caseUuid))
-                .then(studyService.createStudy(studyName, caseUuid, description, ownerEmail).then()));
+                .then(studyService.createStudy(studyName, caseUuid, description, subject, isPrivate).then()));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -71,8 +72,9 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
                                                   @RequestPart("caseFile") Mono<FilePart> caseFile,
                                                   @RequestParam("description") String description,
-                                                  @RequestParam("ownerEmail") String ownerEmail) {
-        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName).then(studyService.createStudy(studyName, caseFile, description, ownerEmail).then()));
+                                                  @RequestParam("isPrivate") Boolean isPrivate,
+                                                  @RequestHeader("subject") String subject) {
+        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName).then(studyService.createStudy(studyName, caseFile, description, subject, isPrivate).then()));
     }
 
     @GetMapping(value = "/studies/{studyName}")
@@ -80,8 +82,8 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The study information"),
             @ApiResponse(code = 404, message = "The study doesn't exist")})
-    public ResponseEntity<Mono<Study>> getStudy(@PathVariable("studyName") String studyName) {
-        Mono<Study> studyMono = studyService.getStudy(studyName);
+    public ResponseEntity<Mono<Study>> getStudy(@PathVariable("studyName") String studyName, @RequestHeader("subject") String subject) {
+        Mono<Study> studyMono = studyService.getUserStudy(studyName, subject);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
 
     }

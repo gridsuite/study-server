@@ -9,8 +9,9 @@ package org.gridsuite.study.server.repository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.Column;
-import org.springframework.data.cassandra.core.mapping.PrimaryKey;
+import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
 
 import java.io.Serializable;
@@ -25,8 +26,11 @@ import java.util.UUID;
 @Table
 public class Study implements Serializable {
 
-    @PrimaryKey("studyName")
+    @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.PARTITIONED)
     private String name;
+
+    @PrimaryKeyColumn(name = "subject", type = PrimaryKeyType.CLUSTERED)
+    private String subject;
 
     @Column("networkUuid")
     private UUID networkUuid;
@@ -46,6 +50,6 @@ public class Study implements Serializable {
     @Column("casePrivate")
     private boolean casePrivate;
 
-    @Column("ownerEmail")
-    private String ownerEmail;
+    @Column("isPrivate")
+    private boolean isPrivate;
 }
