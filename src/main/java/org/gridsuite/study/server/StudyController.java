@@ -84,13 +84,11 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
     }
 
-    @PostMapping(value = "/studies/{studyName}/exists")
+    @GetMapping(value = "/studies/{studyName}/exists")
     @ApiOperation(value = "Check if the study exists", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The study information")})
     public ResponseEntity<Mono<Study>> studyExists(@PathVariable("studyName") String studyName) {
-        System.out.println("hello");
-        Mono<Study> studyMono = studyService.getStudy(studyName);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudy(studyName));
     }
 
     @DeleteMapping(value = "/studies/{studyName}")
