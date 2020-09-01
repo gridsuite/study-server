@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.dto;
 
 import io.swagger.annotations.ApiModel;
+import java.time.ZonedDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,8 @@ import lombok.NoArgsConstructor;
 public class StudyInfos {
 
     String studyName;
+
+    ZonedDateTime creationDate;
 
     String description;
 

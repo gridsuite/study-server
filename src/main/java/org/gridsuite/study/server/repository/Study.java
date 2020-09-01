@@ -25,8 +25,8 @@ import java.util.UUID;
 @Table
 public class Study implements Serializable {
 
-    @PrimaryKey("studyName")
-    private String name;
+    @PrimaryKey
+    private StudyKey key;
 
     @Column("networkUuid")
     private UUID networkUuid;

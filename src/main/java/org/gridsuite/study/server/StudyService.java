@@ -8,11 +8,16 @@ package org.gridsuite.study.server;
 
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
 import org.gridsuite.study.server.repository.Study;
+import org.gridsuite.study.server.repository.StudyKey;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -100,7 +105,9 @@ public class StudyService {
 
     Flux<StudyInfos> getStudyList() {
         Flux<Study> studyList = studyRepository.findAll();
-        return studyList.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
+        Flux<StudyInfos> studies = studyList.map(study -> new StudyInfos(study.getKey().getName(), ZonedDateTime.ofInstant(study.getKey().getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")),
+                study.getDescription(), study.getCaseFormat())).sort(Comparator.comparing(StudyInfos::getCreationDate).reversed());
+        return studies;
     }
 
     Mono<Study> createStudy(String studyName, UUID caseUuid, String description) {
@@ -109,7 +116,7 @@ public class StudyService {
 
         return Mono.zip(networkInfos, caseFormat)
                 .flatMap(t -> {
-                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false);
+                    Study study = new Study(new StudyKey(studyName, LocalDateTime.now(ZoneOffset.UTC)), t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false);
                     return studyRepository.insert(study);
                 });
     }
@@ -133,7 +140,7 @@ public class StudyService {
             Mono<String> caseFormat = getCaseFormat(uuid);
             return Mono.zip(networkInfos, caseFormat)
                     .flatMap(t -> {
-                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true);
+                        Study study = new Study(new StudyKey(studyName, LocalDateTime.now(ZoneOffset.UTC)), t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true);
                         return studyRepository.insert(study);
                     });
         });
@@ -337,7 +344,7 @@ public class StudyService {
     public Mono<Study> renameStudy(String studyName, String newStudyName) {
         Mono<Study> studyMono = studyRepository.findByName(studyName);
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS))).flatMap(study -> {
-            study.setName(newStudyName);
+            study.getKey().setName(newStudyName);
             Mono<Study> newStudyMono = studyRepository.insert(study);
             Mono<Void> deleted = studyRepository.deleteByName(studyName);
             return deleted.then(newStudyMono);

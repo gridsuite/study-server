@@ -17,8 +17,9 @@ import reactor.core.publisher.Mono;
  */
 
 @Repository
-public interface StudyRepository extends ReactiveCassandraRepository<Study, Integer> {
+public interface StudyRepository extends ReactiveCassandraRepository<Study, StudyKey> {
 
+    @Query("SELECT * FROM study WHERE studyName = :studyName")
     Mono<Study> findByName(String studyName);
 
     @Query("DELETE FROM study WHERE studyname = :studyName")
