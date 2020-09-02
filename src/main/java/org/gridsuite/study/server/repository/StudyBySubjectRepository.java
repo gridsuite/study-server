@@ -11,6 +11,6 @@ import reactor.core.publisher.Flux;
 @Repository
 public interface StudyBySubjectRepository extends ReactiveCassandraRepository<StudyBySubject, Integer> {
 
-    Flux<StudyBySubject> findAllBySubject(String subject);
+    Flux<StudyBySubject> findAllBySubjectAndIsPrivate(String subject, boolean isPrivate);
 
 }

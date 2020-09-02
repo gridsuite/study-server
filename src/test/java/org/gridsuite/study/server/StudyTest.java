@@ -243,7 +243,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"},{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //insert the same study => 409 conflict
         webTestClient.post()
@@ -412,7 +412,17 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"},{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"s2\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\"},{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+
+        //expect only 1 study (public one) since the other is private and we use another subject
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("subject", "a")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[{\"studyName\":\"studyName\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //rename the study
         String newStudyName = "newName";

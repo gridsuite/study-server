@@ -12,13 +12,27 @@ CREATE TABLE IF NOT EXISTS study.study (
 );
 
 CREATE TABLE IF NOT EXISTS study.studyBySubject (
-    subject text,
     studyName text,
-    PRIMARY KEY (subject, studyName)
+    networkUuid uuid,
+    networkId text,
+    description text,
+    caseFormat text,
+    caseUuid uuid,
+    casePrivate boolean,
+    subject text,
+    isPrivate boolean,
+    PRIMARY KEY (subject, isPrivate, studyName)
 );
 
 CREATE TABLE IF NOT EXISTS study.studyByAccessRights (
-    isPrivate boolean,
     studyName text,
+    networkUuid uuid,
+    networkId text,
+    description text,
+    caseFormat text,
+    caseUuid uuid,
+    casePrivate boolean,
+    subject text,
+    isPrivate boolean,
     PRIMARY KEY (isPrivate, studyName)
 );
