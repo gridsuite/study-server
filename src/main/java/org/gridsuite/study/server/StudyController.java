@@ -82,7 +82,13 @@ public class StudyController {
     public ResponseEntity<Mono<Study>> getStudy(@PathVariable("studyName") String studyName) {
         Mono<Study> studyMono = studyService.getStudy(studyName);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
+    }
 
+    @GetMapping(value = "/studies/{studyName}/exists")
+    @ApiOperation(value = "Check if the study exists", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "If the study exists or not.")})
+    public ResponseEntity<Mono<Boolean>> studyExists(@PathVariable("studyName") String studyName) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.studyExists(studyName));
     }
 
     @DeleteMapping(value = "/studies/{studyName}")
@@ -178,7 +184,6 @@ public class StudyController {
                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
         Mono<Study> studyMono = studyService.renameStudy(studyName, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
-
     }
 
     @GetMapping(value = "/export-network-formats")
