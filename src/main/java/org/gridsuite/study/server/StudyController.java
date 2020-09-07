@@ -86,9 +86,9 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyName}/exists")
     @ApiOperation(value = "Check if the study exists", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The study information")})
-    public ResponseEntity<Mono<Study>> getStudyIfExists(@PathVariable("studyName") String studyName) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudy(studyName));
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "If the study exists or not.")})
+    public ResponseEntity<Mono<Boolean>> studyExists(@PathVariable("studyName") String studyName) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.studyExists(studyName));
     }
 
     @DeleteMapping(value = "/studies/{studyName}")

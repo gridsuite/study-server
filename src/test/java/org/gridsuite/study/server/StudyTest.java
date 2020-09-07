@@ -311,7 +311,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo(null);
+                .isEqualTo("false");
 
         // check study s2 if exists
         webTestClient.get()
@@ -320,7 +320,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true}");
+                .isEqualTo("true");
 
         //get the voltage level diagram svg
         webTestClient.get()
