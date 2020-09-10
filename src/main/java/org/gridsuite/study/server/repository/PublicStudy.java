@@ -2,6 +2,7 @@ package org.gridsuite.study.server.repository;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
@@ -15,18 +16,16 @@ import java.util.UUID;
  */
 
 @Getter
+@Setter
 @AllArgsConstructor
 @Table
-public class StudyByAccessRights implements Serializable {
+public class PublicStudy implements Serializable {
 
-    @PrimaryKeyColumn(name = "isPrivate", type = PrimaryKeyType.PARTITIONED)
-    private boolean isPrivate;
-
-    @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
+    @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.PARTITIONED)
     private String studyName;
 
-    @Column("subject")
-    private String subject;
+    @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.CLUSTERED)
+    private UserId userId;
 
     @Column("networkUuid")
     private UUID networkUuid;
@@ -45,5 +44,9 @@ public class StudyByAccessRights implements Serializable {
 
     @Column("casePrivate")
     private boolean casePrivate;
+
+    @Column("isPrivate")
+    private boolean isPrivate;
+
 }
 

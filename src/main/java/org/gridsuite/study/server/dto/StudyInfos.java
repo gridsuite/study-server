@@ -10,6 +10,7 @@ import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.gridsuite.study.server.repository.UserId;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -22,6 +23,8 @@ import lombok.NoArgsConstructor;
 public class StudyInfos {
 
     String studyName;
+
+    UserId userId;
 
     String description;
 

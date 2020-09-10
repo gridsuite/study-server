@@ -29,8 +29,8 @@ public class Study implements Serializable {
     @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.PARTITIONED)
     private String name;
 
-    @PrimaryKeyColumn(name = "subject", type = PrimaryKeyType.CLUSTERED)
-    private String subject;
+    @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.CLUSTERED)
+    private UserId userId;
 
     @Column("networkUuid")
     private UUID networkUuid;
