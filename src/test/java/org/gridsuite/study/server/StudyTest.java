@@ -174,8 +174,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
                         return new MockResponse().setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
+                            .setBody("{\n" +
+                                "\"metrics\":{\n" +
+                                "\"network_0_iterations\":\"7\",\n" +
+                                "\"network_0_status\":\"CONVERGED\"\n" +
+                                "},\n" +
+                                "\"logs\":\"\",\n" +
+                                "\"ok\":true\n" +
+                                "}")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + CASE_UUID:
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID:
                     case "/v1/networks?caseName=" + IMPORTED_CASE_UUID:
@@ -295,7 +302,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true}");
+                .isEqualTo("{\"name\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}");
 
         //get a non existing study -> 404 not found
         webTestClient.get()
@@ -434,7 +441,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false}");
+                .isEqualTo("{\"name\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}");
 
         webTestClient.post()
                 .uri("/v1/studies/" + STUDY_NAME + "/rename")

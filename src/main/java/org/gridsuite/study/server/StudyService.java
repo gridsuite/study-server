@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -21,6 +22,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.integration.json.JsonPathUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -33,6 +35,7 @@ import org.springframework.messaging.Message;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.context.annotation.Bean;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -103,13 +106,13 @@ public class StudyService {
         return studyList.map(study -> new StudyInfos(study.getName(), study.getDescription(), study.getCaseFormat()));
     }
 
-    Mono<Study> createStudy(String studyName, UUID caseUuid, String description) {
+    Mono<Study> createStudy(String studyName, UUID caseUuid, String description, LoadFlowResult loadFlowResult) {
         Mono<NetworkInfos> networkInfos = persistentStore(caseUuid);
         Mono<String> caseFormat = getCaseFormat(caseUuid);
 
         return Mono.zip(networkInfos, caseFormat)
                 .flatMap(t -> {
-                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false);
+                    Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, loadFlowResult);
                     return studyRepository.insert(study);
                 });
     }
@@ -133,7 +136,7 @@ public class StudyService {
             Mono<String> caseFormat = getCaseFormat(uuid);
             return Mono.zip(networkInfos, caseFormat)
                     .flatMap(t -> {
-                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true);
+                        Study study = new Study(studyName, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true, new LoadFlowResult());
                         return studyRepository.insert(study);
                     });
         });
@@ -305,11 +308,11 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        }).doOnSuccess(s ->
-            studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                .setHeader(STUDY_NAME, studyName)
-                .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
-                .build())
+        }).then(studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.NOT_DONE))
+            .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                    .setHeader(STUDY_NAME, studyName)
+                    .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
+                    .build())
         );
     }
 
@@ -322,15 +325,34 @@ public class StudyService {
                     .toUriString();
 
             return webClient.put()
-                    .uri(loadFlowServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(Void.class);
+                .uri(loadFlowServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class)
+                .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, jsonToLoadFlowTesult(e)))
+                .doOnError(e -> studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.NOT_DONE).block());
+
         }).doOnSuccess(s ->
             studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(STUDY_NAME, studyName)
                 .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
-                .build())
+                .build()
+            )
         );
+    }
+
+    private LoadFlowResult jsonToLoadFlowTesult(String strLfResult) {
+        try {
+            String strStatus = JsonPathUtils.evaluate(strLfResult, "$.metrics.network_0_status");
+            LoadFlowResult.LoadFlowStatus status;
+            switch (strStatus) {
+                case "DIVERGED": status = LoadFlowResult.LoadFlowStatus.DIVERGED; break;
+                case "CONVERGED": status = LoadFlowResult.LoadFlowStatus.CONVERGED; break;
+                default: status = LoadFlowResult.LoadFlowStatus.NOT_DONE;
+            }
+            return new LoadFlowResult(status);
+        } catch (IOException e) {
+            return new LoadFlowResult(LoadFlowResult.LoadFlowStatus.NOT_DONE);
+        }
     }
 
     @Transactional
@@ -342,6 +364,16 @@ public class StudyService {
             Mono<Void> deleted = studyRepository.deleteByName(studyName);
             return deleted.then(newStudyMono);
         });
+    }
+
+    @Transactional
+    public Mono<Void> setLoadFlowRunning(String studyName) {
+        return Mono.when(assertLoadFlowRunnable(studyName))
+            .then(studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.RUNNING))
+            .doOnSuccess(s -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(STUDY_NAME, studyName)
+                .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
+                .build()));
     }
 
     public Mono<Collection<String>> getExportFormats() {
@@ -397,6 +429,13 @@ public class StudyService {
     public Mono<Void> assertStudyNotExists(String studyName) {
         Mono<Boolean> studyExists = studyExists(studyName);
         return studyExists.flatMap(s -> (boolean) s ? Mono.error(new StudyException(STUDY_ALREADY_EXISTS)) : Mono.empty());
+    }
+
+    public Mono<Void> assertLoadFlowRunnable(String studyName) {
+        Mono<Study> studyMono = studyRepository.findByName(studyName);
+        return studyMono.map(Study::getLoadFlowResult)
+            .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)))
+            .flatMap(lfr -> lfr.getStatus().equals(LoadFlowResult.LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {

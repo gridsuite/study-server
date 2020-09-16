@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -59,7 +60,7 @@ public class StudyController {
                                                     @PathVariable("caseUuid") UUID caseUuid,
                                                     @RequestParam("description") String description) {
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName), studyService.assertCaseExists(caseUuid))
-.then(studyService.createStudy(studyName, caseUuid, description).then()));
+            .then(studyService.createStudy(studyName, caseUuid, description, new LoadFlowResult()).then()));
     }
 
     @PostMapping(value = "/studies/{studyName}")
@@ -174,7 +175,8 @@ public class StudyController {
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
     public ResponseEntity<Mono<Void>> runLoadFlow(@PathVariable("studyName") String studyName) {
-        return ResponseEntity.ok().body(studyService.runLoadFlow(studyName).then());
+        return ResponseEntity.ok().body(Mono.when(studyService.setLoadFlowRunning(studyName))
+            .then(studyService.runLoadFlow(studyName).then()));
     }
 
     @PostMapping(value = "/studies/{studyName}/rename")
