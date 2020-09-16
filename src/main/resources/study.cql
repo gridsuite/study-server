@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS study.study (
     PRIMARY KEY (studyName, userId)
 );
 
-CREATE TABLE IF NOT EXISTS study.studyBySubject (
+CREATE TABLE IF NOT EXISTS study.privateStudyBySubject (
     studyName text,
     networkUuid uuid,
     networkId text,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS study.studyBySubject (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    PRIMARY KEY (userId, isPrivate, studyName)
+    PRIMARY KEY (userId, studyName)
 );
 
 CREATE TABLE IF NOT EXISTS study.publicStudy (

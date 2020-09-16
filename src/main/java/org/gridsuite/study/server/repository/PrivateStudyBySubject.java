@@ -19,13 +19,10 @@ import java.util.UUID;
 @Setter
 @AllArgsConstructor
 @Table
-public class StudyBySubject implements Serializable {
+public class PrivateStudyBySubject implements Serializable {
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;
-
-    @PrimaryKeyColumn(name = "isPrivate", type = PrimaryKeyType.CLUSTERED)
-    private boolean isPrivate;
 
     @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
     private String studyName;
@@ -48,4 +45,6 @@ public class StudyBySubject implements Serializable {
     @Column("casePrivate")
     private boolean casePrivate;
 
+    @Column("isPrivate")
+    private boolean isPrivate;
 }

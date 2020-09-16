@@ -44,7 +44,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-@ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class, StudyBySubjectRepository.class})
+@ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
 @Service
 public class StudyService {
 
@@ -65,7 +65,7 @@ public class StudyService {
     String networkStoreServerBaseUri;
 
     private final StudyRepository studyRepository;
-    private final StudyBySubjectRepository studyBySubjectRepository;
+    private final PrivateStudyBySubjectRepository privateStudyBySubjectRepository;
     private final PublicStudyRepository publicStudyRepository;
 
     private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
@@ -86,7 +86,7 @@ public class StudyService {
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             StudyRepository studyRepository,
-            StudyBySubjectRepository studyBySubjectRepository,
+            PrivateStudyBySubjectRepository privateStudyBySubjectRepository,
             PublicStudyRepository publicStudyRepository,
             WebClient.Builder webClientBuilder) {
         this.caseServerBaseUri = caseServerBaseUri;
@@ -101,12 +101,12 @@ public class StudyService {
         this.webClient =  webClientBuilder.build();
 
         this.studyRepository = studyRepository;
-        this.studyBySubjectRepository = studyBySubjectRepository;
+        this.privateStudyBySubjectRepository = privateStudyBySubjectRepository;
         this.publicStudyRepository = publicStudyRepository;
     }
 
     Flux<StudyInfos> getStudyList(String userId) {
-        Flux<StudyBySubject> studyBySubjectFlux = studyBySubjectRepository.findAllByUserIdAndIsPrivate(userId, true);
+        Flux<PrivateStudyBySubject> studyBySubjectFlux = privateStudyBySubjectRepository.findAllByUserId(userId);
 
         return Flux.concat(studyBySubjectFlux.map(studyBySubject ->
             new StudyInfos(studyBySubject.getStudyName(), studyBySubject.getUserId(), studyBySubject.getDescription(), studyBySubject.getCaseFormat())
@@ -158,14 +158,14 @@ public class StudyService {
     }
 
     private Mono<Study> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId, String description, String caseFormat, UUID caseUuid, boolean isCasePrivate) {
-        final StudyBySubject studyBySubject = new StudyBySubject(userId, isPrivate, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate);
+        final PrivateStudyBySubject privateStudyBySubject = new PrivateStudyBySubject(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
         final PublicStudy publicStudy = new PublicStudy(studyName, userId, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
         final Study study = new Study(studyName, userId, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
         if (!isPrivate) {
-            return Mono.zip(studyBySubjectRepository.insert(studyBySubject), publicStudyRepository.insert(publicStudy), studyRepository.insert(study))
-                    .map(Tuple3::getT3);
+            return Mono.zip(publicStudyRepository.insert(publicStudy), studyRepository.insert(study))
+                    .map(Tuple2::getT2);
         } else {
-            return Mono.zip(studyBySubjectRepository.insert(studyBySubject), studyRepository.insert(study))
+            return Mono.zip(privateStudyBySubjectRepository.insert(privateStudyBySubject), studyRepository.insert(study))
                     .map(Tuple2::getT2);
         }
     }
@@ -186,7 +186,7 @@ public class StudyService {
     }
 
     @Transactional
-    Mono<Void> deleteStudy(String studyName, String userId, String headerUserId) {
+    public Mono<Void> deleteStudy(String studyName, String userId, String headerUserId) {
         Mono<Study> studyMono = studyRepository.findByNameAndUserId(studyName, userId);
 
         return studyMono.flatMap(study -> {
@@ -203,15 +203,15 @@ public class StudyService {
                         .uri(caseServerBaseUri + path)
                         .retrieve()
                         .bodyToMono(Void.class)
-                        .then(deleteRequests(userId, study.isPrivate(), studyName));
+                        .then(deleteRequests(userId, studyName));
             } else {
-                return deleteRequests(userId, study.isPrivate(), studyName);
+                return deleteRequests(userId, studyName);
             }
         });
     }
 
-    Mono<Void> deleteRequests(String userId, boolean isPrivate, String studyName) {
-        return Mono.zip(studyBySubjectRepository.delete(userId, isPrivate, studyName),
+    Mono<Void> deleteRequests(String userId, String studyName) {
+        return Mono.zip(privateStudyBySubjectRepository.delete(userId, studyName),
                 publicStudyRepository.delete(studyName, userId),
                 studyRepository.deleteByNameAndUserId(studyName, userId)).map(Tuple3::getT3);
     }
@@ -396,7 +396,7 @@ public class StudyService {
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS))).flatMap(study -> {
             study.setName(newStudyName);
 
-            Mono<Void> deleteStudy = deleteStudy(studyName, userId, headerUserId);
+            Mono<Void> deleteStudy = deleteRequests(userId, studyName);
             Mono<Study> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
                     study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate());
 
