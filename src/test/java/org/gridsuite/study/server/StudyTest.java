@@ -82,7 +82,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private NetworkStoreService networkStoreClient;
 
     private static final String STUDIES_URL = "/v1/studies/{studyName}";
-    private static final String STUDY_EXIST_URL = "/v1/studies/{studyName}/exists";
+    private static final String STUDY_EXIST_URL = "/v1/{userId}/studies/{studyName}/exists";
     private static final String DESCRIPTION = "description";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String STUDY_NAME = "studyName";
@@ -329,7 +329,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // check if a non existing study exists
         webTestClient.get()
-                .uri(STUDY_EXIST_URL, "s3")
+                .uri(STUDY_EXIST_URL, "subject", "s3")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -338,7 +338,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // check study s2 if exists
         webTestClient.get()
-                .uri(STUDY_EXIST_URL, "s2")
+                .uri(STUDY_EXIST_URL, "subject", "s2")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
