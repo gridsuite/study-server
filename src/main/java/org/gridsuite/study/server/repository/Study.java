@@ -30,7 +30,7 @@ public class Study implements Serializable {
     private String name;
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.CLUSTERED)
-    private UserId userId;
+    private String userId;
 
     @Column("networkUuid")
     private UUID networkUuid;

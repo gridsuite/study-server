@@ -14,11 +14,11 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface StudyBySubjectRepository extends ReactiveCassandraRepository<StudyBySubject, Integer> {
 
-    Flux<StudyBySubject> findAllByUserIdAndIsPrivate(UserId userId, boolean isPrivate);
+    Flux<StudyBySubject> findAllByUserIdAndIsPrivate(String userId, boolean isPrivate);
 
     @Query("SELECT * FROM studybysubject WHERE userId = :userId and isprivate = :isPrivate and studyname = :studyName")
-    Mono<StudyBySubject> findById(@Param("userId") UserId userId, @Param("isPrivate") boolean isPrivate, @Param("studyName") String studyName);
+    Mono<StudyBySubject> findById(@Param("userId") String userId, @Param("isPrivate") boolean isPrivate, @Param("studyName") String studyName);
 
     @Query("DELETE FROM studybysubject WHERE userId = :userId and isprivate = :isPrivate and studyname = :studyName")
-    Mono<Void> delete(@Param("userId") UserId userId, @Param("isPrivate") boolean isPrivate, @Param("studyName") String studyName);
+    Mono<Void> delete(@Param("userId") String userId, @Param("isPrivate") boolean isPrivate, @Param("studyName") String studyName);
 }

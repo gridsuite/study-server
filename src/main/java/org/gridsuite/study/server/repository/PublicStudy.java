@@ -25,7 +25,7 @@ public class PublicStudy implements Serializable {
     private String studyName;
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.CLUSTERED)
-    private UserId userId;
+    private String userId;
 
     @Column("networkUuid")
     private UUID networkUuid;

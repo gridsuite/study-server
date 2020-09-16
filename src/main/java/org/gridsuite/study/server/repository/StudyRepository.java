@@ -21,9 +21,9 @@ public interface StudyRepository extends ReactiveCassandraRepository<Study, Inte
 
     Mono<Study> findByName(String studyName);
 
-    Mono<Study> findByNameAndUserId(String name, UserId userId);
+    Mono<Study> findByNameAndUserId(String name, String userId);
 
     @Query("DELETE FROM study WHERE studyname = :studyName and userId = :userId")
-    Mono<Void> deleteByNameAndSubject(@Param("studyName") String studyName, @Param("userId") UserId userId);
+    Mono<Void> deleteByNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
 }

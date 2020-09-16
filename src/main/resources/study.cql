@@ -1,8 +1,3 @@
-CREATE TYPE IF NOT EXISTS study.userId (
-    subject text,
-    issuer text
-    );
-
 CREATE TABLE IF NOT EXISTS study.study (
     studyName text,
     networkUuid uuid,
@@ -11,7 +6,7 @@ CREATE TABLE IF NOT EXISTS study.study (
     caseFormat text,
     caseUuid uuid,
     casePrivate boolean,
-    userId frozen<study.userId>,
+    userId text,
     isPrivate boolean,
     PRIMARY KEY (studyName, userId)
 );
@@ -24,7 +19,7 @@ CREATE TABLE IF NOT EXISTS study.studyBySubject (
     caseFormat text,
     caseUuid uuid,
     casePrivate boolean,
-    userId frozen<study.userId>,
+    userId text,
     isPrivate boolean,
     PRIMARY KEY (userId, isPrivate, studyName)
 );
@@ -37,7 +32,7 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     caseFormat text,
     caseUuid uuid,
     casePrivate boolean,
-    userId frozen<study.userId>,
+    userId text,
     isPrivate boolean,
     PRIMARY KEY (studyName, userId)
 );

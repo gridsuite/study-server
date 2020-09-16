@@ -213,7 +213,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -224,7 +223,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "false")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isOk();
 
@@ -232,7 +230,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", "randomStudy", "00000000-0000-0000-0000-000000000000", DESCRIPTION, "false")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isEqualTo(424)
                 .expectBody()
@@ -242,18 +239,16 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":{\"subject\":\"subject\",\"issuer\":\"issuer\"},\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"subject\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //insert the same study => 409 conflict
         webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "false")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isEqualTo(409)
                 .expectBody()
@@ -264,15 +259,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "true")
                 .header("subject", "subject2")
-                .header("issuer", "issuer")
-                .exchange()
-                .expectStatus().isEqualTo(200);
-
-        //insert the same study with the same user from another issuer (should work)
-        webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "true")
-                .header("subject", "subject2")
-                .header("issuer", "issuer2")
                 .exchange()
                 .expectStatus().isEqualTo(200);
 
@@ -288,7 +274,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             webTestClient.post()
                     .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s2", "desc", "true")
                     .header("subject", "subject")
-                    .header("issuer", "issuer")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .exchange()
@@ -307,7 +292,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             webTestClient.post()
                     .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s2", "desc", "false")
                     .header("subject", "subject")
-                    .header("issuer", "issuer")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .exchange()
@@ -319,35 +303,32 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // check the study s2
         webTestClient.get()
-                .uri(STUDIES_URL + "/subject/issuer", "s2")
+                .uri("/v1/subject/studies/{studyName}", "s2")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"name\":\"s2\",\"userId\":{\"subject\":\"subject\",\"issuer\":\"issuer\"},\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"private\":true}");
+                .isEqualTo("{\"name\":\"s2\",\"userId\":\"subject\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"private\":true}");
 
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
-                .uri(STUDIES_URL + "/subject/issuer", "s2")
+                .uri("/v1/subject/studies/{studyName}", "s2")
                 .header("subject", "subject2")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isUnauthorized();
 
         //get a non existing study -> 404 not found
         webTestClient.get()
-                .uri(STUDIES_URL + "/subject/issuer", "s3")
+                .uri("/v1/subject/studies/{studyName}", "s3")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectBody();
 
         //get the voltage level diagram svg
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network/voltage-levels/{voltageLevelId}/svg?useName=false", STUDY_NAME, "subject", "issuer", "voltageLevelId")
+                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", "subject", STUDY_NAME, "voltageLevelId")
                 .exchange()
                 .expectHeader().contentType(MediaType.APPLICATION_XML)
                 .expectStatus().isOk()
@@ -355,13 +336,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //get the voltage level diagram svg from a study that doesn't exist
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network/voltage-levels/{voltageLevelId}/svg", "notExistingStudy", "subject", "issuer", "voltageLevelId")
+                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", "subject", "notExistingStudy", "voltageLevelId")
                 .exchange()
                 .expectStatus().isNotFound();
 
         //get the voltage level diagram svg and metadata
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", STUDY_NAME, "subject", "issuer", "voltageLevelId")
+                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", "subject", STUDY_NAME, "voltageLevelId")
                 .exchange()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectStatus().isOk()
@@ -370,13 +351,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //get the voltage level diagram svg and metadata from a study that doesn't exist
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "notExistingStudy", "subject", "issuer", "voltageLevelId")
+                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "subject", "notExistingStudy", "voltageLevelId")
                 .exchange()
                 .expectStatus().isNotFound();
 
         //get voltage levels
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network/voltage-levels", STUDY_NAME, "subject", "issuer")
+                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels", "subject", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)
@@ -393,43 +374,42 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //get the lines-graphics of a network
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/geo-data/lines/", STUDY_NAME, "subject", "issuer")
+                .uri("/v1/{userId}/studies/{studyName}/geo-data/lines/", "subject", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the substation-graphics of a network
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/geo-data/substations/", STUDY_NAME, "subject", "issuer")
+                .uri("/v1/{userId}/studies/{studyName}/geo-data/substations/", "subject", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the lines map data of a network
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network-map/lines/", STUDY_NAME, "subject", "issuer")
+                .uri("/v1/{userId}/studies/{studyName}/network-map/lines/", "subject", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the substation map data of a network
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network-map/substations/", STUDY_NAME, "subject", "issuer")
+                .uri("/v1/{userId}/studies/{studyName}/network-map/substations/", "subject", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //delete existing study s2
         webTestClient.delete()
-                .uri(STUDIES_URL + "/subject/issuer", "s2")
+                .uri("/v1/subject/studies/{studyName}/", "s2")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isOk();
 
         //update switch
         webTestClient.put()
-                .uri("/v1/studies/{studyName}/{subject}/{issuer}/network-modification/switches/{switchId}?open=true", STUDY_NAME, "subject", "issuer", "switchId")
+                .uri("/v1/{subject}/studies/{studyName}/network-modification/switches/{switchId}?open=true", "subject", STUDY_NAME, "switchId")
                 .exchange()
                 .expectStatus().isOk();
 
@@ -443,46 +423,44 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("subject", "subject")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":{\"subject\":\"subject\",\"issuer\":\"issuer\"},\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"subject\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //expect only 1 study (public one) since the other is private and we use another subject
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("subject", "a")
-                .header("issuer", "issuer")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":{\"subject\":\"subject\",\"issuer\":\"issuer\"},\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"subject\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
 
         //rename the study
         String newStudyName = "newName";
         RenameStudyAttributes renameStudyAttributes = new RenameStudyAttributes(newStudyName);
 
         webTestClient.post()
-                .uri("/v1/studies/" + STUDY_NAME + "/subject/issuer/rename")
+                .uri("/v1/subject/studies/" + STUDY_NAME + "/rename")
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"name\":\"newName\",\"userId\":{\"subject\":\"subject\",\"issuer\":\"issuer\"},\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"private\":false}");
+                .isEqualTo("{\"name\":\"newName\",\"userId\":\"subject\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"private\":false}");
 
         webTestClient.post()
-                .uri("/v1/studies/" + STUDY_NAME + "/subject/issuer/rename")
+                .uri("/v1/subject/studies/" + STUDY_NAME + "/rename")
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
                 .expectStatus().isNotFound();
 
         //run a loadflow
         webTestClient.put()
-                .uri("/v1/studies/" + "newName" + "/subject/issuer/loadflow/run")
+                .uri("/v1/subject/studies/" + "newName" + "/loadflow/run")
                 .exchange()
                 .expectStatus().isOk();
         // assert that the broker message has been sent
@@ -502,7 +480,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //export a network
         webTestClient.get()
-                .uri("/v1/studies/{studyName}/subject/issuer/export-network/{format}", newStudyName, "XIIDM")
+                .uri("/v1/subject/studies/{studyName}/export-network/{format}", newStudyName, "XIIDM")
                 .exchange()
                 .expectStatus().isOk();
 
