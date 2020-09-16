@@ -82,6 +82,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private NetworkStoreService networkStoreClient;
 
     private static final String STUDIES_URL = "/v1/studies/{studyName}";
+    private static final String STUDY_EXIST_URL = "/v1/studies/{studyName}/exists";
     private static final String DESCRIPTION = "description";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String STUDY_NAME = "studyName";
@@ -325,6 +326,24 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectBody();
+
+        // check if a non existing study exists
+        webTestClient.get()
+                .uri(STUDY_EXIST_URL, "s3")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("false");
+
+        // check study s2 if exists
+        webTestClient.get()
+                .uri(STUDY_EXIST_URL, "s2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("true");
 
         //get the voltage level diagram svg
         webTestClient.get()
