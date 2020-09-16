@@ -212,11 +212,12 @@ public class StudyController {
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
-    public ResponseEntity<Mono<Study>> renameStudy(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<Study>> renameStudy(@RequestHeader("subject") String headerUserId,
+                                                   @PathVariable("studyName") String studyName,
                                                    @PathVariable("userId") String userId,
                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
-        Mono<Study> studyMono = studyService.renameStudy(studyName, userId, renameStudyAttributes.getNewStudyName());
+        Mono<Study> studyMono = studyService.renameStudy(studyName, userId, headerUserId, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
     }
 

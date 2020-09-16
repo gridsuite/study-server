@@ -185,12 +185,13 @@ public class StudyService {
         return studyRepository.findByNameAndUserId(studyName, userId);
     }
 
+    @Transactional
     Mono<Void> deleteStudy(String studyName, String userId, String headerUserId) {
         Mono<Study> studyMono = studyRepository.findByNameAndUserId(studyName, userId);
 
         return studyMono.flatMap(study -> {
-            //if the study is public we need to ensure that it's the initial creator that deletes it
-            if (!study.isPrivate() && !userId.equals(headerUserId)) {
+            //we need to ensure that it's the initial creator that deletes it
+            if (!userId.equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
             }
             if (study.isCasePrivate()) {
@@ -202,15 +203,17 @@ public class StudyService {
                         .uri(caseServerBaseUri + path)
                         .retrieve()
                         .bodyToMono(Void.class)
-                        .then(Mono.zip(studyBySubjectRepository.delete(userId, study.isPrivate(), studyName),
-                                publicStudyRepository.delete(studyName, userId),
-                                studyRepository.deleteByNameAndUserId(studyName, userId)).map(Tuple3::getT3));
+                        .then(deleteRequests(userId, study.isPrivate(), studyName));
             } else {
-                return Mono.zip(studyBySubjectRepository.delete(userId, study.isPrivate(), studyName),
-                        publicStudyRepository.delete(studyName, userId),
-                        studyRepository.deleteByNameAndUserId(studyName, userId)).map(Tuple3::getT3);
+                return deleteRequests(userId, study.isPrivate(), studyName);
             }
         });
+    }
+
+    Mono<Void> deleteRequests(String userId, boolean isPrivate, String studyName) {
+        return Mono.zip(studyBySubjectRepository.delete(userId, isPrivate, studyName),
+                publicStudyRepository.delete(studyName, userId),
+                studyRepository.deleteByNameAndUserId(studyName, userId)).map(Tuple3::getT3);
     }
 
     Mono<UUID> importCase(Mono<FilePart> multipartFile) {
@@ -385,44 +388,19 @@ public class StudyService {
     }
 
     @Transactional
-    public Mono<Study> renameStudy(String studyName, String userId, String newStudyName) {
+    public Mono<Study> renameStudy(String studyName, String userId, String headerUserId, String newStudyName) {
+        if (!userId.equals(headerUserId)) {
+            return Mono.error(new StudyException(NOT_ALLOWED));
+        }
         Mono<Study> studyMono = studyRepository.findByNameAndUserId(studyName, userId);
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS))).flatMap(study -> {
             study.setName(newStudyName);
 
-            Mono<StudyBySubject> studyBySubjectMono = studyBySubjectRepository.findById(userId, study.isPrivate(), studyName);
+            Mono<Void> deleteStudy = deleteStudy(studyName, userId, headerUserId);
+            Mono<Study> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
+                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate());
 
-            if (!study.isPrivate()) {
-                Mono<PublicStudy> publicStudyMono = publicStudyRepository.findById(studyName, userId);
-                Mono<PublicStudy> insertPublicStudyMono = Mono.zip(publicStudyMono, studyBySubjectMono).flatMap(t -> {
-                    PublicStudy publicStudy = t.getT1();
-                    publicStudy.setStudyName(newStudyName);
-
-                    StudyBySubject studyBySubject = t.getT2();
-                    studyBySubject.setStudyName(newStudyName);
-
-                    return studyBySubjectRepository.insert(studyBySubject).then(publicStudyRepository.insert(publicStudy));
-                });
-
-                Mono<Study> newStudyMono = studyRepository.insert(study);
-                Mono<Void> deletedPublicStudy = publicStudyRepository.delete(studyName, userId);
-                Mono<Void> deletedStudyBySubject = studyBySubjectRepository.delete(userId, study.isPrivate(), studyName);
-                Mono<Void> deletedStudy = studyRepository.deleteByNameAndUserId(studyName, userId);
-
-                return insertPublicStudyMono.then(deletedStudyBySubject.then(deletedPublicStudy).then(deletedStudy.then(newStudyMono)));
-
-            } else {
-                Mono<StudyBySubject> insertStudyBySubjectMono = studyBySubjectMono.flatMap(studyBySubject -> {
-                    studyBySubject.setStudyName(newStudyName);
-                    return studyBySubjectRepository.insert(studyBySubject);
-                });
-
-                Mono<Study> newStudyMono = studyRepository.insert(study);
-                Mono<Void> deletedStudyBySubject = studyBySubjectRepository.delete(userId, study.isPrivate(), studyName);
-                Mono<Void> deletedStudy = studyRepository.deleteByNameAndUserId(studyName, userId);
-
-                return insertStudyBySubjectMono.then(deletedStudyBySubject.then(deletedStudy.then(newStudyMono)));
-            }
+            return deleteStudy.then(insertStudy);
         });
     }
 

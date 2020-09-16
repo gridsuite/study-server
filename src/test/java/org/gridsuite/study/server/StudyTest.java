@@ -464,6 +464,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         webTestClient.post()
                 .uri("/v1/subject/studies/" + STUDY_NAME + "/rename")
+                .header("subject", "subject")
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
                 .expectStatus().isOk()
@@ -473,6 +474,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         webTestClient.post()
                 .uri("/v1/subject/studies/" + STUDY_NAME + "/rename")
+                .header("subject", "subject")
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
                 .expectStatus().isNotFound();
