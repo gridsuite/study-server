@@ -308,11 +308,15 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        }).then(studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.NOT_DONE))
-            .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                    .setHeader(STUDY_NAME, studyName)
-                    .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
-                    .build())
+        }).then(studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.NOT_DONE)
+        .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+            .setHeader(STUDY_NAME, studyName)
+            .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
+            .build())))
+        .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(STUDY_NAME, studyName)
+                .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
+                .build())
         );
     }
 
