@@ -55,8 +55,8 @@ jobs:
         run: >
           mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
           -Djib.httpTimeout=60000
-          -Djib.to.image=docker.io/powsybl/study-server
-          -Djib.to.auth.username=powsyblci
+          -Djib.to.image=docker.io/gridsuite/study-server
+          -Djib.to.auth.username=gridsuiteci
           -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Broadcast update event
