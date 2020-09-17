@@ -53,6 +53,7 @@ public class StudyService {
     private static final String STUDY_NAME = "studyName";
     private static final String UPDATE_TYPE = "updateType";
     private static final String UPDATE_TYPE_LOADFLOW = "loadflow";
+    private static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     private static final String UPDATE_TYPE_SWITCH = "switch";
 
     private WebClient webClient;
@@ -311,7 +312,7 @@ public class StudyService {
         }).then(studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.NOT_DONE)
         .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
             .setHeader(STUDY_NAME, studyName)
-            .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
+            .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW_STATUS)
             .build())))
         .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(STUDY_NAME, studyName)
@@ -376,7 +377,7 @@ public class StudyService {
             .then(studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.RUNNING))
             .doOnSuccess(s -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(STUDY_NAME, studyName)
-                .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
+                .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW_STATUS)
                 .build()));
     }
 
