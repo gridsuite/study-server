@@ -415,6 +415,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk();
 
+        Message<byte[]> messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
+        assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
@@ -459,7 +464,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals("", new String(messageLF.getPayload()));
         MessageHeaders headersLF = messageLF.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
-        assertEquals("loadflow", headersLF.get(HEADER_UPDATE_TYPE));
+        assertEquals("loadflow_status", headersLF.get(HEADER_UPDATE_TYPE));
 
         //get available export format
         webTestClient.get()
