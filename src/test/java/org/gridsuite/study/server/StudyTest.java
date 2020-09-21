@@ -317,7 +317,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/subject/studies/{studyName}", "s2")
                 .header("subject", "subject2")
                 .exchange()
-                .expectStatus().isUnauthorized();
+                .expectStatus().isForbidden();
 
         //get a non existing study -> 404 not found
         webTestClient.get()

@@ -20,7 +20,7 @@ public class RestResponseEntityExceptionHandler {
         } else if (errorMessage.equals(STUDY_ALREADY_EXISTS)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(STUDY_ALREADY_EXISTS);
         } else if (errorMessage.equals(NOT_ALLOWED)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(NOT_ALLOWED);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
