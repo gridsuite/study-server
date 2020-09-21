@@ -19,7 +19,7 @@ import java.util.UUID;
 @Setter
 @AllArgsConstructor
 @Table
-public class PrivateStudyBySubject implements Serializable {
+public class PrivateStudy implements Serializable {
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;

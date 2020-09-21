@@ -21,10 +21,10 @@ import java.util.UUID;
 @Table
 public class PublicStudy implements Serializable {
 
-    @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.PARTITIONED)
+    @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
     private String studyName;
 
-    @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.CLUSTERED)
+    @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;
 
     @Column("networkUuid")

@@ -19,11 +19,9 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface StudyRepository extends ReactiveCassandraRepository<Study, Integer> {
 
-    Mono<Study> findByName(String studyName);
+    Mono<Study> findByUserIdAndName(String userId, String name);
 
-    Mono<Study> findByNameAndUserId(String name, String userId);
-
-    @Query("DELETE FROM study WHERE studyname = :studyName and userId = :userId")
+    @Query("DELETE FROM study WHERE userId = :userId and studyname = :studyName")
     Mono<Void> deleteByNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
 }

@@ -16,7 +16,7 @@ public interface PublicStudyRepository extends ReactiveCassandraRepository<Publi
 
     Flux<PublicStudy> findAll();
 
-    @Query("DELETE FROM publicStudy WHERE studyname = :studyName and userId = :userId")
+    @Query("DELETE FROM publicStudy WHERE userId = :userId and studyname = :studyName")
     Mono<Void> delete(@Param("studyName") String studyName, @Param("userId") String userId);
 
 }
