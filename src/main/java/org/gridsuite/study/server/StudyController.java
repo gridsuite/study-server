@@ -46,7 +46,7 @@ public class StudyController {
     @GetMapping(value = "/studies")
     @ApiOperation(value = "Get all studies")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
-    public ResponseEntity<Flux<StudyInfos>> getStudyList(@RequestHeader("subject") String userId) {
+    public ResponseEntity<Flux<StudyInfos>> getStudyList(@RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(userId));
     }
 
@@ -59,7 +59,7 @@ public class StudyController {
                                                                   @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description,
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
-                                                                  @RequestHeader("subject") String userId) {
+                                                                  @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
                 .then(studyService.createStudy(studyName, caseUuid, description, userId, isPrivate).then()));
     }
@@ -74,7 +74,7 @@ public class StudyController {
                                                   @RequestPart("caseFile") Mono<FilePart> caseFile,
                                                   @RequestParam("description") String description,
                                                   @RequestParam("isPrivate") Boolean isPrivate,
-                                                  @RequestHeader("subject") String userId) {
+                                                  @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).then(studyService.createStudy(studyName, caseFile, description, userId, isPrivate).then()));
     }
 
@@ -84,9 +84,9 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The study information"),
             @ApiResponse(code = 404, message = "The study doesn't exist")})
     public ResponseEntity<Mono<Study>> getStudy(@PathVariable("studyName") String studyName,
-                                                @RequestHeader("subject") String headerUserId,
+                                                @RequestHeader("userId") String headerUserId,
                                                 @PathVariable("userId") String userId) {
-        Mono<Study> studyMono = studyService.getUserStudy(studyName, userId, headerUserId);
+        Mono<Study> studyMono = studyService.getCurrentUserStudy(studyName, userId, headerUserId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
     }
 
@@ -103,7 +103,7 @@ public class StudyController {
     @ApiResponse(code = 200, message = "Study deleted")
     public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyName") String studyName,
                                                   @PathVariable("userId") String userId,
-                                                  @RequestHeader("subject") String headerUserId) {
+                                                  @RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteStudy(studyName, userId, headerUserId).then());
     }
 
@@ -212,7 +212,7 @@ public class StudyController {
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
-    public ResponseEntity<Mono<Study>> renameStudy(@RequestHeader("subject") String headerUserId,
+    public ResponseEntity<Mono<Study>> renameStudy(@RequestHeader("userId") String headerUserId,
                                                    @PathVariable("studyName") String studyName,
                                                    @PathVariable("userId") String userId,
                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {

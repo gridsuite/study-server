@@ -27,11 +27,11 @@ import java.util.UUID;
 @Table
 public class PublicStudy implements Serializable {
 
-    @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
-    private String studyName;
-
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;
+
+    @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
+    private String studyName;
 
     @Column("networkUuid")
     private UUID networkUuid;

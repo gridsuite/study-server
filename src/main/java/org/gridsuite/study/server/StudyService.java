@@ -107,8 +107,8 @@ public class StudyService {
     Flux<StudyInfos> getStudyList(String userId) {
         Flux<PrivateStudy> privateStudyFlux = privateStudyRepository.findAllByUserId(userId);
 
-        return Flux.concat(privateStudyFlux.map(studyBySubject ->
-            new StudyInfos(studyBySubject.getStudyName(), studyBySubject.getUserId(), studyBySubject.getDescription(), studyBySubject.getCaseFormat())
+        return Flux.concat(privateStudyFlux.map(privateStudy ->
+            new StudyInfos(privateStudy.getStudyName(), privateStudy.getUserId(), privateStudy.getDescription(), privateStudy.getCaseFormat())
         ), getPublicStudyList());
     }
 
@@ -158,8 +158,8 @@ public class StudyService {
 
     private Mono<Study> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId, String description, String caseFormat, UUID caseUuid, boolean isCasePrivate) {
         final PrivateStudy privateStudy = new PrivateStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
-        final PublicStudy publicStudy = new PublicStudy(studyName, userId, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
-        final Study study = new Study(studyName, userId, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
+        final PublicStudy publicStudy = new PublicStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
+        final Study study = new Study(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudy), studyRepository.insert(study))
                     .map(Tuple2::getT2);
@@ -169,8 +169,8 @@ public class StudyService {
         }
     }
 
-    Mono<Study> getUserStudy(String studyName, String userId, String headerUserId) {
-        Mono<Study> studyMono = studyRepository.findByUserIdAndName(userId, studyName);
+    Mono<Study> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
+        Mono<Study> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName);
         return studyMono.flatMap(study -> {
             if (study.isPrivate() && !userId.equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
@@ -181,18 +181,17 @@ public class StudyService {
     }
 
     Mono<Study> getStudy(String studyName, String userId) {
-        return studyRepository.findByUserIdAndName(userId, studyName);
+        return studyRepository.findByUserIdAndStudyName(userId, studyName);
     }
 
     @Transactional
     public Mono<Void> deleteStudy(String studyName, String userId, String headerUserId) {
-        Mono<Study> studyMono = studyRepository.findByUserIdAndName(userId, studyName);
-
+        //we need to ensure that it's the initial creator that deletes it
+        if (!userId.equals(headerUserId)) {
+            return Mono.error(new StudyException(NOT_ALLOWED));
+        }
+        Mono<Study> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName);
         return studyMono.flatMap(study -> {
-            //we need to ensure that it's the initial creator that deletes it
-            if (!userId.equals(headerUserId)) {
-                return Mono.error(new StudyException(NOT_ALLOWED));
-            }
             if (study.isCasePrivate()) {
                 String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
                         .buildAndExpand(study.getCaseUuid())
@@ -212,7 +211,7 @@ public class StudyService {
     Mono<Void> deleteStudy(String userId, String studyName) {
         return Mono.zip(privateStudyRepository.delete(userId, studyName),
                 publicStudyRepository.delete(studyName, userId),
-                studyRepository.deleteByNameAndUserId(studyName, userId)).then();
+                studyRepository.deleteByStudyNameAndUserId(studyName, userId)).then();
     }
 
     Mono<UUID> importCase(Mono<FilePart> multipartFile) {
@@ -388,12 +387,13 @@ public class StudyService {
 
     @Transactional
     public Mono<Study> renameStudy(String studyName, String userId, String headerUserId, String newStudyName) {
+        //we need to ensure that it's the initial creator that deletes it
         if (!userId.equals(headerUserId)) {
             return Mono.error(new StudyException(NOT_ALLOWED));
         }
-        Mono<Study> studyMono = studyRepository.findByUserIdAndName(userId, studyName);
+        Mono<Study> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName);
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS))).flatMap(study -> {
-            study.setName(newStudyName);
+            study.setStudyName(newStudyName);
 
             Mono<Void> deleteStudy = deleteStudy(userId, studyName);
             Mono<Study> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
@@ -438,7 +438,7 @@ public class StudyService {
     }
 
     Mono<UUID> getStudyUuid(String studyName, String userId) {
-        Mono<Study> studyMono = studyRepository.findByUserIdAndName(userId, studyName);
+        Mono<Study> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName);
         return studyMono.map(Study::getNetworkUuid)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
 
