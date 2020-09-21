@@ -23,6 +23,8 @@ public class StudyInfos {
 
     String studyName;
 
+    String userId;
+
     String description;
 
     String caseFormat;

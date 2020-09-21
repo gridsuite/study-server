@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, RTE (http://www.rte-france.com)
+ * Copyright (c) 2020, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -20,11 +20,12 @@ import java.util.UUID;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
+
 @Getter
 @Setter
 @AllArgsConstructor
 @Table
-public class Study implements Serializable {
+public class PublicStudy implements Serializable {
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;
@@ -52,4 +53,6 @@ public class Study implements Serializable {
 
     @Column("isPrivate")
     private boolean isPrivate;
+
 }
+

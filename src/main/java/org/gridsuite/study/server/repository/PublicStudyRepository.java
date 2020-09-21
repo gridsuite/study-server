@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, RTE (http://www.rte-france.com)
+ * Copyright (c) 2020, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -10,6 +10,7 @@ import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -17,11 +18,11 @@ import reactor.core.publisher.Mono;
  */
 
 @Repository
-public interface StudyRepository extends ReactiveCassandraRepository<Study, Integer> {
+public interface PublicStudyRepository extends ReactiveCassandraRepository<PublicStudy, Integer> {
 
-    Mono<Study> findByUserIdAndStudyName(String userId, String name);
+    Flux<PublicStudy> findAll();
 
-    @Query("DELETE FROM study WHERE userId = :userId and studyname = :studyName")
-    Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
+    @Query("DELETE FROM publicStudy WHERE userId = :userId and studyname = :studyName")
+    Mono<Void> delete(@Param("studyName") String studyName, @Param("userId") String userId);
 
 }
