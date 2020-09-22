@@ -333,7 +333,7 @@ public class StudyService {
                 .uri(loadFlowServerBaseUri + path)
                 .retrieve()
                 .bodyToMono(String.class)
-                .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, jsonToLoadFlowTesult(e)))
+                .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, jsonToLoadFlowResult(e)))
                 .doOnError(e -> studyRepository.updateLoadFlowState(studyName, LoadFlowResult.LoadFlowStatus.NOT_DONE).block());
 
         }).doOnSuccess(s ->
@@ -345,7 +345,7 @@ public class StudyService {
         );
     }
 
-    private LoadFlowResult jsonToLoadFlowTesult(String strLfResult) {
+    private LoadFlowResult jsonToLoadFlowResult(String strLfResult) {
         try {
             String strStatus = JsonPathUtils.evaluate(strLfResult, "$.metrics.network_0_status");
             LoadFlowResult.LoadFlowStatus status;

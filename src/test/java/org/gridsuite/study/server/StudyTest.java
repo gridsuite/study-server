@@ -24,6 +24,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
@@ -465,6 +466,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         MessageHeaders headersLF = messageLF.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals("loadflow_status", headersLF.get(HEADER_UPDATE_TYPE));
+        assertEquals( LoadFlowResult.LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy("newName").block()).getLoadFlowResult().getStatus());
 
         //get available export format
         webTestClient.get()
