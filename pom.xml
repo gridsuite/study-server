@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- * Copyright (c) 2019, RTE (http://www.rte-france.com)
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+    Copyright (c) 2019, RTE (http://www.rte-france.com)
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
         <version>3</version>
+        <relativePath/>
     </parent>
 
     <groupId>org.gridsuite</groupId>
     <artifactId>gridsuite-study-server</artifactId>
-    <packaging>jar</packaging>
     <version>1.0.0-SNAPSHOT</version>
 
-    <licenses>
-        <license>
-            <name>Mozilla Public License, Version 2.0</name>
-            <url>https://www.mozilla.org/en-US/MPL/2.0/</url>
-        </license>
-    </licenses>
+    <packaging>jar</packaging>
+    <name>Study Server</name>
+    <description>Study Server</description>
+    <url>http://www.gridsuite.org/</url>
 
     <scm>
         <connection>scm:git:https://github.com/gridsuite/study-server.git</connection>
@@ -44,27 +44,11 @@
     </developers>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
         <java.version>11</java.version>
 
-        <guava.version>20.0</guava.version>
-        <datastax.version>3.7.2</datastax.version>
-        <embedded-cassandra.version>3.0.3</embedded-cassandra.version>
-        <lombok.version>1.18.8</lombok.version>
-        <metricscore.version>3.2.6</metricscore.version>
-        <springboot.version>2.2.7.RELEASE</springboot.version>
-        <spring-cloud.version>Hoxton.SR3</spring-cloud.version>
-        <springdata.version>2.2.3.RELEASE</springdata.version>
-        <springfox.version>2.9.2</springfox.version>
-        <springtest.version>5.1.5.RELEASE</springtest.version>
+        <gridsuite-dependencies.version>1</gridsuite-dependencies.version>
 
-        <reactor.spring.version>1.0.1.RELEASE</reactor.spring.version>
         <mock.web.server.version>4.6.0</mock.web.server.version>
-
-        <powsybl-core.version>3.5.0</powsybl-core.version>
-        <network-store-client.version>1.0.0-SNAPSHOT</network-store-client.version>
-
     </properties>
 
     <build>
@@ -81,9 +65,11 @@
                 </plugin>
             </plugins>
         </pluginManagement>
-
         <plugins>
-            <!-- Génération du JAR -->
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -92,14 +78,159 @@
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
             </plugin>
-            <plugin>
-                <groupId>com.google.cloud.tools</groupId>
-                <artifactId>jib-maven-plugin</artifactId>
-            </plugin>
         </plugins>
     </build>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- overrides of imports -->
+
+            <!-- imports -->
+            <dependency>
+                <groupId>org.gridsuite</groupId>
+                <artifactId>gridsuite-dependencies</artifactId>
+                <version>${gridsuite-dependencies.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- project specific dependencies -->
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>${mock.web.server.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>mockwebserver</artifactId>
+                <version>${mock.web.server.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Compilation dependencies -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-network-store-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-swagger2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-cassandra</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>com.jayway.jsonpath</groupId>
+          <artifactId>json-path-assert</artifactId>
+        </dependency>
+        <!-- Runtime dependencies -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-config-classic</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-swagger-ui</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>com.github.nosan</groupId>
+            <artifactId>embedded-cassandra-spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-config-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-iidm-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-iidm-xml-converter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.skyscreamer</groupId>
+            <artifactId>jsonassert</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <classifier>test-binder</classifier>
+        </dependency>
+    </dependencies>
+
     <profiles>
+        <!-- needed for embedded-cassandra to download cassandra (only once) through authentified proxies -->
         <profile>
             <id>proxy</id>
             <activation>
@@ -128,183 +259,5 @@
             </build>
         </profile>
     </profiles>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${springboot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${guava.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-    <dependencies>
-        <!-- Compilation dependencies -->
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-commons</artifactId>
-            <version>${powsybl-core.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-network-store-client</artifactId>
-            <version>${network-store-client.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-core</artifactId>
-            <version>${metricscore.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.data</groupId>
-            <artifactId>spring-data-cassandra</artifactId>
-            <version>${springdata.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-            <version>${springboot.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
-            <version>${springfox.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-            <version>${springfox.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-            <version>${springboot.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.projectreactor</groupId>
-            <artifactId>reactor-spring</artifactId>
-            <version>${reactor.spring.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
-        </dependency>
-
-        <!-- Runtime dependencies -->
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-config-classic</artifactId>
-            <version>${powsybl-core.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- Test dependencies -->
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>${mock.web.server.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>mockwebserver</artifactId>
-            <version>${mock.web.server.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.nosan</groupId>
-            <artifactId>embedded-cassandra-spring-test</artifactId>
-            <version>${embedded-cassandra.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-config-test</artifactId>
-            <version>${powsybl-core.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-iidm-xml-converter</artifactId>
-            <version>${powsybl-core.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-iidm-impl</artifactId>
-            <version>${powsybl-core.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-test</artifactId>
-            <version>${springtest.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-test-autoconfigure</artifactId>
-            <version>${springboot.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.skyscreamer</groupId>
-            <artifactId>jsonassert</artifactId>
-            <version>1.5.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-            <classifier>test-binder</classifier>
-        </dependency>
-    </dependencies>
 
 </project>

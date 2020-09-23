@@ -20,15 +20,15 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface StudyRepository extends ReactiveCassandraRepository<Study, Integer> {
 
-    Mono<Study> findByName(String studyName);
+    Mono<Study> findByUserIdAndStudyName(String userId, String name);
 
-    @Query("DELETE FROM study WHERE studyname = :studyName")
-    Mono<Void> deleteByName(@Param("studyName") String studyName);
+    @Query("DELETE FROM study WHERE userId = :userId and studyname = :studyName")
+    Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
-    @Query("UPDATE study SET loadFlowResult.status = :status WHERE studyname = :studyName")
-    Mono<Void> updateLoadFlowState(String studyName, LoadFlowResult.LoadFlowStatus status);
+    @Query("UPDATE study SET loadFlowResult.status = :status WHERE userId = :userId and studyname = :studyName")
+    Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowResult.LoadFlowStatus status);
 
-    @Query("UPDATE study SET loadFlowResult = :result WHERE studyname = :studyName")
-    Mono<Void> updateLoadFlowResult(String studyName, LoadFlowResult result);
+    @Query("UPDATE study SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName")
+    Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResult result);
 
 }

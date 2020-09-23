@@ -51,5 +51,4 @@ public class CassandraConfig extends AbstractReactiveCassandraConfiguration {
         mappingContext.setUserTypeResolver(new SimpleUserTypeResolver(cluster(env).getObject(), CassandraConstants.KEYSPACE_STUDY));
         return mappingContext;
     }
-
 }
