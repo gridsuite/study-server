@@ -430,7 +430,6 @@ public class StudyService {
         });
     }
 
-    @Transactional
     public Mono<Void> setLoadFlowRunning(String studyName, String userId) {
         return Mono.when(assertLoadFlowRunnable(studyName, userId))
             .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.RUNNING))
