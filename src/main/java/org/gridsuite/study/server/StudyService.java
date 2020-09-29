@@ -362,10 +362,7 @@ public class StudyService {
                     .retrieve()
                     .bodyToMono(Void.class);
         }).then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
-        .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-            .setHeader(STUDY_NAME, studyName)
-            .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW_STATUS)
-            .build())))
+        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
         .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(STUDY_NAME, studyName)
                 .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
@@ -386,14 +383,22 @@ public class StudyService {
                 .retrieve()
                 .bodyToMono(String.class)
                 .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, userId, jsonToLoadFlowResult(e)))
-                .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE).block());
-
+                .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
+                    .subscribe())
+                .doOnCancel(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
+                    .subscribe())
+                .doOnTerminate(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
+                    .subscribe());
         }).doFinally(s ->
-            studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                .setHeader(STUDY_NAME, studyName)
-                .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
-                .build()
-            )
+            emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)
+        );
+    }
+
+    private void emitStudyChanged(String studyName, String updateTypeLoadflow) {
+        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+            .setHeader(STUDY_NAME, studyName)
+            .setHeader(UPDATE_TYPE, updateTypeLoadflow)
+            .build()
         );
     }
 
@@ -433,10 +438,7 @@ public class StudyService {
     public Mono<Void> setLoadFlowRunning(String studyName, String userId) {
         return Mono.when(assertLoadFlowRunnable(studyName, userId))
             .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.RUNNING))
-            .doOnSuccess(s -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                .setHeader(STUDY_NAME, studyName)
-                .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW_STATUS)
-                .build()));
+            .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
     public Mono<Collection<String>> getExportFormats() {
