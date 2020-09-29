@@ -388,7 +388,7 @@ public class StudyService {
                 .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, userId, jsonToLoadFlowResult(e)))
                 .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE).block());
 
-        }).doOnSuccess(s ->
+        }).doFinally(s ->
             studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(STUDY_NAME, studyName)
                 .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
@@ -399,12 +399,12 @@ public class StudyService {
 
     private LoadFlowResult jsonToLoadFlowResult(String strLfResult) {
         try {
-            String strStatus = JsonPathUtils.evaluate(strLfResult, "$.metrics.network_0_status");
+            Boolean bStatus = JsonPathUtils.evaluate(strLfResult, "$.ok");
             LoadFlowResult.LoadFlowStatus status;
-            switch (strStatus) {
-                case "DIVERGED": status = LoadFlowResult.LoadFlowStatus.DIVERGED; break;
-                case "CONVERGED": status = LoadFlowResult.LoadFlowStatus.CONVERGED; break;
-                default: status = LoadFlowResult.LoadFlowStatus.NOT_DONE;
+            if (bStatus) {
+                status = LoadFlowResult.LoadFlowStatus.CONVERGED;
+            } else {
+                status = LoadFlowResult.LoadFlowStatus.DIVERGED;
             }
             return new LoadFlowResult(status);
         } catch (IOException e) {
