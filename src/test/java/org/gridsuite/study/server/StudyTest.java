@@ -204,6 +204,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/lines/lineId/switches?lockout=true":
+                        return new MockResponse().setResponseCode(200);
                 }
                 return new MockResponse().setResponseCode(404);
             }
@@ -311,6 +314,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
                 .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"private\":true}");
+
+        webTestClient.put()
+                .uri("/v1/userId/studies/{studyName}/network-modification/lines/{lineId}/switches?lockout=true", "s2", "lineId")
+                .exchange()
+                .expectStatus().isOk();
 
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()

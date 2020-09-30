@@ -199,6 +199,17 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.changeSwitchState(studyName, userId, switchId, open).then());
     }
 
+    @PutMapping(value = "/{userId}/studies/{studyName}/network-modification/lines/{lineId}/switches")
+    @ApiOperation(value = "export the study's network in the given format", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
+    public Mono<ResponseEntity<Boolean>> lockoutLine(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @PathVariable("lineId") String lineId,
+            @RequestParam("lockout") boolean lockout) {
+        return studyService.lockoutLine(studyName, userId, lineId, lockout);
+    }
+
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
