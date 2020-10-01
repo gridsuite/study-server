@@ -539,6 +539,18 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 "{\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":true,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true}"
             );
 
+        // run loadflow with new parameters
+        webTestClient.put()
+            .uri("/v1/userId/studies/" + newStudyName + "/loadflow/run")
+            .exchange()
+            .expectStatus().isOk();
+        // assert that the broker message has been sent
+        messageLF = output.receive(1000);
+        assertEquals("", new String(messageLF.getPayload()));
+        headersLF = messageLF.getHeaders();
+        assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
+        assertEquals("loadflow", headersLF.get(HEADER_UPDATE_TYPE));
+
         // Shut down the server. Instances cannot be reused.
         server.shutdown();
     }
