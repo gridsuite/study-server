@@ -396,12 +396,6 @@ public class StudyService {
         );
     }
 
-    private <T, R> void setIfNotNull(T value, Function<T, R> f) {
-        if (value != null) {
-            f.apply(value);
-        }
-    }
-
     private com.powsybl.loadflow.LoadFlowParameters getLoadFlowParameters(LoadFlowParameters lfParameters) {
         com.powsybl.loadflow.LoadFlowParameters params = com.powsybl.loadflow.LoadFlowParameters.load();
         if (lfParameters != null) {
