@@ -24,6 +24,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.LoadFlowParameters;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
@@ -310,7 +311,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"private\":true}");
+                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"loadFlowParameters\":null,\"private\":true}");
 
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
@@ -470,7 +471,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"private\":false}");
+                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"loadFlowParameters\":null,\"private\":false}");
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
@@ -504,6 +505,39 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/userId/studies/{studyName}/export-network/{format}", newStudyName, "XIIDM")
                 .exchange()
                 .expectStatus().isOk();
+
+        // get default LoadFlowParameters
+        webTestClient.get()
+            .uri("/v1/userId/studies/{studyName}/loadflow/parameters/get", newStudyName)
+            .exchange()
+            .expectBody(String.class).isEqualTo(
+                "{\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}"
+            );
+
+        // setting loadFlow Parameters
+        webTestClient.post()
+            .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters/set")
+            .header("userId", "userId")
+            .body(BodyInserters.fromValue(new LoadFlowParameters(
+                LoadFlowParameters.VoltageInitMode.DC_VALUES,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true
+            )))
+            .exchange()
+            .expectStatus().isOk();
+
+        // getting setted values
+        webTestClient.get()
+            .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters/get")
+            .exchange()
+            .expectBody(String.class).isEqualTo(
+                "{\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":true,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true}"
+            );
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();

@@ -116,6 +116,10 @@
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-loadflow-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
         </dependency>
         <dependency>

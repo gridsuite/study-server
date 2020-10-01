@@ -1,3 +1,14 @@
+
+create type if not exists study.loadFlowParameters(
+    voltageInitMode text,
+    transformerVoltageControlOn boolean,
+    noGeneratorReactiveLimits boolean,
+    phaseShifterRegulationOn boolean,
+    twtSplitShuntAdmittance boolean,
+    simulShunt boolean
+)
+
+
 CREATE TABLE IF NOT EXISTS study.study (
     studyName text,
     networkUuid uuid,
@@ -8,6 +19,7 @@ CREATE TABLE IF NOT EXISTS study.study (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowParameters study.loadFlowParameters,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -21,6 +33,7 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowParameters study.loadFlowParameters,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -34,5 +47,6 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowParameters study.loadFlowParameters,
     PRIMARY KEY (userId, studyName)
 );

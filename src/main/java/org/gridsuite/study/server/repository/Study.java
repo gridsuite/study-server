@@ -9,6 +9,7 @@ package org.gridsuite.study.server.repository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import org.gridsuite.study.server.dto.LoadFlowParameters;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
@@ -52,4 +53,7 @@ public class Study implements Serializable {
 
     @Column("isPrivate")
     private boolean isPrivate;
+
+    @Column("loadFlowParameters")
+    private LoadFlowParameters loadFlowParameters;
 }

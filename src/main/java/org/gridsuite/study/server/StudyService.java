@@ -6,9 +6,11 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.loadflow.json.JsonLoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.gridsuite.study.server.dto.LoadFlowParameters;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -33,7 +35,10 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.context.annotation.Bean;
 import reactor.util.function.Tuple2;
 
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -126,7 +131,7 @@ public class StudyService {
 
         return Mono.zip(networkInfos, caseFormat)
             .flatMap(t ->
-                    insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false)
+                    insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, null)
             );
     }
 
@@ -151,15 +156,15 @@ public class StudyService {
             Mono<String> caseFormat = getCaseFormat(uuid);
             return Mono.zip(networkInfos, caseFormat)
                     .flatMap(t ->
-                            insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true)
+                            insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true, null)
                     );
         });
     }
 
-    private Mono<Study> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId, String description, String caseFormat, UUID caseUuid, boolean isCasePrivate) {
-        final PrivateStudy privateStudy = new PrivateStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
-        final PublicStudy publicStudy = new PublicStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
-        final Study study = new Study(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate);
+    private Mono<Study> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId, String description, String caseFormat, UUID caseUuid, boolean isCasePrivate, LoadFlowParameters lfParameters) {
+        final PrivateStudy privateStudy = new PrivateStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
+        final PublicStudy publicStudy = new PublicStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
+        final Study study = new Study(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudy), studyRepository.insert(study))
                     .map(Tuple2::getT2);
@@ -366,15 +371,21 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(String studyName, String userId) {
-        Mono<UUID> networkUuid = getStudyUuid(studyName, userId);
+        Mono<Study> studyCas = getStudy(studyName, userId);
 
-        return networkUuid.flatMap(uuid -> {
+        return studyCas.flatMap(study -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                    .buildAndExpand(uuid)
-                    .toUriString();
+                .buildAndExpand(study.getNetworkUuid())
+                .toUriString();
+
+            OutputStream body = new ByteArrayOutputStream();
+            if (study.getLoadFlowParameters() != null) {
+                JsonLoadFlowParameters.write(getLoadFlowParameters(study.getLoadFlowParameters()), body);
+            }
 
             return webClient.put()
                     .uri(loadFlowServerBaseUri + path)
+                    .body(BodyInserters.fromValue(body.toString()))
                     .retrieve()
                     .bodyToMono(Void.class);
         }).doOnSuccess(s ->
@@ -383,6 +394,27 @@ public class StudyService {
                 .setHeader(UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
                 .build())
         );
+    }
+
+    private <T, R> void setIfNotNull(T value, Function<T, R> f) {
+        if (value != null) {
+            f.apply(value);
+        }
+    }
+
+    private com.powsybl.loadflow.LoadFlowParameters getLoadFlowParameters(LoadFlowParameters lfParameters) {
+        com.powsybl.loadflow.LoadFlowParameters params = com.powsybl.loadflow.LoadFlowParameters.load();
+        if (lfParameters != null) {
+            params.setVoltageInitMode(com.powsybl.loadflow.LoadFlowParameters.VoltageInitMode.valueOf(lfParameters.getVoltageInitMode().name()));
+            params.setNoGeneratorReactiveLimits(lfParameters.isNoGeneratorReactiveLimits());
+            params.setPhaseShifterRegulationOn(lfParameters.isPhaseShifterRegulationOn());
+            params.setSimulShunt(lfParameters.isSimulShunt());
+            params.setTransformerVoltageControlOn(lfParameters.isTransformerVoltageControlOn());
+            params.setTwtSplitShuntAdmittance(lfParameters.isTwtSplitShuntAdmittance());
+            params.setReadSlackBus(lfParameters.isReadSlackBus());
+            params.setWriteSlackBus(lfParameters.isWriteSlackBus());
+        }
+        return params;
     }
 
     @Transactional
@@ -397,8 +429,7 @@ public class StudyService {
 
             Mono<Void> deleteStudy = deleteStudy(userId, studyName);
             Mono<Study> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
-                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate());
-
+                study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowParameters());
             return deleteStudy.then(insertStudy);
         });
     }
@@ -442,6 +473,10 @@ public class StudyService {
         return studyMono.map(Study::getNetworkUuid)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
 
+    }
+
+    Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParameters lfParameter) {
+        return studyRepository.updateLoadFlowParameters(studyName, userId, lfParameter);
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {
@@ -488,5 +523,27 @@ public class StudyService {
 
     void setNetworkStoreServerBaseUri(String networkStoreServerBaseUri) {
         this.networkStoreServerBaseUri = networkStoreServerBaseUri + DELIMITER;
+    }
+
+    public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {
+        Mono<Study> studyMono = getStudy(studyName, userId);
+        return studyMono.flatMap(study -> {
+            if (study.getLoadFlowParameters() != null) {
+                return Mono.just(study.getLoadFlowParameters());
+            } else {
+                com.powsybl.loadflow.LoadFlowParameters params = com.powsybl.loadflow.LoadFlowParameters.load();
+                LoadFlowParameters lfDefault = new LoadFlowParameters(
+                    LoadFlowParameters.VoltageInitMode.valueOf(params.getVoltageInitMode().name()),
+                    params.isTransformerVoltageControlOn(),
+                    params.isNoGeneratorReactiveLimits(),
+                    params.isPhaseShifterRegulationOn(),
+                    params.isTwtSplitShuntAdmittance(),
+                    params.isSimulShunt(),
+                    params.isReadSlackBus(),
+                    params.isWriteSlackBus()
+                    );
+                return Mono.just(lfDefault);
+            }
+        });
     }
 }
