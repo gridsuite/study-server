@@ -57,8 +57,10 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.BDDMockito.given;
+
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 
 @RunWith(SpringRunner.class)
@@ -186,6 +188,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/2-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/3-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/generators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -415,6 +420,27 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //get the substation map data of a network
         webTestClient.get()
                 .uri("/v1/{userId}/studies/{studyName}/network-map/substations/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the 2 windings transformers map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/2-windings-transformers/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the 3 windings transformers map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/3-windings-transformers/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the generators map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/generators/", "userId", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
