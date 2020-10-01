@@ -1,12 +1,14 @@
 
-create type if not exists study.loadFlowParameters(
+CREATE TYPE IF NOT EXISTS study.loadFlowParameters (
     voltageInitMode text,
     transformerVoltageControlOn boolean,
     noGeneratorReactiveLimits boolean,
     phaseShifterRegulationOn boolean,
     twtSplitShuntAdmittance boolean,
-    simulShunt boolean
-)
+    simulShunt boolean,
+	readSlackBus boolean,
+	writeSlackBus boolean	
+);
 
 
 CREATE TABLE IF NOT EXISTS study.study (
