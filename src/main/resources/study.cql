@@ -6,8 +6,8 @@ CREATE TYPE IF NOT EXISTS study.loadFlowParameters (
     phaseShifterRegulationOn boolean,
     twtSplitShuntAdmittance boolean,
     simulShunt boolean,
-	readSlackBus boolean,
-	writeSlackBus boolean	
+    readSlackBus boolean,
+    writeSlackBus boolean
 );
 
 

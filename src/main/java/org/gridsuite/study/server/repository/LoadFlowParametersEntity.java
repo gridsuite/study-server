@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.dto;
+package org.gridsuite.study.server.repository;
 
 import com.datastax.driver.core.DataType;
 import lombok.AllArgsConstructor;
@@ -22,7 +22,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @Getter
 @Setter
-public class LoadFlowParameters implements Serializable {
+public class LoadFlowParametersEntity implements Serializable {
 
     public enum VoltageInitMode {
         UNIFORM_VALUES, // v=1pu, theta=0

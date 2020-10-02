@@ -24,7 +24,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.LoadFlowParameters;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
@@ -508,7 +508,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // get default LoadFlowParameters
         webTestClient.get()
-            .uri("/v1/userId/studies/{studyName}/loadflow/parameters/get", newStudyName)
+            .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
             .exchange()
             .expectBody(String.class).isEqualTo(
                 "{\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}"
@@ -516,10 +516,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // setting loadFlow Parameters
         webTestClient.post()
-            .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters/set")
+            .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters")
             .header("userId", "userId")
-            .body(BodyInserters.fromValue(new LoadFlowParameters(
-                LoadFlowParameters.VoltageInitMode.DC_VALUES,
+            .body(BodyInserters.fromValue(new LoadFlowParametersEntity(
+                LoadFlowParametersEntity.VoltageInitMode.DC_VALUES,
                 true,
                 false,
                 true,
@@ -533,7 +533,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // getting setted values
         webTestClient.get()
-            .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters/get")
+            .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters")
             .exchange()
             .expectBody(String.class).isEqualTo(
                 "{\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":true,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true}"

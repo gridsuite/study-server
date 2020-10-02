@@ -7,7 +7,7 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.gridsuite.study.server.dto.LoadFlowParameters;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -246,20 +246,20 @@ public class StudyController {
         });
     }
 
-    @PostMapping(value = "/{userId}/studies/{studyName}/loadflow/parameters/set")
+    @PostMapping(value = "/{userId}/studies/{studyName}/loadflow/parameters")
     @ApiOperation(value = "set loadflow parameters on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow parameters are set")})
     public ResponseEntity<Mono<Void>> setLoadflowParameters(
         @PathVariable("studyName") String studyName,
         @PathVariable("userId") String userId,
-        @RequestBody(required = false) LoadFlowParameters lfParameter) {
+        @RequestBody(required = false) LoadFlowParametersEntity lfParameter) {
         return ResponseEntity.ok().body(studyService.setLoadFlowParameters(studyName, userId, lfParameter));
     }
 
-    @GetMapping(value = "/{userId}/studies/{studyName}/loadflow/parameters/get")
+    @GetMapping(value = "/{userId}/studies/{studyName}/loadflow/parameters")
     @ApiOperation(value = "set loadflow parameters on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow parameters are reset")})
-    public ResponseEntity<Mono<LoadFlowParameters>> resetLoadflowParameters(
+    public ResponseEntity<Mono<LoadFlowParametersEntity>> resetLoadflowParameters(
         @PathVariable("studyName") String studyName,
         @PathVariable("userId") String userId) {
         return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyName, userId));

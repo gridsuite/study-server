@@ -6,11 +6,11 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.loadflow.json.JsonLoadFlowParameters;
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.gridsuite.study.server.dto.LoadFlowParameters;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -35,8 +35,6 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.context.annotation.Bean;
 import reactor.util.function.Tuple2;
 
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -160,7 +158,7 @@ public class StudyService {
         });
     }
 
-    private Mono<Study> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId, String description, String caseFormat, UUID caseUuid, boolean isCasePrivate, LoadFlowParameters lfParameters) {
+    private Mono<Study> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId, String description, String caseFormat, UUID caseUuid, boolean isCasePrivate, LoadFlowParametersEntity lfParameters) {
         final PrivateStudy privateStudy = new PrivateStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
         final PublicStudy publicStudy = new PublicStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
         final Study study = new Study(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
@@ -377,14 +375,9 @@ public class StudyService {
                 .buildAndExpand(study.getNetworkUuid())
                 .toUriString();
 
-            OutputStream body = new ByteArrayOutputStream();
-            if (study.getLoadFlowParameters() != null) {
-                JsonLoadFlowParameters.write(getLoadFlowParameters(study.getLoadFlowParameters()), body);
-            }
-
             return webClient.put()
                     .uri(loadFlowServerBaseUri + path)
-                    .body(BodyInserters.fromValue(body.toString()))
+                    .body(BodyInserters.fromValue(getLoadFlowParameters(study.getLoadFlowParameters())))
                     .retrieve()
                     .bodyToMono(Void.class);
         }).doOnSuccess(s ->
@@ -395,10 +388,10 @@ public class StudyService {
         );
     }
 
-    private com.powsybl.loadflow.LoadFlowParameters getLoadFlowParameters(LoadFlowParameters lfParameters) {
-        com.powsybl.loadflow.LoadFlowParameters params = com.powsybl.loadflow.LoadFlowParameters.load();
+    private LoadFlowParameters getLoadFlowParameters(LoadFlowParametersEntity lfParameters) {
+        LoadFlowParameters params = com.powsybl.loadflow.LoadFlowParameters.load();
         if (lfParameters != null) {
-            params.setVoltageInitMode(com.powsybl.loadflow.LoadFlowParameters.VoltageInitMode.valueOf(lfParameters.getVoltageInitMode().name()));
+            params.setVoltageInitMode(LoadFlowParameters.VoltageInitMode.valueOf(lfParameters.getVoltageInitMode().name()));
             params.setNoGeneratorReactiveLimits(lfParameters.isNoGeneratorReactiveLimits());
             params.setPhaseShifterRegulationOn(lfParameters.isPhaseShifterRegulationOn());
             params.setSimulShunt(lfParameters.isSimulShunt());
@@ -468,7 +461,7 @@ public class StudyService {
 
     }
 
-    Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParameters lfParameter) {
+    Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter) {
         return studyRepository.updateLoadFlowParameters(studyName, userId, lfParameter);
     }
 
@@ -518,15 +511,15 @@ public class StudyService {
         this.networkStoreServerBaseUri = networkStoreServerBaseUri + DELIMITER;
     }
 
-    public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {
+    public Mono<LoadFlowParametersEntity> getLoadFlowParameters(String studyName, String userId) {
         Mono<Study> studyMono = getStudy(studyName, userId);
         return studyMono.flatMap(study -> {
             if (study.getLoadFlowParameters() != null) {
                 return Mono.just(study.getLoadFlowParameters());
             } else {
-                com.powsybl.loadflow.LoadFlowParameters params = com.powsybl.loadflow.LoadFlowParameters.load();
-                LoadFlowParameters lfDefault = new LoadFlowParameters(
-                    LoadFlowParameters.VoltageInitMode.valueOf(params.getVoltageInitMode().name()),
+                LoadFlowParameters params = LoadFlowParameters.load();
+                LoadFlowParametersEntity lfDefault = new LoadFlowParametersEntity(
+                    LoadFlowParametersEntity.VoltageInitMode.valueOf(params.getVoltageInitMode().name()),
                     params.isTransformerVoltageControlOn(),
                     params.isNoGeneratorReactiveLimits(),
                     params.isPhaseShifterRegulationOn(),
