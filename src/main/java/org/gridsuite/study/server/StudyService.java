@@ -45,6 +45,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 
 @ComponentScan(basePackageClasses = {NetworkStoreService.class, StudyRepository.class})
@@ -340,6 +341,39 @@ public class StudyService {
 
     Mono<String> getLinesMapData(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/lines/{networkUuid}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
+    Mono<String> getTwoWindingsTransformersMapData(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/2-windings-transformers/{networkUuid}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
+    Mono<String> getThreeWindingsTransformersMapData(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/3-windings-transformers/{networkUuid}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
+    Mono<String> getGeneratorsMapData(UUID networkUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/generators/{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
