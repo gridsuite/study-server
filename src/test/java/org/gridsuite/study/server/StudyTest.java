@@ -318,9 +318,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo(
-                    "{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":true}"
-                );
+                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":true}");
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}", "s2")
@@ -484,9 +482,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo(
-                    "{\"userId\":\"userId\",\"studyName\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":false}"
-                );
+                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":false}");
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
