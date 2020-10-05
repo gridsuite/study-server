@@ -41,6 +41,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(userId));
     }
 
+    @GetMapping(value = "/study_creation_requests")
+    @ApiOperation(value = "Get all study creation requests")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of study creation requests")})
+    public ResponseEntity<Mono<List<BasicStudyInfos>>> getStudyCreationRequestList() {
+        Mono<List<BasicStudyInfos>> studies = studyService.getStudyCreationRequestList().collectList();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
+    }
+
     @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
     @ApiOperation(value = "create a study from an existing case")
     @ApiResponses(value = {

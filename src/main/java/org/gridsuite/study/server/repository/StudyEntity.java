@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -16,6 +17,8 @@ public interface StudyEntity {
     String getUserId();
 
     String getStudyName();
+
+    LocalDateTime getDate();
 
     void setStudyName(String studyName);
 

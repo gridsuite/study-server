@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.repository;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.stereotype.Repository;
@@ -48,13 +50,13 @@ public class StudyRepository {
     public Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
                                          LoadFlowResult loadFlowResult) {
-        PublicAndPrivateStudyEntity publicAndPrivateStudyEntity = new PublicAndPrivateStudyEntity(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid,
+        PublicAndPrivateStudyEntity publicAndPrivateStudyEntity = new PublicAndPrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                                                   casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
                                                                                                   null);
-        PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid,
+        PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                     casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
                                                                     null);
-        PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid,
+        PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                        casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
                                                                        null);
 

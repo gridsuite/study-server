@@ -42,7 +42,7 @@ public class EmbeddedCassandraFactoryConfig {
     @Bean
     CassandraConnection cassandraConnection(Cassandra cassandra) {
         CassandraConnection cassandraConnection = new DefaultCassandraConnectionFactory().create(cassandra);
-        CqlDataSet.ofClasspaths("create_keyspace.cql", "study.cql").forEachStatement(cassandraConnection::execute);
+        CqlDataSet.ofClasspaths("create_keyspace.cql", "study.cql", "study_creation_request.cql").forEachStatement(cassandraConnection::execute);
         return cassandraConnection;
     }
 

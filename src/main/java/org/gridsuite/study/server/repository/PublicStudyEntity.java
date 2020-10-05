@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import com.datastax.driver.core.DataType;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,6 +35,9 @@ public class PublicStudyEntity implements Serializable, StudyEntity {
 
     @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
     private String studyName;
+
+    @Column("creationDate")
+    private LocalDateTime date;
 
     @Column("networkUuid")
     private UUID networkUuid;
