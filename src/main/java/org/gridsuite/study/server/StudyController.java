@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -62,7 +63,7 @@ public class StudyController {
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
-                .then(studyService.createStudy(studyName, caseUuid, description, userId, isPrivate).then()));
+                .then(studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, new LoadFlowResult()).then()));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -237,7 +238,7 @@ public class StudyController {
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
 
-        return ResponseEntity.ok().body(studyService.runLoadFlow(studyName, userId).then());
+        return ResponseEntity.ok().body(Mono.when(studyService.setLoadFlowRunning(studyName, userId)).then(studyService.runLoadFlow(studyName, userId).then()));
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")

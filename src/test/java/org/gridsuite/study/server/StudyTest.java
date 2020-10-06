@@ -24,6 +24,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
@@ -176,8 +177,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
                         return new MockResponse().setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
+                            .setBody("{\n" +
+                                "\"metrics\":{\n" +
+                                "\"network_0_iterations\":\"7\",\n" +
+                                "\"network_0_status\":\"CONVERGED\"\n" +
+                                "},\n" +
+                                "\"logs\":\"\",\n" +
+                                "\"ok\":true\n" +
+                                "}")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + CASE_UUID:
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID:
                     case "/v1/networks?caseName=" + IMPORTED_CASE_UUID:
@@ -315,8 +323,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"private\":true}");
-
+                .isEqualTo(
+                    "{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":true}"
+            );
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}", "s2")
@@ -458,6 +467,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk();
 
+        Message<byte[]> messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
+        assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
@@ -496,7 +510,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"userId\":\"userId\",\"studyName\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"private\":false}");
+                .isEqualTo(
+                    "{\"userId\":\"userId\",\"studyName\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":false}"
+            );
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
@@ -515,7 +531,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals("", new String(messageLF.getPayload()));
         MessageHeaders headersLF = messageLF.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
-        assertEquals("loadflow", headersLF.get(HEADER_UPDATE_TYPE));
+        assertEquals("loadflow_status", headersLF.get(HEADER_UPDATE_TYPE));
+        assertEquals(LoadFlowResult.LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy("newName", "userId").block()).getLoadFlowResult().getStatus());
 
         //get available export format
         webTestClient.get()
