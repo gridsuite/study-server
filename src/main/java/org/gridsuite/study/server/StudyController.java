@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
@@ -29,6 +30,7 @@ import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 
 @RestController
@@ -62,7 +64,7 @@ public class StudyController {
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
-                .then(studyService.createStudy(studyName, caseUuid, description, userId, isPrivate).then()));
+                .then(studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, new LoadFlowResult()).then()));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -171,7 +173,7 @@ public class StudyController {
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network-map/lines")
     @ApiOperation(value = "Get Network lines description", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines graphics")})
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines data")})
     public ResponseEntity<Mono<String>> getLinesMapData(
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
@@ -181,12 +183,42 @@ public class StudyController {
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network-map/substations")
     @ApiOperation(value = "Get Network substations description", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations graphics")})
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations data")})
     public ResponseEntity<Mono<String>> getSubstationsMapData(
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyUuid(studyName, userId).flatMap(studyService::getSubstationsMapData));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/2-windings-transformers")
+    @ApiOperation(value = "Get Network 2 windings transformers description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of 2 windings transformers data")})
+    public ResponseEntity<Mono<String>> getTwoWindingsTransformersMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyUuid(studyName, userId).flatMap(studyService::getTwoWindingsTransformersMapData));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/3-windings-transformers")
+    @ApiOperation(value = "Get Network 3 windings transformers description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of 3 windings transformers data")})
+    public ResponseEntity<Mono<String>> getThreeWindingsTransformersMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyUuid(studyName, userId).flatMap(studyService::getThreeWindingsTransformersMapData));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/generators")
+    @ApiOperation(value = "Get Network generators description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of generators data")})
+    public ResponseEntity<Mono<String>> getGeneratorsMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyUuid(studyName, userId).flatMap(studyService::getGeneratorsMapData));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/network-modification/switches/{switchId}")
@@ -207,7 +239,7 @@ public class StudyController {
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
 
-        return ResponseEntity.ok().body(studyService.runLoadFlow(studyName, userId).then());
+        return ResponseEntity.ok().body(Mono.when(studyService.setLoadFlowRunning(studyName, userId)).then(studyService.runLoadFlow(studyName, userId).then()));
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")

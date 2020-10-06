@@ -147,6 +147,10 @@
             <artifactId>spring-cloud-stream</artifactId>
         </dependency>
 
+        <dependency>
+          <groupId>com.jayway.jsonpath</groupId>
+          <artifactId>json-path-assert</artifactId>
+        </dependency>
         <!-- Runtime dependencies -->
         <dependency>
             <groupId>com.powsybl</groupId>
