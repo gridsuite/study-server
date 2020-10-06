@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.AllStudyRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -24,7 +24,7 @@ import org.springframework.data.cassandra.repository.config.EnableReactiveCassan
 @Configuration
 @PropertySource(value = {"classpath:cassandra.properties"})
 @PropertySource(value = {"file:/config/cassandra.properties"}, ignoreResourceNotFound = true)
-@EnableReactiveCassandraRepositories(basePackageClasses = StudyRepository.class)
+@EnableReactiveCassandraRepositories(basePackageClasses = AllStudyRepository.class)
 public class CassandraConfig extends AbstractReactiveCassandraConfiguration {
 
     @Override

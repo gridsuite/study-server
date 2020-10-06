@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -24,7 +23,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.LoadFlowResult;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
@@ -35,7 +34,7 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
-import org.springframework.http.*;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -257,7 +256,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
 
         //insert the same study => 409 conflict
         webTestClient.post()
@@ -324,7 +323,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
                 .isEqualTo(
-                    "{\"userId\":\"userId\",\"studyName\":\"s2\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"caseUuid\":\"11111111-0000-0000-0000-000000000000\",\"casePrivate\":true,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":true}"
+                    "{\"studyName\":\"s2\",\"userId\":\"userId\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}"
             );
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
@@ -486,7 +485,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -496,7 +495,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\"}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
 
         //rename the study
         String newStudyName = "newName";
@@ -510,9 +509,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo(
-                    "{\"userId\":\"userId\",\"studyName\":\"newName\",\"networkUuid\":\"38400000-8cf0-11bd-b23e-10b96e4ef00d\",\"networkId\":\"20140116_0830_2D4_UX1_pst\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"caseUuid\":\"00000000-8cf0-11bd-b23e-10b96e4ef00d\",\"casePrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"},\"private\":false}"
-            );
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}");
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
@@ -532,7 +529,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         MessageHeaders headersLF = messageLF.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals("loadflow_status", headersLF.get(HEADER_UPDATE_TYPE));
-        assertEquals(LoadFlowResult.LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy("newName", "userId").block()).getLoadFlowResult().getStatus());
+        assertEquals(LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy("newName", "userId").block()).getLoadFlowResult().getStatus());
 
         //get available export format
         webTestClient.get()

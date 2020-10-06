@@ -28,4 +28,6 @@ public class StudyInfos {
     String description;
 
     String caseFormat;
+
+    LoadFlowResult loadFlowResult;
 }
