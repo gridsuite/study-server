@@ -42,7 +42,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 
-@ComponentScan(basePackageClasses = {NetworkStoreService.class, AllStudyRepository.class})
+@ComponentScan(basePackageClasses = {NetworkStoreService.class, PublicAndPrivateStudyRepository.class})
 @Service
 public class StudyService {
 

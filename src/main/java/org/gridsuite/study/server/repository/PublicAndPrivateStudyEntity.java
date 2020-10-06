@@ -26,7 +26,7 @@ import java.util.UUID;
 @Setter
 @AllArgsConstructor
 @Table("study")
-public class AllStudyEntity implements Serializable, StudyEntity {
+public class PublicAndPrivateStudyEntity implements Serializable, StudyEntity {
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;
