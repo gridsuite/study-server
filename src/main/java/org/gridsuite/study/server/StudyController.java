@@ -11,7 +11,6 @@ import org.gridsuite.study.server.dto.*;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
@@ -29,7 +28,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
-@Transactional
 @Api(value = "Study server")
 @ComponentScan(basePackageClasses = StudyService.class)
 public class StudyController {

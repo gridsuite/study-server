@@ -12,26 +12,29 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.json.JsonPathUtils;
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import org.springframework.messaging.Message;
-import org.springframework.integration.support.MessageBuilder;
-import org.springframework.context.annotation.Bean;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -135,8 +138,7 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    @Transactional
-     public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
+    public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
         Mono<UUID> caseUUid;
         caseUUid = importCase(caseFile);
 
@@ -165,7 +167,6 @@ public class StudyService {
         return studyRepository.findStudy(userId, studyName);
     }
 
-    @Transactional
     public Mono<Void> deleteStudy(String studyName, String userId, String headerUserId) {
         //we need to ensure that it's the initial creator that deletes it
         if (!userId.equals(headerUserId)) {
@@ -419,7 +420,6 @@ public class StudyService {
         }
     }
 
-    @Transactional
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String headerUserId, String newStudyName) {
         //we need to ensure that it's the initial creator that deletes it
         if (!userId.equals(headerUserId)) {
