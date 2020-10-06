@@ -15,11 +15,13 @@ spring:
 
   cloud:
     function:
-      definition: publishStudyUpdate
+      definition: publishStudyUpdate;consumeSaResult
     stream:
       bindings:
         publishStudyUpdate-out-0:
           destination: study.update
+        consumeSaResult-in-0:
+          destination: sa.result
 
 backing-services:
   case:
@@ -36,7 +38,8 @@ backing-services:
     base-uri: http://localhost:5007
   loadflow:
     base-uri: http://localhost:5008
-
+  security-analysis-server:
+    base-uri: http://localhost:5023
 
 network-store-server:
   preloading-strategy: COLLECTION

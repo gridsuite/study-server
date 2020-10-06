@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -29,15 +28,20 @@ import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
-import org.springframework.http.*;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
@@ -54,7 +58,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
+import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.BDDMockito.given;
 
@@ -66,13 +72,36 @@ import static org.mockito.BDDMockito.given;
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
 @EnableWebFlux
-@ContextHierarchy({
-    @ContextConfiguration(classes = {StudyApplication.class, StudyService.class, TestChannelBinderConfiguration.class})
-    })
+@SpringBootTest
+@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class StudyTest extends AbstractEmbeddedCassandraSetup {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
+
+    private static final String STUDIES_URL = "/v1/studies/{studyName}";
+    private static final String STUDY_EXIST_URL = "/v1/{userId}/studies/{studyName}/exists";
+    private static final String DESCRIPTION = "description";
+    private static final String TEST_FILE = "testCase.xiidm";
+    private static final String STUDY_NAME = "studyName";
+    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
+    private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
+    private static final String SECURITY_ANALYSIS_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String HEADER_STUDY_NAME = "studyName";
+    private static final String HEADER_UPDATE_TYPE = "updateType";
+    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+    private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
+    private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
+    private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
 
     @Autowired
     private OutputDestination output;
+
+    @Autowired
+    private InputDestination input;
 
     @Autowired
     private WebTestClient webTestClient;
@@ -83,30 +112,17 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     @MockBean
     private NetworkStoreService networkStoreClient;
 
-    private static final String STUDIES_URL = "/v1/studies/{studyName}";
-    private static final String STUDY_EXIST_URL = "/v1/{userId}/studies/{studyName}/exists";
-    private static final String DESCRIPTION = "description";
-    private static final String TEST_FILE = "testCase.xiidm";
-    private static final String STUDY_NAME = "studyName";
-    private static final String NETWORK_UUID = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String CASE_UUID = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String IMPORTED_CASE_UUID = "11111111-0000-0000-0000-000000000000";
-    private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
-    private static final String HEADER_STUDY_NAME = "studyName";
-    private static final String HEADER_UPDATE_TYPE = "updateType";
-    private final UUID networkUuid = UUID.fromString(NETWORK_UUID);
-    private final UUID caseUuid = UUID.fromString(CASE_UUID);
-    private final UUID importedCaseUuid = UUID.fromString(IMPORTED_CASE_UUID);
-    private final NetworkInfos networkInfos = new NetworkInfos(networkUuid, "20140116_0830_2D4_UX1_pst");
+    @Autowired
+    ObjectMapper mapper;
 
-    TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
+    private TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
 
     @Before
     public void setup() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
                 new ResourceSet("", TEST_FILE));
         Network network = Importers.importData("XIIDM", dataSource, null);
-        given(networkStoreClient.getNetwork(networkUuid)).willReturn(network);
+        given(networkStoreClient.getNetwork(NETWORK_UUID)).willReturn(network);
 
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
@@ -133,10 +149,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         studyService.setNetworkMapServerBaseUri(baseUrl);
         studyService.setLoadFlowServerBaseUri(baseUrl);
         studyService.setNetworkStoreServerBaseUri(baseUrl);
+        studyService.setSecurityAnalysisServerBaseUri(baseUrl);
 
-        ObjectMapper mapper = new ObjectMapper();
-        String networkInfosAsString = mapper.writeValueAsString(networkInfos);
-        String importedCaseUuidAsString = mapper.writeValueAsString(importedCaseUuid);
+        String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
+        String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
         String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
 
         final Dispatcher dispatcher = new Dispatcher() {
@@ -159,7 +175,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).setBody("UCTE")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/cases/" + IMPORTED_CASE_UUID + "/format":
+                    case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -178,9 +194,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks?caseUuid=" + CASE_UUID:
-                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID:
-                    case "/v1/networks?caseName=" + IMPORTED_CASE_UUID:
+                    case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
+                    case "/v1/networks?caseName=" + IMPORTED_CASE_UUID_STRING:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -194,11 +210,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setBody(" ").setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/svg/" + NETWORK_UUID + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
+                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
                         return new MockResponse().setResponseCode(200).setBody("byte")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
                         return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -209,8 +225,23 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=ls&receiver=study:newName":
+                        input.send(MessageBuilder.withPayload("")
+                                .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
+                                .setHeader("receiver", "study:newName")
+                                .build());
+                        return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "?limitType":
+                        return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    default:
+                        LOGGER.error("Path not supported: " + request.getPath());
+                        return new MockResponse().setResponseCode(404);
                 }
-                return new MockResponse().setResponseCode(404);
             }
         };
         server.setDispatcher(dispatcher);
@@ -227,7 +258,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //insert a study
         webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "false")
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "false")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
@@ -240,7 +271,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isEqualTo(424)
                 .expectBody()
                 .jsonPath("$")
-                .isEqualTo(CASE_DOESNT_EXISTS);
+                .isEqualTo(CASE_NOT_FOUND.name());
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -253,17 +284,17 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //insert the same study => 409 conflict
         webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "false")
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "false")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isEqualTo(409)
                 .expectBody()
                 .jsonPath("$")
-                .isEqualTo(STUDY_ALREADY_EXISTS);
+                .isEqualTo(STUDY_ALREADY_EXISTS.name());
 
         //insert the same study but with another user (should work)
         webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, caseUuid, DESCRIPTION, "true")
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "true")
                 .header("userId", "userId2")
                 .exchange()
                 .expectStatus().isEqualTo(200);
@@ -304,7 +335,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .expectStatus().isEqualTo(409)
                     .expectBody()
                     .jsonPath("$")
-                    .isEqualTo(STUDY_ALREADY_EXISTS);
+                    .isEqualTo(STUDY_ALREADY_EXISTS.name());
         }
 
         // check the study s2
@@ -507,7 +538,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         //run a loadflow
         webTestClient.put()
-                .uri("/v1/userId/studies/" + "newName" + "/loadflow/run")
+                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/run")
                 .exchange()
                 .expectStatus().isOk();
         // assert that the broker message has been sent
@@ -530,6 +561,32 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/userId/studies/{studyName}/export-network/{format}", newStudyName, "XIIDM")
                 .exchange()
                 .expectStatus().isOk();
+
+        // security analysis not found
+        webTestClient.get()
+                .uri("/v1/security-analysis/results/{resultUuid}", NOT_FOUND_SECURITY_ANALYSIS_UUID)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // run security analysis
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/security-analysis/run?contingencyListName={contingencyListName}", newStudyName, "ls")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(UUID.class)
+                .isEqualTo(UUID.fromString(SECURITY_ANALYSIS_UUID));
+
+        Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
+        assertEquals(newStudyName, securityAnalysisUpdateMessage.getHeaders().get(StudyService.STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(StudyService.UPDATE_TYPE));
+
+        // get security analysis result
+        webTestClient.get()
+                .uri("/v1/security-analysis/results/{resultUuid}", SECURITY_ANALYSIS_UUID)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo(SECURITY_ANALYSIS_RESULT_JSON);
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();
