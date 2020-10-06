@@ -19,6 +19,8 @@ import lombok.experimental.SuperBuilder;
 @ApiModel("Basic study attributes")
 public class BasicStudyInfos {
 
+    String userId;
+
     String studyName;
 
     ZonedDateTime creationDate;

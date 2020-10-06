@@ -6,28 +6,24 @@
  */
 package org.gridsuite.study.server.repository;
 
-import com.datastax.driver.core.DataType;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
-import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-
 @Getter
 @Setter
 @AllArgsConstructor
-@Table("privatestudy")
-public class PrivateStudyEntity implements Serializable, StudyEntity {
+@Table
+public class PrivateStudyCreationRequest implements Serializable {
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;
@@ -37,32 +33,4 @@ public class PrivateStudyEntity implements Serializable, StudyEntity {
 
     @Column("creationDate")
     private LocalDateTime date;
-
-    @Column("networkUuid")
-    private UUID networkUuid;
-
-    @Column("networkId")
-    private String networkId;
-
-    @Column("description")
-    private String description;
-
-    @Column("caseFormat")
-    private String caseFormat;
-
-    @Column("caseUuid")
-    private UUID caseUuid;
-
-    @Column("casePrivate")
-    private boolean casePrivate;
-
-    @Column("isPrivate")
-    private boolean isPrivate;
-
-    @Column("loadFlowResult")
-    @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")
-    private LoadFlowResultEntity loadFlowResult;
-
-    @Column("securityAnalysisResultUuid")
-    private UUID securityAnalysisResultUuid;
 }

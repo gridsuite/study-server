@@ -10,23 +10,21 @@ import com.github.nosan.embedded.cassandra.EmbeddedCassandraFactory;
 import com.github.nosan.embedded.cassandra.api.Cassandra;
 import com.github.nosan.embedded.cassandra.api.CassandraFactory;
 import com.github.nosan.embedded.cassandra.api.Version;
+import com.github.nosan.embedded.cassandra.api.connection.CassandraConnection;
+import com.github.nosan.embedded.cassandra.api.connection.DefaultCassandraConnectionFactory;
+import com.github.nosan.embedded.cassandra.api.cql.CqlDataSet;
 import com.github.nosan.embedded.cassandra.artifact.RemoteArtifact;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
-
+import com.github.nosan.embedded.cassandra.commons.io.ClassPathResource;
 import java.net.Authenticator;
-import java.net.PasswordAuthentication;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.PasswordAuthentication;
 import java.net.Proxy;
 import java.net.UnknownHostException;
 import java.time.Duration;
-
-import com.github.nosan.embedded.cassandra.api.cql.CqlDataSet;
-import com.github.nosan.embedded.cassandra.api.connection.CassandraConnection;
-import com.github.nosan.embedded.cassandra.api.connection.DefaultCassandraConnectionFactory;
-import com.github.nosan.embedded.cassandra.commons.io.ClassPathResource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -42,7 +40,7 @@ public class EmbeddedCassandraFactoryConfig {
     @Bean
     CassandraConnection cassandraConnection(Cassandra cassandra) {
         CassandraConnection cassandraConnection = new DefaultCassandraConnectionFactory().create(cassandra);
-        CqlDataSet.ofClasspaths("create_keyspace.cql", "study.cql", "study_creation_request.cql").forEachStatement(cassandraConnection::execute);
+        CqlDataSet.ofClasspaths("create_keyspace.cql", "study.cql").forEachStatement(cassandraConnection::execute);
         return cassandraConnection;
     }
 

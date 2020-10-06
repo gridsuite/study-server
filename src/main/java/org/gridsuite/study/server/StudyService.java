@@ -15,6 +15,7 @@ import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -67,7 +68,7 @@ public class StudyService {
     private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
     static final String HEADER_STUDY_NAME = "studyName";
     static final String HEADER_UPDATE_TYPE = "updateType";
-    static final String UPDATE_TYPE_STUDIES = "update_studies";
+    static final String UPDATE_TYPE_STUDIES = "studies";
     private static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     private static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
@@ -97,7 +98,8 @@ public class StudyService {
     private String actionsServerBaseUri;
 
     private StudyRepository studyRepository;
-    private final StudyCreationRequestRepository studyCreationRequestRepository;
+    private final PrivateStudyCreationRequestRepository privateStudyCreationRequestRepository;
+    private final PublicStudyCreationRequestRepository publicStudyCreationRequestRepository;
 
     private ObjectMapper objectMapper;
 
@@ -154,7 +156,8 @@ public class StudyService {
             @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
             @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
             StudyRepository studyRepository,
-            StudyCreationRequestRepository studyCreationRequestRepository,
+            PrivateStudyCreationRequestRepository privateStudyCreationRequestRepository,
+            PublicStudyCreationRequestRepository publicStudyCreationRequestRepository,
             PrivateStudyRepository privateStudyRepository,
             PublicStudyRepository publicStudyRepository,
             WebClient.Builder webClientBuilder,
@@ -171,7 +174,8 @@ public class StudyService {
         this.actionsServerBaseUri = actionsServerBaseUri;
 
         this.studyRepository = studyRepository;
-        this.studyCreationRequestRepository = studyCreationRequestRepository;
+        this.privateStudyCreationRequestRepository = privateStudyCreationRequestRepository;
+        this.publicStudyCreationRequestRepository = publicStudyCreationRequestRepository;
         this.webClient =  webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
@@ -184,8 +188,8 @@ public class StudyService {
                 .loadFlowResult(new LoadFlowResult(entity.getLoadFlowResult().getStatus())).build();
     }
 
-    private static BasicStudyInfos toBasicInfos(StudyCreationRequest entity) {
-        return BasicStudyInfos.builder().studyName(entity.getName())
+    private static BasicStudyInfos toBasicInfos(PublicStudyCreationRequest entity) {
+        return BasicStudyInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC"))).build();
     }
 
@@ -197,27 +201,26 @@ public class StudyService {
         return studyRepository.getPublicStudies().map(StudyService::toInfos).sort(Comparator.comparing(StudyInfos::getCreationDate).reversed());
     }
 
-    Flux<BasicStudyInfos> getStudyCreationRequestList() {
-        return  studyCreationRequestRepository.findAll().map(StudyService::toBasicInfos).sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
+    Flux<BasicStudyInfos> getStudyCreationRequestList(String userId) {
+        Flux<PrivateStudyCreationRequest> privateStudyFlux = privateStudyCreationRequestRepository.findAllByUserId(userId);
+        Flux<BasicStudyInfos> studies = Flux.concat(privateStudyFlux.map(privateStudy -> BasicStudyInfos.builder().studyName(privateStudy.getStudyName())
+                .userId(privateStudy.getUserId())
+                .creationDate(ZonedDateTime.ofInstant(privateStudy.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC"))).build()
+        ), getPublicStudyCreationRequestList());
+        return studies.sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
+    }
+
+    Flux<BasicStudyInfos> getPublicStudyCreationRequestList() {
+        return  publicStudyCreationRequestRepository.findAll().map(StudyService::toBasicInfos).sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
     public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, LoadFlowResult loadFlowResult) {
         return Mono.zip(persistentStore(caseUuid), getCaseFormat(caseUuid))
-            .flatMap(t ->
-                    studyRepository.insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, loadFlowResult)
-                    .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
-            );
-    }
-
-    private Mono<String> getCaseFormat(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
-                .buildAndExpand(caseUuid)
-                .toUriString();
-
-        return webClient.get()
-                .uri(caseServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(String.class);
+                .flatMap(t ->
+                        studyRepository.insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, loadFlowResult)
+                                .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
+                )
+        .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
     }
 
     public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
@@ -228,9 +231,20 @@ public class StudyService {
             return Mono.zip(persistentStore(uuid), getCaseFormat(uuid))
                     .flatMap(t ->
                             studyRepository.insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), uuid, true, new LoadFlowResult())
-                            .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
+                                    .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
                     );
-        });
+        })
+        .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
+    }
+
+    private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
+        if (isPrivate) {
+            return privateStudyCreationRequestRepository.insert(new PrivateStudyCreationRequest(userId, studyName, LocalDateTime.now(ZoneOffset.UTC))).then()
+                    .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES));
+        } else {
+            return publicStudyCreationRequestRepository.insert(new PublicStudyCreationRequest(userId, studyName, LocalDateTime.now(ZoneOffset.UTC))).then()
+                    .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES));
+        }
     }
 
     Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
@@ -269,6 +283,25 @@ public class StudyService {
                 return studyRepository.deleteStudy(userId, studyName);
             }
         });
+    }
+
+    private void deleteStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
+        if (isPrivate) {
+            privateStudyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId).subscribe();
+        } else {
+            publicStudyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId).subscribe();
+        }
+    }
+
+    private Mono<String> getCaseFormat(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
+                .buildAndExpand(caseUuid)
+                .toUriString();
+
+        return webClient.get()
+                .uri(caseServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
     Mono<UUID> importCase(Mono<FilePart> multipartFile) {
@@ -461,24 +494,14 @@ public class StudyService {
                     .toUriString();
 
             return webClient.put()
-                .uri(loadFlowServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(String.class)
-                .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, userId, jsonToLoadFlowResult(e)))
-                .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
-                    .subscribe())
-                .doOnCancel(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
-                    .subscribe());
-        }).doFinally(s ->
-            emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)
-        );
-    }
-
-    private void emitStudyChanged(String studyName, String updateTypeLoadflow) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_NAME, studyName)
-            .setHeader(HEADER_UPDATE_TYPE, updateTypeLoadflow)
-            .build()
+                    .uri(loadFlowServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(Void.class);
+        }).doOnSuccess(s ->
+            studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_LOADFLOW)
+                .build())
         );
     }
 
@@ -559,6 +582,14 @@ public class StudyService {
         return studyMono.map(StudyEntity::getNetworkUuid)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
 
+    }
+
+    private void emitStudyChanged(String studyName, String updateType) {
+        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .build()
+        );
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {

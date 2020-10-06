@@ -20,7 +20,9 @@ import com.powsybl.network.store.model.TopLevelDocument;
 import com.powsybl.network.store.model.VoltageLevelAttributes;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -301,6 +303,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //empty list
         webTestClient.get()
                 .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -368,6 +371,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .header("userId", "userId2")
                 .exchange()
                 .expectStatus().isEqualTo(200);
+        // drop the broker message for study creation request
+        output.receive(1000);
+        // drop the broker message for study creation
+        output.receive(1000);
 
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
@@ -610,7 +617,12 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]"
+                //.expectBodyList(StudyInfos.class)
+                //.value(studies -> {
+                //            new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
+                //                    .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).build()).matchesSafely(studies.get(0));
+                );
 
         //rename the study
         String newStudyName = "newName";
@@ -716,6 +728,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         @Override
         public boolean matchesSafely(T s) {
             return source.getStudyName().equals(s.getStudyName())
+                    && source.getUserId().equals(s.getUserId())
                     && s.getCreationDate().toEpochSecond() - source.getCreationDate().toEpochSecond() < 2;
         }
 

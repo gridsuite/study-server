@@ -18,8 +18,6 @@ import lombok.experimental.SuperBuilder;
 @ApiModel("Basic study attributes")
 public class StudyInfos extends BasicStudyInfos {
 
-    String userId;
-
     String description;
 
     String caseFormat;

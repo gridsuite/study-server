@@ -10,7 +10,17 @@ import io.swagger.annotations.*;
 import org.gridsuite.study.server.dto.*;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -35,17 +45,17 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies")
-    @ApiOperation(value = "Get all studies")
+    @ApiOperation(value = "Get all studies for a user")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
     public ResponseEntity<Flux<StudyInfos>> getStudyList(@RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(userId));
     }
 
     @GetMapping(value = "/study_creation_requests")
-    @ApiOperation(value = "Get all study creation requests")
+    @ApiOperation(value = "Get all study creation requests for a user")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of study creation requests")})
-    public ResponseEntity<Mono<List<BasicStudyInfos>>> getStudyCreationRequestList() {
-        Mono<List<BasicStudyInfos>> studies = studyService.getStudyCreationRequestList().collectList();
+    public ResponseEntity<Flux<BasicStudyInfos>> getStudyCreationRequestList(@RequestHeader("userId") String userId) {
+        Flux<BasicStudyInfos> studies = studyService.getStudyCreationRequestList(userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 
