@@ -24,6 +24,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.NetworkInfos;

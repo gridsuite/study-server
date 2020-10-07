@@ -10,6 +10,9 @@ CREATE TYPE IF NOT EXISTS study.loadFlowParameters (
     writeSlackBus boolean
 );
 
+CREATE TYPE IF NOT EXISTS study.loadFlowResult (
+    status text
+);
 
 CREATE TYPE IF NOT EXISTS study.loadFlowResult (
     status text
@@ -25,6 +28,7 @@ CREATE TABLE IF NOT EXISTS study.study (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowResult study.loadFlowResult,
     loadFlowParameters study.loadFlowParameters,
     loadFlowResult study.loadFlowResult,
     PRIMARY KEY (userId, studyName)
@@ -41,6 +45,7 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     userId text,
     isPrivate boolean,
     loadFlowResult study.loadFlowResult,
+    loadFlowResult study.loadFlowResult,
     loadFlowParameters study.loadFlowParameters,
     PRIMARY KEY (userId, studyName)
 );
@@ -55,6 +60,7 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowResult study.loadFlowResult,
     loadFlowResult study.loadFlowResult,
     loadFlowParameters study.loadFlowParameters,
     PRIMARY KEY (userId, studyName)

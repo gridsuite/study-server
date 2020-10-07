@@ -12,6 +12,7 @@ import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.dto.LoadFlowResult;
+import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -164,8 +165,8 @@ public class StudyService {
     }
 
     private Mono<Study> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId, String description, String caseFormat, UUID caseUuid, boolean isCasePrivate, LoadFlowResult loadFlowResult, LoadFlowParametersEntity lfParameters) {
-        final PrivateStudy privateStudy = new PrivateStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
-        final PublicStudy publicStudy = new PublicStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, lfParameters);
+        final PrivateStudy privateStudy = new PrivateStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, loadFlowResult, lfParameters);
+        final PublicStudy publicStudy = new PublicStudy(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, loadFlowResult, lfParameters);
         final Study study = new Study(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid, isCasePrivate, isPrivate, loadFlowResult, lfParameters);
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudy), studyRepository.insert(study))
@@ -397,13 +398,28 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        }).then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
+        }).then(updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
         .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(STUDY_NAME, studyName)
                 .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
                 .build())
         );
+    }
+
+    private Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowResult.LoadFlowStatus lfStatus) {
+        return
+            Mono.zip(studyRepository.updateLoadFlowState(studyName, userId, lfStatus),
+                privateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
+                publicStudyRepository.updateLoadFlowState(studyName, userId, lfStatus)
+                ).then();
+    }
+
+    private Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResult loadFlowResult) {
+        return
+            Mono.zip(privateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResult),
+                publicStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResult),
+                studyRepository.updateLoadFlowResult(studyName, userId, loadFlowResult)).then();
     }
 
     Mono<Void> runLoadFlow(String studyName, String userId) {
@@ -416,13 +432,12 @@ public class StudyService {
 
             return webClient.put()
                 .uri(loadFlowServerBaseUri + path)
-                .body(BodyInserters.fromValue(getLoadFlowParameters(study.getLoadFlowParameters())))
-                    .retrieve()
+                .retrieve()
                 .bodyToMono(String.class)
-                .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, userId, jsonToLoadFlowResult(e)))
-                .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
+                .flatMap(e -> updateLoadFlowResult(studyName, userId, jsonToLoadFlowResult(e)))
+                .doOnError(e -> updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
                     .subscribe())
-                .doOnCancel(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
+                .doOnCancel(() -> updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
                     .subscribe());
         }).doFinally(s ->
             emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)
@@ -452,21 +467,6 @@ public class StudyService {
         }
     }
 
-    private LoadFlowParameters getLoadFlowParameters(LoadFlowParametersEntity lfParameters) {
-        LoadFlowParameters params = com.powsybl.loadflow.LoadFlowParameters.load();
-        if (lfParameters != null) {
-            params.setVoltageInitMode(LoadFlowParameters.VoltageInitMode.valueOf(lfParameters.getVoltageInitMode().name()));
-            params.setNoGeneratorReactiveLimits(lfParameters.isNoGeneratorReactiveLimits());
-            params.setPhaseShifterRegulationOn(lfParameters.isPhaseShifterRegulationOn());
-            params.setSimulShunt(lfParameters.isSimulShunt());
-            params.setTransformerVoltageControlOn(lfParameters.isTransformerVoltageControlOn());
-            params.setTwtSplitShuntAdmittance(lfParameters.isTwtSplitShuntAdmittance());
-            params.setReadSlackBus(lfParameters.isReadSlackBus());
-            params.setWriteSlackBus(lfParameters.isWriteSlackBus());
-        }
-        return params;
-    }
-
     @Transactional
     public Mono<Study> renameStudy(String studyName, String userId, String headerUserId, String newStudyName) {
         //we need to ensure that it's the initial creator that deletes it
@@ -479,14 +479,15 @@ public class StudyService {
 
             Mono<Void> deleteStudy = deleteStudy(userId, studyName);
             Mono<Study> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
-                study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), new LoadFlowResult(), study.getLoadFlowParameters());
+                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowResult());
+
             return deleteStudy.then(insertStudy);
         });
     }
 
     public Mono<Void> setLoadFlowRunning(String studyName, String userId) {
         return Mono.when(assertLoadFlowRunnable(studyName, userId))
-            .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.RUNNING))
+            .then(updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.RUNNING))
             .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
