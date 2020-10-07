@@ -29,6 +29,7 @@ public class RestResponseEntityExceptionHandler {
             case CASE_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(CASE_NOT_FOUND);
             case STUDY_ALREADY_EXISTS:
+            case LOADFLOW_NOT_RUNNABLE:
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(STUDY_ALREADY_EXISTS);
             case NOT_ALLOWED:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);

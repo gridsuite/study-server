@@ -17,6 +17,7 @@ class StudyException  extends RuntimeException {
         STUDY_ALREADY_EXISTS,
         STUDY_NOT_FOUND,
         CASE_NOT_FOUND,
+        LOADFLOW_NOT_RUNNABLE,
         SECURITY_ANALYSIS_NOT_FOUND,
         NOT_ALLOWED
     }

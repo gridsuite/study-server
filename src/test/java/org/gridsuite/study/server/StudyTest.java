@@ -114,7 +114,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private NetworkStoreService networkStoreClient;
 
     @Autowired
-    ObjectMapper mapper;
+    private ObjectMapper mapper;
 
     private TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
 
@@ -556,12 +556,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk();
         // assert that the broker message has been sent
-        Message<byte[]> messageLF = output.receive(1000);
-        assertEquals("", new String(messageLF.getPayload()));
-        MessageHeaders headersLF = messageLF.getHeaders();
+        Message<byte[]> messageLfStatus = output.receive(1000);
+        assertEquals("", new String(messageLfStatus.getPayload()));
+        MessageHeaders headersLF = messageLfStatus.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals("loadflow_status", headersLF.get(HEADER_UPDATE_TYPE));
         assertEquals(LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy("newName", "userId").block()).getLoadFlowResult().getStatus());
+        Message<byte[]> messageLf = output.receive(1000);
+        assertEquals("newName", messageLf.getHeaders().get(HEADER_STUDY_NAME));
+        assertEquals("loadflow", messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
 
         //get available export format
         webTestClient.get()

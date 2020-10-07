@@ -8,26 +8,22 @@ package org.gridsuite.study.server;
 
 import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.PrivateStudyRepository;
+import org.gridsuite.study.server.repository.PublicStudyRepository;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.integration.support.MessageBuilder;
-import org.springframework.messaging.Message;
 import org.springframework.integration.json.JsonPathUtils;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
@@ -38,17 +34,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -519,7 +511,7 @@ public class StudyService {
         });
     }
 
-    Mono<UUID> getStudyUuid(String studyName, String userId) {
+    Mono<UUID> getNetworkUuid(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.map(StudyEntity::getNetworkUuid)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
@@ -543,7 +535,7 @@ public class StudyService {
     public Mono<Void> assertLoadFlowRunnable(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.map(StudyEntity::getLoadFlowResult)
-            .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)))
+            .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
             .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
     }
 
