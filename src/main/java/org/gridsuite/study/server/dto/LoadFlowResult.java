@@ -6,28 +6,17 @@
  */
 package org.gridsuite.study.server.dto;
 
-import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@ApiModel("Study attributes")
-public class StudyInfos {
+public class LoadFlowResult {
 
-    String studyName;
-
-    String userId;
-
-    String description;
-
-    String caseFormat;
-
-    LoadFlowResult loadFlowResult;
+    private LoadFlowStatus status = LoadFlowStatus.NOT_DONE;
 }

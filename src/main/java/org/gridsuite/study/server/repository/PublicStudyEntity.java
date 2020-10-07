@@ -6,10 +6,12 @@
  */
 package org.gridsuite.study.server.repository;
 
+import com.datastax.driver.core.DataType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
+import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
@@ -24,8 +26,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @AllArgsConstructor
-@Table
-public class PublicStudy implements Serializable {
+@Table("publicstudy")
+public class PublicStudyEntity implements Serializable, StudyEntity {
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;
@@ -54,5 +56,7 @@ public class PublicStudy implements Serializable {
     @Column("isPrivate")
     private boolean isPrivate;
 
+    @Column("loadFlowResult")
+    @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")
+    private LoadFlowResultEntity loadFlowResult;
 }
-
