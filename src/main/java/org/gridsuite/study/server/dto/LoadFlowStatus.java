@@ -6,17 +6,12 @@
  */
 package org.gridsuite.study.server.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-public class LoadFlowResult {
-
-    private LoadFlowStatus status = LoadFlowStatus.NOT_DONE;
+public enum LoadFlowStatus {
+    NOT_DONE,
+    RUNNING,
+    CONVERGED,
+    DIVERGED
 }

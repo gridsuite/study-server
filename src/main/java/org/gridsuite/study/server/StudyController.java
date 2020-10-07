@@ -6,17 +6,11 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.gridsuite.study.server.dto.LoadFlowResult;
-import org.gridsuite.study.server.dto.RenameStudyAttributes;
-import org.gridsuite.study.server.dto.StudyInfos;
-import org.gridsuite.study.server.dto.VoltageLevelAttributes;
-import org.gridsuite.study.server.repository.Study;
 import io.swagger.annotations.*;
+import org.gridsuite.study.server.dto.*;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
@@ -34,7 +28,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
-@Transactional
 @Api(value = "Study server")
 @ComponentScan(basePackageClasses = StudyService.class)
 public class StudyController {
@@ -85,10 +78,10 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The study information"),
             @ApiResponse(code = 404, message = "The study doesn't exist")})
-    public ResponseEntity<Mono<Study>> getStudy(@PathVariable("studyName") String studyName,
-                                                @RequestHeader("userId") String headerUserId,
-                                                @PathVariable("userId") String userId) {
-        Mono<Study> studyMono = studyService.getCurrentUserStudy(studyName, userId, headerUserId);
+    public ResponseEntity<Mono<StudyInfos>> getStudy(@PathVariable("studyName") String studyName,
+                                                      @RequestHeader("userId") String headerUserId,
+                                                      @PathVariable("userId") String userId) {
+        Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyName, userId, headerUserId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
     }
 
@@ -244,12 +237,12 @@ public class StudyController {
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
-    public ResponseEntity<Mono<Study>> renameStudy(@RequestHeader("userId") String headerUserId,
-                                                   @PathVariable("studyName") String studyName,
-                                                   @PathVariable("userId") String userId,
-                                                   @RequestBody RenameStudyAttributes renameStudyAttributes) {
+    public ResponseEntity<Mono<StudyInfos>> renameStudy(@RequestHeader("userId") String headerUserId,
+                                                         @PathVariable("studyName") String studyName,
+                                                         @PathVariable("userId") String userId,
+                                                         @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
-        Mono<Study> studyMono = studyService.renameStudy(studyName, userId, headerUserId, renameStudyAttributes.getNewStudyName());
+        Mono<StudyInfos> studyMono = studyService.renameStudy(studyName, userId, headerUserId, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
     }
 
