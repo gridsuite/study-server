@@ -6,7 +6,11 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.network.store.model.TopLevelDocument;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.PrivateStudyRepository;
 import org.gridsuite.study.server.repository.PublicStudyRepository;
@@ -36,6 +40,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -65,21 +73,31 @@ public class StudyService {
     private static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     private static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
-    private static final String RECEIVER_PREFIX = "study:";
+
+    @Getter
+    @AllArgsConstructor
+    private static class Receiver {
+
+        private final String studyName;
+
+        private final String userId;
+    }
 
     private WebClient webClient;
 
-    String caseServerBaseUri;
-    String singleLineDiagramServerBaseUri;
-    String networkConversionServerBaseUri;
-    String geoDataServerBaseUri;
-    String networkMapServerBaseUri;
-    String networkModificationServerBaseUri;
-    String loadFlowServerBaseUri;
-    String networkStoreServerBaseUri;
-    String securityAnalysisServerBaseUri;
+    private String caseServerBaseUri;
+    private String singleLineDiagramServerBaseUri;
+    private String networkConversionServerBaseUri;
+    private String geoDataServerBaseUri;
+    private String networkMapServerBaseUri;
+    private String networkModificationServerBaseUri;
+    private String loadFlowServerBaseUri;
+    private String networkStoreServerBaseUri;
+    private String securityAnalysisServerBaseUri;
 
     private StudyRepository studyRepository;
+
+    private ObjectMapper objectMapper;
 
     private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
 
@@ -90,18 +108,32 @@ public class StudyService {
 
     @Bean
     public Consumer<Flux<Message<String>>> consumeSaResult() {
-        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).map(message -> {
+        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
             UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
             String receiver = message.getHeaders().get("receiver", String.class);
-            if (receiver != null && receiver.startsWith(RECEIVER_PREFIX)) {
-                String studyName = receiver.substring(RECEIVER_PREFIX.length());
-                LOGGER.info("Security analysis result '{}' available for study '{}'", resultUuid, studyName);
-                studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                    .setHeader(STUDY_NAME, studyName)
-                    .setHeader(UPDATE_TYPE, UPDATE_TYPE_SECURITY_ANALYSIS_RESULT)
-                    .build());
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
+
+                    LOGGER.info("Security analysis result '{}' available for study '{}' and user '{}'",
+                            resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
+
+                    // update DB
+                    return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
+                            .then(Mono.fromCallable(() -> {
+                                // send notification
+                                studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                                        .setHeader(STUDY_NAME, receiverObj.getStudyName())
+                                        .setHeader(UPDATE_TYPE, UPDATE_TYPE_SECURITY_ANALYSIS_RESULT)
+                                        .build());
+                                return null;
+                            }));
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
             }
-            return message;
+            return Mono.empty();
         })
         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
         .subscribe();
@@ -121,7 +153,8 @@ public class StudyService {
             StudyRepository studyRepository,
             PrivateStudyRepository privateStudyRepository,
             PublicStudyRepository publicStudyRepository,
-            WebClient.Builder webClientBuilder) {
+            WebClient.Builder webClientBuilder,
+            ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
@@ -132,9 +165,9 @@ public class StudyService {
         this.networkStoreServerBaseUri = networkStoreServerBaseUri;
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
 
-        this.webClient =  webClientBuilder.build();
-
         this.studyRepository = studyRepository;
+        this.webClient =  webClientBuilder.build();
+        this.objectMapper = objectMapper;
     }
 
     private static StudyInfos toInfos(StudyEntity entity) {
@@ -548,9 +581,15 @@ public class StudyService {
         Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
 
         return networkUuid.flatMap(uuid -> {
+            String receiver;
+            try {
+                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyName, userId)), StandardCharsets.UTF_8);
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
             String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                     .queryParam("contingencyListName", contingencyListNames)
-                    .queryParam("receiver", RECEIVER_PREFIX + studyName)
+                    .queryParam("receiver", receiver)
                     .buildAndExpand(uuid)
                     .toUriString();
             return webClient
@@ -563,19 +602,24 @@ public class StudyService {
         });
     }
 
-    public Mono<String> getSecurityAnalysisResult(UUID resultUuid, List<String> limitTypes) {
-        Objects.requireNonNull(resultUuid);
+    public Mono<String> getSecurityAnalysisResult(String studyName, String userId, List<String> limitTypes) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
         Objects.requireNonNull(limitTypes);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-                .queryParam("limitType", limitTypes)
-                .buildAndExpand(resultUuid)
-                .toUriString();
-        return webClient
-                .get()
-                .uri(securityAnalysisServerBaseUri + path)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
-                .bodyToMono(String.class);
+
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+                    .queryParam("limitType", limitTypes)
+                    .buildAndExpand(resultUuid)
+                    .toUriString();
+            return webClient
+                    .get()
+                    .uri(securityAnalysisServerBaseUri + path)
+                    .retrieve()
+                    .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
+                    .bodyToMono(String.class);
+        });
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {

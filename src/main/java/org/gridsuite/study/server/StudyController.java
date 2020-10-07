@@ -278,13 +278,14 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyName, userId, nonNullcontigencyListNames, nonNullParameters));
     }
 
-    @GetMapping(value = "/security-analysis/results/{resultUuid}")
+    @GetMapping(value = "/{userId}/studies/{studyName}/security-analysis/result")
     @ApiOperation(value = "Get a security analysis result on study", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The security analysis result"),
                            @ApiResponse(code = 404, message = "The security analysis has not been found")})
-    public ResponseEntity<Mono<String>> getSecurityAnalysisResult(@ApiParam(value = "Result UUID") @PathVariable("resultUuid") UUID resultUuid,
+    public ResponseEntity<Mono<String>> getSecurityAnalysisResult(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
+                                                                  @ApiParam(value = "User ID") @PathVariable("userId") String userId,
                                                                   @ApiParam(value = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisResult(resultUuid, nonNullLimitTypes));
+        return ResponseEntity.ok().body(studyService.getSecurityAnalysisResult(studyName, userId, nonNullLimitTypes));
     }
 }

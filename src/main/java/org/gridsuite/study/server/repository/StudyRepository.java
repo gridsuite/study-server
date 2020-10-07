@@ -49,11 +49,14 @@ public class StudyRepository {
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
                                          LoadFlowResult loadFlowResult) {
         PublicAndPrivateStudyEntity publicAndPrivateStudyEntity = new PublicAndPrivateStudyEntity(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                                                  casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()));
+                                                                                                  casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
+                                                                                                  null);
         PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                    casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()));
+                                                                    casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
+                                                                    null);
         PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                       casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()));
+                                                                       casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
+                                                                       null);
 
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudyEntity), publicAndPrivateStudyRepository.insert(publicAndPrivateStudyEntity))
@@ -86,6 +89,13 @@ public class StudyRepository {
         return Mono.zip(privateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity),
                         publicStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity),
                         publicAndPrivateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity))
+                .then();
+    }
+
+    public Mono<Void> updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid) {
+        return Mono.zip(privateStudyRepository.updateSecurityAnalysisResultUuid(studyName, userId, securityAnalysisResultUuid),
+                        publicStudyRepository.updateSecurityAnalysisResultUuid(studyName, userId, securityAnalysisResultUuid),
+                        publicAndPrivateStudyRepository.updateSecurityAnalysisResultUuid(studyName, userId, securityAnalysisResultUuid))
                 .then();
     }
 }

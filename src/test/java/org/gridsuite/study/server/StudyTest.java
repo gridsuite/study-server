@@ -234,10 +234,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=ls&receiver=study:newName":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=ls&receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
                         input.send(MessageBuilder.withPayload("")
                                 .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                                .setHeader("receiver", "study:newName")
+                                .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
                                 .build());
                         return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -600,7 +600,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // get security analysis result
         webTestClient.get()
-                .uri("/v1/security-analysis/results/{resultUuid}", SECURITY_ANALYSIS_UUID)
+                .uri("/v1/userId/studies/{studyName}/security-analysis/result", newStudyName)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)

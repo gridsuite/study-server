@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS study.study (
     userId text,
     isPrivate boolean,
     loadFlowResult study.loadFlowResult,
+    securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     userId text,
     isPrivate boolean,
     loadFlowResult study.loadFlowResult,
+    securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -41,5 +43,6 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     userId text,
     isPrivate boolean,
     loadFlowResult study.loadFlowResult,
+    securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );

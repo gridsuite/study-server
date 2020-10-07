@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
@@ -31,4 +33,6 @@ public interface PublicAndPrivateStudyRepository extends ReactiveCassandraReposi
     @Query("UPDATE study SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName")
     Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);
 
+    @Query("UPDATE study SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyname = :studyName")
+    Mono<Void> updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
 }
