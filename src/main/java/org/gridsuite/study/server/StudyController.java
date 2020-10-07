@@ -282,10 +282,12 @@ public class StudyController {
     @ApiOperation(value = "Get a security analysis result on study", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The security analysis result"),
                            @ApiResponse(code = 404, message = "The security analysis has not been found")})
-    public ResponseEntity<Mono<String>> getSecurityAnalysisResult(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
+    public Mono<ResponseEntity<String>> getSecurityAnalysisResult(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
                                                                   @ApiParam(value = "User ID") @PathVariable("userId") String userId,
                                                                   @ApiParam(value = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisResult(studyName, userId, nonNullLimitTypes));
+        return studyService.getSecurityAnalysisResult(studyName, userId, nonNullLimitTypes)
+                .map(result -> ResponseEntity.ok().body(result))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 }

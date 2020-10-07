@@ -34,6 +34,6 @@ public interface PublicStudyRepository extends ReactiveCassandraRepository<Publi
     @Query("UPDATE publicStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF isPrivate != null")
     Mono<Object> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);
 
-    @Query("UPDATE publicStudy SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyname = :studyName")
-    Mono<Void> updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
+    @Query("UPDATE publicStudy SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyname = :studyName IF EXISTS")
+    Mono<Boolean> updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
 }

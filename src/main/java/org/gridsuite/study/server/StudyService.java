@@ -609,16 +609,18 @@ public class StudyService {
 
         return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-                    .queryParam("limitType", limitTypes)
-                    .buildAndExpand(resultUuid)
-                    .toUriString();
-            return webClient
-                    .get()
-                    .uri(securityAnalysisServerBaseUri + path)
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
-                    .bodyToMono(String.class);
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+                        .queryParam("limitType", limitTypes)
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .get()
+                        .uri(securityAnalysisServerBaseUri + path)
+                        .retrieve()
+                        .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
+                        .bodyToMono(String.class);
+            });
         });
     }
 
