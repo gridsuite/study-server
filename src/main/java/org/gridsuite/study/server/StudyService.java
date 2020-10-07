@@ -12,7 +12,6 @@ import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.dto.LoadFlowResult;
-import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
@@ -479,7 +478,8 @@ public class StudyService {
 
             Mono<Void> deleteStudy = deleteStudy(userId, studyName);
             Mono<Study> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
-                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowResult());
+                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(),
+                study.getLoadFlowResult(), study.getLoadFlowParameters());
 
             return deleteStudy.then(insertStudy);
         });
@@ -533,9 +533,16 @@ public class StudyService {
     }
 
     Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter) {
-        return studyRepository.updateLoadFlowParameters(studyName, userId, lfParameter).then(
+        return updateLoadFlowParameters(studyName, userId, lfParameter).then(
             studyRepository.updateLoadFlowState(studyName, userId, LoadFlowResult.LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)));
+    }
+
+    private Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter) {
+        return Mono.zip(studyRepository.updateLoadFlowParameters(studyName, userId, lfParameter),
+            publicStudyRepository.updateLoadFlowParameters(studyName, userId, lfParameter),
+            privateStudyRepository.updateLoadFlowParameters(studyName, userId, lfParameter)
+            ).then();
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {

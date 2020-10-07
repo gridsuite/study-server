@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS study.study (
     isPrivate boolean,
     loadFlowResult study.loadFlowResult,
     loadFlowParameters study.loadFlowParameters,
-    loadFlowResult study.loadFlowResult,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -44,7 +43,6 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowResult study.loadFlowResult,
     loadFlowResult study.loadFlowResult,
     loadFlowParameters study.loadFlowParameters,
     PRIMARY KEY (userId, studyName)
@@ -60,7 +58,6 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowResult study.loadFlowResult,
     loadFlowResult study.loadFlowResult,
     loadFlowParameters study.loadFlowParameters,
     PRIMARY KEY (userId, studyName)

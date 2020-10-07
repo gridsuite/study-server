@@ -9,7 +9,6 @@ package org.gridsuite.study.server;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
 import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.RenameStudyAttributes;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelAttributes;
