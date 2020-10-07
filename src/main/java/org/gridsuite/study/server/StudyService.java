@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
 import org.gridsuite.study.server.dto.*;
@@ -486,7 +485,7 @@ public class StudyService {
 
     }
 
-    Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter) {
+    Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParameters lfParameter) {
         return studyRepository.updateLoadFlowParameters(studyName, userId, lfParameter).then(
             studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)));
@@ -545,14 +544,24 @@ public class StudyService {
         this.networkStoreServerBaseUri = networkStoreServerBaseUri + DELIMITER;
     }
 
-    public Mono<LoadFlowParametersEntity> getLoadFlowParameters(String studyName, String userId) {
+    public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {
         Mono<StudyEntity> studyMono = getStudy(studyName, userId);
         return studyMono.flatMap(study -> {
             if (study.getLoadFlowParameters() != null) {
-                return Mono.just(study.getLoadFlowParameters());
+                LoadFlowParametersEntity params = study.getLoadFlowParameters();
+                return Mono.just(
+                    new LoadFlowParameters(params.getVoltageInitMode(),
+                        params.isTransformerVoltageControlOn(),
+                        params.isNoGeneratorReactiveLimits(),
+                        params.isPhaseShifterRegulationOn(),
+                        params.isTwtSplitShuntAdmittance(),
+                        params.isSimulShunt(),
+                        params.isReadSlackBus(),
+                        params.isWriteSlackBus())
+                );
             } else {
-                LoadFlowParameters params = LoadFlowParameters.load();
-                LoadFlowParametersEntity lfDefault = new LoadFlowParametersEntity(
+                var params = com.powsybl.loadflow.LoadFlowParameters.load();
+                LoadFlowParameters lfDefault = new LoadFlowParameters(
                     VoltageInitMode.valueOf(params.getVoltageInitMode().name()),
                     params.isTransformerVoltageControlOn(),
                     params.isNoGeneratorReactiveLimits(),

@@ -8,7 +8,6 @@ package org.gridsuite.study.server;
 
 import io.swagger.annotations.*;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
@@ -277,14 +276,14 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> setLoadflowParameters(
         @PathVariable("studyName") String studyName,
         @PathVariable("userId") String userId,
-        @RequestBody(required = false) LoadFlowParametersEntity lfParameter) {
+        @RequestBody(required = false) LoadFlowParameters lfParameter) {
         return ResponseEntity.ok().body(studyService.setLoadFlowParameters(studyName, userId, lfParameter));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/loadflow/parameters")
     @ApiOperation(value = "set loadflow parameters on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow parameters are reset")})
-    public ResponseEntity<Mono<LoadFlowParametersEntity>> resetLoadflowParameters(
+    public ResponseEntity<Mono<LoadFlowParameters>> resetLoadflowParameters(
         @PathVariable("studyName") String studyName,
         @PathVariable("userId") String userId) {
         return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyName, userId));

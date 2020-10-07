@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.gridsuite.study.server.dto.LoadFlowParameters;
 import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.stereotype.Repository;
@@ -89,7 +90,15 @@ public class StudyRepository {
                 .then();
     }
 
-    public Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter) {
+    public Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParameters params) {
+        LoadFlowParametersEntity lfParameter = new LoadFlowParametersEntity(params.getVoltageInitMode(),
+            params.isTransformerVoltageControlOn(),
+            params.isNoGeneratorReactiveLimits(),
+            params.isPhaseShifterRegulationOn(),
+            params.isTwtSplitShuntAdmittance(),
+            params.isSimulShunt(),
+            params.isReadSlackBus(),
+            params.isWriteSlackBus());
         return Mono.zip(publicAndPrivateStudyRepository.updateLoadFlowParameters(studyName, userId, lfParameter),
             publicStudyRepository.updateLoadFlowParameters(studyName, userId, lfParameter),
             privateStudyRepository.updateLoadFlowParameters(studyName, userId, lfParameter)

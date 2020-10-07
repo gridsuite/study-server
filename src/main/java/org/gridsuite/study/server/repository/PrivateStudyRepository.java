@@ -26,13 +26,13 @@ public interface PrivateStudyRepository extends ReactiveCassandraRepository<Priv
     @Query("DELETE FROM privateStudy WHERE userId = :userId and studyname = :studyName")
     Mono<Void> delete(@Param("userId") String userId, @Param("studyName") String studyName);
 
-    @Query("UPDATE privateStudy SET loadFlowResult.status = :status WHERE userId = :userId and studyname = :studyName IF exists")
+    @Query("UPDATE privateStudy SET loadFlowResult.status = :status WHERE userId = :userId and studyname = :studyName IF EXISTS")
     Mono<Object> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
 
-    @Query("UPDATE privateStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF exists")
+    @Query("UPDATE privateStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF EXISTS")
     Mono<Object> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);
 
-    @Query("UPDATE study SET loadFlowParameters = :lfParameter  WHERE userId = :userId and studyname = :studyName IF exists")
-    Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
+    @Query("UPDATE study SET loadFlowParameters = :lfParameter  WHERE userId = :userId and studyname = :studyName IF EXISTS")
+    Mono<Object> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
 
 }
