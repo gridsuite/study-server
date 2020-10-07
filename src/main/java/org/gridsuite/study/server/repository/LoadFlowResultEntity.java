@@ -9,39 +9,20 @@ package org.gridsuite.study.server.repository;
 
 import com.datastax.driver.core.DataType;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.gridsuite.study.server.dto.VoltageInitMode;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 
 import java.io.Serializable;
 
-@UserDefinedType("loadFlowParameters")
+@UserDefinedType("loadFlowResult")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Setter
-@Builder(toBuilder = true)
-public class LoadFlowParametersEntity implements Serializable {
+public class LoadFlowResultEntity implements Serializable {
 
     @CassandraType(type = DataType.Name.TEXT)
-    private VoltageInitMode voltageInitMode;
-
-    private boolean transformerVoltageControlOn;
-
-    private boolean noGeneratorReactiveLimits;
-
-    private boolean phaseShifterRegulationOn;
-
-    private boolean twtSplitShuntAdmittance;
-
-    private boolean simulShunt;
-
-    private boolean readSlackBus;
-
-    private boolean writeSlackBus;
-
+    private LoadFlowStatus status = LoadFlowStatus.NOT_DONE;
 }

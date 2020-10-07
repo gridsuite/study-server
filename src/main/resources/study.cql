@@ -14,10 +14,6 @@ CREATE TYPE IF NOT EXISTS study.loadFlowResult (
     status text
 );
 
-CREATE TYPE IF NOT EXISTS study.loadFlowResult (
-    status text
-);
-
 CREATE TABLE IF NOT EXISTS study.study (
     studyName text,
     networkUuid uuid,

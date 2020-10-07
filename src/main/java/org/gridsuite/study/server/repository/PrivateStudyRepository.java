@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
-import org.gridsuite.study.server.dto.LoadFlowResult;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
 import org.springframework.data.repository.query.Param;
@@ -19,18 +19,18 @@ import reactor.core.publisher.Mono;
  */
 
 @Repository
-public interface PrivateStudyRepository extends ReactiveCassandraRepository<PrivateStudy, Integer> {
+public interface PrivateStudyRepository extends ReactiveCassandraRepository<PrivateStudyEntity, Integer> {
 
-    Flux<PrivateStudy> findAllByUserId(String userId);
+    Flux<PrivateStudyEntity> findAllByUserId(String userId);
 
     @Query("DELETE FROM privateStudy WHERE userId = :userId and studyname = :studyName")
-    Mono<Object> delete(@Param("userId") String userId, @Param("studyName") String studyName);
+    Mono<Void> delete(@Param("userId") String userId, @Param("studyName") String studyName);
 
     @Query("UPDATE privateStudy SET loadFlowResult.status = :status WHERE userId = :userId and studyname = :studyName IF exists")
-    Mono<Object> updateLoadFlowState(String studyName, String userId, LoadFlowResult.LoadFlowStatus status);
+    Mono<Object> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
 
     @Query("UPDATE privateStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF exists")
-    Mono<Object> updateLoadFlowResult(String studyName, String userId, LoadFlowResult result);
+    Mono<Object> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);
 
     @Query("UPDATE study SET loadFlowParameters = :lfParameter  WHERE userId = :userId and studyname = :studyName IF exists")
     Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
