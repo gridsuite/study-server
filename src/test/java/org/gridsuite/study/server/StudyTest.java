@@ -96,7 +96,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
+    private static final String CONTIGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
+    private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
 
     @Autowired
     private OutputDestination output;
@@ -151,6 +153,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         studyService.setLoadFlowServerBaseUri(baseUrl);
         studyService.setNetworkStoreServerBaseUri(baseUrl);
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
+        studyService.setActionsServerBaseUri(baseUrl);
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
@@ -244,6 +247,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
                     case "/v1/results/" + SECURITY_ANALYSIS_UUID + "?limitType":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/contingency-lists/" + CONTIGENCY_LIST_NAME + "/export?networkUuid=" + NETWORK_UUID_STRING:
+                        return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     default:
@@ -588,7 +595,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
         // run security analysis
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/security-analysis/run?contingencyListName={contingencyListName}", newStudyName, "ls")
+                .uri("/v1/userId/studies/{studyName}/security-analysis/run?contingencyListName={contingencyListName}", newStudyName, CONTIGENCY_LIST_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(UUID.class)
@@ -605,6 +612,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectBody(String.class)
                 .isEqualTo(SECURITY_ANALYSIS_RESULT_JSON);
+
+        // get contingency count
+        webTestClient.get()
+                .uri("/v1/userId/studies/{studyName}/contingency-count?contingencyListName={contingencyListName}", newStudyName, CONTIGENCY_LIST_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Integer.class)
+                .isEqualTo(1);
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();

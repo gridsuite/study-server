@@ -290,4 +290,15 @@ public class StudyController {
                 .map(result -> ResponseEntity.ok().body(result))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/contingency-count")
+    @ApiOperation(value = "Get contingency count for a list of contingency list on a study", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The contingency count")})
+    public Mono<ResponseEntity<Integer>> getContingencyCount(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
+                                                             @ApiParam(value = "User ID") @PathVariable("userId") String userId,
+                                                             @ApiParam(value = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contigencyListNames) {
+        List<String> nonNullcontigencyListNames = contigencyListNames != null ? contigencyListNames : Collections.emptyList();
+        return studyService.getContingencyCount(studyName, userId, nonNullcontigencyListNames)
+                .map(count -> ResponseEntity.ok().body(count));
+    }
 }

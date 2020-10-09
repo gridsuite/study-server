@@ -8,9 +8,11 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.contingency.Contingency;
 import com.powsybl.network.store.model.TopLevelDocument;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.PrivateStudyRepository;
 import org.gridsuite.study.server.repository.PublicStudyRepository;
@@ -74,13 +76,14 @@ public class StudyService {
     private static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
 
-    @Getter
+    @Data
     @AllArgsConstructor
+    @NoArgsConstructor
     private static class Receiver {
 
-        private final String studyName;
+        private String studyName;
 
-        private final String userId;
+        private String userId;
     }
 
     private WebClient webClient;
@@ -94,6 +97,7 @@ public class StudyService {
     private String loadFlowServerBaseUri;
     private String networkStoreServerBaseUri;
     private String securityAnalysisServerBaseUri;
+    private String actionsServerBaseUri;
 
     private StudyRepository studyRepository;
 
@@ -150,6 +154,7 @@ public class StudyService {
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
+            @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
             StudyRepository studyRepository,
             PrivateStudyRepository privateStudyRepository,
             PublicStudyRepository publicStudyRepository,
@@ -164,6 +169,7 @@ public class StudyService {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
         this.networkStoreServerBaseUri = networkStoreServerBaseUri;
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+        this.actionsServerBaseUri = actionsServerBaseUri;
 
         this.studyRepository = studyRepository;
         this.webClient =  webClientBuilder.build();
@@ -624,6 +630,31 @@ public class StudyService {
         });
     }
 
+    public Mono<Integer> getContingencyCount(String studyName, String userId, List<String> contingencyListNames) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(contingencyListNames);
+
+        Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
+
+        return networkUuid.flatMap(uuid ->
+                Flux.fromIterable(contingencyListNames)
+                    .flatMap(contingencyListName -> {
+                        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
+                                .queryParam("networkUuid", uuid)
+                                .buildAndExpand(contingencyListName)
+                                .toUriString();
+                        Mono<List<Contingency>> contingencies = webClient
+                                .get()
+                                .uri(actionsServerBaseUri + path)
+                                .retrieve()
+                                .bodyToMono(new ParameterizedTypeReference<>() { });
+                        return contingencies.map(List::size);
+                    })
+                    .reduce(0, Integer::sum)
+        );
+    }
+
     void setCaseServerBaseUri(String caseServerBaseUri) {
         this.caseServerBaseUri = caseServerBaseUri;
     }
@@ -658,5 +689,9 @@ public class StudyService {
 
     public void setSecurityAnalysisServerBaseUri(String securityAnalysisServerBaseUri) {
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+    }
+
+    public void setActionsServerBaseUri(String actionsServerBaseUri) {
+        this.actionsServerBaseUri = actionsServerBaseUri;
     }
 }
