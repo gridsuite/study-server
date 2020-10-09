@@ -324,7 +324,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
-        // assert that the broker message has been sent a study creation message
+        // assert that the broker message has been sent a study creation message for creation
+        messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        headersSwitch = messageSwitch.getHeaders();
+        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a study creation request message for deletion
         messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
@@ -371,9 +378,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .header("userId", "userId2")
                 .exchange()
                 .expectStatus().isEqualTo(200);
-        // drop the broker message for study creation request
+        // drop the broker message for study creation request (creation)
         output.receive(1000);
         // drop the broker message for study creation
+        output.receive(1000);
+        // drop the broker message for study creation request (deletion)
         output.receive(1000);
 
         //insert a study with a case (multipartfile)
@@ -393,9 +402,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .exchange()
                     .expectStatus().isOk();
         }
-        // drop the broker message for study creation request
+        // drop the broker message for study creation request (creation)
         output.receive(1000);
         // drop the broker message for study creation
+        output.receive(1000);
+        // drop the broker message for study creation request (deletion)
         output.receive(1000);
 
         //Import the same case -> 409 conflict
@@ -642,6 +653,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 //               .networkId("20140116_0830_2D4_UX1_pst").description("description").caseFormat("UCTE").caseUuid(UUID.fromString("00000000-8cf0-11bd-b23e-10b96e4ef00d"))
                 //                .casePrivate(false).date(LocalDateTime.now(ZoneOffset.UTC)).build()));
                 );
+        // drop the broker message for study deletion
+        output.receive(1000);
+        // drop the broker message for study creation request (creation)
+        output.receive(1000);
+        // drop the broker message for study creation
+        output.receive(1000);
+        // drop the broker message for study creation request (deletion)
+        output.receive(1000);
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")

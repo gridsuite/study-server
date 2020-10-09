@@ -51,6 +51,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -66,6 +67,8 @@ public class StudyService {
 
     private static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
     private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
+    static final String ROOT_CATEGORY_REACTOR = "reactor.";
+
     static final String HEADER_STUDY_NAME = "studyName";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_STUDIES = "studies";
@@ -220,7 +223,8 @@ public class StudyService {
                         studyRepository.insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, loadFlowResult)
                                 .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
                 )
-        .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
     }
 
     public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
@@ -234,15 +238,18 @@ public class StudyService {
                                     .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
                     );
         })
-        .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
     }
 
     private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
         if (isPrivate) {
             return privateStudyCreationRequestRepository.insert(new PrivateStudyCreationRequest(userId, studyName, LocalDateTime.now(ZoneOffset.UTC))).then()
+                    .log(ROOT_CATEGORY_REACTOR, Level.FINE)
                     .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES));
         } else {
             return publicStudyCreationRequestRepository.insert(new PublicStudyCreationRequest(userId, studyName, LocalDateTime.now(ZoneOffset.UTC))).then()
+                    .log(ROOT_CATEGORY_REACTOR, Level.FINE)
                     .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES));
         }
     }
@@ -260,6 +267,10 @@ public class StudyService {
 
     Mono<StudyEntity> getStudy(String studyName, String userId) {
         return studyRepository.findStudy(userId, studyName);
+    }
+
+    private Mono<StudyEntity> getStudyCreationRequest(String studyName, String userId) {
+        return publicStudyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).switchIfEmpty(privateStudyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName));
     }
 
     public Mono<Void> deleteStudy(String studyName, String userId, String headerUserId) {
@@ -285,14 +296,6 @@ public class StudyService {
         });
     }
 
-    private void deleteStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
-        if (isPrivate) {
-            privateStudyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId).subscribe();
-        } else {
-            publicStudyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId).subscribe();
-        }
-    }
-
     private Mono<String> getCaseFormat(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
                 .buildAndExpand(caseUuid)
@@ -301,7 +304,21 @@ public class StudyService {
         return webClient.get()
                 .uri(caseServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class);
+                .bodyToMono(String.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    private void deleteStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
+        if (isPrivate) {
+            privateStudyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId)
+                    .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
+                    .subscribe();
+        } else {
+            publicStudyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId)
+                    .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_STUDIES))
+                    .subscribe();
+        }
     }
 
     Mono<UUID> importCase(Mono<FilePart> multipartFile) {
@@ -315,7 +332,9 @@ public class StudyService {
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
                     .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
                     .retrieve()
-                    .bodyToMono(UUID.class);
+                    .bodyToMono(UUID.class)
+                    .publishOn(Schedulers.boundedElastic())
+                    .log(ROOT_CATEGORY_REACTOR, Level.FINE);
         });
     }
 
@@ -360,7 +379,9 @@ public class StudyService {
         return webClient.post()
                 .uri(networkConversionServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(NetworkInfos.class);
+                .bodyToMono(NetworkInfos.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
@@ -593,7 +614,7 @@ public class StudyService {
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {
-        return getStudy(studyName, userId).hasElement();
+        return getStudy(studyName, userId).switchIfEmpty(getStudyCreationRequest(studyName, userId)).hasElement();
     }
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {

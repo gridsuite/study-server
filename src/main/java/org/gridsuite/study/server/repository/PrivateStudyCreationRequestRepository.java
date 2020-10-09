@@ -19,6 +19,8 @@ public interface PrivateStudyCreationRequestRepository extends ReactiveCassandra
 
     Flux<PrivateStudyCreationRequest> findAllByUserId(String userId);
 
+    Mono<StudyEntity> findByUserIdAndStudyName(String userId, String name);
+
     Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
 }

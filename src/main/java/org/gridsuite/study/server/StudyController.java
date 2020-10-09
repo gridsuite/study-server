@@ -7,26 +7,18 @@
 package org.gridsuite.study.server;
 
 import io.swagger.annotations.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -69,8 +61,11 @@ public class StudyController {
                                                                   @RequestParam("description") String description,
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
+        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, new LoadFlowResult())
+                .subscribeOn(Schedulers.boundedElastic())
+                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
-                .then(studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, new LoadFlowResult()).then()));
+                .doOnSuccess(s -> createStudy.subscribe()));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -80,11 +75,14 @@ public class StudyController {
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
-                                                  @RequestPart("caseFile") Mono<FilePart> caseFile,
+                                                  @RequestPart("caseFile") FilePart caseFile,
                                                   @RequestParam("description") String description,
                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                   @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).then(studyService.createStudy(studyName, caseFile, description, userId, isPrivate).then()));
+        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
+                .subscribeOn(Schedulers.boundedElastic())
+                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
+        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).doOnSuccess(s -> createStudy.subscribe()));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}")
