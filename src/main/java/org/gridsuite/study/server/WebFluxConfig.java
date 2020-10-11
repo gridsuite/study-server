@@ -17,6 +17,9 @@ import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
+/**
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
+ */
 @Configuration
 public class WebFluxConfig implements WebFluxConfigurer {
 
