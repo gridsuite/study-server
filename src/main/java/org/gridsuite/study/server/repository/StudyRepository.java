@@ -8,14 +8,13 @@ package org.gridsuite.study.server.repository;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.UUID;
 import org.gridsuite.study.server.dto.LoadFlowResult;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
-
-import java.util.UUID;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -74,8 +73,8 @@ public class StudyRepository {
     }
 
     public Mono<Void> deleteStudy(String userId, String studyName) {
-        return Mono.zip(privateStudyRepository.delete(userId, studyName),
-                        publicStudyRepository.delete(studyName, userId),
+        return Mono.zip(privateStudyRepository.deleteByStudyNameAndUserId(studyName, userId),
+                        publicStudyRepository.deleteByStudyNameAndUserId(studyName, userId),
                         publicAndPrivateStudyRepository.deleteByStudyNameAndUserId(studyName, userId)).then();
     }
 

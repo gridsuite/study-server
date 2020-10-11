@@ -6,19 +6,12 @@
  */
 package org.gridsuite.study.server.repository;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-public interface StudyEntity {
-
-    String getUserId();
-
-    String getStudyName();
-
-    LocalDateTime getDate();
+public interface StudyEntity extends BasicStudyEntity {
 
     void setStudyName(String studyName);
 

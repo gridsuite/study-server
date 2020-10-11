@@ -47,7 +47,7 @@ public class StudyController {
     @ApiOperation(value = "Get all study creation requests for a user")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of study creation requests")})
     public ResponseEntity<Flux<BasicStudyInfos>> getStudyCreationRequestList(@RequestHeader("userId") String userId) {
-        Flux<BasicStudyInfos> studies = studyService.getStudyCreationRequestList(userId);
+        Flux<BasicStudyInfos> studies = studyService.getStudyCreationRequests(userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 

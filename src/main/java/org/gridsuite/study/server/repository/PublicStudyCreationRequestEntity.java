@@ -22,8 +22,8 @@ import org.springframework.data.cassandra.core.mapping.Table;
 @Getter
 @Setter
 @AllArgsConstructor
-@Table
-public class PublicStudyCreationRequest implements Serializable {
+@Table("publicstudycreationrequest")
+public class PublicStudyCreationRequestEntity implements Serializable, BasicStudyEntity {
 
     @PrimaryKeyColumn(name = "userId", type = PrimaryKeyType.PARTITIONED)
     private String userId;

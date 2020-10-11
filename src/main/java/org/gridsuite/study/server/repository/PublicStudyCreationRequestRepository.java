@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.repository;
 
 import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
-import org.springframework.data.repository.query.Param;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -15,12 +14,12 @@ import reactor.core.publisher.Mono;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 
-public interface PublicStudyCreationRequestRepository extends ReactiveCassandraRepository<PublicStudyCreationRequest, String> {
+public interface PublicStudyCreationRequestRepository extends ReactiveCassandraRepository<PublicStudyCreationRequestEntity, String> {
 
-    Flux<PublicStudyCreationRequest> findAll();
+    Flux<PublicStudyCreationRequestEntity> findAll();
 
-    Mono<StudyEntity> findByUserIdAndStudyName(String userId, String name);
+    Mono<PublicStudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String name);
 
-    Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
+    Mono<Void> deleteByStudyNameAndUserId(String studyName, String userId);
 
 }

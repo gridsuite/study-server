@@ -8,14 +8,16 @@ package org.gridsuite.study.server.dto;
 
 import io.swagger.annotations.ApiModel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @SuperBuilder
+@NoArgsConstructor
 @Getter
-@ApiModel("Basic study attributes")
+@ApiModel("Study attributes")
 public class StudyInfos extends BasicStudyInfos {
 
     String description;

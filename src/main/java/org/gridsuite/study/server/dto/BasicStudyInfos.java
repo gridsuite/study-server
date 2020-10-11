@@ -9,19 +9,21 @@ package org.gridsuite.study.server.dto;
 import io.swagger.annotations.ApiModel;
 import java.time.ZonedDateTime;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @SuperBuilder
+@NoArgsConstructor
 @Getter
 @ApiModel("Basic study attributes")
 public class BasicStudyInfos {
 
-    String userId;
-
     String studyName;
+
+    String userId;
 
     ZonedDateTime creationDate;
 }
