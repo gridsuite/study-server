@@ -50,7 +50,9 @@ import org.springframework.web.reactive.function.BodyInserters;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -94,6 +96,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String HEADER_STUDY_NAME = "studyName";
     private static final String HEADER_UPDATE_TYPE = "updateType";
+    private static final String HEADER_UPDATE_EQUIPMENT_ID = "equipment_id";
+    private static final String HEADER_UPDATE_TYPE_EQUIPMENT = "equipment_type";
     private final UUID networkUuid = UUID.fromString(NETWORK_UUID);
     private final UUID caseUuid = UUID.fromString(CASE_UUID);
     private final UUID importedCaseUuid = UUID.fromString(IMPORTED_CASE_UUID);
@@ -216,6 +220,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/GENERATOR/generatorId":
+                        return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                            .setBody(" { \"targetP\": true }");
                 }
                 return new MockResponse().setResponseCode(404);
             }
@@ -477,6 +486,30 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
         assertEquals(STUDY_NAME, headersSwitch.get(HEADER_STUDY_NAME));
         assertEquals("switch", headersSwitch.get(HEADER_UPDATE_TYPE));
+
+        //update equipment
+        Map<String, String> mapEquimentChange = new HashMap<>();
+        mapEquimentChange.put("targetP", "40");
+        webTestClient.post()
+            .uri("/v1/{userId}/studies/{studyName}/network-modification/GENERATOR/{generatorId}", "userId", STUDY_NAME, "generatorId")
+            .body(BodyInserters.fromValue(mapEquimentChange))
+            .exchange()
+            .expectStatus().isOk();
+
+        messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
+        assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
+        // assert that the broker message has been sent
+
+        Message<byte[]> messageEquipment = output.receive(1000);
+        assertEquals("", new String(messageEquipment.getPayload()));
+        MessageHeaders equipmentHeaders = messageEquipment.getHeaders();
+        assertEquals(STUDY_NAME, equipmentHeaders.get(HEADER_STUDY_NAME));
+        assertEquals("equipment", equipmentHeaders.get(HEADER_UPDATE_TYPE));
+        assertEquals("generatorId", equipmentHeaders.get(HEADER_UPDATE_EQUIPMENT_ID));
+        assertEquals("GENERATOR", equipmentHeaders.get(HEADER_UPDATE_TYPE_EQUIPMENT));
 
         webTestClient.get()
                 .uri("/v1/studies")

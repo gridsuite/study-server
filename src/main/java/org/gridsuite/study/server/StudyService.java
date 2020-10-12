@@ -34,6 +34,7 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -54,6 +55,9 @@ public class StudyService {
     private static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     private static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     private static final String UPDATE_TYPE_SWITCH = "switch";
+    private static final String UPDATE_TYPE_EQUIPMENT = "equipment";
+    private static final String UPDATE_EQUIPMENT_TYPE = "equipment_type";
+    private static final String UPDATE_EQUIPMENT_ID = "equipment_id";
 
     private WebClient webClient;
 
@@ -373,6 +377,27 @@ public class StudyService {
                 .setHeader(UPDATE_TYPE, UPDATE_TYPE_SWITCH)
                 .build())
         );
+    }
+
+    public Mono<Map> changeEquipmentState(String studyName, String userId, String equipmentType, String equipmentId, Map<String, String> changeRequest) {
+        Mono<UUID> networkUuid = getStudyUuid(studyName, userId);
+        return networkUuid.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/{equipementType}/{equipmentId}")
+                .buildAndExpand(uuid, equipmentType, equipmentId)
+                .toUriString();
+            return webClient.post()
+                .uri(networkModificationServerBaseUri + path)
+                .body(BodyInserters.fromValue(changeRequest))
+                .retrieve()
+                .bodyToMono(Map.class);
+        }).doOnSuccess(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
+            .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS))
+            .doOnSuccess(e -> studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                        .setHeader(STUDY_NAME, studyName)
+                        .setHeader(UPDATE_TYPE, UPDATE_TYPE_EQUIPMENT)
+                        .setHeader(UPDATE_EQUIPMENT_TYPE, equipmentType)
+                        .setHeader(UPDATE_EQUIPMENT_ID, equipmentId)
+                        .build()));
     }
 
     Mono<Void> runLoadFlow(String studyName, String userId) {

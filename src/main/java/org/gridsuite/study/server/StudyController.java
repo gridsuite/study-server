@@ -19,6 +19,7 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -222,6 +223,18 @@ public class StudyController {
                                                         @RequestParam("open") boolean open) {
 
         return ResponseEntity.ok().body(studyService.changeSwitchState(studyName, userId, switchId, open).then());
+    }
+
+    @PostMapping(value = "/{userId}/studies/{studyName}/network-modification/{equipmentType}/{equipmentId}")
+    @ApiOperation(value = "update a switch position", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The equipment is updated")})
+    public ResponseEntity<Mono<Map>> changeEquipmentState(@PathVariable("studyName") String studyName,
+                                                                           @PathVariable("userId") String userId,
+                                                                           @PathVariable("equipmentType") String equimentType,
+                                                                           @PathVariable("equipmentId") String equipmentId,
+                                                                           @RequestBody() Map<String, String> changeRequest) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.changeEquipmentState(studyName, userId, equimentType, equipmentId, changeRequest));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
