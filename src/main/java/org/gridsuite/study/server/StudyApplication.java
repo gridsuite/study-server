@@ -6,8 +6,11 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.network.store.client.NetworkStoreService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.web.reactive.config.EnableWebFlux;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -15,6 +18,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @SpringBootApplication
+@EnableWebFlux
+@ComponentScan(basePackageClasses = {StudyApplication.class, NetworkStoreService.class})
 public class StudyApplication {
 
     public static void main(String[] args) {

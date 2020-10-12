@@ -6,16 +6,26 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.network.store.client.NetworkStoreService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.contingency.Contingency;
 import com.powsybl.network.store.model.TopLevelDocument;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.PrivateStudyRepository;
+import org.gridsuite.study.server.repository.PublicStudyRepository;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -32,47 +42,105 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-
-@ComponentScan(basePackageClasses = {NetworkStoreService.class, PublicAndPrivateStudyRepository.class})
 @Service
 public class StudyService {
 
-    private static final String STUDY_NAME = "studyName";
-    private static final String UPDATE_TYPE = "updateType";
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
+
+    private static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
+    private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
+    static final String STUDY_NAME = "studyName";
+    static final String UPDATE_TYPE = "updateType";
     private static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     private static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     private static final String UPDATE_TYPE_SWITCH = "switch";
+    static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    private static class Receiver {
+
+        private String studyName;
+
+        private String userId;
+    }
 
     private WebClient webClient;
 
-    String caseServerBaseUri;
-    String singleLineDiagramServerBaseUri;
-    String networkConversionServerBaseUri;
-    String geoDataServerBaseUri;
-    String networkMapServerBaseUri;
-    String networkModificationServerBaseUri;
-    String loadFlowServerBaseUri;
-    String networkStoreServerBaseUri;
+    private String caseServerBaseUri;
+    private String singleLineDiagramServerBaseUri;
+    private String networkConversionServerBaseUri;
+    private String geoDataServerBaseUri;
+    private String networkMapServerBaseUri;
+    private String networkModificationServerBaseUri;
+    private String loadFlowServerBaseUri;
+    private String networkStoreServerBaseUri;
+    private String securityAnalysisServerBaseUri;
+    private String actionsServerBaseUri;
 
     private StudyRepository studyRepository;
+
+    private ObjectMapper objectMapper;
 
     private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
 
     @Bean
     public Supplier<Flux<Message<String>>> publishStudyUpdate() {
-        return () -> studyUpdatePublisher;
+        return () -> studyUpdatePublisher.log(CATEGORY_BROKER_OUTPUT, Level.FINE);
+    }
+
+    @Bean
+    public Consumer<Flux<Message<String>>> consumeSaResult() {
+        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
+            String receiver = message.getHeaders().get("receiver", String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
+
+                    LOGGER.info("Security analysis result '{}' available for study '{}' and user '{}'",
+                            resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
+
+                    // update DB
+                    return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
+                            .then(Mono.fromCallable(() -> {
+                                // send notification
+                                studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                                        .setHeader(STUDY_NAME, receiverObj.getStudyName())
+                                        .setHeader(UPDATE_TYPE, UPDATE_TYPE_SECURITY_ANALYSIS_RESULT)
+                                        .build());
+                                return null;
+                            }));
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+            return Mono.empty();
+        })
+        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+        .subscribe();
     }
 
     @Autowired
@@ -85,10 +153,13 @@ public class StudyService {
             @Value("${backing-services.network-map.base-uri:http://network-map-store-server/}") String networkMapServerBaseUri,
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
+            @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
+            @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
             StudyRepository studyRepository,
             PrivateStudyRepository privateStudyRepository,
             PublicStudyRepository publicStudyRepository,
-            WebClient.Builder webClientBuilder) {
+            WebClient.Builder webClientBuilder,
+            ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
@@ -97,10 +168,12 @@ public class StudyService {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
         this.networkStoreServerBaseUri = networkStoreServerBaseUri;
-
-        this.webClient =  webClientBuilder.build();
+        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+        this.actionsServerBaseUri = actionsServerBaseUri;
 
         this.studyRepository = studyRepository;
+        this.webClient =  webClientBuilder.build();
+        this.objectMapper = objectMapper;
     }
 
     private static StudyInfos toInfos(StudyEntity entity) {
@@ -355,7 +428,7 @@ public class StudyService {
     }
 
     Mono<Void> changeSwitchState(String studyName, String userId, String switchId, boolean open) {
-        Mono<UUID> networkUuid = getStudyUuid(studyName, userId);
+        Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
 
         return networkUuid.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/switches/{switchId}")
@@ -376,7 +449,7 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(String studyName, String userId) {
-        Mono<UUID> networkUuid = getStudyUuid(studyName, userId);
+        Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
 
         return networkUuid.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
@@ -426,7 +499,7 @@ public class StudyService {
             return Mono.error(new StudyException(NOT_ALLOWED));
         }
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
-        return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS))).flatMap(study -> {
+        return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(study -> {
             study.setStudyName(newStudyName);
 
             Mono<Void> deleteStudy = studyRepository.deleteStudy(userId, studyName);
@@ -456,7 +529,7 @@ public class StudyService {
     }
 
     public Mono<ExportNetworkInfos> exportNetwork(String studyName, String userId, String format) {
-        Mono<UUID> networkUuidMono = getStudyUuid(studyName, userId);
+        Mono<UUID> networkUuidMono = getNetworkUuid(studyName, userId);
 
         return networkUuidMono.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
@@ -477,10 +550,10 @@ public class StudyService {
         });
     }
 
-    Mono<UUID> getStudyUuid(String studyName, String userId) {
+    Mono<UUID> getNetworkUuid(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.map(StudyEntity::getNetworkUuid)
-                .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)));
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
 
     }
 
@@ -490,7 +563,7 @@ public class StudyService {
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {
         Mono<Boolean> caseExists = caseExists(caseUuid);
-        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new StudyException(CASE_DOESNT_EXISTS)));
+        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
     }
 
     public Mono<Void> assertStudyNotExists(String studyName, String userId) {
@@ -501,8 +574,85 @@ public class StudyService {
     public Mono<Void> assertLoadFlowRunnable(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.map(StudyEntity::getLoadFlowResult)
-            .switchIfEmpty(Mono.error(new StudyException(STUDY_DOESNT_EXISTS)))
+            .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
             .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
+    }
+
+    public Mono<UUID> runSecurityAnalysis(String studyName, String userId, List<String> contingencyListNames, String parameters) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(contingencyListNames);
+        Objects.requireNonNull(parameters);
+
+        Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
+
+        return networkUuid.flatMap(uuid -> {
+            String receiver;
+            try {
+                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyName, userId)), StandardCharsets.UTF_8);
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
+                    .queryParam("contingencyListName", contingencyListNames)
+                    .queryParam("receiver", receiver)
+                    .buildAndExpand(uuid)
+                    .toUriString();
+            return webClient
+                    .post()
+                    .uri(securityAnalysisServerBaseUri + path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(parameters))
+                    .retrieve()
+                    .bodyToMono(UUID.class);
+        });
+    }
+
+    public Mono<String> getSecurityAnalysisResult(String studyName, String userId, List<String> limitTypes) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(limitTypes);
+
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+                        .queryParam("limitType", limitTypes)
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .get()
+                        .uri(securityAnalysisServerBaseUri + path)
+                        .retrieve()
+                        .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
+                        .bodyToMono(String.class);
+            });
+        });
+    }
+
+    public Mono<Integer> getContingencyCount(String studyName, String userId, List<String> contingencyListNames) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(contingencyListNames);
+
+        Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
+
+        return networkUuid.flatMap(uuid ->
+                Flux.fromIterable(contingencyListNames)
+                    .flatMap(contingencyListName -> {
+                        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
+                                .queryParam("networkUuid", uuid)
+                                .buildAndExpand(contingencyListName)
+                                .toUriString();
+                        Mono<List<Contingency>> contingencies = webClient
+                                .get()
+                                .uri(actionsServerBaseUri + path)
+                                .retrieve()
+                                .bodyToMono(new ParameterizedTypeReference<>() { });
+                        return contingencies.map(List::size);
+                    })
+                    .reduce(0, Integer::sum)
+        );
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {
@@ -535,5 +685,13 @@ public class StudyService {
 
     void setNetworkStoreServerBaseUri(String networkStoreServerBaseUri) {
         this.networkStoreServerBaseUri = networkStoreServerBaseUri + DELIMITER;
+    }
+
+    public void setSecurityAnalysisServerBaseUri(String securityAnalysisServerBaseUri) {
+        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+    }
+
+    public void setActionsServerBaseUri(String actionsServerBaseUri) {
+        this.actionsServerBaseUri = actionsServerBaseUri;
     }
 }

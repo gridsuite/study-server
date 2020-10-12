@@ -49,6 +49,7 @@
         <gridsuite-dependencies.version>1</gridsuite-dependencies.version>
 
         <mock.web.server.version>4.6.0</mock.web.server.version>
+        <openapi.version>1.4.8</openapi.version>
     </properties>
 
     <build>
@@ -116,11 +117,11 @@
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-network-store-client</artifactId>
+            <artifactId>powsybl-contingency-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-network-store-client</artifactId>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>
@@ -142,6 +143,11 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-stream</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-webflux-ui</artifactId>
+            <version>${openapi.version}</version>
+        </dependency>
 
         <dependency>
           <groupId>com.jayway.jsonpath</groupId>
@@ -151,11 +157,6 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-config-classic</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
