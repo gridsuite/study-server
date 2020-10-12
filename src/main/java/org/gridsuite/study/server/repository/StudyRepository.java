@@ -91,7 +91,8 @@ public class StudyRepository {
     }
 
     public Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParameters params) {
-        LoadFlowParametersEntity lfParameter = new LoadFlowParametersEntity(params.getVoltageInitMode(),
+        LoadFlowParametersEntity lfParameter = params == null ? null :
+            new LoadFlowParametersEntity(params.getVoltageInitMode(),
             params.isTransformerVoltageControlOn(),
             params.isNoGeneratorReactiveLimits(),
             params.isPhaseShifterRegulationOn(),
