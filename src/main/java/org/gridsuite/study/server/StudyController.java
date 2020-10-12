@@ -273,9 +273,9 @@ public class StudyController {
                                                           @ApiParam(value = "User ID") @PathVariable("userId") String userId,
                                                           @ApiParam(value = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contigencyListNames,
                                                           @RequestBody(required = false) String parameters) {
-        List<String> nonNullcontigencyListNames = contigencyListNames != null ? contigencyListNames : Collections.emptyList();
+        List<String> nonNullcontingencyListNames = contigencyListNames != null ? contigencyListNames : Collections.emptyList();
         String nonNullParameters = Objects.toString(parameters, "");
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyName, userId, nonNullcontigencyListNames, nonNullParameters));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyName, userId, nonNullcontingencyListNames, nonNullParameters));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/security-analysis/result")
