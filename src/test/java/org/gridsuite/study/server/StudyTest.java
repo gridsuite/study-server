@@ -19,6 +19,14 @@ import com.powsybl.network.store.model.Resource;
 import com.powsybl.network.store.model.ResourceType;
 import com.powsybl.network.store.model.TopLevelDocument;
 import com.powsybl.network.store.model.VoltageLevelAttributes;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -53,17 +61,9 @@ import org.springframework.util.ResourceUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.BDDMockito.given;
@@ -649,6 +649,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         Message<byte[]> messageLf = output.receive(1000);
         assertEquals("newName", messageLf.getHeaders().get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        //try to run a another loadflow
+        webTestClient.put()
+                .uri("/v1/userId/studies/" + "newName" + "/loadflow/run")
+                .exchange()
+                .expectStatus().isEqualTo(403)
+                .expectBody()
+                .jsonPath("$")
+                .isEqualTo(LOADFLOW_NOT_RUNNABLE.name());
 
         //get available export format
         webTestClient.get()

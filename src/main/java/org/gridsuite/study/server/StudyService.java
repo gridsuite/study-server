@@ -11,6 +11,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.TopLevelDocument;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -39,20 +52,6 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -498,9 +497,7 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(String studyName, String userId) {
-        Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
-
-        return networkUuid.flatMap(uuid -> {
+        return setLoadFlowRunning(studyName, userId).then(getNetworkUuid(studyName, userId)).flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                     .buildAndExpand(uuid)
                     .toUriString();
@@ -552,10 +549,9 @@ public class StudyService {
         }).map(StudyService::toInfos);
     }
 
-    public Mono<Void> setLoadFlowRunning(String studyName, String userId) {
-        return Mono.when(assertLoadFlowRunnable(studyName, userId))
-            .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.RUNNING))
-            .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
+    private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
+        return studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.RUNNING)
+                .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
     public Mono<Collection<String>> getExportFormats() {
@@ -626,6 +622,13 @@ public class StudyService {
         return studyMono.map(StudyEntity::getLoadFlowResult)
             .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
             .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
+    }
+
+    public Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
+        Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
+        return studyMono.map(StudyEntity::getLoadFlowResult)
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
+                .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
