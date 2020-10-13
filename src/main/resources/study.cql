@@ -1,3 +1,7 @@
+CREATE TYPE IF NOT EXISTS study.loadFlowResult (
+    status text
+);
+
 CREATE TABLE IF NOT EXISTS study.study (
     studyName text,
     networkUuid uuid,
@@ -8,6 +12,8 @@ CREATE TABLE IF NOT EXISTS study.study (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowResult study.loadFlowResult,
+    securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -21,6 +27,8 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowResult study.loadFlowResult,
+    securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -34,5 +42,7 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
+    loadFlowResult study.loadFlowResult,
+    securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
