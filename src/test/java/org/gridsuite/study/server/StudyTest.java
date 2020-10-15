@@ -621,6 +621,40 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectBody(Integer.class)
                 .isEqualTo(1);
 
+        // make public study private
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/accessRights?toPrivate=true", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+
+        // make private study private should work
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/accessRights?toPrivate=true", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+
+        // make private study public
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/accessRights?toPrivate=false", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+
+        // try to change access right for a study of another user -> forbidden
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/accessRights?toPrivate=true", newStudyName)
+                .header("userId", "notAuth")
+                .exchange()
+                .expectStatus().isForbidden();
+
         // Shut down the server. Instances cannot be reused.
         server.shutdown();
     }

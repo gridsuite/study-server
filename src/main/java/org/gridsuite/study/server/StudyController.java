@@ -242,6 +242,17 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
     }
 
+    @PostMapping(value = "/{userId}/studies/{studyName}/accessRights")
+    @ApiOperation(value = "update a switch position", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
+    public ResponseEntity<Mono<StudyInfos>> changeStudyAccessRights(@PathVariable("studyName") String studyName,
+                                                        @PathVariable("userId") String userId,
+                                                        @RequestHeader("userId") String headerUserId,
+                                                        @RequestParam("toPrivate") boolean toPrivate) {
+
+        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, toPrivate));
+    }
+
     @GetMapping(value = "/export-network-formats")
     @ApiOperation(value = "get the available export format", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The available export format")})

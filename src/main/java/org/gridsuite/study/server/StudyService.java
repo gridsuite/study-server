@@ -550,6 +550,36 @@ public class StudyService {
         });
     }
 
+    public Mono<StudyInfos> changeStudyAccessRights(String studyName, String userId, String headerUserId, boolean toPrivate) {
+        //only the owner of a study can change the access rights
+        if (!headerUserId.equals(userId)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
+        Mono<StudyEntity> studyEntityMono = getStudy(studyName, userId);
+        return studyEntityMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(studyEntity -> {
+            Mono<Void> delete;
+            Mono<StudyEntity> insert;
+            //if the study is public and we want to make it private
+            if (!studyEntity.isPrivate() && toPrivate) {
+                delete = studyRepository.deleteStudy(studyName, userId);
+                insert = studyRepository.insertStudy(studyEntity.getStudyName(), userId, true, studyEntity.getNetworkUuid(),
+                        studyEntity.getNetworkId(), studyEntity.getDescription(), studyEntity.getCaseFormat(), studyEntity.getCaseUuid(),
+                        studyEntity.isCasePrivate(), new LoadFlowResult(studyEntity.getLoadFlowResult().getStatus()));
+              //if the study is private and we want to make it public
+            } else if (studyEntity.isPrivate() && !toPrivate) {
+                delete = studyRepository.deleteStudy(studyName, userId);
+                insert = studyRepository.insertStudy(studyEntity.getStudyName(), userId, false, studyEntity.getNetworkUuid(),
+                        studyEntity.getNetworkId(), studyEntity.getDescription(), studyEntity.getCaseFormat(), studyEntity.getCaseUuid(),
+                        studyEntity.isCasePrivate(), new LoadFlowResult(studyEntity.getLoadFlowResult().getStatus()));
+            } else {
+                return Mono.just(studyEntity);
+            }
+            return delete.then(insert);
+        }).map(StudyService::toInfos);
+
+    }
+
     Mono<UUID> getNetworkUuid(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.map(StudyEntity::getNetworkUuid)
