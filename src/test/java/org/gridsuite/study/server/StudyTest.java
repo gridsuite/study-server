@@ -678,12 +678,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk();
 
-        // get default LoadFlowParameters
-        webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
-                .exchange()
-                .expectBody(String.class).isEqualTo("{\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}");
-
         // security analysis not found
         webTestClient.get()
                 .uri("/v1/security-analysis/results/{resultUuid}", NOT_FOUND_SECURITY_ANALYSIS_UUID)
@@ -717,6 +711,12 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectBody(Integer.class)
                 .isEqualTo(1);
+
+        // get default LoadFlowParameters
+        webTestClient.get()
+                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
+                .exchange()
+                .expectBody(String.class).isEqualTo("{\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}");
 
         // setting loadFlow Parameters
         webTestClient.post()
