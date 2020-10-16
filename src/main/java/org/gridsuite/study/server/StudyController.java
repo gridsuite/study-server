@@ -6,10 +6,8 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.loadflow.LoadFlowParameters;
 import io.swagger.annotations.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
@@ -19,6 +17,10 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.logging.Level;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -319,7 +321,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/loadflow/parameters")
-    @ApiOperation(value = "set loadflow parameters on study", produces = "application/json")
+    @ApiOperation(value = "set loadflow parameters on study, reset to default ones if empty body", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow parameters are set")})
     public ResponseEntity<Mono<Void>> setLoadflowParameters(
             @PathVariable("studyName") String studyName,
@@ -329,9 +331,9 @@ public class StudyController {
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/loadflow/parameters")
-    @ApiOperation(value = "set loadflow parameters on study", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow parameters are reset")})
-    public ResponseEntity<Mono<LoadFlowParameters>> resetLoadflowParameters(
+    @ApiOperation(value = "Get loadflow parameters on study", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow parameters")})
+    public ResponseEntity<Mono<LoadFlowParameters>> getLoadflowParameters(
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
         return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyName, userId));

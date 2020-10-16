@@ -8,12 +8,8 @@
 package org.gridsuite.study.server.repository;
 
 import com.datastax.driver.core.DataType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.gridsuite.study.server.dto.VoltageInitMode;
+import com.powsybl.loadflow.LoadFlowParameters;
+import lombok.*;
 import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 
@@ -28,7 +24,7 @@ import java.io.Serializable;
 public class LoadFlowParametersEntity implements Serializable {
 
     @CassandraType(type = DataType.Name.TEXT)
-    private VoltageInitMode voltageInitMode;
+    private LoadFlowParameters.VoltageInitMode voltageInitMode;
 
     private boolean transformerVoltageControlOn;
 
@@ -43,5 +39,4 @@ public class LoadFlowParametersEntity implements Serializable {
     private boolean readSlackBus;
 
     private boolean writeSlackBus;
-
 }
