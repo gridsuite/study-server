@@ -21,15 +21,11 @@ final class StudyConstants {
     static final String GEO_DATA_API_VERSION = "v1";
     static final String NETWORK_MODIFICATION_API_VERSION = "v1";
     static final String LOADFLOW_API_VERSION = "v1";
+    static final String SECURITY_ANALYSIS_API_VERSION = "v1";
+    static final String ACTIONS_API_VERSION = "v1";
 
     static final String NETWORK_UUID = "networkUuid";
     static final String CASE_UUID = "caseUuid";
-
-    static final String STUDY_ALREADY_EXISTS = "STUDY ALREADY EXISTS";
-    static final String STUDY_DOESNT_EXISTS = "STUDY DOESN'T EXISTS";
-    static final String CASE_DOESNT_EXISTS = "CASE DOESN'T EXISTS";
-    static final String LOADFLOW_NOT_RUNNABLE = "LOADFLOW NOT RUNNABLE";
-    static final String NOT_ALLOWED = "NOT ALLOWED";
 
     static final String DELIMITER = "/";
 }

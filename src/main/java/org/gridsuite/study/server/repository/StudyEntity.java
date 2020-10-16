@@ -11,11 +11,7 @@ import java.util.UUID;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-public interface StudyEntity {
-
-    String getUserId();
-
-    String getStudyName();
+public interface StudyEntity extends BasicStudyEntity {
 
     void setStudyName(String studyName);
 
@@ -34,6 +30,8 @@ public interface StudyEntity {
     boolean isPrivate();
 
     LoadFlowResultEntity getLoadFlowResult();
+
+    UUID getSecurityAnalysisResultUuid();
 
     LoadFlowParametersEntity getLoadFlowParameters();
 }
