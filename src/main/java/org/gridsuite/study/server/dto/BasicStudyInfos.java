@@ -7,22 +7,23 @@
 package org.gridsuite.study.server.dto;
 
 import io.swagger.annotations.ApiModel;
+import java.time.ZonedDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @SuperBuilder
 @NoArgsConstructor
 @Getter
-@ApiModel("Study attributes")
-public class StudyInfos extends BasicStudyInfos {
+@ApiModel("Basic study attributes")
+public class BasicStudyInfos {
 
-    String description;
+    String studyName;
 
-    String caseFormat;
+    String userId;
 
-    LoadFlowResult loadFlowResult;
+    ZonedDateTime creationDate;
 }
