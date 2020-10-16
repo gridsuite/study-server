@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.json.ContingencyJsonModule;
+import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.codec.ServerCodecConfigurer;

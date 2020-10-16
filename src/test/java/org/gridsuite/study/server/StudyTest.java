@@ -682,46 +682,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
                 .exchange()
-                .expectBody(String.class).isEqualTo(
-                "{\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}"
-        );
-
-        // setting loadFlow Parameters
-        webTestClient.post()
-                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters")
-                .header("userId", "userId")
-                .body(BodyInserters.fromValue(new LoadFlowParametersEntity(
-                        VoltageInitMode.DC_VALUES,
-                        true,
-                        false,
-                        true,
-                        false,
-                        true,
-                        false,
-                        true
-                )))
-                .exchange()
-                .expectStatus().isOk();
-
-        // getting setted values
-        webTestClient.get()
-                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters")
-                .exchange()
-                .expectBody(String.class).isEqualTo(
-                "{\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":true,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true}"
-        );
-
-        // run loadflow with new parameters
-        webTestClient.put()
-                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/run")
-                .exchange()
-                .expectStatus().isOk();
-        // assert that the broker message has been sent
-        messageLF = output.receive(1000);
-        assertEquals("", new String(messageLF.getPayload()));
-        headersLF = messageLF.getHeaders();
-        assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
-        assertEquals("loadflow", headersLF.get(HEADER_UPDATE_TYPE));
+                .expectBody(String.class).isEqualTo("{\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}");
 
         // security analysis not found
         webTestClient.get()
@@ -756,6 +717,41 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectBody(Integer.class)
                 .isEqualTo(1);
+
+        // setting loadFlow Parameters
+        webTestClient.post()
+                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters")
+                .header("userId", "userId")
+                .body(BodyInserters.fromValue(new LoadFlowParametersEntity(
+                        VoltageInitMode.DC_VALUES,
+                        true,
+                        false,
+                        true,
+                        false,
+                        true,
+                        false,
+                        true
+                )))
+                .exchange()
+                .expectStatus().isOk();
+
+        // getting setted values
+        webTestClient.get()
+                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/parameters")
+                .exchange()
+                .expectBody(String.class).isEqualTo("{\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"noGeneratorReactiveLimits\":false,\"phaseShifterRegulationOn\":true,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true}");
+
+        // run loadflow with new parameters
+        webTestClient.put()
+                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/run")
+                .exchange()
+                .expectStatus().isOk();
+        // assert that the broker message has been sent
+        messageLf = output.receive(1000);
+        assertEquals("", new String(messageLf.getPayload()));
+        headersLF = messageLf.getHeaders();
+        assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();

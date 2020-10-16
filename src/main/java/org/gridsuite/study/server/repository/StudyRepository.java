@@ -52,13 +52,13 @@ public class StudyRepository {
                                          LoadFlowResult loadFlowResult, LoadFlowParametersEntity lfParameters) {
         PublicAndPrivateStudyEntity publicAndPrivateStudyEntity = new PublicAndPrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                                                   casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
-                                                                                                  null, lfParameters);
+                                                                                                  lfParameters, null);
         PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                     casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
-                                                                    null, lfParameters);
+                                                                    lfParameters, null);
         PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                        casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
-                                                                       null, lfParameters);
+                                                                       lfParameters, null);
 
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudyEntity), publicAndPrivateStudyRepository.insert(publicAndPrivateStudyEntity))
