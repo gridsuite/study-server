@@ -187,6 +187,7 @@ public class StudyService {
                 .userId(entity.getUserId())
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
                 .loadFlowResult(new LoadFlowResult(entity.getLoadFlowResult().getStatus()))
+                .isPrivate(entity.isPrivate())
                 .build();
     }
 

@@ -347,7 +347,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
                 .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                                    .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult())
+                                    .description("description").isPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult())
                                     .build()).matchesSafely(studies.get(0)));
 
         //insert the same study => 409 conflict
@@ -425,8 +425,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder().studyName("s2").userId("userId").description("desc").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult()).build()));
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("s2")
+                        .userId("userId")
+                        .isPrivate(true)
+                        .description("desc")
+                        .caseFormat("XIIDM")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult()).build()));
 
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
@@ -597,8 +604,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                        .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult())
+                .value(studies -> new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("studyName")
+                        .userId("userId").caseFormat("UCTE")
+                        .description("description")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult())
+                        .isPrivate(false)
                         .build()).matchesSafely(studies.get(0)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
@@ -625,7 +637,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder().studyName("newName").userId("userId").description("description").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult()).build()));
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .isPrivate(false)
+                        .loadFlowResult(new LoadFlowResult()).build()));
 
         // drop the broker message for study deletion
         output.receive(1000);
@@ -713,8 +732,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":true,\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .isPrivate(true)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
 
         // make private study private should work
         webTestClient.post()
@@ -722,8 +748,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":true,\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .isPrivate(true)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
 
         // make private study public
         webTestClient.post()
@@ -731,8 +764,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":false,\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .isPrivate(false)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
 
         // try to change access right for a study of another user -> forbidden
         webTestClient.post()
@@ -776,7 +816,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             return super.matchesSafely(s)
                     && source.getCaseFormat().equals(s.getCaseFormat())
                     && source.getDescription().equals(s.getDescription())
-                    && source.getLoadFlowResult().getStatus() == s.getLoadFlowResult().getStatus();
+                    && source.getLoadFlowResult().getStatus() == s.getLoadFlowResult().getStatus()
+                    && source.getIsPrivate().equals(s.getIsPrivate());
         }
     }
 }
