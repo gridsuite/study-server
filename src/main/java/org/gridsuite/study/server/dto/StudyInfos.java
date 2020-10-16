@@ -29,5 +29,7 @@ public class StudyInfos {
 
     String caseFormat;
 
+    Boolean isPrivate;
+
     LoadFlowResult loadFlowResult;
 }

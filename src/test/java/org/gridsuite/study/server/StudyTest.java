@@ -295,7 +295,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
 
         //insert the same study => 409 conflict
         webTestClient.post()
@@ -362,7 +362,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
                 .isEqualTo(
-                    "{\"studyName\":\"s2\",\"userId\":\"userId\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}"
+                    "{\"studyName\":\"s2\",\"userId\":\"userId\",\"description\":\"desc\",\"caseFormat\":\"XIIDM\",\"isPrivate\":true,\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}"
             );
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
@@ -524,7 +524,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -534,7 +534,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
+                .isEqualTo("[{\"studyName\":\"studyName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}]");
 
         //rename the study
         String newStudyName = "newName";
@@ -548,7 +548,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}");
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":false,\"loadFlowResult\":{\"status\":\"NOT_DONE\"}}");
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
@@ -628,7 +628,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)
-                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":true,\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
 
         // make private study private should work
         webTestClient.post()
@@ -637,7 +637,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)
-                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":true,\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
 
         // make private study public
         webTestClient.post()
@@ -646,7 +646,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)
-                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
+                .isEqualTo("{\"studyName\":\"newName\",\"userId\":\"userId\",\"description\":\"description\",\"caseFormat\":\"UCTE\",\"isPrivate\":false,\"loadFlowResult\":{\"status\":\"CONVERGED\"}}");
 
         // try to change access right for a study of another user -> forbidden
         webTestClient.post()

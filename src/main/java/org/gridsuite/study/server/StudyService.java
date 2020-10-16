@@ -181,6 +181,7 @@ public class StudyService {
                               entity.getUserId(),
                               entity.getDescription(),
                               entity.getCaseFormat(),
+                              entity.isPrivate(),
                               new LoadFlowResult(entity.getLoadFlowResult().getStatus()));
     }
 
@@ -562,13 +563,13 @@ public class StudyService {
             Mono<StudyEntity> insert;
             //if the study is public and we want to make it private
             if (!studyEntity.isPrivate() && toPrivate) {
-                delete = studyRepository.deleteStudy(studyName, userId);
+                delete = studyRepository.deleteStudy(userId, studyName);
                 insert = studyRepository.insertStudy(studyEntity.getStudyName(), userId, true, studyEntity.getNetworkUuid(),
                         studyEntity.getNetworkId(), studyEntity.getDescription(), studyEntity.getCaseFormat(), studyEntity.getCaseUuid(),
                         studyEntity.isCasePrivate(), new LoadFlowResult(studyEntity.getLoadFlowResult().getStatus()));
               //if the study is private and we want to make it public
             } else if (studyEntity.isPrivate() && !toPrivate) {
-                delete = studyRepository.deleteStudy(studyName, userId);
+                delete = studyRepository.deleteStudy(userId, studyName);
                 insert = studyRepository.insertStudy(studyEntity.getStudyName(), userId, false, studyEntity.getNetworkUuid(),
                         studyEntity.getNetworkId(), studyEntity.getDescription(), studyEntity.getCaseFormat(), studyEntity.getCaseUuid(),
                         studyEntity.isCasePrivate(), new LoadFlowResult(studyEntity.getLoadFlowResult().getStatus()));
