@@ -46,13 +46,3 @@ backing-services:
 network-store-server:
   preloading-strategy: COLLECTION
   base-uri: http://localhost:8080/
-
-logging:
-  level:
-    org:
-      springframework:
-        data:
-          cassandra:
-            core:
-              cql:
-                CqlTemplate: DEBUG
