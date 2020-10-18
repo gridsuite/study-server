@@ -32,4 +32,6 @@ public interface StudyEntity extends BasicStudyEntity {
     LoadFlowResultEntity getLoadFlowResult();
 
     UUID getSecurityAnalysisResultUuid();
+
+    LoadFlowParametersEntity getLoadFlowParameters();
 }

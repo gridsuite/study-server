@@ -13,19 +13,12 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VoltageLevel;
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.Resource;
 import com.powsybl.network.store.model.ResourceType;
 import com.powsybl.network.store.model.TopLevelDocument;
 import com.powsybl.network.store.model.VoltageLevelAttributes;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -48,9 +41,6 @@ import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
-import org.springframework.http.codec.CodecConfigurer;
-import org.springframework.http.codec.json.Jackson2JsonDecoder;
-import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
@@ -59,10 +49,18 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.util.MimeType;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
@@ -104,6 +102,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String CONTIGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
+    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.3\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}";
+    public static final String LOAD_PARAMETERS2_JSON = "{\"version\":\"1.3\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true}";
 
     @Autowired
     private OutputDestination output;
@@ -114,6 +114,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     @Autowired
     private StudyController controller;
 
+    @Autowired
     private WebTestClient webTestClient;
 
     @Autowired
@@ -143,16 +144,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         vls.forEach(vl -> data.add(new Resource<>(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build(), null, null)));
 
         topLevelDocument = new TopLevelDocument<>(data, null);
-
-        webTestClient = WebTestClient.bindToController(controller)
-                .controllerAdvice(new RestResponseEntityExceptionHandler())
-                .httpMessageCodecs(configurer -> {
-                    CodecConfigurer.DefaultCodecs defaults = configurer.defaultCodecs();
-                    defaults.jackson2JsonDecoder(new Jackson2JsonDecoder(objectMapper, new MimeType[0]));
-                    defaults.jackson2JsonEncoder(new Jackson2JsonEncoder(objectMapper, new MimeType[0]));
-                })
-                .configureClient()
-                .build();
     }
 
     @Test
@@ -706,6 +697,50 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectBody(Integer.class)
                 .isEqualTo(1);
+
+        // get default LoadFlowParameters
+        webTestClient.get()
+                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo(LOAD_PARAMETERS_JSON);
+
+        // setting loadFlow Parameters
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
+                .header("userId", "userId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(new LoadFlowParameters(
+                        LoadFlowParameters.VoltageInitMode.DC_VALUES,
+                        true,
+                        false,
+                        true,
+                        false,
+                        true,
+                        false,
+                        true))
+                )
+                .exchange()
+                .expectStatus().isOk();
+
+        // getting setted values
+        webTestClient.get()
+                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo(LOAD_PARAMETERS2_JSON);
+
+        // run loadflow with new parameters
+        webTestClient.put()
+                .uri("/v1/userId/studies/{studyName}/loadflow/run", newStudyName)
+                .exchange()
+                .expectStatus().isOk();
+        // assert that the broker message has been sent
+        messageLf = output.receive(1000);
+        assertEquals("", new String(messageLf.getPayload()));
+        headersLF = messageLf.getHeaders();
+        assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
 
         // Shut down the server. Instances cannot be reused.
         server.shutdown();

@@ -63,6 +63,9 @@ public class PrivateStudyEntity implements Serializable, StudyEntity {
     @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")
     private LoadFlowResultEntity loadFlowResult;
 
+    @Column("loadFlowParameters")
+    private LoadFlowParametersEntity loadFlowParameters;
+
     @Column("securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
 }
