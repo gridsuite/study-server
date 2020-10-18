@@ -560,6 +560,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         headersSwitch = messageSwitch.getHeaders();
         assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+        messageSwitch = output.receive(1000);
+        assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         //update switch
         webTestClient.put()
