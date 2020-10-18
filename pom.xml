@@ -46,10 +46,9 @@
     <properties>
         <java.version>11</java.version>
 
-        <gridsuite-dependencies.version>1</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>2</gridsuite-dependencies.version>
 
         <mock.web.server.version>4.6.0</mock.web.server.version>
-        <openapi.version>1.4.8</openapi.version>
     </properties>
 
     <build>
@@ -146,7 +145,6 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-webflux-ui</artifactId>
-            <version>${openapi.version}</version>
         </dependency>
 
         <dependency>
