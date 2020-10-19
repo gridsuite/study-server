@@ -27,11 +27,14 @@ public interface PublicStudyRepository extends ReactiveCassandraRepository<Publi
     @Query("DELETE FROM publicStudy WHERE userId = :userId and studyname = :studyName")
     Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
-    @Query("UPDATE publicStudy SET loadFlowResult.status = :status WHERE userId = :userId and studyname = :studyName IF isPrivate != null")
-    Mono<Object> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
+    @Query("UPDATE publicStudy SET loadFlowParameters = :lfParameter  WHERE userId = :userId and studyname = :studyName IF EXISTS")
+    Mono<Boolean> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
 
-    @Query("UPDATE publicStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF isPrivate != null")
-    Mono<Object> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);
+    @Query("UPDATE publicStudy SET loadFlowResult.status = :status WHERE userId = :userId and studyname = :studyName IF EXISTS")
+    Mono<Boolean> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
+
+    @Query("UPDATE publicStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF EXISTS")
+    Mono<Boolean> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);
 
     @Query("UPDATE publicStudy SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyname = :studyName IF EXISTS")
     Mono<Boolean> updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
