@@ -24,7 +24,7 @@ public class StudyInfos extends BasicStudyInfos {
 
     String caseFormat;
 
-    Boolean isPrivate;
+    boolean studyPrivate;
 
     LoadFlowResult loadFlowResult;
 }

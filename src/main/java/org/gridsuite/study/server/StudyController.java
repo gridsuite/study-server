@@ -260,15 +260,24 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
     }
 
-    @PostMapping(value = "/{userId}/studies/{studyName}/accessRights")
+    @PostMapping(value = "/{userId}/studies/{studyName}/public")
     @ApiOperation(value = "update a switch position", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
-    public ResponseEntity<Mono<StudyInfos>> changeStudyAccessRights(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<StudyInfos>> makeStudyPublic(@PathVariable("studyName") String studyName,
                                                         @PathVariable("userId") String userId,
-                                                        @RequestHeader("userId") String headerUserId,
-                                                        @RequestParam("toPrivate") boolean toPrivate) {
+                                                        @RequestHeader("userId") String headerUserId) {
 
-        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, toPrivate));
+        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, false));
+    }
+
+    @PostMapping(value = "/{userId}/studies/{studyName}/private")
+    @ApiOperation(value = "update a switch position", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
+    public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyName") String studyName,
+                                                                    @PathVariable("userId") String userId,
+                                                                    @RequestHeader("userId") String headerUserId) {
+
+        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, true));
     }
 
     @GetMapping(value = "/export-network-formats")
