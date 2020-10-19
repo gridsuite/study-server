@@ -34,6 +34,8 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(LOADFLOW_NOT_RUNNABLE);
             case LOADFLOW_RUNNING:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(LOADFLOW_RUNNING);
+            case SECURITY_ANALYSIS_RUNNING:
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(SECURITY_ANALYSIS_RUNNING);
             case NOT_ALLOWED:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             default:

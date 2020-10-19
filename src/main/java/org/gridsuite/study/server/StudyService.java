@@ -624,11 +624,19 @@ public class StudyService {
             .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
     }
 
-    public Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
+    private Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.map(StudyEntity::getLoadFlowResult)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
+    }
+
+    private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
+        return Mono.empty(); // FIXME the security analysis status is not yet implemented
+    }
+
+    public Mono<Void> assertComputationNotRunning(String studyName, String userId) {
+        return assertLoadFlowNotRunning(studyName, userId).and(assertSecurityAnalysisNotRunning(studyName, userId));
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {

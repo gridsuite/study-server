@@ -234,7 +234,7 @@ public class StudyController {
                                                         @PathVariable("switchId") String switchId,
                                                         @RequestParam("open") boolean open) {
 
-        return ResponseEntity.ok().body(studyService.assertLoadFlowNotRunning(studyName, userId)
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyName, userId)
                 .then(studyService.changeSwitchState(studyName, userId, switchId, open).then()));
     }
 

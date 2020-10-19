@@ -19,6 +19,7 @@ class StudyException  extends RuntimeException {
         CASE_NOT_FOUND,
         LOADFLOW_NOT_RUNNABLE,
         LOADFLOW_RUNNING,
+        SECURITY_ANALYSIS_RUNNING,
         SECURITY_ANALYSIS_NOT_FOUND,
         NOT_ALLOWED
     }
