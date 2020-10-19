@@ -33,6 +33,8 @@ public interface StudyEntity {
 
     boolean isPrivate();
 
+    LoadFlowStatusEntity getLoadFlowStatus();
+
     LoadFlowResultEntity getLoadFlowResult();
 
     UUID getSecurityAnalysisResultUuid();

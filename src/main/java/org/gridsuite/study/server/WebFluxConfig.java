@@ -32,6 +32,7 @@ public class WebFluxConfig implements WebFluxConfigurer {
     public static ObjectMapper createObjectMapper() {
         var objectMapper = Jackson2ObjectMapperBuilder.json().build();
         objectMapper.registerModule(new ContingencyJsonModule());
+        objectMapper.registerModule(new LoadFlowResultJsonModule());
         return objectMapper;
     }
 

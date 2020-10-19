@@ -1,4 +1,19 @@
+CREATE TYPE IF NOT EXISTS study.componentResult (
+    componentNum int,
+    status text,
+    iterationCount int,
+    slackBusId text,
+    slackBusActivePowerMismatch double,
+);
+
 CREATE TYPE IF NOT EXISTS study.loadFlowResult (
+    isOk boolean,
+    metrics frozen<map<text,text>>,
+    logs text,
+    componentResults frozen<list<study.componentResult>>,
+);
+
+CREATE TYPE IF NOT EXISTS study.loadFlowStatus (
     status text
 );
 
@@ -12,7 +27,8 @@ CREATE TABLE IF NOT EXISTS study.study (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowResult study.loadFlowResult,
+    loadFlowStatus study.loadFlowStatus,
+    loadFlowResult frozen<study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
@@ -27,7 +43,8 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowResult study.loadFlowResult,
+    loadFlowStatus study.loadFlowStatus,
+    loadFlowResult frozen <study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
@@ -42,7 +59,8 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowResult study.loadFlowResult,
+    loadFlowStatus study.loadFlowStatus,
+    loadFlowResult frozen <study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );

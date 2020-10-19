@@ -29,5 +29,5 @@ public class StudyInfos {
 
     String caseFormat;
 
-    LoadFlowResult loadFlowResult;
+    String loadFlowStatus;
 }
