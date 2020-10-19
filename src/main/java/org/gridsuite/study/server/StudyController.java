@@ -261,8 +261,8 @@ public class StudyController {
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/public")
-    @ApiOperation(value = "update a switch position", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
+    @ApiOperation(value = "set study to public", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is public")})
     public ResponseEntity<Mono<StudyInfos>> makeStudyPublic(@PathVariable("studyName") String studyName,
                                                         @PathVariable("userId") String userId,
                                                         @RequestHeader("userId") String headerUserId) {
@@ -271,8 +271,8 @@ public class StudyController {
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/private")
-    @ApiOperation(value = "update a switch position", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is updated")})
+    @ApiOperation(value = "set study to private", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The study is private")})
     public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyName") String studyName,
                                                                     @PathVariable("userId") String userId,
                                                                     @RequestHeader("userId") String headerUserId) {
