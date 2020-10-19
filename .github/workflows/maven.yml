@@ -16,15 +16,6 @@ jobs:
         with:
           java-version: 11
 
-      - name: Checkout single line diagram sources
-        uses: actions/checkout@v1
-        with:
-          repository: powsybl/powsybl-single-line-diagram
-          ref: refs/heads/master
-
-      - name: Build and install single line diagram with Maven
-        run: mvn --batch-mode -DskipTests=true --file ../powsybl-single-line-diagram/pom.xml install
-
       - name: Checkout network store sources
         uses: actions/checkout@v1
         with:

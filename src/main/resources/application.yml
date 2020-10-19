@@ -46,4 +46,3 @@ backing-services:
 network-store-server:
   preloading-strategy: COLLECTION
   base-uri: http://localhost:8080/
-
