@@ -771,7 +771,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .header("userId", "notAuth")
                 .exchange()
                 .expectStatus().isForbidden();
-      
+
         // get default LoadFlowParameters
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
