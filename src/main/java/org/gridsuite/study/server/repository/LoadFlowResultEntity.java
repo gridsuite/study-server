@@ -11,18 +11,30 @@ import com.datastax.driver.core.DataType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.springframework.data.cassandra.core.mapping.CassandraType;
-import org.springframework.data.cassandra.core.mapping.UserDefinedType;
+import org.springframework.data.cassandra.core.mapping.*;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
-@UserDefinedType("loadFlowResult")
+/**
+ * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
+ * @author Etienne Homer <etienne.homer at rte-france.com>
+ */
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
+@UserDefinedType("loadFlowResult")
 public class LoadFlowResultEntity implements Serializable {
+    @CassandraType(type = DataType.Name.BOOLEAN)
+    private boolean isOk;
+
+    @CassandraType(type = DataType.Name.MAP, typeArguments = { DataType.Name.TEXT, DataType.Name.TEXT })
+    private Map<String, String> metrics;
 
     @CassandraType(type = DataType.Name.TEXT)
-    private LoadFlowStatus status = LoadFlowStatus.NOT_DONE;
+    private String logs;
+
+    @CassandraType(type = DataType.Name.LIST, typeArguments = { DataType.Name.UDT }, userTypeName = "componentResult")
+    private List<ComponentResultEntity> componentResults;
 }

@@ -63,10 +63,11 @@ public class StudyController {
                                                                   @RequestParam("description") String description,
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
-        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, new LoadFlowResult())
+        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
                 .subscribeOn(Schedulers.boundedElastic())
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
+//                .then(studyService.createStudy(studyName, caseUuid, description, userId, isPrivate).then()));
                 .doOnSuccess(s -> createStudy.subscribe()));
     }
 

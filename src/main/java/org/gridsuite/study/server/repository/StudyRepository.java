@@ -6,16 +6,19 @@
  */
 package org.gridsuite.study.server.repository;
 
+import com.powsybl.loadflow.LoadFlowResult;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.UUID;
-import org.gridsuite.study.server.dto.LoadFlowResult;
+
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
+
+import java.util.List;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -49,23 +52,24 @@ public class StudyRepository {
 
     public Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
-                                         LoadFlowResult loadFlowResult, LoadFlowParametersEntity loadFlowParameters) {
+                                         LoadFlowStatusEntity loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters) {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
         Objects.requireNonNull(networkId);
         Objects.requireNonNull(caseFormat);
         Objects.requireNonNull(caseUuid);
-        Objects.requireNonNull(loadFlowResult);
+        Objects.requireNonNull(loadFlowStatus);
+        //Objects.requireNonNull(loadFlowResult);
         Objects.requireNonNull(loadFlowParameters);
         PublicAndPrivateStudyEntity publicAndPrivateStudyEntity = new PublicAndPrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                                                  casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
+                                                                                                  casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
                                                                                                   loadFlowParameters, null);
         PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                    casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
+                                                                    casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
                                                                     loadFlowParameters, null);
         PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                       casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
+                                                                       casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
                                                                        loadFlowParameters, null);
 
         if (!isPrivate) {
@@ -88,14 +92,15 @@ public class StudyRepository {
     }
 
     public Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatus lfStatus) {
-        return Mono.zip(publicAndPrivateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
-                        privateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
-                        publicStudyRepository.updateLoadFlowState(studyName, userId, lfStatus))
+        return Mono.zip(publicAndPrivateStudyRepository.updateLoadFlowState(studyName, userId, new LoadFlowStatusEntity(lfStatus)),
+                        privateStudyRepository.updateLoadFlowState(studyName, userId, new LoadFlowStatusEntity(lfStatus)),
+                        publicStudyRepository.updateLoadFlowState(studyName, userId, new LoadFlowStatusEntity(lfStatus)))
                 .then();
     }
 
     public Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResult loadFlowResult) {
-        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(loadFlowResult.getStatus());
+        List<ComponentResultEntity> componentResultEntityList = ComponentResultEntity.toEntityList(loadFlowResult.getComponentResults());
+        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(loadFlowResult.isOk(), loadFlowResult.getMetrics(), loadFlowResult.getLogs(), componentResultEntityList);
         return Mono.zip(privateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity),
                         publicStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity),
                         publicAndPrivateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity))

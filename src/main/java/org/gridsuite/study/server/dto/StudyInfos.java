@@ -24,5 +24,5 @@ public class StudyInfos extends BasicStudyInfos {
 
     String caseFormat;
 
-    LoadFlowResult loadFlowResult;
+    String loadFlowStatus;
 }

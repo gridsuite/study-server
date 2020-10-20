@@ -4,19 +4,25 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.dto;
 
+package org.gridsuite.study.server.repository;
+
+import com.datastax.driver.core.DataType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.springframework.data.cassandra.core.mapping.CassandraType;
+import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 
-/**
- * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
- */
+import java.io.Serializable;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class LoadFlowResult {
+@UserDefinedType("loadFlowStatus")
+public class LoadFlowStatusEntity implements Serializable {
 
+    @CassandraType(type = DataType.Name.TEXT)
     private LoadFlowStatus status = LoadFlowStatus.NOT_DONE;
 }

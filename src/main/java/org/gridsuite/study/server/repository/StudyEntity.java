@@ -29,6 +29,8 @@ public interface StudyEntity extends BasicStudyEntity {
 
     boolean isPrivate();
 
+    LoadFlowStatusEntity getLoadFlowStatus();
+
     LoadFlowResultEntity getLoadFlowResult();
 
     UUID getSecurityAnalysisResultUuid();
