@@ -112,7 +112,8 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyName") String studyName,
                                                   @PathVariable("userId") String userId,
                                                   @RequestHeader("userId") String headerUserId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteStudy(studyName, userId, headerUserId).then());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId)
+                .doOnSuccess(s -> studyService.deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg")
@@ -257,8 +258,8 @@ public class StudyController {
                                                          @PathVariable("userId") String userId,
                                                          @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
-        Mono<StudyInfos> studyMono = studyService.renameStudy(studyName, userId, headerUserId, renameStudyAttributes.getNewStudyName());
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
+        Mono<StudyInfos> studyMono = studyService.renameStudy(studyName, userId, renameStudyAttributes.getNewStudyName());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId).then(studyMono));
     }
 
     @GetMapping(value = "/export-network-formats")
