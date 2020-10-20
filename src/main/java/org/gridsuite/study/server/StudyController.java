@@ -8,6 +8,9 @@ package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import io.swagger.annotations.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
@@ -17,10 +20,6 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.logging.Level;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -235,7 +234,8 @@ public class StudyController {
                                                         @PathVariable("switchId") String switchId,
                                                         @RequestParam("open") boolean open) {
 
-        return ResponseEntity.ok().body(studyService.changeSwitchState(studyName, userId, switchId, open).then());
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyName, userId)
+                .then(studyService.changeSwitchState(studyName, userId, switchId, open).then()));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
@@ -245,7 +245,8 @@ public class StudyController {
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
 
-        return ResponseEntity.ok().body(Mono.when(studyService.setLoadFlowRunning(studyName, userId)).then(studyService.runLoadFlow(studyName, userId).then()));
+        return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyName, userId)
+                .then(studyService.runLoadFlow(studyName, userId).then()));
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")
