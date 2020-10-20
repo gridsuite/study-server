@@ -262,6 +262,26 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId).then(studyMono));
     }
 
+    @PostMapping(value = "/{userId}/studies/{studyName}/public")
+    @ApiOperation(value = "set study to public", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is public")})
+    public ResponseEntity<Mono<StudyInfos>> makeStudyPublic(@PathVariable("studyName") String studyName,
+                                                        @PathVariable("userId") String userId,
+                                                        @RequestHeader("userId") String headerUserId) {
+
+        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, false));
+    }
+
+    @PostMapping(value = "/{userId}/studies/{studyName}/private")
+    @ApiOperation(value = "set study to private", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The study is private")})
+    public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyName") String studyName,
+                                                                    @PathVariable("userId") String userId,
+                                                                    @RequestHeader("userId") String headerUserId) {
+
+        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, true));
+    }
+
     @GetMapping(value = "/export-network-formats")
     @ApiOperation(value = "get the available export format", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The available export format")})

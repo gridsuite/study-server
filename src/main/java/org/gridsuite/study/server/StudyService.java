@@ -186,6 +186,7 @@ public class StudyService {
                 .userId(entity.getUserId())
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
                 .loadFlowResult(new LoadFlowResult(entity.getLoadFlowResult().getStatus()))
+                .studyPrivate(entity.isPrivate())
                 .build();
     }
 
@@ -212,7 +213,7 @@ public class StudyService {
                           .flatMap(t -> {
                               LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                               return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                 description, t.getT2(), caseUuid, false, loadFlowResult, toEntity(loadFlowParameters));
+                                                 description, t.getT2(), caseUuid, false, loadFlowResult, toEntity(loadFlowParameters), null);
                           })
                 )
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -226,7 +227,7 @@ public class StudyService {
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                description, t.getT2(), uuid, true, new LoadFlowResult(), toEntity(loadFlowParameters));
+                                                description, t.getT2(), uuid, true, new LoadFlowResult(), toEntity(loadFlowParameters), null);
                          })
                 ))
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -280,9 +281,9 @@ public class StudyService {
 
     private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
-                                          LoadFlowResult loadFlowResult, LoadFlowParametersEntity loadFlowParameters) {
+                                          LoadFlowResult loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         return studyRepository.insertStudy(studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowResult,
-                                           loadFlowParameters)
+                                           loadFlowParameters, securityAnalysisUuid)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
@@ -542,7 +543,7 @@ public class StudyService {
             Mono<Void> removeStudy = removeStudy(studyName, userId);
             Mono<StudyEntity> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
                     study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), new LoadFlowResult(study.getLoadFlowResult().getStatus()),
-                    study.getLoadFlowParameters());
+                    study.getLoadFlowParameters(), study.getSecurityAnalysisResultUuid());
 
             return removeStudy.then(insertStudy);
         }).map(StudyService::toInfos);
@@ -585,6 +586,24 @@ public class StudyService {
             });
 
         });
+    }
+
+    public Mono<StudyInfos> changeStudyAccessRights(String studyName, String userId, String headerUserId, boolean toPrivate) {
+        //only the owner of a study can change the access rights
+        if (!headerUserId.equals(userId)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
+        return getStudy(studyName, userId).switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(studyEntity ->
+                (studyEntity.isPrivate() == toPrivate) ?
+                        Mono.just(studyEntity) :
+                        studyRepository.deleteStudy(userId, studyName)
+                                .then(insertStudy(studyEntity.getStudyName(), userId, toPrivate, studyEntity.getNetworkUuid(),
+                                        studyEntity.getNetworkId(), studyEntity.getDescription(), studyEntity.getCaseFormat(),
+                                        studyEntity.getCaseUuid(), studyEntity.isCasePrivate(),
+                                        new LoadFlowResult(studyEntity.getLoadFlowResult().getStatus()),
+                                        studyEntity.getLoadFlowParameters(), studyEntity.getSecurityAnalysisResultUuid()))
+        ).map(StudyService::toInfos);
     }
 
     Mono<UUID> getNetworkUuid(String studyName, String userId) {

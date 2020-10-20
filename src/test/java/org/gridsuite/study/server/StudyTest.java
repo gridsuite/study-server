@@ -338,7 +338,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
                 .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                                    .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult())
+                                    .description("description").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult())
                                     .build()).matchesSafely(studies.get(0)));
 
         //insert the same study => 409 conflict
@@ -416,8 +416,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder().studyName("s2").userId("userId").description("desc").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult()).build()));
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("s2")
+                        .userId("userId")
+                        .studyPrivate(true)
+                        .description("desc")
+                        .caseFormat("XIIDM")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult()).build()));
 
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
@@ -591,8 +598,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                        .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult())
+                .value(studies -> new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("studyName")
+                        .userId("userId").caseFormat("UCTE")
+                        .description("description")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult())
+                        .studyPrivate(false)
                         .build()).matchesSafely(studies.get(0)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
@@ -619,7 +631,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder().studyName("newName").userId("userId").description("description").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowResult(new LoadFlowResult()).build()));
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .studyPrivate(false)
+                        .loadFlowResult(new LoadFlowResult()).build()));
 
         // drop the broker message for study deletion
         output.receive(1000);
@@ -710,6 +729,79 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectBody(Integer.class)
                 .isEqualTo(1);
 
+        // make public study private
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .studyPrivate(true)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
+
+        // make private study private should work
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .studyPrivate(true)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
+
+        // make private study public
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/public", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .studyPrivate(false)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
+
+        // drop the broker message for study deletion (due to right access change)
+        output.receive(1000);
+        output.receive(1000);
+
+        // try to change access rights of a non-existing study
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/public", "nonExistingStudy")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // try to change access rights of a non-existing study
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", "nonExistingStudy")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // try to change access right for a study of another user -> forbidden
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .header("userId", "notAuth")
+                .exchange()
+                .expectStatus().isForbidden();
+
         // get default LoadFlowParameters
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
@@ -789,7 +881,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             return super.matchesSafely(s)
                     && source.getCaseFormat().equals(s.getCaseFormat())
                     && source.getDescription().equals(s.getDescription())
-                    && source.getLoadFlowResult().getStatus() == s.getLoadFlowResult().getStatus();
+                    && source.getLoadFlowResult().getStatus() == s.getLoadFlowResult().getStatus()
+                    && source.isStudyPrivate() == s.isStudyPrivate();
         }
     }
 }
