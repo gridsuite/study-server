@@ -221,10 +221,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/GENERATOR/generatorId":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/groovy/":
                         return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8")
-                            .setBody(" { \"targetP\": true }");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
                 return new MockResponse().setResponseCode(404);
             }
@@ -490,9 +489,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //update equipment
         Map<String, String> mapEquimentChange = new HashMap<>();
         mapEquimentChange.put("targetP", "40");
-        webTestClient.post()
-            .uri("/v1/{userId}/studies/{studyName}/network-modification/GENERATOR/{generatorId}", "userId", STUDY_NAME, "generatorId")
-            .body(BodyInserters.fromValue(mapEquimentChange))
+        webTestClient.put()
+            .uri("/v1/{userId}/studies/{studyName}/network-modification/groovy", "userId", STUDY_NAME)
+            .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
             .exchange()
             .expectStatus().isOk();
 
@@ -502,14 +501,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
         assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
         // assert that the broker message has been sent
-
-        Message<byte[]> messageEquipment = output.receive(1000);
-        assertEquals("", new String(messageEquipment.getPayload()));
-        MessageHeaders equipmentHeaders = messageEquipment.getHeaders();
-        assertEquals(STUDY_NAME, equipmentHeaders.get(HEADER_STUDY_NAME));
-        assertEquals("equipment", equipmentHeaders.get(HEADER_UPDATE_TYPE));
-        assertEquals("generatorId", equipmentHeaders.get(HEADER_UPDATE_EQUIPMENT_ID));
-        assertEquals("GENERATOR", equipmentHeaders.get(HEADER_UPDATE_TYPE_EQUIPMENT));
 
         webTestClient.get()
                 .uri("/v1/studies")

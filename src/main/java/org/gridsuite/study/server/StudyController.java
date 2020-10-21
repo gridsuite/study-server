@@ -19,7 +19,6 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -225,16 +224,14 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.changeSwitchState(studyName, userId, switchId, open).then());
     }
 
-    @PostMapping(value = "/{userId}/studies/{studyName}/network-modification/{equipmentType}/{equipmentId}")
-    @ApiOperation(value = "update a switch position", produces = "application/json")
+    @PutMapping(value = "/{userId}/studies/{studyName}/network-modification/groovy")
+    @ApiOperation(value = "update a switch position", produces = "application/text")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The equipment is updated")})
-    public ResponseEntity<Mono<Map>> changeEquipmentState(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<Void>> changeEquipmentState(@PathVariable("studyName") String studyName,
                                                                            @PathVariable("userId") String userId,
-                                                                           @PathVariable("equipmentType") String equimentType,
-                                                                           @PathVariable("equipmentId") String equipmentId,
-                                                                           @RequestBody() Map<String, String> changeRequest) {
+                                                                           @RequestBody() String groovyScript) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.changeEquipmentState(studyName, userId, equimentType, equipmentId, changeRequest));
+        return ResponseEntity.ok().body(studyService.changeEquipmentState(studyName, userId, groovyScript).then());
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
