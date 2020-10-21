@@ -7,6 +7,9 @@
 package org.gridsuite.study.server.repository;
 
 import com.datastax.driver.core.DataType;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,9 +18,6 @@ import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
-
-import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -34,6 +34,9 @@ public class PublicStudyEntity implements Serializable, StudyEntity {
 
     @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
     private String studyName;
+
+    @Column("creationDate")
+    private LocalDateTime date;
 
     @Column("networkUuid")
     private UUID networkUuid;
@@ -59,4 +62,10 @@ public class PublicStudyEntity implements Serializable, StudyEntity {
     @Column("loadFlowResult")
     @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")
     private LoadFlowResultEntity loadFlowResult;
+
+    @Column("loadFlowParameters")
+    private LoadFlowParametersEntity loadFlowParameters;
+
+    @Column("securityAnalysisResultUuid")
+    private UUID securityAnalysisResultUuid;
 }

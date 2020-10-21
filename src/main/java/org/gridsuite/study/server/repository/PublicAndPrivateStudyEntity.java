@@ -7,24 +7,28 @@
 package org.gridsuite.study.server.repository;
 
 import com.datastax.driver.core.DataType;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
 
-import java.io.Serializable;
-import java.util.UUID;
-
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
+@SuperBuilder
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 @Table("study")
 public class PublicAndPrivateStudyEntity implements Serializable, StudyEntity {
 
@@ -33,6 +37,9 @@ public class PublicAndPrivateStudyEntity implements Serializable, StudyEntity {
 
     @PrimaryKeyColumn(name = "studyName", type = PrimaryKeyType.CLUSTERED)
     private String studyName;
+
+    @Column("creationDate")
+    private LocalDateTime date;
 
     @Column("networkUuid")
     private UUID networkUuid;
@@ -58,4 +65,10 @@ public class PublicAndPrivateStudyEntity implements Serializable, StudyEntity {
     @Column("loadFlowResult")
     @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")
     private LoadFlowResultEntity loadFlowResult;
+
+    @Column("loadFlowParameters")
+    private LoadFlowParametersEntity loadFlowParameters;
+
+    @Column("securityAnalysisResultUuid")
+    private UUID securityAnalysisResultUuid;
 }
