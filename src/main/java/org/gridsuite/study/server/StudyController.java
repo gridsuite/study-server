@@ -360,4 +360,38 @@ public class StudyController {
             @PathVariable("userId") String userId) {
         return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyName, userId));
     }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network/substations/{substationId}/svg")
+    @ApiOperation(value = "get the substation diagram for the given network and substation")
+    @ApiResponse(code = 200, message = "The svg")
+    public ResponseEntity<Mono<byte[]>> getSubstationDiagram(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @PathVariable("substationId") String substationId,
+            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
+            @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
+            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
+            @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
+            @ApiParam(value = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuid(studyName, userId).flatMap(uuid ->
+                studyService.getSubstationSvg(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata")
+    @ApiOperation(value = "get the substation diagram for the given network and substation", produces = "application/json")
+    @ApiResponse(code = 200, message = "The svg and metadata")
+    public ResponseEntity<Mono<String>> getSubstationDiagramAndMetadata(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @PathVariable("substationId") String substationId,
+            @ApiParam(value = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
+            @ApiParam(value = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
+            @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
+            @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
+            @ApiParam(value = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId).flatMap(uuid ->
+                studyService.getSubstationSvgAndMetadata(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout)));
+    }
 }
