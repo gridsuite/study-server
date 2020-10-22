@@ -50,12 +50,8 @@ public class StudyCreationRequestRepository {
         }
     }
 
-    public Mono<Void> deleteStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
-        if (isPrivate) {
-            return privateRepository.deleteByStudyNameAndUserId(studyName, userId);
-        } else {
-            return publicRepository.deleteByStudyNameAndUserId(studyName, userId);
-        }
+    public Mono<Void> deleteStudyCreationRequest(String studyName, String userId) {
+        return Mono.when(privateRepository.deleteByStudyNameAndUserId(studyName, userId), publicRepository.deleteByStudyNameAndUserId(studyName, userId));
     }
 
     public Mono<BasicStudyEntity> findStudy(String userId, String studyName) {

@@ -49,7 +49,7 @@ public class StudyRepository {
 
     public Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
-                                         LoadFlowResult loadFlowResult, LoadFlowParametersEntity loadFlowParameters) {
+                                         LoadFlowResult loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -63,10 +63,10 @@ public class StudyRepository {
                                                                                                   loadFlowParameters, null);
         PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                     casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
-                                                                    loadFlowParameters, null);
+                                                                    loadFlowParameters, securityAnalysisUuid);
         PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                        casePrivate, isPrivate, new LoadFlowResultEntity(loadFlowResult.getStatus()),
-                                                                       loadFlowParameters, null);
+                                                                       loadFlowParameters, securityAnalysisUuid);
 
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudyEntity), publicAndPrivateStudyRepository.insert(publicAndPrivateStudyEntity))

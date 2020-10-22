@@ -8,6 +8,9 @@ package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import io.swagger.annotations.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
@@ -17,10 +20,6 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.logging.Level;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -113,7 +112,8 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyName") String studyName,
                                                   @PathVariable("userId") String userId,
                                                   @RequestHeader("userId") String headerUserId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteStudy(studyName, userId, headerUserId).then());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId)
+                .doOnSuccess(s -> studyService.deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg")
@@ -235,7 +235,8 @@ public class StudyController {
                                                         @PathVariable("switchId") String switchId,
                                                         @RequestParam("open") boolean open) {
 
-        return ResponseEntity.ok().body(studyService.changeSwitchState(studyName, userId, switchId, open).then());
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyName, userId)
+                .then(studyService.changeSwitchState(studyName, userId, switchId, open).then()));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
@@ -245,7 +246,8 @@ public class StudyController {
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
 
-        return ResponseEntity.ok().body(Mono.when(studyService.setLoadFlowRunning(studyName, userId)).then(studyService.runLoadFlow(studyName, userId).then()));
+        return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyName, userId)
+                .then(studyService.runLoadFlow(studyName, userId).then()));
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")
@@ -256,8 +258,28 @@ public class StudyController {
                                                          @PathVariable("userId") String userId,
                                                          @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
-        Mono<StudyInfos> studyMono = studyService.renameStudy(studyName, userId, headerUserId, renameStudyAttributes.getNewStudyName());
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
+        Mono<StudyInfos> studyMono = studyService.renameStudy(studyName, userId, renameStudyAttributes.getNewStudyName());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId).then(studyMono));
+    }
+
+    @PostMapping(value = "/{userId}/studies/{studyName}/public")
+    @ApiOperation(value = "set study to public", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is public")})
+    public ResponseEntity<Mono<StudyInfos>> makeStudyPublic(@PathVariable("studyName") String studyName,
+                                                        @PathVariable("userId") String userId,
+                                                        @RequestHeader("userId") String headerUserId) {
+
+        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, false));
+    }
+
+    @PostMapping(value = "/{userId}/studies/{studyName}/private")
+    @ApiOperation(value = "set study to private", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The study is private")})
+    public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyName") String studyName,
+                                                                    @PathVariable("userId") String userId,
+                                                                    @RequestHeader("userId") String headerUserId) {
+
+        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, true));
     }
 
     @GetMapping(value = "/export-network-formats")
