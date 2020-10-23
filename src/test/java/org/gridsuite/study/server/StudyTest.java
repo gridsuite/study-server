@@ -240,6 +240,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-byte")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -489,6 +497,35 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //get the voltage level diagram svg and metadata from a study that doesn't exist
         webTestClient.get()
                 .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "userId", "notExistingStudy", "voltageLevelId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg?useName=false", "userId", STUDY_NAME, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_XML)
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("substation-byte");
+
+        // get the substation diagram svg from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg", "userId", "notExistingStudy", "substationId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg and metadata
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata?useName=false", "userId", STUDY_NAME, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("substation-svgandmetadata");
+
+        // get the substation diagram svg and metadata from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata", "userId", "notExistingStudy", "substationId")
                 .exchange()
                 .expectStatus().isNotFound();
 

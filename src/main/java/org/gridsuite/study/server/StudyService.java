@@ -786,6 +786,41 @@ public class StudyService {
         );
     }
 
+    Mono<byte[]> getSubstationSvg(UUID networkUuid, String substationId, boolean useName, boolean centerLabel, boolean diagonalLabel,
+                                  boolean topologicalColoring, String substationLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
+                .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
+                .queryParam("topologicalColoring", topologicalColoring)
+                .queryParam("substationLayout", substationLayout)
+                .buildAndExpand(networkUuid, substationId)
+                .toUriString();
+
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(byte[].class);
+    }
+
+    Mono<String> getSubstationSvgAndMetadata(UUID networkUuid, String substationId, boolean useName, boolean centerLabel,
+                                             boolean diagonalLabel, boolean topologicalColoring, String substationLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+                .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
+                .queryParam("topologicalColoring", topologicalColoring)
+                .queryParam("substationLayout", substationLayout)
+                .buildAndExpand(networkUuid, substationId)
+                .toUriString();
+
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
     void setCaseServerBaseUri(String caseServerBaseUri) {
         this.caseServerBaseUri = caseServerBaseUri;
     }
