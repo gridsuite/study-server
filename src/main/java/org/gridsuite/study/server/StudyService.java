@@ -511,7 +511,7 @@ public class StudyService {
                 .uri(networkModificationServerBaseUri + path)
                 .body(BodyInserters.fromValue(groovyScript))
                 .retrieve().bodyToMono(Void.class);
-        }).doOnSuccess(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
+        }).then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
             .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
