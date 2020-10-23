@@ -501,7 +501,7 @@ public class StudyService {
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
     }
 
-    public Mono<Void> changeEquipmentState(String studyName, String userId, String groovyScript) {
+    public Mono<Void> applyGroovyScript(String studyName, String userId, String groovyScript) {
         Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
         return networkUuid.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/groovy/")

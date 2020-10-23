@@ -242,11 +242,11 @@ public class StudyController {
     @PutMapping(value = "/{userId}/studies/{studyName}/network-modification/groovy")
     @ApiOperation(value = "update a switch position", produces = "application/text")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The equipment is updated")})
-    public ResponseEntity<Mono<Void>> changeEquipmentState(@PathVariable("studyName") String studyName,
-                                                                           @PathVariable("userId") String userId,
-                                                                           @RequestBody() String groovyScript) {
+    public ResponseEntity<Mono<Void>> applyGroovyScript(@PathVariable("studyName") String studyName,
+                                                        @PathVariable("userId") String userId,
+                                                        @RequestBody String groovyScript) {
 
-        return ResponseEntity.ok().body(studyService.changeEquipmentState(studyName, userId, groovyScript).then());
+        return ResponseEntity.ok().body(studyService.applyGroovyScript(studyName, userId, groovyScript).then());
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
