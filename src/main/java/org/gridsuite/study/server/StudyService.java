@@ -489,7 +489,6 @@ public class StudyService {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                     .buildAndExpand(uuid)
                     .toUriString();
-
             return webClient.put()
                 .uri(loadFlowServerBaseUri + path)
                 .retrieve()
