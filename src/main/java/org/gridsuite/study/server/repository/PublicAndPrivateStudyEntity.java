@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.Column;
@@ -63,7 +64,8 @@ public class PublicAndPrivateStudyEntity implements Serializable, StudyEntity {
     private boolean isPrivate;
 
     @Column("loadFlowStatus")
-    private String loadFlowStatus;
+    @CassandraType(type = DataType.Name.TEXT)
+    private LoadFlowStatus loadFlowStatus;
 
     @Column("loadFlowResult")
     @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")

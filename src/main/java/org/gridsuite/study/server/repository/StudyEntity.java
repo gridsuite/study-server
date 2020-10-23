@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+
 import java.util.UUID;
 
 /**
@@ -29,7 +31,7 @@ public interface StudyEntity extends BasicStudyEntity {
 
     boolean isPrivate();
 
-    String getLoadFlowStatus();
+    LoadFlowStatus getLoadFlowStatus();
 
     LoadFlowResultEntity getLoadFlowResult();
 
