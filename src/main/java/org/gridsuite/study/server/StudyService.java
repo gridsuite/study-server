@@ -684,7 +684,10 @@ public class StudyService {
                                             parameters.isTwtSplitShuntAdmittance(),
                                             parameters.isSimulShunt(),
                                             parameters.isReadSlackBus(),
-                                            parameters.isWriteSlackBus());
+                                            parameters.isWriteSlackBus(),
+                                            parameters.isDc(),
+                                            parameters.isDistributedSlack(),
+                                            parameters.getBalanceType());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
@@ -696,7 +699,10 @@ public class StudyService {
                                       entity.isTwtSplitShuntAdmittance(),
                                       entity.isSimulShunt(),
                                       entity.isReadSlackBus(),
-                                      entity.isWriteSlackBus());
+                                      entity.isWriteSlackBus(),
+                                      entity.isDc(),
+                                      entity.isDistributedSlack(),
+                                      entity.getBalanceType());
     }
 
     public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {
@@ -784,6 +790,41 @@ public class StudyService {
                     })
                     .reduce(0, Integer::sum)
         );
+    }
+
+    Mono<byte[]> getSubstationSvg(UUID networkUuid, String substationId, boolean useName, boolean centerLabel, boolean diagonalLabel,
+                                  boolean topologicalColoring, String substationLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
+                .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
+                .queryParam("topologicalColoring", topologicalColoring)
+                .queryParam("substationLayout", substationLayout)
+                .buildAndExpand(networkUuid, substationId)
+                .toUriString();
+
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(byte[].class);
+    }
+
+    Mono<String> getSubstationSvgAndMetadata(UUID networkUuid, String substationId, boolean useName, boolean centerLabel,
+                                             boolean diagonalLabel, boolean topologicalColoring, String substationLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+                .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
+                .queryParam("topologicalColoring", topologicalColoring)
+                .queryParam("substationLayout", substationLayout)
+                .buildAndExpand(networkUuid, substationId)
+                .toUriString();
+
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {

@@ -102,8 +102,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String CONTIGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
-    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.3\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false}";
-    public static final String LOAD_PARAMETERS2_JSON = "{\"version\":\"1.3\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true}";
+    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.4\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
+    public static final String LOAD_PARAMETERS2_JSON = "{\"version\":\"1.4\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\"}";
 
     @Autowired
     private OutputDestination output;
@@ -238,6 +238,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
                         return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-byte")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/export/formats":
@@ -489,6 +497,35 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //get the voltage level diagram svg and metadata from a study that doesn't exist
         webTestClient.get()
                 .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "userId", "notExistingStudy", "voltageLevelId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg?useName=false", "userId", STUDY_NAME, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_XML)
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("substation-byte");
+
+        // get the substation diagram svg from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg", "userId", "notExistingStudy", "substationId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg and metadata
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata?useName=false", "userId", STUDY_NAME, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("substation-svgandmetadata");
+
+        // get the substation diagram svg and metadata from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata", "userId", "notExistingStudy", "substationId")
                 .exchange()
                 .expectStatus().isNotFound();
 
@@ -840,7 +877,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         false,
                         true,
                         false,
-                        true))
+                        true,
+                        true,
+                        true,
+                        LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD))
                 )
                 .exchange()
                 .expectStatus().isOk();

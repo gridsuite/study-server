@@ -39,4 +39,11 @@ public class LoadFlowParametersEntity implements Serializable {
     private boolean readSlackBus;
 
     private boolean writeSlackBus;
+
+    private boolean dc;
+
+    private boolean distributedSlack;
+
+    @CassandraType(type = DataType.Name.TEXT)
+    private LoadFlowParameters.BalanceType balanceType;
 }

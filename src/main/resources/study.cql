@@ -7,7 +7,10 @@ CREATE TYPE IF NOT EXISTS study.loadFlowParameters (
     twtSplitShuntAdmittance boolean,
     simulShunt boolean,
     readSlackBus boolean,
-    writeSlackBus boolean
+    writeSlackBus boolean,
+    dc boolean,
+    distributedSlack boolean,
+    balanceType text
 );
 
 CREATE TYPE IF NOT EXISTS study.loadFlowResult (
