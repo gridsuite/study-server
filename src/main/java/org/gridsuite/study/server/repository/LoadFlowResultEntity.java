@@ -26,8 +26,8 @@ import java.util.Map;
 @Getter
 @UserDefinedType("loadFlowResult")
 public class LoadFlowResultEntity implements Serializable {
-    @CassandraType(type = DataType.Name.BOOLEAN)
-    private boolean isOk;
+
+    private boolean ok;
 
     @CassandraType(type = DataType.Name.MAP, typeArguments = { DataType.Name.TEXT, DataType.Name.TEXT })
     private Map<String, String> metrics;

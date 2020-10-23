@@ -22,7 +22,7 @@ CREATE TYPE IF NOT EXISTS study.componentResult (
 );
 
 CREATE TYPE IF NOT EXISTS study.loadFlowResult (
-    isOk boolean,
+    ok boolean,
     metrics frozen<map<text,text>>,
     logs text,
     componentResults frozen<list<study.componentResult>>,

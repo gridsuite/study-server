@@ -17,8 +17,6 @@ import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -30,7 +28,6 @@ import java.util.List;
 @UserDefinedType("componentResult")
 public class ComponentResultEntity implements Serializable {
     @Column("componentNum")
-    @CassandraType(type = DataType.Name.INT)
     private int componentNum;
 
     @Column("status")
@@ -38,23 +35,12 @@ public class ComponentResultEntity implements Serializable {
     private LoadFlowResult.ComponentResult.Status status;
 
     @Column("iterationCount")
-    @CassandraType(type = DataType.Name.INT)
     private int iterationCount;
 
     @Column("slackBusId")
-    @CassandraType(type = DataType.Name.TEXT)
     private String slackBusId;
 
     @Column("slackBusActivePowerMismatch")
-    @CassandraType(type = DataType.Name.DOUBLE)
     private double slackBusActivePowerMismatch;
-
-    public static List<ComponentResultEntity> toEntityList(List<LoadFlowResult.ComponentResult> componentResults) {
-        List<ComponentResultEntity> entities = new ArrayList<>();
-        componentResults.forEach(componentResult -> {
-            entities.add(new ComponentResultEntity(componentResult.getComponentNum(), componentResult.getStatus(), componentResult.getIterationCount(), componentResult.getSlackBusId(), componentResult.getSlackBusActivePowerMismatch()));
-        });
-        return entities;
-    }
 }
 

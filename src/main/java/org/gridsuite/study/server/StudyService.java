@@ -668,14 +668,14 @@ public class StudyService {
         return new LoadFlowResultEntity(result.isOk(),
                 result.getMetrics(),
                 result.getLogs(),
-                result.getComponentResults().stream().map(element -> toEntity(element)).collect(Collectors.toList()));
+                result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList()));
     }
 
     public static LoadFlowResult fromEntity(LoadFlowResultEntity entity) {
         return entity == null ? null : new LoadFlowResultImpl(entity.isOk(),
                 entity.getMetrics(),
                 entity.getLogs(),
-                entity.getComponentResults().stream().map(element -> fromEntity(element)).collect(Collectors.toList()));
+                entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
     }
 
     public static ComponentResultEntity toEntity(LoadFlowResult.ComponentResult componentResult) {
