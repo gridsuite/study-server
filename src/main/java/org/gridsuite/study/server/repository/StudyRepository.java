@@ -52,7 +52,7 @@ public class StudyRepository {
 
     public Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
-                                         LoadFlowStatusEntity loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters) {
+                                         LoadFlowStatusEntity loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -60,18 +60,16 @@ public class StudyRepository {
         Objects.requireNonNull(caseFormat);
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowStatus);
-        //Objects.requireNonNull(loadFlowResult);
         Objects.requireNonNull(loadFlowParameters);
         PublicAndPrivateStudyEntity publicAndPrivateStudyEntity = new PublicAndPrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                                                   casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
-                                                                                                  loadFlowParameters, null);
+                                                                                                  loadFlowParameters, securityAnalysisUuid);
         PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                     casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
-                                                                    loadFlowParameters, null);
+                                                                    loadFlowParameters, securityAnalysisUuid);
         PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
                                                                        casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
-                                                                       loadFlowParameters, null);
-
+                                                                       loadFlowParameters, securityAnalysisUuid);
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudyEntity), publicAndPrivateStudyRepository.insert(publicAndPrivateStudyEntity))
                     .map(Tuple2::getT2);

@@ -19,6 +19,14 @@ import com.powsybl.network.store.model.Resource;
 import com.powsybl.network.store.model.ResourceType;
 import com.powsybl.network.store.model.TopLevelDocument;
 import com.powsybl.network.store.model.VoltageLevelAttributes;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -53,17 +61,9 @@ import org.springframework.util.ResourceUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.BDDMockito.given;
@@ -103,7 +103,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
     public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.4\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
-    public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.4\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
+    public static final String LOAD_PARAMETERS2_JSON = "{\"version\":\"1.4\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\"}";
 
     @Autowired
     private OutputDestination output;
@@ -242,6 +242,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-byte")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -340,7 +348,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
                 .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                                    .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE.name())
+                                    .description("description").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE.name())
                                     .build()).matchesSafely(studies.get(0)));
 
         //insert the same study => 409 conflict
@@ -419,7 +427,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder().studyName("s2").userId("userId").description("desc").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE.name()).loadFlowResult(null).build()));
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("s2")
+                        .userId("userId")
+                        .studyPrivate(true)
+                        .description("desc")
+                        .caseFormat("XIIDM")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowStatus(LoadFlowStatus.NOT_DONE.name()).build()));
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}", "s2")
@@ -479,6 +494,35 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //get the voltage level diagram svg and metadata from a study that doesn't exist
         webTestClient.get()
                 .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "userId", "notExistingStudy", "voltageLevelId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg?useName=false", "userId", STUDY_NAME, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_XML)
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("substation-byte");
+
+        // get the substation diagram svg from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg", "userId", "notExistingStudy", "substationId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg and metadata
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata?useName=false", "userId", STUDY_NAME, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("substation-svgandmetadata");
+
+        // get the substation diagram svg and metadata from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata", "userId", "notExistingStudy", "substationId")
                 .exchange()
                 .expectStatus().isNotFound();
 
@@ -561,6 +605,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         headersSwitch = messageSwitch.getHeaders();
         assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+        messageSwitch = output.receive(1000);
+        assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         //update switch
         webTestClient.put()
@@ -589,8 +636,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                        .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE.name())
+                .value(studies -> new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("studyName")
+                        .userId("userId").caseFormat("UCTE")
+                        .description("description")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowStatus(LoadFlowStatus.NOT_DONE.name())
+                        .studyPrivate(false)
                         .build()).matchesSafely(studies.get(0)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
@@ -617,7 +669,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder().studyName("newName").userId("userId").description("description").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE.name()).build()));
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .studyPrivate(false)
+                        .loadFlowStatus(LoadFlowStatus.NOT_DONE.name()).build()));
 
         // drop the broker message for study deletion
         output.receive(1000);
@@ -650,6 +709,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         Message<byte[]> messageLf = output.receive(1000);
         assertEquals("newName", messageLf.getHeaders().get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        //try to run a another loadflow
+        webTestClient.put()
+                .uri("/v1/userId/studies/" + "newName" + "/loadflow/run")
+                .exchange()
+                .expectStatus().isEqualTo(403)
+                .expectBody()
+                .jsonPath("$")
+                .isEqualTo(LOADFLOW_NOT_RUNNABLE.name());
 
         //get available export format
         webTestClient.get()
@@ -699,6 +767,79 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectBody(Integer.class)
                 .isEqualTo(1);
 
+        // make public study private
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .studyPrivate(true)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
+
+        // make private study private should work
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .studyPrivate(true)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
+
+        // make private study public
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/public", newStudyName)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(StudyInfos.class)
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyName("newName")
+                        .userId("userId")
+                        .description("description")
+                        .caseFormat("UCTE")
+                        .studyPrivate(false)
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowResult(new LoadFlowResult(LoadFlowStatus.CONVERGED)).build()));
+
+        // drop the broker message for study deletion (due to right access change)
+        output.receive(1000);
+        output.receive(1000);
+
+        // try to change access rights of a non-existing study
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/public", "nonExistingStudy")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // try to change access rights of a non-existing study
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", "nonExistingStudy")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // try to change access right for a study of another user -> forbidden
+        webTestClient.post()
+                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .header("userId", "notAuth")
+                .exchange()
+                .expectStatus().isForbidden();
+
         // get default LoadFlowParameters
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
@@ -716,10 +857,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         true,
                         false,
                         true,
-                        false))
-                       /* true,
                         false,
-                        true))*/
+                        true,
+                        false,
+                        true,
+                        true,
+                        true,
+                        LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD))
                 )
                 .exchange()
                 .expectStatus().isOk();
@@ -778,6 +922,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             boolean match = super.matchesSafely(s)
                     && source.getCaseFormat().equals(s.getCaseFormat())
                     && source.getDescription().equals(s.getDescription())
+                    && source.isStudyPrivate() == s.isStudyPrivate();
                     && source.getLoadFlowStatus().equals(s.getLoadFlowStatus());
             return match;
         }

@@ -28,4 +28,6 @@ public class StudyInfos extends BasicStudyInfos {
     String loadFlowStatus;
 
     LoadFlowResultEntity loadFlowResult;
+
+    boolean studyPrivate;
 }

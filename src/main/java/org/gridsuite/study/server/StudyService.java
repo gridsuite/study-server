@@ -12,9 +12,23 @@ import com.powsybl.contingency.Contingency;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.TopLevelDocument;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Synchronized;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -186,6 +200,7 @@ public class StudyService {
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
                 .loadFlowStatus(entity.getLoadFlowStatus().getStatus().name())
                 .loadFlowResult(entity.getLoadFlowResult())
+                .studyPrivate(entity.isPrivate())
                 .build();
     }
 
@@ -212,11 +227,11 @@ public class StudyService {
                           .flatMap(t -> {
                               LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                               return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                 description, t.getT2(), caseUuid, false, new LoadFlowStatusEntity(LoadFlowStatus.NOT_DONE), null,  toEntity(loadFlowParameters));
+                                                 description, t.getT2(), caseUuid, false, new LoadFlowStatusEntity(LoadFlowStatus.NOT_DONE), null,  toEntity(loadFlowParameters), null);
                           })
                 )
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
+                .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe());
     }
 
     public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
@@ -229,11 +244,11 @@ public class StudyService {
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                description, t.getT2(), uuid, true, new LoadFlowStatusEntity(LoadFlowStatus.NOT_DONE), null, toEntity(loadFlowParameters));
+                                                description, t.getT2(), uuid, true, new LoadFlowStatusEntity(LoadFlowStatus.NOT_DONE), null, toEntity(loadFlowParameters), null);
                          })
                 ))
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                .doFinally(s -> deleteStudyCreationRequest(studyName, userId, isPrivate));
+                .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()); // delete the study if the creation has been canceled
     }
 
     Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
@@ -255,13 +270,16 @@ public class StudyService {
         return studyCreationRequestRepository.findStudy(userId, studyName);
     }
 
-    public Mono<Void> deleteStudy(String studyName, String userId, String headerUserId) {
-        //we need to ensure that it's the initial creator that deletes it
-        if (!userId.equals(headerUserId)) {
-            return Mono.error(new StudyException(NOT_ALLOWED));
-        }
-        Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
-        return studyMono.flatMap(study -> {
+    @Synchronized
+    public Mono<Void> deleteStudyIfNotCreationInProgress(String studyName, String userId) {
+        return getStudyCreationRequest(studyName, userId) // if creation in progress delete only the creation request
+                .switchIfEmpty(removeStudy(studyName, userId).cast(BasicStudyEntity.class))
+                .then()
+                .doFinally(r -> deleteStudyCreationRequest(studyName, userId));
+    }
+
+    private Mono<Void> removeStudy(String studyName, String userId, String headerUserId) {
+        return studyRepository.findStudy(userId, studyName).flatMap(study -> {
             if (study.isCasePrivate()) {
                 String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
                         .buildAndExpand(study.getCaseUuid())
@@ -271,22 +289,22 @@ public class StudyService {
                         .uri(caseServerBaseUri + path)
                         .retrieve()
                         .bodyToMono(Void.class)
-                        .then(deleteStudy(userId, studyName));
+                        .then(removeStudy(studyName, userId));
             } else {
-                return deleteStudy(userId, studyName);
+                return removeStudy(studyName, userId);
             }
         });
     }
 
     private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatusEntity loadFlowStatus,
-                                          LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters) {
+                                          LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         return studyRepository.insertStudy(studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
-                                           loadFlowParameters)
+                                           loadFlowParameters, securityAnalysisUuid)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
-    private Mono<Void> deleteStudy(String userId, String studyName) {
+    private Mono<Void> removeStudy(String studyName, String userId) {
         return studyRepository.deleteStudy(userId, studyName)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
@@ -296,8 +314,8 @@ public class StudyService {
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
-    private void deleteStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
-        studyCreationRequestRepository.deleteStudyCreationRequest(studyName, userId, isPrivate)
+    private void deleteStudyCreationRequest(String studyName, String userId) {
+        studyCreationRequestRepository.deleteStudyCreationRequest(studyName, userId)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES))
                 .subscribe();
     }
@@ -501,9 +519,7 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(String studyName, String userId) {
-        Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
-
-        return networkUuid.flatMap(uuid -> {
+        return setLoadFlowRunning(studyName, userId).then(getNetworkUuid(studyName, userId)).flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                     .buildAndExpand(uuid)
                     .toUriString();
@@ -528,27 +544,36 @@ public class StudyService {
         );
     }
 
-    public Mono<StudyInfos> renameStudy(String studyName, String userId, String headerUserId, String newStudyName) {
-        //we need to ensure that it's the initial creator that deletes it
-        if (!userId.equals(headerUserId)) {
-            return Mono.error(new StudyException(NOT_ALLOWED));
-        }
+//    private LoadFlowResult jsonToLoadFlowResult(String strLfResult) {
+//        try {
+//            Boolean bStatus = JsonPathUtils.evaluate(strLfResult, "$.ok");
+//            LoadFlowStatus status;
+//            if (bStatus) {
+//                status = LoadFlowStatus.CONVERGED;
+//            } else {
+//                status = LoadFlowStatus.DIVERGED;
+//            }
+//            return new LoadFlowResult(status);
+//        } catch (IOException e) {
+//            return new LoadFlowResult(LoadFlowStatus.NOT_DONE);
+//        }
+//    }
+
+    public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(study -> {
             study.setStudyName(newStudyName);
-            Mono<Void> deleteStudy = deleteStudy(userId, studyName);
+            Mono<Void> removeStudy = removeStudy(studyName, userId);
             Mono<StudyEntity> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
-                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowStatus(), study.getLoadFlowResult(), study.getLoadFlowParameters()
-                );
-
-            return deleteStudy.then(insertStudy);
+                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowStatus(), study.getLoadFlowResult(),
+                    study.getLoadFlowParameters(), study.getSecurityAnalysisResultUuid());
+            return removeStudy.then(insertStudy);
         }).map(StudyService::toInfos);
     }
 
-    public Mono<Void> setLoadFlowRunning(String studyName, String userId) {
-        return Mono.when(assertLoadFlowRunnable(studyName, userId))
-            .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.RUNNING))
-            .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
+    private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
+        return studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.RUNNING)
+                .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
     public Mono<Collection<String>> getExportFormats() {
@@ -583,6 +608,25 @@ public class StudyService {
             });
 
         });
+    }
+
+    public Mono<StudyInfos> changeStudyAccessRights(String studyName, String userId, String headerUserId, boolean toPrivate) {
+        //only the owner of a study can change the access rights
+        if (!headerUserId.equals(userId)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
+        return getStudy(studyName, userId).switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(studyEntity ->
+                (studyEntity.isPrivate() == toPrivate) ?
+                        Mono.just(studyEntity) :
+                        studyRepository.deleteStudy(userId, studyName)
+                                .then(insertStudy(studyEntity.getStudyName(), userId, toPrivate, studyEntity.getNetworkUuid(),
+                                        studyEntity.getNetworkId(), studyEntity.getDescription(), studyEntity.getCaseFormat(),
+                                        studyEntity.getCaseUuid(), studyEntity.isCasePrivate(),
+                                        studyEntity.getLoadFlowStatus(),
+                                        studyEntity.getLoadFlowResult(),
+                                        studyEntity.getLoadFlowParameters(), studyEntity.getSecurityAnalysisResultUuid()))
+        ).map(StudyService::toInfos);
     }
 
     Mono<UUID> getNetworkUuid(String studyName, String userId) {
@@ -621,6 +665,25 @@ public class StudyService {
             .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
     }
 
+    public Mono<Void> assertUserAllowed(String userId, String headerUserId) {
+        return (userId.equals(headerUserId)) ? Mono.empty() : Mono.error(new StudyException(NOT_ALLOWED));
+    }
+
+    private Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
+        Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
+        return studyMono.map(StudyEntity::getLoadFlowStatus)
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
+                .flatMap(lfs -> lfs.equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
+    }
+
+    private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
+        return Mono.empty(); // FIXME the security analysis status is not yet implemented
+    }
+
+    public Mono<Void> assertComputationNotRunning(String studyName, String userId) {
+        return assertLoadFlowNotRunning(studyName, userId).and(assertSecurityAnalysisNotRunning(studyName, userId));
+    }
+
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
         Objects.requireNonNull(parameters);
         return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
@@ -630,7 +693,10 @@ public class StudyService {
                                             parameters.isTwtSplitShuntAdmittance(),
                                             parameters.isSimulShunt(),
                                             parameters.isReadSlackBus(),
-                                            parameters.isWriteSlackBus());
+                                            parameters.isWriteSlackBus(),
+                                            parameters.isDc(),
+                                            parameters.isDistributedSlack(),
+                                            parameters.getBalanceType());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
@@ -639,10 +705,11 @@ public class StudyService {
                                       entity.isTransformerVoltageControlOn(),
                                       entity.isNoGeneratorReactiveLimits(),
                                       entity.isPhaseShifterRegulationOn(),
-                                      entity.isTwtSplitShuntAdmittance())
-                                      /*entity.isSimulShunt()
-                                      entity.isReadSlackBus(),
-                                      entity.isWriteSlackBus())*/;
+                                      entity.isTwtSplitShuntAdmittance(),
+                                      entity.isWriteSlackBus(),
+                                      entity.isDc(),
+                                      entity.isDistributedSlack(),
+                                      entity.getBalanceType());
     }
 
     public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {
@@ -730,6 +797,41 @@ public class StudyService {
                     })
                     .reduce(0, Integer::sum)
         );
+    }
+
+    Mono<byte[]> getSubstationSvg(UUID networkUuid, String substationId, boolean useName, boolean centerLabel, boolean diagonalLabel,
+                                  boolean topologicalColoring, String substationLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
+                .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
+                .queryParam("topologicalColoring", topologicalColoring)
+                .queryParam("substationLayout", substationLayout)
+                .buildAndExpand(networkUuid, substationId)
+                .toUriString();
+
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(byte[].class);
+    }
+
+    Mono<String> getSubstationSvgAndMetadata(UUID networkUuid, String substationId, boolean useName, boolean centerLabel,
+                                             boolean diagonalLabel, boolean topologicalColoring, String substationLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+                .queryParam("useName", useName)
+                .queryParam("centerLabel", centerLabel)
+                .queryParam("diagonalLabel", diagonalLabel)
+                .queryParam("topologicalColoring", topologicalColoring)
+                .queryParam("substationLayout", substationLayout)
+                .buildAndExpand(networkUuid, substationId)
+                .toUriString();
+
+        return webClient.get()
+                .uri(singleLineDiagramServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {
