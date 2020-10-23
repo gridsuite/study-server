@@ -500,7 +500,7 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        }).then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE.name())
+        }).then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
     }
@@ -510,7 +510,6 @@ public class StudyService {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                     .buildAndExpand(uuid)
                     .toUriString();
-
             return webClient.put()
                 .uri(loadFlowServerBaseUri + path)
                 .retrieve()
@@ -518,13 +517,13 @@ public class StudyService {
                 .flatMap(result ->
                         Mono.zip(
                             studyRepository.updateLoadFlowResult(studyName, userId, result),
-                            studyRepository.updateLoadFlowState(studyName, userId, result.isOk() ? LoadFlowStatus.CONVERGED.name() : LoadFlowStatus.CONVERGED.name())
+                            studyRepository.updateLoadFlowState(studyName, userId, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED)
                         )
                         .then()
                 )
-                .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE.name())
+                .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                     .subscribe())
-                .doOnCancel(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE.name())
+                .doOnCancel(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                     .subscribe());
         }).doFinally(s ->
             emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)
@@ -544,7 +543,7 @@ public class StudyService {
     }
 
     private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
-        return studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.RUNNING.name())
+        return studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.RUNNING)
                 .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
@@ -725,7 +724,7 @@ public class StudyService {
 
     Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParameters parameters) {
         return studyRepository.updateLoadFlowParameters(studyName, userId, toEntity(parameters != null ? parameters : LoadFlowParameters.load())).then(
-                studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE.name())
+                studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)));
     }
 

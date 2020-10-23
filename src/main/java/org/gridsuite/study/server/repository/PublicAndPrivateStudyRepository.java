@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
 import org.springframework.data.repository.query.Param;
@@ -30,7 +31,7 @@ public interface PublicAndPrivateStudyRepository extends ReactiveCassandraReposi
     Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
 
     @Query("UPDATE study SET loadFlowStatus = :status WHERE userId = :userId and studyname = :studyName")
-    Mono<Void> updateLoadFlowState(String studyName, String userId, String status);
+    Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
 
     @Query("UPDATE study SET loadFlowResult = :loadFlowResult WHERE userId = :userId and studyname = :studyName")
     Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResult);

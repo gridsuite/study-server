@@ -7,6 +7,8 @@
 package org.gridsuite.study.server.repository;
 
 import java.util.UUID;
+
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
 import org.springframework.data.repository.query.Param;
@@ -27,7 +29,7 @@ public interface PublicStudyRepository extends ReactiveCassandraRepository<Publi
     Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
     @Query("UPDATE publicStudy SET loadFlowStatus = :status WHERE userId = :userId and studyname = :studyName IF EXISTS")
-    Mono<Object> updateLoadFlowState(String studyName, String userId, String status);
+    Mono<Object> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
 
     @Query("UPDATE publicStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF EXISTS")
     Mono<Boolean> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);

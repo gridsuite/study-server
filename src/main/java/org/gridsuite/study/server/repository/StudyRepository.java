@@ -89,7 +89,7 @@ public class StudyRepository {
                         publicAndPrivateStudyRepository.deleteByStudyNameAndUserId(studyName, userId)).then();
     }
 
-    public Mono<Void> updateLoadFlowState(String studyName, String userId, String lfStatus) {
+    public Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatus lfStatus) {
         return Mono.zip(publicAndPrivateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
                         privateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
                         publicStudyRepository.updateLoadFlowState(studyName, userId, lfStatus))
