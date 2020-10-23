@@ -6,19 +6,16 @@
  */
 package org.gridsuite.study.server.repository;
 
-import com.powsybl.loadflow.LoadFlowResult;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Objects;
-import java.util.UUID;
-
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -89,19 +86,17 @@ public class StudyRepository {
                         publicAndPrivateStudyRepository.deleteByStudyNameAndUserId(studyName, userId)).then();
     }
 
-    public Mono<Void> updateLoadFlowState(String studyName, String userId, String lfStatus) {
+    public Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatus lfStatus) {
         return Mono.zip(publicAndPrivateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
                         privateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
                         publicStudyRepository.updateLoadFlowState(studyName, userId, lfStatus))
                 .then();
     }
 
-    public Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResult loadFlowResult) {
-        List<ComponentResultEntity> componentResultEntityList = ComponentResultEntity.toEntityList(loadFlowResult.getComponentResults());
-        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(loadFlowResult.isOk(), loadFlowResult.getMetrics(), loadFlowResult.getLogs(), componentResultEntityList);
-        return Mono.zip(privateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity),
-                        publicStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity),
-                        publicAndPrivateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResultEntity))
+    public Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResult) {
+        return Mono.zip(privateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResult),
+                        publicStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResult),
+                        publicAndPrivateStudyRepository.updateLoadFlowResult(studyName, userId, loadFlowResult))
                 .then();
     }
 

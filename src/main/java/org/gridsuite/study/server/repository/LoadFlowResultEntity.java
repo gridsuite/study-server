@@ -32,7 +32,6 @@ public class LoadFlowResultEntity implements Serializable {
     @CassandraType(type = DataType.Name.MAP, typeArguments = { DataType.Name.TEXT, DataType.Name.TEXT })
     private Map<String, String> metrics;
 
-    @CassandraType(type = DataType.Name.TEXT)
     private String logs;
 
     @CassandraType(type = DataType.Name.LIST, typeArguments = { DataType.Name.UDT }, userTypeName = "componentResult")
