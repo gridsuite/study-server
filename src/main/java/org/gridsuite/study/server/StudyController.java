@@ -236,7 +236,7 @@ public class StudyController {
                                                         @RequestParam("open") boolean open) {
 
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyName, userId)
-                .then(studyService.changeSwitchState(studyName, userId, switchId, open).then()));
+                .then(studyService.changeSwitchState(studyName, userId, switchId, open)));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
@@ -247,7 +247,7 @@ public class StudyController {
             @PathVariable("userId") String userId) {
 
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyName, userId)
-                .then(studyService.runLoadFlow(studyName, userId).then()));
+                .then(studyService.runLoadFlow(studyName, userId)));
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")

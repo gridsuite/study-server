@@ -479,7 +479,9 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        }).then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
+        })
+        .then(studyRepository.updateLoadFlowResult(studyName, userId, null))
+        .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
     }
@@ -493,12 +495,8 @@ public class StudyService {
                 .uri(loadFlowServerBaseUri + path)
                 .retrieve()
                 .bodyToMono(LoadFlowResult.class)
-                .flatMap(result ->
-                        Mono.zip(
-                            studyRepository.updateLoadFlowResult(studyName, userId, toEntity(result)),
-                            studyRepository.updateLoadFlowState(studyName, userId, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED)
-                        )
-                        .then()
+                .flatMap(result -> studyRepository.updateLoadFlowResult(studyName, userId, toEntity(result))
+                        .then(studyRepository.updateLoadFlowState(studyName, userId, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
                 )
                 .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                     .subscribe())
