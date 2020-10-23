@@ -102,8 +102,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String CONTIGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
-    public static final String LOAD_PARAMETERS_VERSION14_JSON = "{\"version\":\"1.4\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
-    public static final String LOAD_PARAMETERS_VERSION14_JSON2 = "{\"version\":\"1.4\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
+    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.4\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
+    public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.4\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
 
     @Autowired
     private OutputDestination output;
@@ -704,7 +704,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo(LOAD_PARAMETERS_VERSION14_JSON);
+                .expectBody(String.class).isEqualTo(LOAD_PARAMETERS_JSON);
 
         // setting loadFlow Parameters
         webTestClient.post()
@@ -729,7 +729,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo(LOAD_PARAMETERS_VERSION14_JSON2);
+                .expectBody(String.class).isEqualTo(LOAD_PARAMETERS_JSON2);
 
         // run loadflow with new parameters
         webTestClient.put()
