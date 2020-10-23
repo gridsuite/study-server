@@ -684,7 +684,10 @@ public class StudyService {
                                             parameters.isTwtSplitShuntAdmittance(),
                                             parameters.isSimulShunt(),
                                             parameters.isReadSlackBus(),
-                                            parameters.isWriteSlackBus());
+                                            parameters.isWriteSlackBus(),
+                                            parameters.isDc(),
+                                            parameters.isDistributedSlack(),
+                                            parameters.getBalanceType());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
@@ -696,7 +699,10 @@ public class StudyService {
                                       entity.isTwtSplitShuntAdmittance(),
                                       entity.isSimulShunt(),
                                       entity.isReadSlackBus(),
-                                      entity.isWriteSlackBus());
+                                      entity.isWriteSlackBus(),
+                                      entity.isDc(),
+                                      entity.isDistributedSlack(),
+                                      entity.getBalanceType());
     }
 
     public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {

@@ -46,7 +46,7 @@
     <properties>
         <java.version>11</java.version>
 
-        <gridsuite-dependencies.version>2</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>3</gridsuite-dependencies.version>
 
         <mock.web.server.version>4.6.0</mock.web.server.version>
     </properties>
