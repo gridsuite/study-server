@@ -12,7 +12,6 @@ import com.powsybl.contingency.Contingency;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.TopLevelDocument;
-import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -53,19 +52,6 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.io.UncheckedIOException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -544,21 +530,6 @@ public class StudyService {
         );
     }
 
-//    private LoadFlowResult jsonToLoadFlowResult(String strLfResult) {
-//        try {
-//            Boolean bStatus = JsonPathUtils.evaluate(strLfResult, "$.ok");
-//            LoadFlowStatus status;
-//            if (bStatus) {
-//                status = LoadFlowStatus.CONVERGED;
-//            } else {
-//                status = LoadFlowStatus.DIVERGED;
-//            }
-//            return new LoadFlowResult(status);
-//        } catch (IOException e) {
-//            return new LoadFlowResult(LoadFlowStatus.NOT_DONE);
-//        }
-//    }
-
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(study -> {
@@ -687,29 +658,31 @@ public class StudyService {
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
         Objects.requireNonNull(parameters);
         return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
-                                            parameters.isTransformerVoltageControlOn(),
-                                            parameters.isNoGeneratorReactiveLimits(),
-                                            parameters.isPhaseShifterRegulationOn(),
-                                            parameters.isTwtSplitShuntAdmittance(),
-                                            parameters.isSimulShunt(),
-                                            parameters.isReadSlackBus(),
-                                            parameters.isWriteSlackBus(),
-                                            parameters.isDc(),
-                                            parameters.isDistributedSlack(),
-                                            parameters.getBalanceType());
+                parameters.isTransformerVoltageControlOn(),
+                parameters.isNoGeneratorReactiveLimits(),
+                parameters.isPhaseShifterRegulationOn(),
+                parameters.isTwtSplitShuntAdmittance(),
+                parameters.isSimulShunt(),
+                parameters.isReadSlackBus(),
+                parameters.isWriteSlackBus(),
+                parameters.isDc(),
+                parameters.isDistributedSlack(),
+                parameters.getBalanceType());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowParameters(entity.getVoltageInitMode(),
-                                      entity.isTransformerVoltageControlOn(),
-                                      entity.isNoGeneratorReactiveLimits(),
-                                      entity.isPhaseShifterRegulationOn(),
-                                      entity.isTwtSplitShuntAdmittance(),
-                                      entity.isWriteSlackBus(),
-                                      entity.isDc(),
-                                      entity.isDistributedSlack(),
-                                      entity.getBalanceType());
+                entity.isTransformerVoltageControlOn(),
+                entity.isNoGeneratorReactiveLimits(),
+                entity.isPhaseShifterRegulationOn(),
+                entity.isTwtSplitShuntAdmittance(),
+                entity.isSimulShunt(),
+                entity.isReadSlackBus(),
+                entity.isWriteSlackBus(),
+                entity.isDc(),
+                entity.isDistributedSlack(),
+                entity.getBalanceType());
     }
 
     public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {
