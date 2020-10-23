@@ -13,6 +13,7 @@ import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.CassandraType;
 import org.springframework.data.cassandra.core.mapping.Column;
@@ -58,6 +59,10 @@ public class PrivateStudyEntity implements Serializable, StudyEntity {
 
     @Column("isPrivate")
     private boolean isPrivate;
+
+    @Column("loadFlowStatus")
+    @CassandraType(type = DataType.Name.TEXT)
+    private LoadFlowStatus loadFlowStatus;
 
     @Column("loadFlowResult")
     @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")

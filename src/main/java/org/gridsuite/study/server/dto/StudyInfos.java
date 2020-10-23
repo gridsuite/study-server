@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
+import com.powsybl.loadflow.LoadFlowResult;
 import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,7 +25,9 @@ public class StudyInfos extends BasicStudyInfos {
 
     String caseFormat;
 
-    boolean studyPrivate;
+    LoadFlowStatus loadFlowStatus;
 
     LoadFlowResult loadFlowResult;
+
+    boolean studyPrivate;
 }
