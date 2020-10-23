@@ -10,6 +10,7 @@ import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -25,4 +26,6 @@ public class StudyInfos extends BasicStudyInfos {
     String caseFormat;
 
     String loadFlowStatus;
+
+    LoadFlowResultEntity loadFlowResult;
 }

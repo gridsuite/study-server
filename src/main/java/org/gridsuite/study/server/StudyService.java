@@ -180,16 +180,12 @@ public class StudyService {
     }
 
     private static StudyInfos toInfos(StudyEntity entity) {
-//        return new StudyInfos(entity.getStudyName(),
-//                              entity.getUserId(),
-//                              entity.getDescription(),
-//                              entity.getCaseFormat(),
-//                              entity.getLoadFlowStatus().getStatus().name());
         return StudyInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
                 .loadFlowStatus(entity.getLoadFlowStatus().getStatus().name())
+                .loadFlowResult(entity.getLoadFlowResult())
                 .build();
     }
 
@@ -204,12 +200,6 @@ public class StudyService {
         return studyRepository.getStudies(userId).map(StudyService::toInfos)
                 .sort(Comparator.comparing(StudyInfos::getCreationDate).reversed());
     }
-//    public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
-//        Mono<NetworkInfos> networkInfos = persistentStore(caseUuid);
-//        Mono<String> caseFormat = getCaseFormat(caseUuid);
-//
-//        return Mono.zip(networkInfos, caseFormat)
-//            .flatMap(t -> studyRepository.insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE));
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
         return studyCreationRequestRepository.getStudyCreationRequests(userId).map(StudyService::toBasicInfos)
@@ -538,30 +528,6 @@ public class StudyService {
         );
     }
 
-//<<<<<<< HEAD
-//    private void emitStudyChanged(String studyName, String updateTypeLoadflow) {
-//        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-//            .setHeader(STUDY_NAME, studyName)
-//            .setHeader(UPDATE_TYPE, updateTypeLoadflow)
-//            .build()
-//        );
-//=======
-//    private LoadFlowResult jsonToLoadFlowResult(String strLfResult) {
-//        try {
-//            Boolean bStatus = JsonPathUtils.evaluate(strLfResult, "$.ok");
-//            LoadFlowStatus status;
-//            if (bStatus) {
-//                status = LoadFlowStatus.CONVERGED;
-//            } else {
-//                status = LoadFlowStatus.DIVERGED;
-//            }
-//            return new LoadFlowResult(status);
-//        } catch (IOException e) {
-//            return new LoadFlowResult(LoadFlowStatus.NOT_DONE);
-//        }
-//>>>>>>> master
-//    }
-
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String headerUserId, String newStudyName) {
         //we need to ensure that it's the initial creator that deletes it
         if (!userId.equals(headerUserId)) {
@@ -570,16 +536,10 @@ public class StudyService {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(study -> {
             study.setStudyName(newStudyName);
-
-//<<<<<<< HEAD
-//            Mono<Void> deleteStudy = studyRepository.deleteStudy(userId, studyName);
-//            Mono<StudyEntity> insertStudy = studyRepository.insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
-//                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowStatus().getStatus());
-//=======
             Mono<Void> deleteStudy = deleteStudy(userId, studyName);
             Mono<StudyEntity> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
                     study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowStatus(), study.getLoadFlowResult(), study.getLoadFlowParameters()
-                    );
+                );
 
             return deleteStudy.then(insertStudy);
         }).map(StudyService::toInfos);
