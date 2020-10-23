@@ -272,10 +272,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/contingency-lists/" + CONTIGENCY_LIST_NAME + "/export?networkUuid=" + NETWORK_UUID_STRING:
                         return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/groovy/":
+                        return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     default:
                         LOGGER.error("Path not supported: " + request.getPath());
                         return new MockResponse().setResponseCode(404);
+
                 }
             }
         };
@@ -627,6 +631,20 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         headersSwitch = messageSwitch.getHeaders();
         assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+
+        //update equipment
+        webTestClient.put()
+            .uri("/v1/{userId}/studies/{studyName}/network-modification/groovy", "userId", STUDY_NAME)
+            .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+            .exchange()
+            .expectStatus().isOk();
+
+        messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
+        assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
+        // assert that the broker message has been sent
 
         webTestClient.get()
                 .uri("/v1/studies")
