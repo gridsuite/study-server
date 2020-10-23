@@ -4,12 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.loadflow;
 
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.powsybl.loadflow.LoadFlowResult;
-import com.powsybl.loadflow.json.LoadFlowResultDeserializer;
-import com.powsybl.loadflow.json.LoadFlowResultSerializer;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
