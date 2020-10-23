@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.powsybl.contingency.json.ContingencyJsonModule;
 import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
-import org.gridsuite.study.server.loadflow.LoadFlowResultJsonModule;
+import com.powsybl.loadflow.json.LoadFlowResultJsonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.codec.ServerCodecConfigurer;

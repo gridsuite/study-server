@@ -28,10 +28,6 @@ CREATE TYPE IF NOT EXISTS study.loadFlowResult (
     componentResults frozen<list<study.componentResult>>,
 );
 
-CREATE TYPE IF NOT EXISTS study.loadFlowStatus (
-    status text
-);
-
 CREATE TABLE IF NOT EXISTS study.study (
     studyName text,
     creationDate timestamp,
@@ -43,7 +39,7 @@ CREATE TABLE IF NOT EXISTS study.study (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowStatus study.loadFlowStatus,
+    loadFlowStatus text,
     loadFlowResult frozen<study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     loadFlowParameters study.loadFlowParameters,
@@ -61,7 +57,7 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowStatus study.loadFlowStatus,
+    loadFlowStatus text,
     loadFlowResult frozen <study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     loadFlowParameters study.loadFlowParameters,
@@ -79,7 +75,7 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     casePrivate boolean,
     userId text,
     isPrivate boolean,
-    loadFlowStatus study.loadFlowStatus,
+    loadFlowStatus text,
     loadFlowResult frozen <study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     loadFlowParameters study.loadFlowParameters,
@@ -99,4 +95,3 @@ CREATE TABLE IF NOT EXISTS study.privateStudyCreationRequest (
     userId text,
     PRIMARY KEY (userId, studyName)
 );
-

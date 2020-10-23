@@ -30,7 +30,7 @@ public interface PublicAndPrivateStudyRepository extends ReactiveCassandraReposi
     Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
 
     @Query("UPDATE study SET loadFlowStatus = :status WHERE userId = :userId and studyname = :studyName")
-    Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatusEntity status);
+    Mono<Void> updateLoadFlowState(String studyName, String userId, String status);
 
     @Query("UPDATE study SET loadFlowResult = :loadFlowResult WHERE userId = :userId and studyname = :studyName")
     Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResult);

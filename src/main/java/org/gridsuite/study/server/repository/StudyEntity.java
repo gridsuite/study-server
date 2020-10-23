@@ -29,7 +29,7 @@ public interface StudyEntity extends BasicStudyEntity {
 
     boolean isPrivate();
 
-    LoadFlowStatusEntity getLoadFlowStatus();
+    String getLoadFlowStatus();
 
     LoadFlowResultEntity getLoadFlowResult();
 

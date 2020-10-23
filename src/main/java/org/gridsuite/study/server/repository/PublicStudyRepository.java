@@ -27,7 +27,7 @@ public interface PublicStudyRepository extends ReactiveCassandraRepository<Publi
     Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
     @Query("UPDATE publicStudy SET loadFlowStatus = :status WHERE userId = :userId and studyname = :studyName IF EXISTS")
-    Mono<Object> updateLoadFlowState(String studyName, String userId, LoadFlowStatusEntity status);
+    Mono<Object> updateLoadFlowState(String studyName, String userId, String status);
 
     @Query("UPDATE publicStudy SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName IF EXISTS")
     Mono<Boolean> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);

@@ -60,8 +60,7 @@ public class PrivateStudyEntity implements Serializable, StudyEntity {
     private boolean isPrivate;
 
     @Column("loadFlowStatus")
-    @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowStatus")
-    private LoadFlowStatusEntity loadFlowStatus;
+    private String loadFlowStatus;
 
     @Column("loadFlowResult")
     @CassandraType(type = DataType.Name.UDT, userTypeName = "loadFlowResult")

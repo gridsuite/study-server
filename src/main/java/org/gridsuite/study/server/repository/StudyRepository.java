@@ -12,7 +12,6 @@ import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -52,7 +51,7 @@ public class StudyRepository {
 
     public Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
-                                         LoadFlowStatusEntity loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+                                         String loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -89,10 +88,10 @@ public class StudyRepository {
                         publicAndPrivateStudyRepository.deleteByStudyNameAndUserId(studyName, userId)).then();
     }
 
-    public Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatus lfStatus) {
-        return Mono.zip(publicAndPrivateStudyRepository.updateLoadFlowState(studyName, userId, new LoadFlowStatusEntity(lfStatus)),
-                        privateStudyRepository.updateLoadFlowState(studyName, userId, new LoadFlowStatusEntity(lfStatus)),
-                        publicStudyRepository.updateLoadFlowState(studyName, userId, new LoadFlowStatusEntity(lfStatus)))
+    public Mono<Void> updateLoadFlowState(String studyName, String userId, String lfStatus) {
+        return Mono.zip(publicAndPrivateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
+                        privateStudyRepository.updateLoadFlowState(studyName, userId, lfStatus),
+                        publicStudyRepository.updateLoadFlowState(studyName, userId, lfStatus))
                 .then();
     }
 
