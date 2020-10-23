@@ -9,9 +9,10 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
+import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.model.TopLevelDocument;
-import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -42,7 +43,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
-import org.springframework.integration.json.JsonPathUtils;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -185,7 +185,8 @@ public class StudyService {
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
-                .loadFlowResult(new LoadFlowResult(entity.getLoadFlowResult().getStatus()))
+                .loadFlowStatus(entity.getLoadFlowStatus())
+                .loadFlowResult(fromEntity(entity.getLoadFlowResult()))
                 .studyPrivate(entity.isPrivate())
                 .build();
     }
@@ -207,13 +208,13 @@ public class StudyService {
                 .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
-    public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, LoadFlowResult loadFlowResult) {
+    public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
                 .then(Mono.zip(persistentStore(caseUuid), getCaseFormat(caseUuid))
                           .flatMap(t -> {
                               LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                               return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                 description, t.getT2(), caseUuid, false, loadFlowResult, toEntity(loadFlowParameters), null);
+                                                 description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
                           })
                 )
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -227,7 +228,7 @@ public class StudyService {
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                description, t.getT2(), uuid, true, new LoadFlowResult(), toEntity(loadFlowParameters), null);
+                                                description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                          })
                 ))
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -261,28 +262,10 @@ public class StudyService {
                 .doFinally(r -> deleteStudyCreationRequest(studyName, userId));
     }
 
-    private Mono<Void> removeStudy(String studyName, String userId, String headerUserId) {
-        return studyRepository.findStudy(userId, studyName).flatMap(study -> {
-            if (study.isCasePrivate()) {
-                String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
-                        .buildAndExpand(study.getCaseUuid())
-                        .toUriString();
-
-                return webClient.delete()
-                        .uri(caseServerBaseUri + path)
-                        .retrieve()
-                        .bodyToMono(Void.class)
-                        .then(removeStudy(studyName, userId));
-            } else {
-                return removeStudy(studyName, userId);
-            }
-        });
-    }
-
     private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
-                                         String description, String caseFormat, UUID caseUuid, boolean casePrivate,
-                                          LoadFlowResult loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
-        return studyRepository.insertStudy(studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowResult,
+                                         String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
+                                         LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+        return studyRepository.insertStudy(studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
                                            loadFlowParameters, securityAnalysisUuid)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
@@ -496,7 +479,9 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(Void.class);
-        }).then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
+        })
+        .then(studyRepository.updateLoadFlowResult(studyName, userId, null))
+        .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
     }
@@ -506,12 +491,13 @@ public class StudyService {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                     .buildAndExpand(uuid)
                     .toUriString();
-
             return webClient.put()
                 .uri(loadFlowServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(String.class)
-                .flatMap(e -> studyRepository.updateLoadFlowResult(studyName, userId, jsonToLoadFlowResult(e)))
+                .bodyToMono(LoadFlowResult.class)
+                .flatMap(result -> studyRepository.updateLoadFlowResult(studyName, userId, toEntity(result))
+                        .then(studyRepository.updateLoadFlowState(studyName, userId, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
+                )
                 .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                     .subscribe())
                 .doOnCancel(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
@@ -521,30 +507,14 @@ public class StudyService {
         );
     }
 
-    private LoadFlowResult jsonToLoadFlowResult(String strLfResult) {
-        try {
-            Boolean bStatus = JsonPathUtils.evaluate(strLfResult, "$.ok");
-            LoadFlowStatus status;
-            if (bStatus) {
-                status = LoadFlowStatus.CONVERGED;
-            } else {
-                status = LoadFlowStatus.DIVERGED;
-            }
-            return new LoadFlowResult(status);
-        } catch (IOException e) {
-            return new LoadFlowResult(LoadFlowStatus.NOT_DONE);
-        }
-    }
-
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(study -> {
             study.setStudyName(newStudyName);
             Mono<Void> removeStudy = removeStudy(studyName, userId);
             Mono<StudyEntity> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
-                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), new LoadFlowResult(study.getLoadFlowResult().getStatus()),
+                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowStatus(), study.getLoadFlowResult(),
                     study.getLoadFlowParameters(), study.getSecurityAnalysisResultUuid());
-
             return removeStudy.then(insertStudy);
         }).map(StudyService::toInfos);
     }
@@ -584,7 +554,6 @@ public class StudyService {
                 String filename = res.getHeaders().getContentDisposition().getFilename();
                 return new ExportNetworkInfos(filename, bytes);
             });
-
         });
     }
 
@@ -601,7 +570,8 @@ public class StudyService {
                                 .then(insertStudy(studyEntity.getStudyName(), userId, toPrivate, studyEntity.getNetworkUuid(),
                                         studyEntity.getNetworkId(), studyEntity.getDescription(), studyEntity.getCaseFormat(),
                                         studyEntity.getCaseUuid(), studyEntity.isCasePrivate(),
-                                        new LoadFlowResult(studyEntity.getLoadFlowResult().getStatus()),
+                                        studyEntity.getLoadFlowStatus(),
+                                        studyEntity.getLoadFlowResult(),
                                         studyEntity.getLoadFlowParameters(), studyEntity.getSecurityAnalysisResultUuid()))
         ).map(StudyService::toInfos);
     }
@@ -637,9 +607,9 @@ public class StudyService {
 
     public Mono<Void> assertLoadFlowRunnable(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
-        return studyMono.map(StudyEntity::getLoadFlowResult)
+        return studyMono.map(StudyEntity::getLoadFlowStatus)
             .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-            .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
+            .flatMap(lfs -> lfs.equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
     }
 
     public Mono<Void> assertUserAllowed(String userId, String headerUserId) {
@@ -648,9 +618,9 @@ public class StudyService {
 
     private Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
         Mono<StudyEntity> studyMono = studyRepository.findStudy(userId, studyName);
-        return studyMono.map(StudyEntity::getLoadFlowResult)
+        return studyMono.map(StudyEntity::getLoadFlowStatus)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .flatMap(lfr -> lfr.getStatus().equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
+                .flatMap(lfs -> lfs.equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
     }
 
     private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
@@ -664,31 +634,65 @@ public class StudyService {
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
         Objects.requireNonNull(parameters);
         return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
-                                            parameters.isTransformerVoltageControlOn(),
-                                            parameters.isNoGeneratorReactiveLimits(),
-                                            parameters.isPhaseShifterRegulationOn(),
-                                            parameters.isTwtSplitShuntAdmittance(),
-                                            parameters.isSimulShunt(),
-                                            parameters.isReadSlackBus(),
-                                            parameters.isWriteSlackBus(),
-                                            parameters.isDc(),
-                                            parameters.isDistributedSlack(),
-                                            parameters.getBalanceType());
+                parameters.isTransformerVoltageControlOn(),
+                parameters.isNoGeneratorReactiveLimits(),
+                parameters.isPhaseShifterRegulationOn(),
+                parameters.isTwtSplitShuntAdmittance(),
+                parameters.isSimulShunt(),
+                parameters.isReadSlackBus(),
+                parameters.isWriteSlackBus(),
+                parameters.isDc(),
+                parameters.isDistributedSlack(),
+                parameters.getBalanceType());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowParameters(entity.getVoltageInitMode(),
-                                      entity.isTransformerVoltageControlOn(),
-                                      entity.isNoGeneratorReactiveLimits(),
-                                      entity.isPhaseShifterRegulationOn(),
-                                      entity.isTwtSplitShuntAdmittance(),
-                                      entity.isSimulShunt(),
-                                      entity.isReadSlackBus(),
-                                      entity.isWriteSlackBus(),
-                                      entity.isDc(),
-                                      entity.isDistributedSlack(),
-                                      entity.getBalanceType());
+                entity.isTransformerVoltageControlOn(),
+                entity.isNoGeneratorReactiveLimits(),
+                entity.isPhaseShifterRegulationOn(),
+                entity.isTwtSplitShuntAdmittance(),
+                entity.isSimulShunt(),
+                entity.isReadSlackBus(),
+                entity.isWriteSlackBus(),
+                entity.isDc(),
+                entity.isDistributedSlack(),
+                entity.getBalanceType());
+    }
+
+    public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
+        Objects.requireNonNull(result);
+        return new LoadFlowResultEntity(result.isOk(),
+                result.getMetrics(),
+                result.getLogs(),
+                result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList()));
+    }
+
+    public static LoadFlowResult fromEntity(LoadFlowResultEntity entity) {
+        return entity == null ? null : new LoadFlowResultImpl(entity.isOk(),
+                entity.getMetrics(),
+                entity.getLogs(),
+                entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
+    }
+
+    public static ComponentResultEntity toEntity(LoadFlowResult.ComponentResult componentResult) {
+        Objects.requireNonNull(componentResult);
+        return new ComponentResultEntity(componentResult.getComponentNum(),
+                componentResult.getStatus(),
+                componentResult.getIterationCount(),
+                componentResult.getSlackBusId(),
+                componentResult.getSlackBusActivePowerMismatch()
+        );
+    }
+
+    public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEntity entity) {
+        Objects.requireNonNull(entity);
+        return new LoadFlowResultImpl.ComponentResultImpl(entity.getComponentNum(),
+                entity.getStatus(),
+                entity.getIterationCount(),
+                entity.getSlackBusId(),
+                entity.getSlackBusActivePowerMismatch());
     }
 
     public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {

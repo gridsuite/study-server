@@ -62,11 +62,11 @@ public class StudyController {
                                                                   @RequestParam("description") String description,
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
-        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, new LoadFlowResult())
+        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
                 .subscribeOn(Schedulers.boundedElastic())
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
-                .doOnSuccess(s -> createStudy.subscribe()));
+            .doOnSuccess(s -> createStudy.subscribe()));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -236,7 +236,7 @@ public class StudyController {
                                                         @RequestParam("open") boolean open) {
 
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyName, userId)
-                .then(studyService.changeSwitchState(studyName, userId, switchId, open).then()));
+                .then(studyService.changeSwitchState(studyName, userId, switchId, open)));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
@@ -247,7 +247,7 @@ public class StudyController {
             @PathVariable("userId") String userId) {
 
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyName, userId)
-                .then(studyService.runLoadFlow(studyName, userId).then()));
+                .then(studyService.runLoadFlow(studyName, userId)));
     }
 
     @PostMapping(value = "/{userId}/studies/{studyName}/rename")

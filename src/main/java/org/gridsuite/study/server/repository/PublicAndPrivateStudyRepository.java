@@ -27,14 +27,14 @@ public interface PublicAndPrivateStudyRepository extends ReactiveCassandraReposi
     @Query("DELETE FROM study WHERE userId = :userId and studyname = :studyName")
     Mono<Void> deleteByStudyNameAndUserId(@Param("studyName") String studyName, @Param("userId") String userId);
 
-    @Query("UPDATE study SET loadFlowResult.status = :status WHERE userId = :userId and studyname = :studyName")
-    Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
-
-    @Query("UPDATE study SET loadFlowResult = :result WHERE userId = :userId and studyname = :studyName")
-    Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity result);
-
     @Query("UPDATE study SET loadFlowParameters = :lfParameter  WHERE userId = :userId and studyname = :studyName")
     Mono<Void> updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
+
+    @Query("UPDATE study SET loadFlowStatus = :status WHERE userId = :userId and studyname = :studyName")
+    Mono<Void> updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
+
+    @Query("UPDATE study SET loadFlowResult = :loadFlowResult WHERE userId = :userId and studyname = :studyName")
+    Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResult);
 
     @Query("UPDATE study SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyname = :studyName")
     Mono<Void> updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
