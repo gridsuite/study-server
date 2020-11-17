@@ -78,6 +78,7 @@ public class StudyService {
     static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
+    static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
 
     @Data
     @AllArgsConstructor
@@ -130,11 +131,9 @@ public class StudyService {
                     // update DB
                     return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
                             .then(Mono.fromCallable(() -> {
-                                // send notification
-                                studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                                        .setHeader(HEADER_STUDY_NAME, receiverObj.getStudyName())
-                                        .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_SECURITY_ANALYSIS_RESULT)
-                                        .build());
+                                // send notifications
+                                emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                                 return null;
                             }));
                 } catch (JsonProcessingException e) {
@@ -483,6 +482,8 @@ public class StudyService {
         .then(studyRepository.updateLoadFlowResult(studyName, userId, null))
         .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
+        .then(setSecurityAnalysisStatus(studyName, userId, SecurityAnalysisStatus.NOT_DONE)
+        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
     }
 
@@ -497,9 +498,11 @@ public class StudyService {
                 .body(BodyInserters.fromValue(groovyScript))
                 .retrieve().bodyToMono(Void.class);
         })
-        .then(studyRepository.updateLoadFlowResult(studyName, userId, null))
-        .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
-        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
+                .then(studyRepository.updateLoadFlowResult(studyName, userId, null))
+                .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
+                        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
+                .then(setSecurityAnalysisStatus(studyName, userId, SecurityAnalysisStatus.NOT_DONE)
+                        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
     Mono<Void> runLoadFlow(String studyName, String userId) {
@@ -640,7 +643,9 @@ public class StudyService {
     }
 
     private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
-        return Mono.empty(); // FIXME the security analysis status is not yet implemented
+        Mono<String> statusMono = getSecurityAnalysisStatus(studyName, userId);
+        return statusMono.switchIfEmpty(Mono.empty())
+                .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
     }
 
     public Mono<Void> assertComputationNotRunning(String studyName, String userId) {
@@ -716,9 +721,11 @@ public class StudyService {
     }
 
     Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParameters parameters) {
-        return studyRepository.updateLoadFlowParameters(studyName, userId, toEntity(parameters != null ? parameters : LoadFlowParameters.load())).then(
-                studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
-                        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)));
+        return studyRepository.updateLoadFlowParameters(studyName, userId, toEntity(parameters != null ? parameters : LoadFlowParameters.load()))
+                .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
+                        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
+                .then(setSecurityAnalysisStatus(studyName, userId, SecurityAnalysisStatus.NOT_DONE)
+                        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
     public Mono<UUID> runSecurityAnalysis(String studyName, String userId, List<String> contingencyListNames, String parameters) {
@@ -831,6 +838,46 @@ public class StudyService {
                 .uri(singleLineDiagramServerBaseUri + path)
                 .retrieve()
                 .bodyToMono(String.class);
+    }
+
+    public Mono<String> getSecurityAnalysisStatus(String studyName, String userId) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/status/{resultUuid}")
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .get()
+                        .uri(securityAnalysisServerBaseUri + path)
+                        .retrieve()
+                        .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
+                        .bodyToMono(String.class);
+            });
+        });
+    }
+
+    public Mono<Void> setSecurityAnalysisStatus(String studyName, String userId, SecurityAnalysisStatus status) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/status/{resultUuid}")
+                        .queryParam("status", status.name())
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .put()
+                        .uri(securityAnalysisServerBaseUri + path)
+                        .retrieve()
+                        .bodyToMono(Void.class);
+            });
+        });
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {

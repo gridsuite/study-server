@@ -276,6 +276,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/status/" + SECURITY_ANALYSIS_UUID + "?status=NOT_DONE":
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     default:
                         LOGGER.error("Path not supported: " + request.getPath());
                         return new MockResponse().setResponseCode(404);
@@ -630,6 +634,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
         assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent
+        messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        headersSwitch = messageSwitch.getHeaders();
+        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         //update equipment
@@ -763,6 +774,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectBody(UUID.class)
                 .isEqualTo(UUID.fromString(SECURITY_ANALYSIS_UUID));
+
+        Message<byte[]> securityAnalysisStatusMessage = output.receive(1000);
+        assertEquals(newStudyName, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
 
         Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
         assertEquals(newStudyName, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
