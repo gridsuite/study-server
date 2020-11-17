@@ -131,10 +131,7 @@ public class StudyService {
                     return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
                             .then(Mono.fromCallable(() -> {
                                 // send notification
-                                studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                                        .setHeader(HEADER_STUDY_NAME, receiverObj.getStudyName())
-                                        .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_SECURITY_ANALYSIS_RESULT)
-                                        .build());
+                                emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                                 return null;
                             }));
                 } catch (JsonProcessingException e) {
@@ -600,8 +597,10 @@ public class StudyService {
     }
 
     private void emitStudyChanged(String studyName, String updateType) {
+        // URLEncoder translate ' ' into + (which is also valid), but we registered whith %20
+        //  [+] match only the character +, I don't like using \ in strings
         studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_STUDY_NAME, URLEncoder.encode(studyName, StandardCharsets.UTF_8).replaceAll("[+]", "%20"))
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build()
         );
