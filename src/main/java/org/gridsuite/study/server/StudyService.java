@@ -129,24 +129,23 @@ public class StudyService {
                             resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
 
                     // update DB
-                    setSecurityAnalysisStatus(receiverObj.getStudyName(), receiverObj.getUserId(), SecurityAnalysisStatus.COMPLETED)
-                            .doOnSuccess(e -> emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS));
+                    return setSecurityAnalysisStatus(receiverObj.getStudyName(), receiverObj.getUserId(), SecurityAnalysisStatus.COMPLETED).and(
 
-                    return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
-                            .then(Mono.fromCallable(() -> {
-                                // send notifications
-                                emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-                                return null;
-                            }));
+                            studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
+                                    .then(Mono.fromCallable(() -> {
+                                        // send notifications
+                                        emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                        emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+                                        return null;
+                                    })));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
             }
             return Mono.empty();
         })
-        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-        .subscribe();
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .subscribe();
     }
 
     @Autowired
