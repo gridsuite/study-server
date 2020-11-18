@@ -647,7 +647,7 @@ public class StudyService {
     private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
         Mono<String> statusMono = getSecurityAnalysisStatus(studyName, userId);
         return statusMono.switchIfEmpty(Mono.empty())
-                .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
+                .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING.name()) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
     }
 
     public Mono<Void> assertComputationNotRunning(String studyName, String userId) {
