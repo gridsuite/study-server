@@ -129,6 +129,9 @@ public class StudyService {
                             resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
 
                     // update DB
+                    setSecurityAnalysisStatus(receiverObj.getStudyName(), receiverObj.getUserId(), SecurityAnalysisStatus.COMPLETED)
+                            .doOnSuccess(e -> emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS));
+
                     return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
                             .then(Mono.fromCallable(() -> {
                                 // send notifications
@@ -736,7 +739,7 @@ public class StudyService {
 
         Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
 
-        return networkUuid.flatMap(uuid -> {
+        Mono<UUID> resultUuid = networkUuid.flatMap(uuid -> {
             String receiver;
             try {
                 receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyName, userId)), StandardCharsets.UTF_8);
@@ -756,6 +759,11 @@ public class StudyService {
                     .retrieve()
                     .bodyToMono(UUID.class);
         });
+
+        resultUuid.map(result -> studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result)
+                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))).subscribe();
+
+        return resultUuid;
     }
 
     public Mono<String> getSecurityAnalysisResult(String studyName, String userId, List<String> limitTypes) {
@@ -847,6 +855,8 @@ public class StudyService {
         return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                LOGGER.info(" *************** StudyService.getSecurityAnalysisStatus ***************");
+
                 String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/status/{resultUuid}")
                         .buildAndExpand(resultUuid)
                         .toUriString();
@@ -867,6 +877,8 @@ public class StudyService {
         return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                LOGGER.info(" *************** StudyService.setSecurityAnalysisStatus: status = " + status.name() + " ***************");
+
                 String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/status/{resultUuid}")
                         .queryParam("status", status.name())
                         .buildAndExpand(resultUuid)
