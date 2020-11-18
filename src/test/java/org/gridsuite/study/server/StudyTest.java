@@ -779,10 +779,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals(newStudyName, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
 
-        securityAnalysisStatusMessage = output.receive(1000);
-        assertEquals(newStudyName, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
-
         Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
         assertEquals(newStudyName, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));

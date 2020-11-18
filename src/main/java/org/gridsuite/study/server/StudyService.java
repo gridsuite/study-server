@@ -751,6 +751,7 @@ public class StudyService {
                     .queryParam("receiver", receiver)
                     .buildAndExpand(uuid)
                     .toUriString();
+
             return webClient
                     .post()
                     .uri(securityAnalysisServerBaseUri + path)
@@ -760,10 +761,11 @@ public class StudyService {
                     .bodyToMono(UUID.class);
         });
 
-        resultUuid.map(result -> studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result)
-                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))).subscribe();
-
-        return resultUuid;
+        return resultUuid.flatMap(result ->
+                  studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result)
+                .doOnSuccess(ignored -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                         .then(Mono.just(result))
+        );
     }
 
     public Mono<String> getSecurityAnalysisResult(String studyName, String userId, List<String> limitTypes) {
