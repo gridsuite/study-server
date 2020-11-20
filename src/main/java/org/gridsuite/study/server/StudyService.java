@@ -646,7 +646,7 @@ public class StudyService {
 
     private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
         Mono<String> statusMono = getSecurityAnalysisStatus(studyName, userId);
-        return statusMono.switchIfEmpty(Mono.empty())
+        return statusMono
                 .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING.name()) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
     }
 
@@ -738,7 +738,7 @@ public class StudyService {
 
         Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
 
-        Mono<UUID> resultUuid = networkUuid.flatMap(uuid -> {
+        return networkUuid.flatMap(uuid -> {
             String receiver;
             try {
                 receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyName, userId)), StandardCharsets.UTF_8);
@@ -758,12 +758,11 @@ public class StudyService {
                     .body(BodyInserters.fromValue(parameters))
                     .retrieve()
                     .bodyToMono(UUID.class);
-        });
-
-        return resultUuid.flatMap(result ->
+        })
+                .flatMap(result ->
                   studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result)
-                .doOnSuccess(ignored -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
-                         .then(Mono.just(result))
+                .doOnSuccess(e -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                         .thenReturn(result)
         );
     }
 
