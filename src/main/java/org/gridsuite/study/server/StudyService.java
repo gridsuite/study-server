@@ -855,7 +855,7 @@ public class StudyService {
         return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/status/{resultUuid}")
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
                         .buildAndExpand(resultUuid)
                         .toUriString();
                 return webClient
@@ -875,7 +875,7 @@ public class StudyService {
         return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/status/{resultUuid}")
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
                         .queryParam("status", status.name())
                         .buildAndExpand(resultUuid)
                         .toUriString();

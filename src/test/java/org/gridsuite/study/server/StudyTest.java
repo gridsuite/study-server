@@ -277,11 +277,11 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/status/" + SECURITY_ANALYSIS_UUID:
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/status":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/status/" + SECURITY_ANALYSIS_UUID + "?status=NOT_DONE":
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/status?status=NOT_DONE":
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
