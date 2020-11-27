@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -26,6 +27,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -229,6 +231,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
 
                         case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
+                            return new MockResponse().setResponseCode(200)
+                                    .setBody("[\"s1\", \"s2\", \"s3\"]")
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+
                         case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
                             return new MockResponse().setResponseCode(200)
                                     .setBody("{\n" +
@@ -259,6 +265,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         case "/v1/2-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         case "/v1/3-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         case "/v1/generators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                             return new MockResponse().setBody(" ").setResponseCode(200)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -303,6 +310,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
                         case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/groovy/":
                             return new MockResponse().setResponseCode(200)
+                                    .setBody("[\"s4\", \"s5\", \"s6\", \"s7\"]")
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
 
                         case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/status":
@@ -638,6 +646,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
+        //get all map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/all/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
         //delete existing study s2
         webTestClient.delete()
                 .uri("/v1/userId/studies/{studyName}/", "s2")
@@ -660,6 +675,15 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .uri("/v1/{userId}/studies/{studyName}/network-modification/switches/{switchId}?open=true", "userId", STUDY_NAME, "switchId")
                 .exchange()
                 .expectStatus().isOk();
+
+        // assert that the broker message has been sent
+        Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
+        Message<byte[]> messageStudyUpdate = output.receive(1000);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(STUDY_NAME, headersStudyUpdate.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(substationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         // assert that the broker message has been sent
         Message<byte[]> messageLFStatus = output.receive(1000);
@@ -689,12 +713,21 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .exchange()
                 .expectStatus().isOk();
 
+        // assert that the broker message has been sent
+        substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
+        messageStudyUpdate = output.receive(1000);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(STUDY_NAME, headersStudyUpdate.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(substationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+
+        // assert that the broker message has been sent
         messageLFStatus = output.receive(1000);
         assertEquals("", new String(messageLFStatus.getPayload()));
         headersLFStatus = messageLFStatus.getHeaders();
         assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
         assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
-        // assert that the broker message has been sent
 
         webTestClient.get()
                 .uri("/v1/studies")
