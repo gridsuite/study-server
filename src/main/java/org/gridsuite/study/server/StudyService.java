@@ -129,15 +129,13 @@ public class StudyService {
                             resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
 
                     // update DB
-                    return setSecurityAnalysisStatus(receiverObj.getStudyName(), receiverObj.getUserId(), SecurityAnalysisStatus.COMPLETED).and(
-
-                            studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
+                    return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
                                     .then(Mono.fromCallable(() -> {
                                         // send notifications
                                         emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                                         emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                                         return null;
-                                    })));
+                                    }));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -484,7 +482,7 @@ public class StudyService {
         .then(studyRepository.updateLoadFlowResult(studyName, userId, null))
         .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
-        .then(setSecurityAnalysisStatus(studyName, userId, SecurityAnalysisStatus.NOT_DONE)
+        .then(invalidateSecurityAnalysisStatus(studyName, userId)
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
     }
@@ -503,7 +501,7 @@ public class StudyService {
                 .then(studyRepository.updateLoadFlowResult(studyName, userId, null))
                 .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
-                .then(setSecurityAnalysisStatus(studyName, userId, SecurityAnalysisStatus.NOT_DONE)
+                .then(invalidateSecurityAnalysisStatus(studyName, userId)
                         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
@@ -726,7 +724,7 @@ public class StudyService {
         return studyRepository.updateLoadFlowParameters(studyName, userId, toEntity(parameters != null ? parameters : LoadFlowParameters.load()))
                 .then(studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE)
                         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
-                .then(setSecurityAnalysisStatus(studyName, userId, SecurityAnalysisStatus.NOT_DONE)
+                .then(invalidateSecurityAnalysisStatus(studyName, userId)
                         .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
@@ -868,15 +866,14 @@ public class StudyService {
         });
     }
 
-    public Mono<Void> setSecurityAnalysisStatus(String studyName, String userId, SecurityAnalysisStatus status) {
+    public Mono<Void> invalidateSecurityAnalysisStatus(String studyName, String userId) {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
 
         return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-                        .queryParam("status", status.name())
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/invalidateStatus")
                         .buildAndExpand(resultUuid)
                         .toUriString();
                 return webClient
