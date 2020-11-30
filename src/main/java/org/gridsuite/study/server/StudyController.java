@@ -404,4 +404,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId).flatMap(uuid ->
                 studyService.getSubstationSvgAndMetadata(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout)));
     }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/security-analysis/status")
+    @ApiOperation(value = "Get the security analysis status on study", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The security analysis status"),
+            @ApiResponse(code = 404, message = "The security analysis status has not been found")})
+    public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
+                                                                  @ApiParam(value = "User ID") @PathVariable("userId") String userId) {
+        return studyService.getSecurityAnalysisStatus(studyName, userId)
+                .map(result -> ResponseEntity.ok().body(result))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
 }

@@ -101,6 +101,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
     private static final String CONTIGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
+    private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
     public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.4\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\"}";
     public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.4\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\"}";
@@ -275,6 +276,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/groovy/":
                         return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/status":
+                        return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/invalidate-status":
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     default:
                         LOGGER.error("Path not supported: " + request.getPath());
@@ -630,6 +639,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
         assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent
+        messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        headersSwitch = messageSwitch.getHeaders();
+        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         //update equipment
@@ -764,6 +780,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectBody(UUID.class)
                 .isEqualTo(UUID.fromString(SECURITY_ANALYSIS_UUID));
 
+        Message<byte[]> securityAnalysisStatusMessage = output.receive(1000);
+        assertEquals(newStudyName, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+
         Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
         assertEquals(newStudyName, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
@@ -775,6 +795,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectBody(String.class)
                 .isEqualTo(SECURITY_ANALYSIS_RESULT_JSON);
+
+        // get security analysis status
+        webTestClient.get()
+                .uri("/v1/userId/studies/{studyName}/security-analysis/status", newStudyName)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo(SECURITY_ANALYSIS_STATUS_JSON);
 
         // get contingency count
         webTestClient.get()
@@ -833,6 +861,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         .loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
 
         // drop the broker message for study deletion (due to right access change)
+        output.receive(1000);
         output.receive(1000);
         output.receive(1000);
 
