@@ -69,7 +69,6 @@ import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -337,6 +336,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
     @Test
     public void test() throws Exception {
+
         //empty list
         webTestClient.get()
                 .uri("/v1/studies")
