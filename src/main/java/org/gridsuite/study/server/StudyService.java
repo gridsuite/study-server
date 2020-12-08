@@ -79,6 +79,7 @@ public class StudyService {
     static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    static final String HEADER_ERROR = "error";
 
     @Data
     @AllArgsConstructor
@@ -216,7 +217,10 @@ public class StudyService {
                                                  description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
                           })
                 )
-                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .doOnError(throwable -> {
+                    LOGGER.error(throwable.toString(), throwable);
+                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, throwable.toString());
+                })
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe());
     }
 
@@ -230,7 +234,10 @@ public class StudyService {
                                                 description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                          })
                 ))
-                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .doOnError(throwable -> {
+                    LOGGER.error(throwable.toString(), throwable);
+                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, throwable.toString());
+                })
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()); // delete the study if the creation has been canceled
     }
 
@@ -524,6 +531,7 @@ public class StudyService {
         }).doFinally(s ->
             emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)
         );
+
     }
 
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
@@ -606,6 +614,15 @@ public class StudyService {
         studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .build()
+        );
+    }
+
+    private void emitStudyError(String studyName, String updateType, String errorMessage) {
+        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_ERROR, errorMessage)
                 .build()
         );
     }

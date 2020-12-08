@@ -58,6 +58,7 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.ResourceUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
@@ -66,6 +67,7 @@ import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -86,10 +88,12 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String STUDY_EXIST_URL = "/v1/{userId}/studies/{studyName}/exists";
     private static final String DESCRIPTION = "description";
     private static final String TEST_FILE = "testCase.xiidm";
+    private static final String TEST_FILE_WITH_ERRORS = "testCase_with_errors.xiidm";
     private static final String STUDY_NAME = "studyName";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
+    private static final String IMPORTED_CASE_WITH_ERRORS_UUID_STRING = "88888888-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String SECURITY_ANALYSIS_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
@@ -98,6 +102,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
+    private static final UUID IMPORTED_CASE_WITH_ERRORS_UUID = UUID.fromString(IMPORTED_CASE_WITH_ERRORS_UUID_STRING);
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
     private static final String CONTIGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
@@ -170,6 +175,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
         String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
+        String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
@@ -192,6 +198,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
+                    case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -199,9 +206,16 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         return new MockResponse().setResponseCode(200).setBody("false")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/" + CASE_API_VERSION + "/cases/private":
-                        return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/" + CASE_API_VERSION + "/cases/private": {
+                        String body = request.getBody().readUtf8();
+                        if (body.contains("filename=\"caseFile_with_errors\"")) {  // import file with errors
+                            return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else {
+                            return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        }
+                    }
 
                     case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
 
@@ -222,6 +236,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
                     case "/v1/networks?caseName=" + IMPORTED_CASE_UUID_STRING:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
+                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
@@ -429,6 +447,45 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .expectBody()
                     .jsonPath("$")
                     .isEqualTo(STUDY_ALREADY_EXISTS.name());
+        }
+
+        // Create study with a bad case -> error
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE_WITH_ERRORS))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE_WITH_ERRORS, "text/xml", is);
+
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("caseFile", mockFile.getBytes())
+                    .filename("caseFile_with_errors")
+                    .contentType(MediaType.TEXT_XML);
+
+            webTestClient.post()
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "newStudy", "desc", "false")
+                    .header("userId", "userId")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk();
+
+            // assert that the broker message has been sent a study creation request message
+            Message<byte[]> message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            MessageHeaders headers = message.getHeaders();
+            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+            // assert that the broker message has been sent a error message for study creation
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertFalse(StringUtils.isEmpty(headers.get(StudyService.HEADER_ERROR)));
+
+            // assert that the broker message has been sent a study creation request message for deletion
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
 
         // check the study s2
