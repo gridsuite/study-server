@@ -58,7 +58,6 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.ResourceUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
@@ -67,7 +66,6 @@ import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -187,9 +185,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     case "/v1/studies/{studyName}/cases/{caseUuid}":
                         return new MockResponse().setResponseCode(200).setBody("CGMES")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/studies/newStudy/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
+                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
                     case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
+                    case "/v1/cases/88888888-0000-0000-0000-000000000000/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -240,7 +242,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8").setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
 
                     case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
@@ -449,7 +451,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .isEqualTo(STUDY_ALREADY_EXISTS.name());
         }
 
-        // Create study with a bad case -> error
+        // Create study with a bad case file -> error
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE_WITH_ERRORS))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE_WITH_ERRORS, "text/xml", is);
 
@@ -478,7 +480,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-            assertFalse(StringUtils.isEmpty(headers.get(StudyService.HEADER_ERROR)));
+            assertEquals("The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'", headers.get(StudyService.HEADER_ERROR));
 
             // assert that the broker message has been sent a study creation request message for deletion
             message = output.receive(1000);
@@ -487,6 +489,34 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
+
+        // Create study with a bad existing case -> error
+        webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", "newStudy", IMPORTED_CASE_WITH_ERRORS_UUID_STRING, DESCRIPTION, "false")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk();
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a error message for study creation
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals("The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'", headers.get(StudyService.HEADER_ERROR));
+
+        // assert that the broker message has been sent a study creation request message for deletion
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         // check the study s2
         webTestClient.get()

@@ -21,7 +21,8 @@ class StudyException  extends RuntimeException {
         LOADFLOW_RUNNING,
         SECURITY_ANALYSIS_RUNNING,
         SECURITY_ANALYSIS_NOT_FOUND,
-        NOT_ALLOWED
+        NOT_ALLOWED,
+        STUDY_CREATION_FAILED
     }
 
     private final Type type;

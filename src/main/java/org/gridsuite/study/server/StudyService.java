@@ -7,7 +7,9 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -210,34 +212,28 @@ public class StudyService {
 
     public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .then(Mono.zip(persistentStore(caseUuid), getCaseFormat(caseUuid))
+                .then(Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
                           .flatMap(t -> {
                               LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                               return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                                  description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
                           })
                 )
-                .doOnError(throwable -> {
-                    LOGGER.error(throwable.toString(), throwable);
-                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, throwable.toString());
-                })
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe());
     }
 
     public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
                 .then(importCase(caseFile).flatMap(uuid ->
-                     Mono.zip(persistentStore(uuid), getCaseFormat(uuid))
+                     Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                                 description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                          })
                 ))
-                .doOnError(throwable -> {
-                    LOGGER.error(throwable.toString(), throwable);
-                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, throwable.toString());
-                })
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()); // delete the study if the creation has been canceled
     }
 
@@ -354,7 +350,7 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    private Mono<NetworkInfos> persistentStore(UUID caseUuid) {
+    private Mono<NetworkInfos> persistentStore(UUID caseUuid, String studyName) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_UUID, caseUuid)
                 .buildAndExpand()
@@ -363,6 +359,21 @@ public class StudyService {
         return webClient.post()
                 .uri(networkConversionServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
+                        clientResponse.bodyToMono(String.class).flatMap(body -> {
+                            try {
+                                String message;
+                                JsonNode node = new ObjectMapper().readTree(body).path("message");
+                                if (!node.isMissingNode()) {
+                                    message = node.asText();
+                                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, message);
+                                }
+                            } catch (JsonProcessingException e) {
+                                throw new PowsyblException("Error parsing message from conversion server");
+                            }
+                            return Mono.error(new StudyException(STUDY_CREATION_FAILED));
+                        })
+                )
                 .bodyToMono(NetworkInfos.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
