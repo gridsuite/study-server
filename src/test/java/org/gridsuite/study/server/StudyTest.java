@@ -88,6 +88,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String DESCRIPTION = "description";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_WITH_ERRORS = "testCase_with_errors.xiidm";
+    private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
     private static final String STUDY_NAME = "studyName";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -215,6 +216,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                             if (body.contains("filename=\"caseFile_with_errors\"")) {  // import file with errors
                                 return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
                                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                            } else if (body.contains("filename=\"caseFile_import_errors\"")) {  // import file with errors during import in the case server
+                                return new MockResponse().setResponseCode(500)
+                                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                                        .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
                             } else {
                                 return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -244,7 +249,8 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
 
                         case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
                             return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8").setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
+                                    .addHeader("Content-Type", "application/json; charset=utf-8")
+                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
 
                         case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
@@ -1030,6 +1036,46 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         headers = message.getHeaders();
         assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // Create study with a bad case file -> error when importing in the case server
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE_IMPORT_ERRORS))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE_IMPORT_ERRORS, "text/xml", is);
+
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("caseFile", mockFile.getBytes())
+                    .filename("caseFile_import_errors")
+                    .contentType(MediaType.TEXT_XML);
+
+            webTestClient.post()
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "newStudy", "desc", "false")
+                    .header("userId", "userId")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk();
+
+            // assert that the broker message has been sent a study creation request message
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+            // assert that the broker message has been sent a error message for study creation
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals("Error during import in the case server", headers.get(StudyService.HEADER_ERROR));
+
+            // assert that the broker message has been sent a study creation request message for deletion
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        }
+
     }
 
     @After
