@@ -225,7 +225,7 @@ public class StudyService {
 
     public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .then(importCase(caseFile).flatMap(uuid ->
+                .then(importCase(caseFile, studyName).flatMap(uuid ->
                      Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
@@ -301,7 +301,7 @@ public class StudyService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    Mono<UUID> importCase(Mono<FilePart> multipartFile) {
+    Mono<UUID> importCase(Mono<FilePart> multipartFile, String studyName) {
 
         return multipartFile.flatMap(file -> {
             MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
@@ -312,6 +312,21 @@ public class StudyService {
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
                     .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
                     .retrieve()
+                    .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
+                            clientResponse.bodyToMono(String.class).flatMap(body -> {
+                                try {
+                                    String message;
+                                    JsonNode node = new ObjectMapper().readTree(body).path("message");
+                                    if (!node.isMissingNode()) {
+                                        message = node.asText();
+                                        emitStudyError(studyName, UPDATE_TYPE_STUDIES, message);
+                                    }
+                                } catch (JsonProcessingException e) {
+                                    throw new PowsyblException("Error parsing message from case server");
+                                }
+                                return Mono.error(new StudyException(STUDY_CREATION_FAILED));
+                            })
+                    )
                     .bodyToMono(UUID.class)
                     .publishOn(Schedulers.boundedElastic())
                     .log(ROOT_CATEGORY_REACTOR, Level.FINE);
