@@ -441,8 +441,8 @@ public class StudyService {
                 .bodyToMono(Boolean.class);
     }
 
-    Mono<String> getSubstationsMapData(UUID networkUuid, List<String> substationsIds) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/substations/{networkUuid}");
+    Mono<String> getEquipmentsMapData(UUID networkUuid, List<String> substationsIds, String equipmentPath) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/" + equipmentPath + "/{networkUuid}");
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
         }
@@ -452,71 +452,62 @@ public class StudyService {
                 .uri(networkMapServerBaseUri + path)
                 .retrieve()
                 .bodyToMono(String.class);
+    }
+
+    Mono<String> getSubstationsMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "substations");
     }
 
     Mono<String> getLinesMapData(UUID networkUuid, List<String> substationsIds) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/lines/{networkUuid}");
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        return webClient.get()
-                .uri(networkMapServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(String.class);
+        return getEquipmentsMapData(networkUuid, substationsIds, "lines");
     }
 
     Mono<String> getTwoWindingsTransformersMapData(UUID networkUuid, List<String> substationsIds) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/2-windings-transformers/{networkUuid}");
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        return webClient.get()
-                .uri(networkMapServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(String.class);
+        return getEquipmentsMapData(networkUuid, substationsIds, "2-windings-transformers");
     }
 
     Mono<String> getThreeWindingsTransformersMapData(UUID networkUuid, List<String> substationsIds) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/3-windings-transformers/{networkUuid}");
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        return webClient.get()
-                .uri(networkMapServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(String.class);
+        return getEquipmentsMapData(networkUuid, substationsIds, "3-windings-transformers");
     }
 
     Mono<String> getGeneratorsMapData(UUID networkUuid, List<String> substationsIds) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/generators/{networkUuid}");
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
+        return getEquipmentsMapData(networkUuid, substationsIds, "generators");
+    }
 
-        return webClient.get()
-                .uri(networkMapServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(String.class);
+    Mono<String> getBatteriesMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "batteries");
+    }
+
+    Mono<String> getDanglingLinesMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "dangling-lines");
+    }
+
+    Mono<String> getHvdcLinesMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "hvdc-lines");
+    }
+
+    Mono<String> getLccConverterStationsMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "lcc-converter-stations");
+    }
+
+    Mono<String> getVscConverterStationsMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "vsc-converter-stations");
+    }
+
+    Mono<String> getLoadsMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "loads");
+    }
+
+    Mono<String> getShuntCompensatorsMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "shunt-compensators");
+    }
+
+    Mono<String> getStaticVarCompensatorsMapData(UUID networkUuid, List<String> substationsIds) {
+        return getEquipmentsMapData(networkUuid, substationsIds, "static-var-compensators");
     }
 
     Mono<String> getAllMapData(UUID networkUuid, List<String> substationsIds) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/all/{networkUuid}");
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        return webClient.get()
-                .uri(networkMapServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(String.class);
+        return getEquipmentsMapData(networkUuid, substationsIds, "all");
     }
 
     Mono<Void> changeSwitchState(String studyName, String userId, String switchId, boolean open) {

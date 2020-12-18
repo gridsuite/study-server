@@ -265,6 +265,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         case "/v1/2-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         case "/v1/3-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         case "/v1/generators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/batteries/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/dangling-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/hvdc-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/lcc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/vsc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/loads/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/shunt-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        case "/v1/static-var-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                             return new MockResponse().setBody(" ").setResponseCode(200)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -643,6 +651,62 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         //get the generators map data of a network
         webTestClient.get()
                 .uri("/v1/{userId}/studies/{studyName}/network-map/generators/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the batteries map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/batteries/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the dangling lines map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/dangling-lines/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the hvdc lines map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/hvdc-lines/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the lcc converter stations map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/lcc-converter-stations/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the vsc converter stations map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/vsc-converter-stations/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the loads map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/loads/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the shunt compensators map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/shunt-compensators/", "userId", STUDY_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        //get the static var compensators map data of a network
+        webTestClient.get()
+                .uri("/v1/{userId}/studies/{studyName}/network-map/static-var-compensators/", "userId", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
