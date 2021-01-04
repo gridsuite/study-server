@@ -966,10 +966,14 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         headersLF = messageLf.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
+
+        output.receive(1000);
+        output.receive(1000);
+        output.receive(1000);
     }
 
     @Test
-    public void testCreationWithError() throws Exception {
+    public void testCreationWithErrorBadCaseFile() throws Exception {
         // Create study with a bad case file -> error
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE_WITH_ERRORS))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE_WITH_ERRORS, "text/xml", is);
@@ -1008,35 +1012,10 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
+    }
 
-        // Create study with a bad existing case -> error
-        webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", "newStudy", IMPORTED_CASE_WITH_ERRORS_UUID_STRING, DESCRIPTION, "false")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk();
-
-        // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(1000);
-        assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
-        assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent a error message for study creation
-        message = output.receive(1000);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals("The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'", headers.get(StudyService.HEADER_ERROR));
-
-        // assert that the broker message has been sent a study creation request message for deletion
-        message = output.receive(1000);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
-
+    @Test
+    public void testCreationWithErrorBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE_IMPORT_ERRORS))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE_IMPORT_ERRORS, "text/xml", is);
@@ -1055,9 +1034,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                     .expectStatus().isOk();
 
             // assert that the broker message has been sent a study creation request message
-            message = output.receive(1000);
+            Message<byte[]> message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
-            headers = message.getHeaders();
+            MessageHeaders headers = message.getHeaders();
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
@@ -1075,7 +1054,6 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
-
     }
 
     @After
