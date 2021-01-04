@@ -49,6 +49,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.EmitterProcessor;
@@ -301,6 +302,22 @@ public class StudyService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
+    private Mono<? extends Throwable> handleStudyCreationError(String studyName, ClientResponse clientResponse, String serverName) {
+        return clientResponse.bodyToMono(String.class).flatMap(body -> {
+            try {
+                String message;
+                JsonNode node = new ObjectMapper().readTree(body).path("message");
+                if (!node.isMissingNode()) {
+                    message = node.asText();
+                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, message);
+                }
+            } catch (JsonProcessingException e) {
+                throw new PowsyblException("Error parsing message from " + serverName + " server");
+            }
+            return Mono.error(new StudyException(STUDY_CREATION_FAILED));
+        });
+    }
+
     Mono<UUID> importCase(Mono<FilePart> multipartFile, String studyName) {
 
         return multipartFile.flatMap(file -> {
@@ -313,19 +330,7 @@ public class StudyService {
                     .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
-                            clientResponse.bodyToMono(String.class).flatMap(body -> {
-                                try {
-                                    String message;
-                                    JsonNode node = new ObjectMapper().readTree(body).path("message");
-                                    if (!node.isMissingNode()) {
-                                        message = node.asText();
-                                        emitStudyError(studyName, UPDATE_TYPE_STUDIES, message);
-                                    }
-                                } catch (JsonProcessingException e) {
-                                    throw new PowsyblException("Error parsing message from case server");
-                                }
-                                return Mono.error(new StudyException(STUDY_CREATION_FAILED));
-                            })
+                            handleStudyCreationError(studyName, clientResponse, "case")
                     )
                     .bodyToMono(UUID.class)
                     .publishOn(Schedulers.boundedElastic())
@@ -375,19 +380,7 @@ public class StudyService {
                 .uri(networkConversionServerBaseUri + path)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
-                        clientResponse.bodyToMono(String.class).flatMap(body -> {
-                            try {
-                                String message;
-                                JsonNode node = new ObjectMapper().readTree(body).path("message");
-                                if (!node.isMissingNode()) {
-                                    message = node.asText();
-                                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, message);
-                                }
-                            } catch (JsonProcessingException e) {
-                                throw new PowsyblException("Error parsing message from conversion server");
-                            }
-                            return Mono.error(new StudyException(STUDY_CREATION_FAILED));
-                        })
+                        handleStudyCreationError(studyName, clientResponse, "conversion")
                 )
                 .bodyToMono(NetworkInfos.class)
                 .publishOn(Schedulers.boundedElastic())
