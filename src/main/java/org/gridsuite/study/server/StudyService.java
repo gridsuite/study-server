@@ -7,7 +7,9 @@
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -47,6 +49,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.EmitterProcessor;
@@ -79,6 +82,7 @@ public class StudyService {
     static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    static final String HEADER_ERROR = "error";
 
     @Data
     @AllArgsConstructor
@@ -209,7 +213,7 @@ public class StudyService {
 
     public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .then(Mono.zip(persistentStore(caseUuid), getCaseFormat(caseUuid))
+                .then(Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
                           .flatMap(t -> {
                               LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                               return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
@@ -222,8 +226,8 @@ public class StudyService {
 
     public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .then(importCase(caseFile).flatMap(uuid ->
-                     Mono.zip(persistentStore(uuid), getCaseFormat(uuid))
+                .then(importCase(caseFile, studyName).flatMap(uuid ->
+                     Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
@@ -298,7 +302,23 @@ public class StudyService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    Mono<UUID> importCase(Mono<FilePart> multipartFile) {
+    private Mono<? extends Throwable> handleStudyCreationError(String studyName, ClientResponse clientResponse, String serverName) {
+        return clientResponse.bodyToMono(String.class).flatMap(body -> {
+            try {
+                String message;
+                JsonNode node = new ObjectMapper().readTree(body).path("message");
+                if (!node.isMissingNode()) {
+                    message = node.asText();
+                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, message);
+                }
+            } catch (JsonProcessingException e) {
+                throw new PowsyblException("Error parsing message from " + serverName + " server");
+            }
+            return Mono.error(new StudyException(STUDY_CREATION_FAILED));
+        });
+    }
+
+    Mono<UUID> importCase(Mono<FilePart> multipartFile, String studyName) {
 
         return multipartFile.flatMap(file -> {
             MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
@@ -309,6 +329,9 @@ public class StudyService {
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
                     .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
                     .retrieve()
+                    .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
+                            handleStudyCreationError(studyName, clientResponse, "case")
+                    )
                     .bodyToMono(UUID.class)
                     .publishOn(Schedulers.boundedElastic())
                     .log(ROOT_CATEGORY_REACTOR, Level.FINE);
@@ -347,7 +370,7 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    private Mono<NetworkInfos> persistentStore(UUID caseUuid) {
+    private Mono<NetworkInfos> persistentStore(UUID caseUuid, String studyName) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_UUID, caseUuid)
                 .buildAndExpand()
@@ -356,6 +379,9 @@ public class StudyService {
         return webClient.post()
                 .uri(networkConversionServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
+                        handleStudyCreationError(studyName, clientResponse, "conversion")
+                )
                 .bodyToMono(NetworkInfos.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
@@ -524,6 +550,7 @@ public class StudyService {
         }).doFinally(s ->
             emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)
         );
+
     }
 
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
@@ -606,6 +633,15 @@ public class StudyService {
         studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .build()
+        );
+    }
+
+    private void emitStudyError(String studyName, String updateType, String errorMessage) {
+        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_ERROR, errorMessage)
                 .build()
         );
     }
