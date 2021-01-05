@@ -9,7 +9,6 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.PowsyblException;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -302,7 +301,7 @@ public class StudyService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    private Mono<? extends Throwable> handleStudyCreationError(String studyName, ClientResponse clientResponse, String serverName) {
+    private Mono<? extends Throwable> handleStudyCreationError(String studyName, ClientResponse clientResponse) {
         return clientResponse.bodyToMono(String.class).flatMap(body -> {
             try {
                 String message;
@@ -312,7 +311,9 @@ public class StudyService {
                     emitStudyError(studyName, UPDATE_TYPE_STUDIES, message);
                 }
             } catch (JsonProcessingException e) {
-                throw new PowsyblException("Error parsing message from " + serverName + " server");
+                if (!body.isEmpty()) {
+                    emitStudyError(studyName, UPDATE_TYPE_STUDIES, body);
+                }
             }
             return Mono.error(new StudyException(STUDY_CREATION_FAILED));
         });
@@ -329,8 +330,8 @@ public class StudyService {
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
                     .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
                     .retrieve()
-                    .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
-                            handleStudyCreationError(studyName, clientResponse, "case")
+                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                            handleStudyCreationError(studyName, clientResponse)
                     )
                     .bodyToMono(UUID.class)
                     .publishOn(Schedulers.boundedElastic())
@@ -379,8 +380,8 @@ public class StudyService {
         return webClient.post()
                 .uri(networkConversionServerBaseUri + path)
                 .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse ->
-                        handleStudyCreationError(studyName, clientResponse, "conversion")
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                        handleStudyCreationError(studyName, clientResponse)
                 )
                 .bodyToMono(NetworkInfos.class)
                 .publishOn(Schedulers.boundedElastic())
