@@ -79,6 +79,7 @@ public class StudyService {
     static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    static final String UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT = "dynamicSimulationResult";
 
     @Data
     @AllArgsConstructor
@@ -102,6 +103,7 @@ public class StudyService {
     private String networkStoreServerBaseUri;
     private String securityAnalysisServerBaseUri;
     private String actionsServerBaseUri;
+    private String dynamicSimulationServerBaseUri;
 
     private StudyRepository studyRepository;
     private StudyCreationRequestRepository studyCreationRequestRepository;
@@ -158,6 +160,7 @@ public class StudyService {
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
             @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
+            @Value("${backing-services.dynamic-simulation-server.base-uri:http://dynamic-simulation-server/}") String dynamicSimulationServerBaseUri,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             WebClient.Builder webClientBuilder,
@@ -172,6 +175,7 @@ public class StudyService {
         this.networkStoreServerBaseUri = networkStoreServerBaseUri;
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
         this.actionsServerBaseUri = actionsServerBaseUri;
+        this.dynamicSimulationServerBaseUri = dynamicSimulationServerBaseUri;
 
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
@@ -212,8 +216,10 @@ public class StudyService {
                 .then(Mono.zip(persistentStore(caseUuid), getCaseFormat(caseUuid))
                           .flatMap(t -> {
                               LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                 description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
+                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(),
+                                      t.getT1().getNetworkId(), description, t.getT2(), caseUuid, false,
+                                      LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters),
+                                      null, null);
                           })
                 )
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -226,8 +232,10 @@ public class StudyService {
                      Mono.zip(persistentStore(uuid), getCaseFormat(uuid))
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                             return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                             return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(),
+                                     t.getT1().getNetworkId(), description, t.getT2(), uuid, true,
+                                     LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters),
+                                     null, null);
                          })
                 ))
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -261,11 +269,14 @@ public class StudyService {
                 .doFinally(r -> deleteStudyCreationRequest(studyName, userId));
     }
 
-    private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
-                                         String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
-                                         LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
-        return studyRepository.insertStudy(studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
-                                           loadFlowParameters, securityAnalysisUuid)
+    private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid,
+                                          String networkId, String description, String caseFormat,
+                                          UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
+                                          LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters,
+                                          UUID securityAnalysisUuid, UUID dynamicSimulationUuid) {
+        return studyRepository.insertStudy(studyName, userId, isPrivate, networkUuid, networkId, description,
+                caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult, loadFlowParameters,
+                securityAnalysisUuid, dynamicSimulationUuid)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
@@ -531,9 +542,11 @@ public class StudyService {
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(study -> {
             study.setStudyName(newStudyName);
             Mono<Void> removeStudy = removeStudy(studyName, userId);
-            Mono<StudyEntity> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(), study.getNetworkId(),
-                    study.getDescription(), study.getCaseFormat(), study.getCaseUuid(), study.isCasePrivate(), study.getLoadFlowStatus(), study.getLoadFlowResult(),
-                    study.getLoadFlowParameters(), study.getSecurityAnalysisResultUuid());
+            Mono<StudyEntity> insertStudy = insertStudy(newStudyName, userId, study.isPrivate(), study.getNetworkUuid(),
+                    study.getNetworkId(), study.getDescription(), study.getCaseFormat(), study.getCaseUuid(),
+                    study.isCasePrivate(), study.getLoadFlowStatus(), study.getLoadFlowResult(),
+                    study.getLoadFlowParameters(), study.getSecurityAnalysisResultUuid(),
+                    study.getDynamicSimulationResultUuid());
             return removeStudy.then(insertStudy);
         }).map(StudyService::toInfos);
     }
@@ -591,7 +604,9 @@ public class StudyService {
                                         studyEntity.getCaseUuid(), studyEntity.isCasePrivate(),
                                         studyEntity.getLoadFlowStatus(),
                                         studyEntity.getLoadFlowResult(),
-                                        studyEntity.getLoadFlowParameters(), studyEntity.getSecurityAnalysisResultUuid()))
+                                        studyEntity.getLoadFlowParameters(),
+                                        studyEntity.getSecurityAnalysisResultUuid(),
+                                        studyEntity.getDynamicSimulationResultUuid()))
         ).map(StudyService::toInfos);
     }
 
@@ -885,6 +900,74 @@ public class StudyService {
         });
     }
 
+    Mono<UUID> runDynamicSimulation(String userId, String studyName, Mono<FilePart> dynamicModel, int startTime, int stopTime) {
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID networkUuid = entity.getNetworkUuid();
+
+            return dynamicModel.flatMap(file -> {
+                MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+                multipartBodyBuilder.part("dynamicModel", file);
+
+                String path = UriComponentsBuilder.fromPath(DELIMITER + DYNAMIC_SIMULATION_API_VERSION +
+                        "/networks/{networkUuid}/run")
+                        .queryParam("startTime", startTime)
+                        .queryParam("stopTime", stopTime)
+                        .buildAndExpand(networkUuid)
+                        .toUriString();
+
+                return webClient.post()
+                        .uri(dynamicSimulationServerBaseUri + path)
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                        .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                        .retrieve()
+                        .bodyToMono(UUID.class);
+            }).flatMap(result ->
+                    studyRepository.updateDynamicSimulationResultUuid(studyName, userId, result)
+                            .doOnSuccess(e -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT))
+                            .thenReturn(result));
+        });
+    }
+
+    public Mono<String> getDynamicSimulationStatus(String studyName, String userId) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID resultUuid = entity.getDynamicSimulationResultUuid();
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + DYNAMIC_SIMULATION_API_VERSION + "/results/{resultUuid}/status")
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .get()
+                        .uri(dynamicSimulationServerBaseUri + path)
+                        .retrieve()
+                        .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(DYNAMIC_SIMULATION_NOT_FOUND)))
+                        .bodyToMono(String.class);
+            });
+        });
+    }
+
+    public Mono<String> getDynamicSimulationResult(String studyName, String userId) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID resultUuid = entity.getDynamicSimulationResultUuid();
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + DYNAMIC_SIMULATION_API_VERSION + "/results/{resultUuid}")
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .get()
+                        .uri(dynamicSimulationServerBaseUri + path)
+                        .retrieve()
+                        .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(DYNAMIC_SIMULATION_NOT_FOUND)))
+                        .bodyToMono(String.class);
+            });
+        });
+    }
+
     void setCaseServerBaseUri(String caseServerBaseUri) {
         this.caseServerBaseUri = caseServerBaseUri;
     }
@@ -923,5 +1006,9 @@ public class StudyService {
 
     public void setActionsServerBaseUri(String actionsServerBaseUri) {
         this.actionsServerBaseUri = actionsServerBaseUri;
+    }
+
+    public void setDynamicSimulationServerBaseUri(String dynamicSimulationServerBaseUri) {
+        this.dynamicSimulationServerBaseUri = dynamicSimulationServerBaseUri;
     }
 }

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS study.study (
     loadFlowResult frozen<study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     loadFlowParameters study.loadFlowParameters,
+    dynamicSimulationResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS study.privateStudy (
     loadFlowResult frozen <study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     loadFlowParameters study.loadFlowParameters,
+    dynamicSimulationResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
 
@@ -79,6 +81,7 @@ CREATE TABLE IF NOT EXISTS study.publicStudy (
     loadFlowResult frozen <study.loadFlowResult>,
     securityAnalysisResultUuid uuid,
     loadFlowParameters study.loadFlowParameters,
+    dynamicSimulationResultUuid uuid,
     PRIMARY KEY (userId, studyName)
 );
 

@@ -93,6 +93,9 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String SECURITY_ANALYSIS_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String DYNAMIC_MODELS_FILE = "dynamicModels.groovy";
+    private static final String NOT_FOUND_DYNAMIC_SIMULATION_UUID = "13a85c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String DYNAMIC_SIMULATION_UUID = "23a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String HEADER_STUDY_NAME = "studyName";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
@@ -166,6 +169,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         studyService.setNetworkStoreServerBaseUri(baseUrl);
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
         studyService.setActionsServerBaseUri(baseUrl);
+        studyService.setDynamicSimulationServerBaseUri(baseUrl);
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
@@ -264,6 +268,21 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                                 .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
                                 .build());
                         return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/run?startTime=0&stopTime=100":
+                        input.send(MessageBuilder.withPayload("")
+                                .setHeader("resultUuid", DYNAMIC_SIMULATION_UUID)
+                                .build());
+                        return new MockResponse().setResponseCode(200).setBody("\"" + DYNAMIC_SIMULATION_UUID + "\"")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + DYNAMIC_SIMULATION_UUID:
+                        return new MockResponse().setResponseCode(200).setBody("OK")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + DYNAMIC_SIMULATION_UUID + "/status":
+                        return new MockResponse().setResponseCode(200).setBody("COMPLETE")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/results/" + SECURITY_ANALYSIS_UUID + "?limitType":
@@ -803,6 +822,54 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 .expectStatus().isOk()
                 .expectBody(String.class)
                 .isEqualTo(SECURITY_ANALYSIS_STATUS_JSON);
+
+        //security analysis status update message
+        output.receive();
+
+        // dynamic simulation not found
+        webTestClient.get()
+                .uri("/v1/dynamic-simulation/results/{resultUuid}", NOT_FOUND_DYNAMIC_SIMULATION_UUID)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:dynamicModels.groovy"))) {
+            MockMultipartFile mockFile = new MockMultipartFile("dynamicModel", DYNAMIC_MODELS_FILE, "text/xml", is);
+
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("dynamicModel", mockFile.getBytes())
+                    .filename("dynamicModel")
+                    .contentType(MediaType.TEXT_XML);
+
+            // run dynamic simulation
+            webTestClient.post()
+                    .uri("/v1/userId/studies/{studyName}/dynamic-simulation/run?startTime=0&stopTime=100", newStudyName)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody(UUID.class)
+                    .isEqualTo(UUID.fromString(DYNAMIC_SIMULATION_UUID));
+        }
+
+        //dynamic simulation result update message
+        Message<byte[]> dynamicSimulationStatusMessage = output.receive(1000);
+        assertEquals(newStudyName, dynamicSimulationStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT, dynamicSimulationStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+
+        // get dynamic simulation result
+        webTestClient.get()
+                .uri("/v1/userId/studies/{studyName}/dynamic-simulation/result", newStudyName)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("OK");
+
+        // get dynamic simulation status
+        webTestClient.get()
+                .uri("/v1/userId/studies/{studyName}/dynamic-simulation/status", newStudyName)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("COMPLETE");
 
         // get contingency count
         webTestClient.get()

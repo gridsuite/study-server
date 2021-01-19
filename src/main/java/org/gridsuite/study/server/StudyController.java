@@ -13,6 +13,8 @@ import java.util.*;
 import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +32,8 @@ import reactor.core.scheduler.Schedulers;
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Api(value = "Study server")
 public class StudyController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyController.class);
 
     private final StudyService studyService;
 
@@ -412,6 +416,41 @@ public class StudyController {
     public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
                                                                   @ApiParam(value = "User ID") @PathVariable("userId") String userId) {
         return studyService.getSecurityAnalysisStatus(studyName, userId)
+                .map(result -> ResponseEntity.ok().body(result))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping(value = "/{userId}/studies/{studyName}/dynamic-simulation/run", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ApiOperation(value = "create a study and import the case")
+    public ResponseEntity<Mono<UUID>> runDynamicSimulation(@PathVariable("userId") String userId,
+                                                           @PathVariable("studyName") String studyName,
+                                                           @RequestPart("dynamicModel") FilePart dynamicModel,
+                                                           @RequestParam(name = "startTime", defaultValue = "0") int startTime,
+                                                           @RequestParam("stopTime") int stopTime) {
+        Mono<UUID> resultUuid = studyService.runDynamicSimulation(userId, studyName, Mono.just(dynamicModel), startTime, stopTime)
+                .subscribeOn(Schedulers.boundedElastic())
+                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
+        return ResponseEntity.ok().body(resultUuid);
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/dynamic-simulation/status")
+    @ApiOperation(value = "Get the dynamic simulation status on study", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The dynamic simulation status"),
+            @ApiResponse(code = 404, message = "The dynamic simulation status has not been found")})
+    public Mono<ResponseEntity<String>> getDynamicSimulationStatus(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
+                                                                  @ApiParam(value = "User ID") @PathVariable("userId") String userId) {
+        return studyService.getDynamicSimulationStatus(studyName, userId)
+                .map(result -> ResponseEntity.ok().body(result))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/dynamic-simulation/result")
+    @ApiOperation(value = "Get a dynamic simulation result on study", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The dynamic simulation result"),
+            @ApiResponse(code = 404, message = "The dynamic simulation has not been found")})
+    public Mono<ResponseEntity<String>> getDynamicSimulationResult(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
+                                                                  @ApiParam(value = "User ID") @PathVariable("userId") String userId) {
+        return studyService.getDynamicSimulationResult(studyName, userId)
                 .map(result -> ResponseEntity.ok().body(result))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }

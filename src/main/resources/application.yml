@@ -42,6 +42,8 @@ backing-services:
     base-uri: http://localhost:5022
   security-analysis-server:
     base-uri: http://localhost:5023
+  dynamic-simulation-server:
+    base-uri: http://localhost:5032
 
 network-store-server:
   preloading-strategy: COLLECTION

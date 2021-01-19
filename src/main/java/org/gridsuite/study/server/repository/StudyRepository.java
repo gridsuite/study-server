@@ -49,7 +49,9 @@ public class StudyRepository {
 
     public Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate,
-                                         LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+                                         LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult,
+                                         LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid,
+                                         UUID dynamicSimulationUuid) {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -58,15 +60,21 @@ public class StudyRepository {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowStatus);
         Objects.requireNonNull(loadFlowParameters);
-        PublicAndPrivateStudyEntity publicAndPrivateStudyEntity = new PublicAndPrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                                                  casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
-                                                                                                  loadFlowParameters, securityAnalysisUuid);
-        PublicStudyEntity publicStudyEntity = new PublicStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                    casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
-                                                                    loadFlowParameters, securityAnalysisUuid);
-        PrivateStudyEntity privateStudyEntity = new PrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid,
-                                                                       casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
-                                                                       loadFlowParameters, securityAnalysisUuid);
+        PublicAndPrivateStudyEntity publicAndPrivateStudyEntity =
+                new PublicAndPrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC),
+                        networkUuid, networkId, description, caseFormat, caseUuid,
+                        casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
+                        loadFlowParameters, securityAnalysisUuid, dynamicSimulationUuid);
+        PublicStudyEntity publicStudyEntity =
+                new PublicStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid,
+                        networkId, description, caseFormat, caseUuid,
+                        casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
+                        loadFlowParameters, securityAnalysisUuid, dynamicSimulationUuid);
+        PrivateStudyEntity privateStudyEntity =
+                new PrivateStudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC),
+                        networkUuid, networkId, description, caseFormat, caseUuid,
+                        casePrivate, isPrivate, loadFlowStatus, loadFlowResult,
+                        loadFlowParameters, securityAnalysisUuid, dynamicSimulationUuid);
         if (!isPrivate) {
             return Mono.zip(publicStudyRepository.insert(publicStudyEntity), publicAndPrivateStudyRepository.insert(publicAndPrivateStudyEntity))
                     .map(Tuple2::getT2);
@@ -104,6 +112,13 @@ public class StudyRepository {
         return Mono.zip(privateStudyRepository.updateSecurityAnalysisResultUuid(studyName, userId, securityAnalysisResultUuid),
                         publicStudyRepository.updateSecurityAnalysisResultUuid(studyName, userId, securityAnalysisResultUuid),
                         publicAndPrivateStudyRepository.updateSecurityAnalysisResultUuid(studyName, userId, securityAnalysisResultUuid))
+                .then();
+    }
+
+    public Mono<Void> updateDynamicSimulationResultUuid(String studyName, String userId, UUID dynamicSimulationResultUuid) {
+        return Mono.zip(privateStudyRepository.updateDynamicSimulationResultUuid(studyName, userId, dynamicSimulationResultUuid),
+                publicStudyRepository.updateDynamicSimulationResultUuid(studyName, userId, dynamicSimulationResultUuid),
+                publicAndPrivateStudyRepository.updateDynamicSimulationResultUuid(studyName, userId, dynamicSimulationResultUuid))
                 .then();
     }
 

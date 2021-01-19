@@ -21,6 +21,7 @@ class StudyException  extends RuntimeException {
         LOADFLOW_RUNNING,
         SECURITY_ANALYSIS_RUNNING,
         SECURITY_ANALYSIS_NOT_FOUND,
+        DYNAMIC_SIMULATION_NOT_FOUND,
         NOT_ALLOWED
     }
 

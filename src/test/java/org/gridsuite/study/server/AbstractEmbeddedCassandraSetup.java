@@ -33,5 +33,4 @@ public abstract class AbstractEmbeddedCassandraSetup {
     public void setup() {
         CqlDataSet.ofClasspaths("truncate.cql").forEachStatement(clusterCassandraConnection::execute);
     }
-
 }

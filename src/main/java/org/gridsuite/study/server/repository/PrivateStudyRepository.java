@@ -39,4 +39,7 @@ public interface PrivateStudyRepository extends ReactiveCassandraRepository<Priv
 
     @Query("UPDATE privateStudy SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyname = :studyName IF EXISTS")
     Mono<Boolean> updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
+
+    @Query("UPDATE privateStudy SET dynamicSimulationResultUuid = :dynamicSimulationResultUuid WHERE userId = :userId and studyname = :studyName IF EXISTS")
+    Mono<Boolean> updateDynamicSimulationResultUuid(String studyName, String userId, UUID dynamicSimulationResultUuid);
 }

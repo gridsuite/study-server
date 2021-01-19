@@ -73,4 +73,8 @@ public class PrivateStudyEntity implements Serializable, StudyEntity {
 
     @Column("securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
+
+    @Column("dynamicSimulationResultUuid")
+    private UUID dynamicSimulationResultUuid;
+
 }
