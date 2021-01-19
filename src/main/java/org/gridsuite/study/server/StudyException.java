@@ -22,7 +22,8 @@ class StudyException  extends RuntimeException {
         SECURITY_ANALYSIS_RUNNING,
         SECURITY_ANALYSIS_NOT_FOUND,
         DYNAMIC_SIMULATION_NOT_FOUND,
-        NOT_ALLOWED
+        NOT_ALLOWED,
+        STUDY_CREATION_FAILED
     }
 
     private final Type type;

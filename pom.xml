@@ -46,9 +46,7 @@
     <properties>
         <java.version>11</java.version>
 
-        <gridsuite-dependencies.version>3</gridsuite-dependencies.version>
-
-        <mock.web.server.version>4.6.0</mock.web.server.version>
+        <gridsuite-dependencies.version>4</gridsuite-dependencies.version>
     </properties>
 
     <build>
@@ -95,16 +93,7 @@
             </dependency>
 
             <!-- project specific dependencies -->
-            <dependency>
-                <groupId>com.squareup.okhttp3</groupId>
-                <artifactId>okhttp</artifactId>
-                <version>${mock.web.server.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.squareup.okhttp3</groupId>
-                <artifactId>mockwebserver</artifactId>
-                <version>${mock.web.server.version}</version>
-            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, RTE (http://www.rte-france.com)
+ * Copyright (c) 2021, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -186,9 +186,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lines data")})
     public ResponseEntity<Mono<String>> getLinesMapData(
             @PathVariable("studyName") String studyName,
-            @PathVariable("userId") String userId) {
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId).flatMap(studyService::getLinesMapData));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getLinesMapData(uuid, substationsIds)));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network-map/substations")
@@ -196,9 +198,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of substations data")})
     public ResponseEntity<Mono<String>> getSubstationsMapData(
             @PathVariable("studyName") String studyName,
-            @PathVariable("userId") String userId) {
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId).flatMap(studyService::getSubstationsMapData));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getSubstationsMapData(uuid, substationsIds)));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network-map/2-windings-transformers")
@@ -206,9 +210,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of 2 windings transformers data")})
     public ResponseEntity<Mono<String>> getTwoWindingsTransformersMapData(
             @PathVariable("studyName") String studyName,
-            @PathVariable("userId") String userId) {
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId).flatMap(studyService::getTwoWindingsTransformersMapData));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getTwoWindingsTransformersMapData(uuid, substationsIds)));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network-map/3-windings-transformers")
@@ -216,9 +222,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of 3 windings transformers data")})
     public ResponseEntity<Mono<String>> getThreeWindingsTransformersMapData(
             @PathVariable("studyName") String studyName,
-            @PathVariable("userId") String userId) {
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId).flatMap(studyService::getThreeWindingsTransformersMapData));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getThreeWindingsTransformersMapData(uuid, substationsIds)));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network-map/generators")
@@ -226,9 +234,119 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of generators data")})
     public ResponseEntity<Mono<String>> getGeneratorsMapData(
             @PathVariable("studyName") String studyName,
-            @PathVariable("userId") String userId) {
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId).flatMap(studyService::getGeneratorsMapData));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getGeneratorsMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/batteries")
+    @ApiOperation(value = "Get Network batteries description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of batteries data")})
+    public ResponseEntity<Mono<String>> getBatteriesMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getBatteriesMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/dangling-lines")
+    @ApiOperation(value = "Get Network dangling lines description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of dangling lines data")})
+    public ResponseEntity<Mono<String>> getDanglingLinesMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getDanglingLinesMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/hvdc-lines")
+    @ApiOperation(value = "Get Network hvdc lines description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of hvdc lines data")})
+    public ResponseEntity<Mono<String>> getHvdcLinesMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getHvdcLinesMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/lcc-converter-stations")
+    @ApiOperation(value = "Get Network lcc converter stations description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of lcc converter stations data")})
+    public ResponseEntity<Mono<String>> getLccConverterStationsMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getLccConverterStationsMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/vsc-converter-stations")
+    @ApiOperation(value = "Get Network vsc converter stations description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of vsc converter stations data")})
+    public ResponseEntity<Mono<String>> getVscConverterStationsMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getVscConverterStationsMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/loads")
+    @ApiOperation(value = "Get Network loads description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of loads data")})
+    public ResponseEntity<Mono<String>> getLoadsMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getLoadsMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/shunt-compensators")
+    @ApiOperation(value = "Get Network shunt compensators description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of shunt compensators data")})
+    public ResponseEntity<Mono<String>> getShuntCompensatorsMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getShuntCompensatorsMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/static-var-compensators")
+    @ApiOperation(value = "Get Network static var compensators description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of static var compensators data")})
+    public ResponseEntity<Mono<String>> getStaticVarCompensatorsMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getStaticVarCompensatorsMapData(uuid, substationsIds)));
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network-map/all")
+    @ApiOperation(value = "Get Network equipments description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of equipments data")})
+    public ResponseEntity<Mono<String>> getAllMapData(
+            @PathVariable("studyName") String studyName,
+            @PathVariable("userId") String userId,
+            @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyName, userId)
+                .flatMap(uuid -> studyService.getAllMapData(uuid, substationsIds)));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/network-modification/switches/{switchId}")

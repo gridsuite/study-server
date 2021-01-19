@@ -24,6 +24,7 @@ final class StudyConstants {
     static final String SECURITY_ANALYSIS_API_VERSION = "v1";
     static final String ACTIONS_API_VERSION = "v1";
     static final String DYNAMIC_SIMULATION_API_VERSION = "v1";
+    static final String NETWORK_MAP_API_VERSION = "v1";
 
     static final String NETWORK_UUID = "networkUuid";
     static final String CASE_UUID = "caseUuid";
