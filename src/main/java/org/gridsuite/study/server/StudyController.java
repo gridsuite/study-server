@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.entities.StudyEntity;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;

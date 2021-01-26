@@ -7,6 +7,9 @@
 package org.gridsuite.study.server.repository;
 
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.entities.LoadFlowParametersEntity;
+import org.gridsuite.study.server.entities.LoadFlowResultEntity;
+import org.gridsuite.study.server.entities.PublicAndPrivateStudyEntity;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
 import org.springframework.data.repository.query.Param;

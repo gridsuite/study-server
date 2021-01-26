@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.repository;
 
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.entities.*;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
