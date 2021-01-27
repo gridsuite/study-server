@@ -22,6 +22,19 @@ spring:
           destination: study.update
         consumeSaResult-in-0:
           destination: sa.result
+  jpa:
+    database: POSTGRESQL
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+  datasource:
+    platform: postgres
+    url: jdbc:postgresql://localhost:5432/chmitsdb
+    username: chmits
+    password: chmits
+    driverClassName: org.postgresql.Driver
 
 backing-services:
   case:

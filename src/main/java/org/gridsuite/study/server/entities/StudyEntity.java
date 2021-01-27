@@ -9,64 +9,71 @@ package org.gridsuite.study.server.entities;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+
+import lombok.*;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+
+import javax.persistence.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
+@AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
-@AllArgsConstructor
-@Table("study")
+@Builder
+@Entity
+@Table(name = "study")
 public class StudyEntity implements BasicStudyEntity, Serializable {
+    @Id
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name = "id")
+    private long id;
 
-    @Id
+    @Column(name = "userId")
     private String userId;
-    @Id
+
+    @Column(name = "studyName")
     private String studyName;
 
-    @Column("creationDate")
+    @Column(name = "creationDate")
     private LocalDateTime date;
 
-    @Column("networkUuid")
+    @Column(name = "networkUuid")
     private UUID networkUuid;
 
-    @Column("networkId")
+    @Column(name = "networkId")
     private String networkId;
 
-    @Column("description")
+    @Column(name = "description")
     private String description;
 
-    @Column("caseFormat")
+    @Column(name = "caseFormat")
     private String caseFormat;
 
-    @Column("caseUuid")
+    @Column(name = "caseUuid")
     private UUID caseUuid;
 
-    @Column("casePrivate")
+    @Column(name = "casePrivate")
     private boolean casePrivate;
 
-    @Column("isPrivate")
+    @Column(name = "isPrivate")
     private boolean isPrivate;
 
-    @Column("loadFlowStatus")
+    @Column(name = "loadFlowStatus")
     private LoadFlowStatus loadFlowStatus;
 
-    //Foreign key (One to One relation)
-    @Column("loadFlowResultUuid")
-    private UUID loadFlowResultUuid;
+    @OneToOne(cascade  =  CascadeType.ALL)
+    @JoinColumn(name  =  "loadFlowResultEntity_id", referencedColumnName  =  "id")
+    private LoadFlowResultEntity loadFlowResult;
 
-    //Foreign key (One to One relation)
-    @Column("loadFlowParametersUuid")
-    private UUID loadFlowParametersUuid;
+    @OneToOne(cascade  =  CascadeType.ALL)
+    @JoinColumn(name  =  "loadFlowParameters_id", referencedColumnName  =  "id")
+    private LoadFlowParametersEntity loadFlowParameters;
 
-    @Column("securityAnalysisResultUuid")
+    @Column(name = "securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
 }

@@ -8,47 +8,34 @@ package org.gridsuite.study.server.entities;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
-import org.springframework.data.domain.Persistable;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
+import lombok.*;
+
+import javax.persistence.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
+@AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
-@AllArgsConstructor
-@Table("studycreationrequest")
-public class StudyCreationRequestEntity implements BasicStudyEntity, Serializable, Persistable<UUID> {
+@Builder
+@Entity
+@Table(name = "studycreationrequest")
+public class StudyCreationRequestEntity implements BasicStudyEntity, Serializable {
     @Id
-    @Column("id")
-    private UUID id;
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name = "id")
+    private long id;
 
-    @Column("userId")
+    @Column(name = "userId")
     private String userId;
 
-    @Column("studyName")
+    @Column(name = "studyName")
     private String studyName;
 
-    @Column("creationDate")
+    @Column(name = "creationDate")
     private LocalDateTime date;
-
-    @Transient
-    private boolean newElement;
-
-    @Override
-    @Transient
-    public boolean isNew() {
-        if (newElement && id == null) {
-            id = UUID.randomUUID();
-        }
-        return newElement;
-    }
 }

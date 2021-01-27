@@ -8,47 +8,49 @@
 package org.gridsuite.study.server.entities;
 
 import com.powsybl.loadflow.LoadFlowResult;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
 
+import javax.persistence.*;
 import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
- * @author Chamseddoine Benhamed <chamseddine.benhamed at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Table("componentResult")
+@Setter
+@Builder
+@Entity
+@Table(name = "componentResult")
 public class ComponentResultEntity implements Serializable {
     @Id
-    @Column("id")
-    private UUID id;
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name  =  "id")
+    private long id;
 
-    @Column("componentNum")
+    @Column(name = "componentNum")
     private int componentNum;
 
-    @Column("status")
+    @Column(name = "status")
     private LoadFlowResult.ComponentResult.Status status;
 
-    @Column("iterationCount")
+    @Column(name = "iterationCount")
     private int iterationCount;
 
-    @Column("slackBusId")
+    @Column(name = "slackBusId")
     private String slackBusId;
 
-    @Column("slackBusActivePowerMismatch")
+    @Column(name = "slackBusActivePowerMismatch")
     private double slackBusActivePowerMismatch;
 
-    //Foreign key (one To Many relation)
-    private UUID loadFlowResultUuid;
+    @Transient
+    @ManyToOne
+    @JoinColumn(name = "id", nullable = false)
+    private LoadFlowResultEntity loadFlowResult;
 
 }
 

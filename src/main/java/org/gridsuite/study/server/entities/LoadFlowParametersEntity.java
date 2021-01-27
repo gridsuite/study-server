@@ -9,16 +9,13 @@ package org.gridsuite.study.server.entities;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
 
+import javax.persistence.*;
 import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
- * @author Chamseddoine Benhamed <chamseddine.benhamed at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  * @author Jacques Borsenberger <Jacques.Borsenberger at rte-france.com>
  */
 
@@ -27,31 +24,44 @@ import java.util.UUID;
 @Getter
 @Setter
 @Builder
-@Table("loadFlowParameters")
+@Entity
+@Table(name = "loadFlowParameters")
 public class LoadFlowParametersEntity implements Serializable {
     @Id
-    @Column("id")
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
+    private long id;
 
+    @Column(name = "voltageInitMode")
     private LoadFlowParameters.VoltageInitMode voltageInitMode;
 
+    @Column(name = "transformerVoltageControlOn")
     private boolean transformerVoltageControlOn;
 
+    @Column(name = "noGeneratorReactiveLimits")
     private boolean noGeneratorReactiveLimits;
 
+    @Column(name = "phaseShifterRegulationOn")
     private boolean phaseShifterRegulationOn;
 
+    @Column(name = "twtSplitShuntAdmittance")
     private boolean twtSplitShuntAdmittance;
 
+    @Column(name = "simulShunt")
     private boolean simulShunt;
 
+    @Column(name = "readSlackBus")
     private boolean readSlackBus;
 
+    @Column(name = "writeSlackBus")
     private boolean writeSlackBus;
 
+    @Column(name = "dc")
     private boolean dc;
 
+    @Column(name = "distributedSlack")
     private boolean distributedSlack;
 
+    @Column(name = "balanceType")
     private LoadFlowParameters.BalanceType balanceType;
 }

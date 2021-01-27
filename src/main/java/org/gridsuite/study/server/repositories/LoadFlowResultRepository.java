@@ -4,14 +4,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repository;
+package org.gridsuite.study.server.repositories;
 
 import org.gridsuite.study.server.entities.LoadFlowResultEntity;
-import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
-import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
-public interface LoadFlowResultRepository extends ReactiveCassandraRepository<LoadFlowResultEntity, UUID> {
+public interface LoadFlowResultRepository extends JpaRepository<LoadFlowResultEntity, Long> {
 }
