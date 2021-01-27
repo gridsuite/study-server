@@ -7,23 +7,32 @@
 
 package org.gridsuite.study.server.entities;
 
-import com.datastax.driver.core.DataType;
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
-import org.springframework.data.cassandra.core.mapping.CassandraType;
-import org.springframework.data.cassandra.core.mapping.UserDefinedType;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.io.Serializable;
+import java.util.UUID;
 
-@UserDefinedType("loadFlowParameters")
+/**
+ * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
+ * @author Chamseddoine Benhamed <chamseddine.benhamed at rte-france.com>
+ * @author Jacques Borsenberger <Jacques.Borsenberger at rte-france.com>
+ */
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder(toBuilder = true)
+@Builder
+@Table("loadFlowParameters")
 public class LoadFlowParametersEntity implements Serializable {
+    @Id
+    @Column("id")
+    private UUID id;
 
-    @CassandraType(type = DataType.Name.TEXT)
     private LoadFlowParameters.VoltageInitMode voltageInitMode;
 
     private boolean transformerVoltageControlOn;
@@ -44,6 +53,5 @@ public class LoadFlowParametersEntity implements Serializable {
 
     private boolean distributedSlack;
 
-    @CassandraType(type = DataType.Name.TEXT)
     private LoadFlowParameters.BalanceType balanceType;
 }

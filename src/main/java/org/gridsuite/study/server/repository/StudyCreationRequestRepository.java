@@ -6,60 +6,30 @@
  */
 package org.gridsuite.study.server.repository;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.logging.Level;
-import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.entities.BasicStudyEntity;
-import org.gridsuite.study.server.entities.PrivateStudyCreationRequestEntity;
-import org.gridsuite.study.server.entities.PublicStudyCreationRequestEntity;
-import org.springframework.stereotype.Repository;
+import org.gridsuite.study.server.entities.StudyCreationRequestEntity;
+import org.gridsuite.study.server.entities.StudyEntity;
+import org.springframework.data.cassandra.repository.Query;
+import org.springframework.data.cassandra.repository.ReactiveCassandraRepository;
+import org.springframework.data.repository.query.Param;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.UUID;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@Repository
-public class StudyCreationRequestRepository {
 
-    private final PrivateStudyCreationRequestRepository privateRepository;
-    private final PublicStudyCreationRequestRepository publicRepository;
+public interface StudyCreationRequestRepository extends ReactiveCassandraRepository<StudyCreationRequestEntity, UUID> {
 
-    public StudyCreationRequestRepository(PublicStudyCreationRequestRepository publicRepository, PrivateStudyCreationRequestRepository privateRepository) {
-        this.privateRepository = privateRepository;
-        this.publicRepository = publicRepository;
-    }
+    @Query("SELECT * FROM studycreationrequest WHERE userId = :userId")
+    Flux<StudyEntity> findStudyCreationRequestsByUserId(@Param("userId") String userId);
 
-    public Flux<BasicStudyEntity> getStudyCreationRequests(String userId) {
-        return Flux.concat(getPublicStudyCreationRequests(), getPrivateStudyCreationRequests(userId));
-    }
+    Flux<StudyCreationRequestEntity> findAll();
 
-    public Flux<BasicStudyEntity> getPublicStudyCreationRequests() {
-        return publicRepository.findAll().cast(BasicStudyEntity.class);
-    }
+    Mono<BasicStudyEntity> findByUserIdAndStudyName(String userId, String name);
 
-    public Flux<BasicStudyEntity> getPrivateStudyCreationRequests(String userId) {
-        return privateRepository.findAllByUserId(userId).cast(BasicStudyEntity.class);
-    }
-
-    public Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
-        if (isPrivate) {
-            return privateRepository.insert(new PrivateStudyCreationRequestEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC))).then()
-                    .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
-        } else {
-            return publicRepository.insert(new PublicStudyCreationRequestEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC))).then()
-                    .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
-        }
-    }
-
-    public Mono<Void> deleteStudyCreationRequest(String studyName, String userId) {
-        return Mono.when(privateRepository.deleteByStudyNameAndUserId(studyName, userId), publicRepository.deleteByStudyNameAndUserId(studyName, userId));
-    }
-
-    public Mono<BasicStudyEntity> findStudy(String userId, String studyName) {
-        return publicRepository.findByUserIdAndStudyName(userId, studyName).cast(BasicStudyEntity.class)
-                .switchIfEmpty(privateRepository.findByUserIdAndStudyName(userId, studyName));
-    }
+    Mono<Void> deleteByStudyNameAndUserId(String studyName, String userId);
 
 }

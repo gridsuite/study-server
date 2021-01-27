@@ -6,36 +6,67 @@
  */
 package org.gridsuite.study.server.entities;
 
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-
+import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-public interface StudyEntity extends BasicStudyEntity {
 
-    void setStudyName(String studyName);
+@Getter
+@Setter
+@AllArgsConstructor
+@Table("study")
+public class StudyEntity implements BasicStudyEntity, Serializable {
 
-    UUID getNetworkUuid();
+    @Id
+    private String userId;
+    @Id
+    private String studyName;
 
-    String getNetworkId();
+    @Column("creationDate")
+    private LocalDateTime date;
 
-    String getDescription();
+    @Column("networkUuid")
+    private UUID networkUuid;
 
-    String getCaseFormat();
+    @Column("networkId")
+    private String networkId;
 
-    UUID getCaseUuid();
+    @Column("description")
+    private String description;
 
-    boolean isCasePrivate();
+    @Column("caseFormat")
+    private String caseFormat;
 
-    boolean isPrivate();
+    @Column("caseUuid")
+    private UUID caseUuid;
 
-    LoadFlowStatus getLoadFlowStatus();
+    @Column("casePrivate")
+    private boolean casePrivate;
 
-    LoadFlowResultEntity getLoadFlowResult();
+    @Column("isPrivate")
+    private boolean isPrivate;
 
-    UUID getSecurityAnalysisResultUuid();
+    @Column("loadFlowStatus")
+    private LoadFlowStatus loadFlowStatus;
 
-    LoadFlowParametersEntity getLoadFlowParameters();
+    //Foreign key (One to One relation)
+    @Column("loadFlowResultUuid")
+    private UUID loadFlowResultUuid;
+
+    //Foreign key (One to One relation)
+    @Column("loadFlowParametersUuid")
+    private UUID loadFlowParametersUuid;
+
+    @Column("securityAnalysisResultUuid")
+    private UUID securityAnalysisResultUuid;
 }
