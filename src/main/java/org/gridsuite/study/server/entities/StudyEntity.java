@@ -20,23 +20,42 @@ import javax.persistence.*;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
 @Entity
 @Table(name = "study")
 public class StudyEntity implements BasicStudyEntity, Serializable {
+
+    public StudyEntity(String userId, String studyName, LocalDateTime date, UUID networkUuid, String networkId,
+                       String description, String caseFormat, UUID caseUuid, boolean casePrivate, boolean isPrivate,
+                       LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity
+                               loadFlowParameters, UUID securityAnalysisResultUuid) {
+        this.userId = userId;
+        this.studyName = studyName;
+        this.date = date;
+        this.networkUuid = networkUuid;
+        this.networkId = networkId;
+        this.description = description;
+        this.caseFormat = caseFormat;
+        this.caseUuid = caseUuid;
+        this.casePrivate = casePrivate;
+        this.isPrivate = isPrivate;
+        this.loadFlowStatus = loadFlowStatus;
+        this.loadFlowResult = loadFlowResult;
+        this.loadFlowParameters = loadFlowParameters;
+        this.securityAnalysisResultUuid = securityAnalysisResultUuid;
+    }
+
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
     private long id;
 
-    @Column(name = "userId")
+    @Column(name = "userId", nullable = false)
     private String userId;
 
-    @Column(name = "studyName")
+    @Column(name = "studyName", nullable = false)
     private String studyName;
 
     @Column(name = "creationDate")

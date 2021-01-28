@@ -7,9 +7,11 @@
 
 package org.gridsuite.study.server.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
-import org.springframework.data.annotation.Id;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -19,16 +21,26 @@ import java.io.Serializable;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
 @Entity
 @Table(name = "componentResult")
 public class ComponentResultEntity implements Serializable {
+
+    public ComponentResultEntity(int componentNum, LoadFlowResult.ComponentResult.Status status,
+                                 int iterationCount, String slackBusId, double slackBusActivePowerMismatch,
+                                 LoadFlowResultEntity loadFlowResult) {
+        this.componentNum = componentNum;
+        this.status = status;
+        this.iterationCount = iterationCount;
+        this.slackBusId = slackBusId;
+        this.slackBusActivePowerMismatch = slackBusActivePowerMismatch;
+        this.loadFlowResult = loadFlowResult;
+    }
+
     @Id
-    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name  =  "id")
     private long id;
 
@@ -47,9 +59,10 @@ public class ComponentResultEntity implements Serializable {
     @Column(name = "slackBusActivePowerMismatch")
     private double slackBusActivePowerMismatch;
 
-    @Transient
-    @ManyToOne
-    @JoinColumn(name = "id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loadFlowResult_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JsonIgnore
     private LoadFlowResultEntity loadFlowResult;
 
 }

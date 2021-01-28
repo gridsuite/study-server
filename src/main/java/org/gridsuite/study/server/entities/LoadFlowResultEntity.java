@@ -8,7 +8,6 @@
 package org.gridsuite.study.server.entities;
 
 import lombok.*;
-import org.springframework.data.annotation.Id;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -20,14 +19,20 @@ import java.util.Map;
  * @author Etienne Homer <etienne.homer at rte-france.com>
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
 @Entity
 @Table(name = "loadFlowResult")
 public class LoadFlowResultEntity implements Serializable {
+
+    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEntity> componentResults) {
+        this.ok = ok;
+        this.metrics = metrics;
+        this.logs = logs;
+        this.componentResults = componentResults;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
@@ -37,6 +42,7 @@ public class LoadFlowResultEntity implements Serializable {
     private boolean ok;
 
     @Column(name = "metrics")
+    @ElementCollection
     private Map<String, String> metrics;
 
     @Column(name = "logs")

@@ -17,23 +17,28 @@ import javax.persistence.*;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
 @Entity
 @Table(name = "studycreationrequest")
 public class StudyCreationRequestEntity implements BasicStudyEntity, Serializable {
+
+    public StudyCreationRequestEntity(String userId, String studyName, LocalDateTime date) {
+        this.userId = userId;
+        this.studyName = studyName;
+        this.date = date;
+    }
+
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
     private long id;
 
-    @Column(name = "userId")
+    @Column(name = "userId", nullable = false)
     private String userId;
 
-    @Column(name = "studyName")
+    @Column(name = "studyName", nullable = false)
     private String studyName;
 
     @Column(name = "creationDate")

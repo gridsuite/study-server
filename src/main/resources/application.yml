@@ -26,9 +26,11 @@ spring:
     database: POSTGRESQL
     show-sql: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
+      format_sql: true
+
   datasource:
     platform: postgres
     url: jdbc:postgresql://localhost:5432/chmitsdb

@@ -19,14 +19,31 @@ import java.io.Serializable;
  * @author Jacques Borsenberger <Jacques.Borsenberger at rte-france.com>
  */
 
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
 @Entity
 @Table(name = "loadFlowParameters")
 public class LoadFlowParametersEntity implements Serializable {
+
+    public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
+                                    boolean transformerVoltageControlOn, boolean noGeneratorReactiveLimits,
+                                    boolean phaseShifterRegulationOn, boolean twtSplitShuntAdmittance,
+                                    boolean simulShunt, boolean readSlackBus, boolean writeSlackBus, boolean dc,
+                                    boolean distributedSlack, LoadFlowParameters.BalanceType balanceType) {
+        this.voltageInitMode = voltageInitMode;
+        this.transformerVoltageControlOn = transformerVoltageControlOn;
+        this.noGeneratorReactiveLimits = noGeneratorReactiveLimits;
+        this.phaseShifterRegulationOn = phaseShifterRegulationOn;
+        this.twtSplitShuntAdmittance = twtSplitShuntAdmittance;
+        this.simulShunt = simulShunt;
+        this.readSlackBus = readSlackBus;
+        this.writeSlackBus = writeSlackBus;
+        this.dc = dc;
+        this.distributedSlack = distributedSlack;
+        this.balanceType = balanceType;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")

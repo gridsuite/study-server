@@ -7,11 +7,7 @@
 package org.gridsuite.study.server.repositories;
 
 import org.gridsuite.study.server.entities.StudyCreationRequestEntity;
-import org.gridsuite.study.server.entities.StudyEntity;
-import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.query.Param;
-import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -27,9 +23,4 @@ public interface StudyCreationRequestRepository extends JpaRepository<StudyCreat
     StudyCreationRequestEntity findByUserIdAndStudyName(String userId, String name);
 
     void deleteByStudyNameAndUserId(String studyName, String userId);
-
-    // TO BE  CHECKED
-
-    @Query("SELECT * FROM studycreationrequest WHERE userId = :userId")
-    Flux<StudyEntity> findStudyCreationRequestsByUserId(@Param("userId") String userId);
 }

@@ -370,10 +370,10 @@ public class StudyController {
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
-    public ResponseEntity<Mono<Void>> runLoadFlow(
+    public ResponseEntity<Mono<Object>> runLoadFlow(
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
-
+        // TO DO Void instead of object
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyName, userId)
                 .then(studyService.runLoadFlow(studyName, userId)));
     }
