@@ -245,7 +245,7 @@ public class StudyService {
     }
 
     Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return studyMono.flatMap(study -> {
             if (study.isPrivate() && !userId.equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
@@ -256,11 +256,11 @@ public class StudyService {
     }
 
     Mono<StudyEntity> getStudy(String studyName, String userId) {
-        return Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        return Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
     }
 
     private Mono<BasicStudyEntity> getStudyCreationRequest(String studyName, String userId) {
-        return Mono.just(studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName));
+        return Mono.just(studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).get());
     }
 
     @Synchronized
@@ -524,12 +524,20 @@ public class StudyService {
                     .buildAndExpand(uuid, switchId)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfRes = Mono.fromRunnable(() -> studyRepository.updateLoadFlowResult(studyName, userId, null));
-            Mono<Void> monoUpdateLfState = Mono.fromRunnable(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
+            Mono<Void> monoUpdateLfRes = Mono.fromRunnable(() -> {
+                Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+                studyEntity.ifPresent(studyEntity1 -> {
+                    studyEntity1.setLoadFlowResult(null);
+                    studyRepository.save(studyEntity1);
+                });
+                }
+            );
+            Mono<Void> monoUpdateLfState = Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE))
                     .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS))
                     .then(invalidateSecurityAnalysisStatus(studyName, userId)
                             .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                     .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
+
             Mono<Set<String>> monoChangeSwitchState = webClient.put()
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
@@ -550,12 +558,17 @@ public class StudyService {
 
         return networkUuid.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/groovy/")
-
                     .buildAndExpand(uuid)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfRes = Mono.fromRunnable(() -> studyRepository.updateLoadFlowResult(studyName, userId, null));
-            Mono<Void> monoUpdateLfState = Mono.fromRunnable(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
+            Mono<Void> monoUpdateLfRes = Mono.fromRunnable(() -> {
+                Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+                studyEntity.ifPresent(studyEntity1 -> {
+                    studyEntity1.setLoadFlowResult(null);
+                    studyRepository.save(studyEntity1);
+                });
+            });
+            Mono<Void> monoUpdateLfState = Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE))
                     .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS))
                     .then(invalidateSecurityAnalysisStatus(studyName, userId)
                             .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
@@ -585,11 +598,15 @@ public class StudyService {
                     .uri(loadFlowServerBaseUri + path)
                     .retrieve()
                     .bodyToMono(LoadFlowResult.class)
-                    .flatMap(result -> Mono.fromRunnable(() -> studyRepository.updateLoadFlowResult(studyName, userId, toEntity(result)))
-                            .then(Mono.fromRunnable(() -> studyRepository.updateLoadFlowState(studyName, userId, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED)))
-                    )
-                    .doOnError(e -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
-                    .doOnCancel(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE));
+                    .flatMap(result -> Mono.fromRunnable(() -> {
+                        Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+                        studyEntity.ifPresent(studyEntity1 -> {
+                            studyEntity1.setLoadFlowResult(toEntity(result));
+                            studyRepository.save(studyEntity1);
+                        });
+                    }).then(Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))))
+                    .doOnError(e -> studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE))
+                    .doOnCancel(() -> studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE));
         }).doFinally(s ->
                 emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)
         );
@@ -597,7 +614,7 @@ public class StudyService {
     }
 
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return studyMono.switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(study -> {
             study.setStudyName(newStudyName);
             Mono<Void> removeStudy = removeStudy(studyName, userId);
@@ -609,7 +626,7 @@ public class StudyService {
     }
 
     private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
-        studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.RUNNING);
+        studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.RUNNING);
         emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS);
         return Mono.empty();
     }
@@ -669,7 +686,7 @@ public class StudyService {
     }
 
     Mono<UUID> getNetworkUuid(String studyName, String userId) {
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return studyMono.map(StudyEntity::getNetworkUuid)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
 
@@ -716,7 +733,7 @@ public class StudyService {
     }
 
     public Mono<Void> assertLoadFlowRunnable(String studyName, String userId) {
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return studyMono.map(StudyEntity::getLoadFlowStatus)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .flatMap(lfs -> lfs.equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
@@ -727,7 +744,7 @@ public class StudyService {
     }
 
     private Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return studyMono.map(StudyEntity::getLoadFlowStatus)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .flatMap(lfs -> lfs.equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
@@ -816,11 +833,16 @@ public class StudyService {
     }
 
     Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParameters parameters) {
-        return Mono.fromRunnable(() -> studyRepository.updateLoadFlowParameters(studyName, userId, toEntity(parameters != null ? parameters : LoadFlowParameters.load())))
-                .then(Mono.fromRunnable(() -> studyRepository.updateLoadFlowState(studyName, userId, LoadFlowStatus.NOT_DONE))
-                        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS)))
-                .then(invalidateSecurityAnalysisStatus(studyName, userId)
-                        .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+        studyRepository.findByUserIdAndStudyName(userId, studyName).ifPresent(study -> {
+            study.setLoadFlowParameters(toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
+            study.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
+            studyRepository.save(study);
+            emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS);
+            invalidateSecurityAnalysisStatus(studyName, userId)
+                    .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)).subscribe();
+
+        });
+        return Mono.empty();
     }
 
     public Mono<UUID> runSecurityAnalysis(String studyName, String userId, List<String> contingencyListNames, String parameters) {
@@ -864,7 +886,7 @@ public class StudyService {
         Objects.requireNonNull(userId);
         Objects.requireNonNull(limitTypes);
 
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return   studyMono.flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
@@ -946,7 +968,7 @@ public class StudyService {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
 
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return studyMono.flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
@@ -967,7 +989,7 @@ public class StudyService {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
 
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName));
+        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
         return studyMono.flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {

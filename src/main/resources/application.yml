@@ -27,6 +27,8 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: create
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
       format_sql: true

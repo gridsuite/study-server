@@ -21,9 +21,11 @@ import javax.persistence.*;
  */
 
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
+@Builder
 @Table(name = "study")
 public class StudyEntity implements BasicStudyEntity, Serializable {
 
@@ -83,6 +85,7 @@ public class StudyEntity implements BasicStudyEntity, Serializable {
     private boolean isPrivate;
 
     @Column(name = "loadFlowStatus")
+    @Enumerated(EnumType.STRING)
     private LoadFlowStatus loadFlowStatus;
 
     @OneToOne(cascade  =  CascadeType.ALL)

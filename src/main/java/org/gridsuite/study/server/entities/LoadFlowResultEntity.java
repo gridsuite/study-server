@@ -48,7 +48,8 @@ public class LoadFlowResultEntity implements Serializable {
     @Column(name = "logs")
     private String logs;
 
-    @OneToMany(mappedBy = "loadFlowResult")
+    @OneToMany(mappedBy = "loadFlowResult",
+            cascade = {CascadeType.ALL})
     private List<ComponentResultEntity> componentResults;
 
 }

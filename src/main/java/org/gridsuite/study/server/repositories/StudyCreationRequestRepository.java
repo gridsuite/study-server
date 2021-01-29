@@ -10,6 +10,7 @@ import org.gridsuite.study.server.entities.StudyCreationRequestEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -20,7 +21,7 @@ public interface StudyCreationRequestRepository extends JpaRepository<StudyCreat
 
     List<StudyCreationRequestEntity> findAllByUserId(String userId);
 
-    StudyCreationRequestEntity findByUserIdAndStudyName(String userId, String name);
+    Optional<StudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String name);
 
     void deleteByStudyNameAndUserId(String studyName, String userId);
 }

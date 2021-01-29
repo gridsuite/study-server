@@ -7,15 +7,15 @@
 package org.gridsuite.study.server.repositories;
 
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.entities.LoadFlowParametersEntity;
-import org.gridsuite.study.server.entities.LoadFlowResultEntity;
 import org.gridsuite.study.server.entities.StudyEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -28,23 +28,16 @@ public interface StudyRepository extends JpaRepository<StudyEntity, Long> {
 
     List<StudyEntity> findAllByUserId(String userId);
 
-    StudyEntity findByUserIdAndStudyName(String userId, String name);
+    Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
     @Query(value = "DELETE FROM study WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
     void deleteByStudyNameAndUserId(@Param("userId") String userId, @Param("studyName") String studyName);
 
-    @Query(value = "SELECT FROM study WHERE userId = :userId", nativeQuery = true)
-    List<StudyEntity> findByUserId(@Param("userId") String userId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE study SET loadFlowStatus = :#{#loadFlowStatus.name()} WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
+    int updateLoadFlowStatus(String studyName, String userId, LoadFlowStatus loadFlowStatus);
 
-    @Query(value = "UPDATE study SET loadFlowParameters = :lfParameter  WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
-    void updateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity lfParameter);
-
-    @Query(value = "UPDATE study SET loadFlowStatus = :status WHERE userId = :userId and studyName = :studyName",nativeQuery = true)
-    void updateLoadFlowState(String studyName, String userId, LoadFlowStatus status);
-
-    @Query(value = "UPDATE study SET loadFlowResult = :loadFlowResult WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
-    void updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResult);
-
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE study SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
     void updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
 }

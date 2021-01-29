@@ -60,7 +60,11 @@ public class ComponentResultEntity implements Serializable {
     private double slackBusActivePowerMismatch;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "loadFlowResult_id", nullable = false)
+    @JoinColumn(name = "loadFlowResult_id",
+            nullable = false,
+            foreignKey = @ForeignKey(
+                    name = "componentResult_loadFlowResult_fk"
+            ))
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JsonIgnore
     private LoadFlowResultEntity loadFlowResult;
