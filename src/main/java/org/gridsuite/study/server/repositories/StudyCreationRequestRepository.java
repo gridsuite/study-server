@@ -23,7 +23,7 @@ public interface StudyCreationRequestRepository extends JpaRepository<StudyCreat
 
     List<StudyCreationRequestEntity> findAllByUserId(String userId);
 
-    Optional<StudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String name);
+    Optional<StudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String studyName);
 
     @Modifying
     @Transactional

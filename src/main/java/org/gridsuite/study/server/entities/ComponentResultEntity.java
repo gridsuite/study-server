@@ -10,8 +10,6 @@ package org.gridsuite.study.server.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -61,13 +59,12 @@ public class ComponentResultEntity implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loadFlowResult_id",
-            nullable = false,
+            //nullable = false,
             foreignKey = @ForeignKey(
                     name = "componentResult_loadFlowResult_fk"
             ))
-    @OnDelete(action = OnDeleteAction.CASCADE)
+    //@OnDelete(action = OnDeleteAction.CASCADE)
     @JsonIgnore
     private LoadFlowResultEntity loadFlowResult;
-
 }
 

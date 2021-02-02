@@ -42,13 +42,14 @@ public class LoadFlowResultEntity implements Serializable {
     private boolean ok;
 
     @Column(name = "metrics")
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     private Map<String, String> metrics;
 
     @Column(name = "logs")
     private String logs;
 
     @OneToMany(mappedBy = "loadFlowResult",
+            fetch = FetchType.EAGER,
             cascade = {CascadeType.ALL})
     private List<ComponentResultEntity> componentResults;
 

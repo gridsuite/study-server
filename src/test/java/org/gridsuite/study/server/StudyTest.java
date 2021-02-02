@@ -372,7 +372,6 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        Thread.sleep(20000);
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));

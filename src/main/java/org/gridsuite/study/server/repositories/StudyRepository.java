@@ -37,10 +37,17 @@ public interface StudyRepository extends JpaRepository<StudyEntity, Long> {
     void deleteByStudyNameAndUserId(@Param("userId") String userId, @Param("studyName") String studyName);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Transactional
     @Query(value = "UPDATE study SET loadFlowStatus = :#{#loadFlowStatus.name()} WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
     int updateLoadFlowStatus(String studyName, String userId, LoadFlowStatus loadFlowStatus);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Transactional
     @Query(value = "UPDATE study SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
     void updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Transactional
+    @Query(value = "UPDATE study SET isPrivate = :isPrivate WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
+    void updateIsPrivate(String studyName, String userId, boolean isPrivate);
 }

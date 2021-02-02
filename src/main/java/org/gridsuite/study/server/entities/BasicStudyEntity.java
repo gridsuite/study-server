@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.entities;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -17,5 +17,5 @@ public interface BasicStudyEntity {
 
     String getStudyName();
 
-    LocalDateTime getDate();
+    ZonedDateTime getDate();
 }

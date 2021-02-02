@@ -18,7 +18,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.transaction.Transactional;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
@@ -92,7 +93,7 @@ public class RepositoriesTest {
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .userId("chmits")
                 .studyName("mystudy")
-                .date(LocalDateTime.now())
+                .date(ZonedDateTime.now(ZoneId.of("UTC")))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId")
                 .description("description")
@@ -109,7 +110,7 @@ public class RepositoriesTest {
         StudyEntity studyEntity2 = StudyEntity.builder()
                 .userId("chmits2")
                 .studyName("mystudy2")
-                .date(LocalDateTime.now())
+                .date(ZonedDateTime.now(ZoneId.of("UTC")))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId2")
                 .description("description2")
@@ -161,16 +162,14 @@ public class RepositoriesTest {
 
     @Test
     public void testStudyCreationRequest() {
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity("chmits", "mystudy", LocalDateTime.now());
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity("chmits", "mystudy", ZonedDateTime.now(ZoneId.of("UTC")));
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());
         assertEquals(savedStudyCreationRequestEntity.getUserId(), savedStudyCreationRequestEntity.getUserId());
         assertEquals(savedStudyCreationRequestEntity.getStudyName(), savedStudyCreationRequestEntity.getStudyName());
         assertEquals(savedStudyCreationRequestEntity.getDate(), savedStudyCreationRequestEntity.getDate());
-
         assertTrue(studyCreationRequestRepository.findByUserIdAndStudyName("chmits", "mystudy").isPresent());
-
     }
 
 }
