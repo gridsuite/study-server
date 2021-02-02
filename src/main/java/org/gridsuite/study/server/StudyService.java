@@ -224,8 +224,7 @@ public class StudyService {
                                                  description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
                           })
                 )
-                .doOnError(throwable ->
-                        LOGGER.error(throwable.toString(), throwable))
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe());
     }
 
@@ -968,7 +967,7 @@ public class StudyService {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
 
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
+        Mono<StudyEntity> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElse(Mono.empty());
         return studyMono.flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
@@ -989,7 +988,7 @@ public class StudyService {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
 
-        Mono<StudyEntity> studyMono = Mono.just(studyRepository.findByUserIdAndStudyName(userId, studyName).get());
+        Mono<StudyEntity> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElse(Mono.empty());
         return studyMono.flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
