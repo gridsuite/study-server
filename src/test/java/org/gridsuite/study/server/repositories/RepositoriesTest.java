@@ -6,14 +6,11 @@
  */
 package org.gridsuite.study.server.repositories;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.apache.commons.collections4.map.HashedMap;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.entities.ComponentResultEntity;
-import org.gridsuite.study.server.entities.LoadFlowResultEntity;
-import org.gridsuite.study.server.entities.StudyCreationRequestEntity;
-import org.gridsuite.study.server.entities.StudyEntity;
+import org.gridsuite.study.server.entities.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +38,9 @@ public class RepositoriesTest {
     LoadFlowResultRepository loadFlowResultRepository;
 
     @Autowired
+    LoadFlowParametersRepository loadFlowParametersRepository;
+
+    @Autowired
     ComponentResultRepository componentResultRepository;
 
     @Autowired
@@ -48,9 +48,6 @@ public class RepositoriesTest {
 
     @Autowired
     StudyCreationRequestRepository studyCreationRequestRepository;
-
-    @Autowired
-    ObjectMapper objectMapper;
 
     @Test
     public void testLoadFlowResultRepository() {
@@ -86,6 +83,11 @@ public class RepositoriesTest {
         metrics.put("key1", "value1");
         metrics.put("key2", "value2");
         LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(false, metrics, "logs", new ArrayList<>());
+
+        LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
+                true, false, true, false, true,
+                false, true, false,
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .userId("chmits")
@@ -140,12 +142,18 @@ public class RepositoriesTest {
 
         // updates
         savedStudyEntity1.setLoadFlowResult(loadFlowResultEntity);
+        savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
         StudyEntity savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("chmits", "mystudy").get();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowResult());
+        assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
 
-        int nb = studyRepository.updateLoadFlowStatus("mystudy", "chmits", LoadFlowStatus.CONVERGED);
+        assertEquals(1, loadFlowResultRepository.findAll().size());
+        assertEquals(1, loadFlowParametersRepository.findAll().size());
+
+        int nbRowsUpdated = studyRepository.updateLoadFlowStatus("mystudy", "chmits", LoadFlowStatus.CONVERGED);
+        assertEquals(1, nbRowsUpdated);
         savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("chmits", "mystudy").get();
         assertEquals(LoadFlowStatus.CONVERGED, savedStudyEntity1Updated.getLoadFlowStatus());
 

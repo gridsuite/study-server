@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +31,8 @@ public interface StudyRepository extends JpaRepository<StudyEntity, Long> {
 
     Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
+    @Modifying
+    @Transactional
     @Query(value = "DELETE FROM study WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
     void deleteByStudyNameAndUserId(@Param("userId") String userId, @Param("studyName") String studyName);
 

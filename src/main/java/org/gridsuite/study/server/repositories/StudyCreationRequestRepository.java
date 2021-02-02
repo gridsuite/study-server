@@ -8,7 +8,9 @@ package org.gridsuite.study.server.repositories;
 
 import org.gridsuite.study.server.entities.StudyCreationRequestEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,5 +25,7 @@ public interface StudyCreationRequestRepository extends JpaRepository<StudyCreat
 
     Optional<StudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String name);
 
+    @Modifying
+    @Transactional
     void deleteByStudyNameAndUserId(String studyName, String userId);
 }
