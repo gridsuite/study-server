@@ -15,13 +15,15 @@ spring:
 
   cloud:
     function:
-      definition: publishStudyUpdate;consumeSaResult
+      definition: publishStudyUpdate;consumeSaResult;consumeSaStopped
     stream:
       bindings:
         publishStudyUpdate-out-0:
           destination: study.update
         consumeSaResult-in-0:
           destination: sa.result
+        consumeSaStopped-in-0:
+          destination: sa.stopped
 
 backing-services:
   case:
