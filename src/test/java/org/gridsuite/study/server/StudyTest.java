@@ -35,6 +35,8 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.repositories.StudyCreationRequestRepository;
+import org.gridsuite.study.server.repositories.StudyRepository;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
@@ -77,7 +79,7 @@ import static org.mockito.BDDMockito.given;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient
+@AutoConfigureWebTestClient(timeout = "10000")
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
@@ -140,6 +142,17 @@ public class StudyTest {
     private TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
 
     private MockWebServer server;
+
+    @Autowired
+    private StudyRepository studyRepository;
+
+    @Autowired
+    private StudyCreationRequestRepository studyCreationRequestRepository;
+
+    private void cleanDB() {
+        studyRepository.deleteAll();
+        studyCreationRequestRepository.deleteAll();
+    }
 
     @Before
     public void setup() {
@@ -344,7 +357,6 @@ public class StudyTest {
 
     @Test
     public void test() throws Exception {
-
         //empty list
         webTestClient.get()
                 .uri("/v1/studies")
@@ -1064,7 +1076,7 @@ public class StudyTest {
         headersLF = messageLf.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-
+        cleanDB();
         output.receive(1000);
         output.receive(1000);
         output.receive(1000);
@@ -1097,7 +1109,7 @@ public class StudyTest {
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation
-            message = output.receive(1000);
+            message = output.receive(10000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
@@ -1139,7 +1151,7 @@ public class StudyTest {
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation
-            message = output.receive(1000);
+            message = output.receive(10000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
