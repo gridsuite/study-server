@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.entities;
 
-import java.io.Serializable;
 import java.time.ZonedDateTime;
 
 import lombok.*;
@@ -22,7 +21,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Table(name = "studycreationrequest")
-public class StudyCreationRequestEntity implements BasicStudyEntity, Serializable {
+public class StudyCreationRequestEntity implements BasicStudyEntity {
 
     public StudyCreationRequestEntity(String userId, String studyName, ZonedDateTime date) {
         this.userId = userId;
@@ -31,9 +30,9 @@ public class StudyCreationRequestEntity implements BasicStudyEntity, Serializabl
     }
 
     @Id
-    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @GeneratedValue (strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private long id;
+    private Long id;
 
     @Column(name = "userId", nullable = false)
     private String userId;

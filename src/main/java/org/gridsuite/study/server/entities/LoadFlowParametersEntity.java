@@ -11,7 +11,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
 
 import javax.persistence.*;
-import java.io.Serializable;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -24,7 +23,7 @@ import java.io.Serializable;
 @Setter
 @Entity
 @Table(name = "loadFlowParameters")
-public class LoadFlowParametersEntity implements Serializable {
+public class LoadFlowParametersEntity {
 
     public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
                                     boolean transformerVoltageControlOn, boolean noGeneratorReactiveLimits,
@@ -45,11 +44,12 @@ public class LoadFlowParametersEntity implements Serializable {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue (strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private long id;
+    private Long id;
 
     @Column(name = "voltageInitMode")
+    @Enumerated(EnumType.STRING)
     private LoadFlowParameters.VoltageInitMode voltageInitMode;
 
     @Column(name = "transformerVoltageControlOn")
@@ -80,5 +80,6 @@ public class LoadFlowParametersEntity implements Serializable {
     private boolean distributedSlack;
 
     @Column(name = "balanceType")
+    @Enumerated(EnumType.STRING)
     private LoadFlowParameters.BalanceType balanceType;
 }

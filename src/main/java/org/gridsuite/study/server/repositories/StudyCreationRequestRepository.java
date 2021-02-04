@@ -25,7 +25,7 @@ public interface StudyCreationRequestRepository extends JpaRepository<StudyCreat
 
     Optional<StudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String studyName);
 
-    @Modifying
     @Transactional
+    @Modifying
     void deleteByStudyNameAndUserId(String studyName, String userId);
 }

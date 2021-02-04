@@ -10,7 +10,6 @@ package org.gridsuite.study.server.entities;
 import lombok.*;
 
 import javax.persistence.*;
-import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +23,7 @@ import java.util.Map;
 @Setter
 @Entity
 @Table(name = "loadFlowResult")
-public class LoadFlowResultEntity implements Serializable {
+public class LoadFlowResultEntity {
 
     public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEntity> componentResults) {
         this.ok = ok;
@@ -34,9 +33,8 @@ public class LoadFlowResultEntity implements Serializable {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id")
-    private long id;
+    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "ok")
     private boolean ok;
@@ -48,9 +46,8 @@ public class LoadFlowResultEntity implements Serializable {
     @Column(name = "logs")
     private String logs;
 
-    @OneToMany(mappedBy = "loadFlowResult",
-            fetch = FetchType.EAGER,
-            cascade = {CascadeType.ALL})
+    @OneToMany(fetch = FetchType.EAGER,
+            mappedBy = "loadFlowResult",
+            cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private List<ComponentResultEntity> componentResults;
-
 }

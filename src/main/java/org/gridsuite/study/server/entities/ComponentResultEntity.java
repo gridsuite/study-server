@@ -12,7 +12,6 @@ import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
 
 import javax.persistence.*;
-import java.io.Serializable;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -24,7 +23,7 @@ import java.io.Serializable;
 @Setter
 @Entity
 @Table(name = "componentResult")
-public class ComponentResultEntity implements Serializable {
+public class ComponentResultEntity {
 
     public ComponentResultEntity(int componentNum, LoadFlowResult.ComponentResult.Status status,
                                  int iterationCount, String slackBusId, double slackBusActivePowerMismatch,
@@ -38,9 +37,9 @@ public class ComponentResultEntity implements Serializable {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name  =  "id")
-    private long id;
+    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
 
     @Column(name = "componentNum")
     private int componentNum;
@@ -63,7 +62,6 @@ public class ComponentResultEntity implements Serializable {
             foreignKey = @ForeignKey(
                     name = "componentResult_loadFlowResult_fk"
             ))
-    //@OnDelete(action = OnDeleteAction.CASCADE)
     @JsonIgnore
     private LoadFlowResultEntity loadFlowResult;
 }

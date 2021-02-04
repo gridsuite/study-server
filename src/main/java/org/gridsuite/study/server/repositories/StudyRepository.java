@@ -25,29 +25,29 @@ import java.util.UUID;
  */
 
 @Repository
-public interface StudyRepository extends JpaRepository<StudyEntity, Long> {
+public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
     List<StudyEntity> findAllByUserId(String userId);
 
     Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
-    @Modifying
     @Transactional
+    @Modifying
     @Query(value = "DELETE FROM study WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
     void deleteByStudyNameAndUserId(@Param("userId") String userId, @Param("studyName") String studyName);
 
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE study SET loadFlowStatus = :#{#loadFlowStatus.name()} WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
-    int updateLoadFlowStatus(String studyName, String userId, LoadFlowStatus loadFlowStatus);
+    int updateLoadFlowStatus(@Param("studyName") String studyName, @Param("userId") String userId, @Param("loadFlowStatus") LoadFlowStatus loadFlowStatus);
 
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE study SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
-    void updateSecurityAnalysisResultUuid(String studyName, String userId, UUID securityAnalysisResultUuid);
+    void updateSecurityAnalysisResultUuid(@Param("studyName") String studyName, @Param("userId") String userId, @Param("securityAnalysisResultUuid") UUID securityAnalysisResultUuid);
 
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE study SET isPrivate = :isPrivate WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
-    void updateIsPrivate(String studyName, String userId, boolean isPrivate);
+    void updateIsPrivate(@Param("studyName") String studyName, @Param("userId") String userId, @Param("isPrivate") boolean isPrivate);
 }

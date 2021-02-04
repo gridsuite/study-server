@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.entities;
 
-import java.io.Serializable;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
@@ -21,13 +20,13 @@ import javax.persistence.*;
  */
 
 @NoArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor()
 @Getter
 @Setter
 @Entity
 @Builder
 @Table(name = "study")
-public class StudyEntity implements BasicStudyEntity, Serializable {
+public class StudyEntity implements BasicStudyEntity {
 
     public StudyEntity(String userId, String studyName, ZonedDateTime date, UUID networkUuid, String networkId,
                        String description, String caseFormat, UUID caseUuid, boolean casePrivate, boolean isPrivate,
@@ -52,7 +51,7 @@ public class StudyEntity implements BasicStudyEntity, Serializable {
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
-    private long id;
+    private UUID id;
 
     @Column(name = "userId", nullable = false)
     private String userId;
@@ -89,11 +88,19 @@ public class StudyEntity implements BasicStudyEntity, Serializable {
     private LoadFlowStatus loadFlowStatus;
 
     @OneToOne(cascade  =  CascadeType.ALL)
-    @JoinColumn(name  =  "loadFlowResultEntity_id", referencedColumnName  =  "id")
+    @JoinColumn(name  =  "loadFlowResultEntity_id",
+            referencedColumnName  =  "id",
+            foreignKey = @ForeignKey(
+                    name = "loadFlowResult_id_fk"
+            ))
     private LoadFlowResultEntity loadFlowResult;
 
     @OneToOne(cascade  =  CascadeType.ALL)
-    @JoinColumn(name  =  "loadFlowParameters_id", referencedColumnName  =  "id")
+    @JoinColumn(name  =  "loadFlowParameters_id",
+            referencedColumnName  =  "id",
+            foreignKey = @ForeignKey(
+                    name = "loadFlowResult_id_fk"
+            ))
     private LoadFlowParametersEntity loadFlowParameters;
 
     @Column(name = "securityAnalysisResultUuid")

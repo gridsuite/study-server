@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import javax.transaction.Transactional;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -37,12 +36,6 @@ public class RepositoriesTest {
 
     @Autowired
     LoadFlowResultRepository loadFlowResultRepository;
-
-    @Autowired
-    LoadFlowParametersRepository loadFlowParametersRepository;
-
-    @Autowired
-    ComponentResultRepository componentResultRepository;
 
     @Autowired
     StudyRepository studyRepository;
@@ -72,12 +65,10 @@ public class RepositoriesTest {
 
         // delete loadFlowResultEntity
         loadFlowResultRepository.deleteById(savedLoadFlowResultEntity.getId());
-        assertEquals(0,         loadFlowResultRepository.findAll().size());
-        assertEquals(0,         componentResultRepository.findAll().size());
+        assertEquals(0, loadFlowResultRepository.findAll().size());
     }
 
     @Test
-    @Transactional
     public void testStudyRepository() {
         studyRepository.deleteAll();
         Map<String, String> metrics = new HashedMap<>();
@@ -91,7 +82,7 @@ public class RepositoriesTest {
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
-                .userId("chmits")
+                .userId("foo")
                 .studyName("mystudy")
                 .date(ZonedDateTime.now(ZoneId.of("UTC")))
                 .networkUuid(UUID.randomUUID())
@@ -108,7 +99,7 @@ public class RepositoriesTest {
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
-                .userId("chmits2")
+                .userId("foo2")
                 .studyName("mystudy2")
                 .date(ZonedDateTime.now(ZoneId.of("UTC")))
                 .networkUuid(UUID.randomUUID())
@@ -126,11 +117,10 @@ public class RepositoriesTest {
 
         studyRepository.save(studyEntity1);
         studyRepository.save(studyEntity2);
+        assertEquals(2, studyRepository.findAll().size());
 
         StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
         StudyEntity savedStudyEntity2 = studyRepository.findAll().get(1);
-
-        assertEquals(2, studyRepository.findAll().size());
 
         assertEquals(studyEntity1.getUserId(), savedStudyEntity1.getUserId());
         assertEquals(studyEntity1.getStudyName(), savedStudyEntity1.getStudyName());
@@ -138,38 +128,38 @@ public class RepositoriesTest {
         assertEquals(studyEntity2.getUserId(), savedStudyEntity2.getUserId());
         assertEquals(studyEntity2.getStudyName(), savedStudyEntity2.getStudyName());
 
-        assertTrue(studyRepository.findByUserIdAndStudyName("chmits", "mystudy").isPresent());
-        assertEquals(1, studyRepository.findAllByUserId("chmits").size());
+        assertTrue(studyRepository.findByUserIdAndStudyName("foo", "mystudy").isPresent());
+        assertEquals(1, studyRepository.findAllByUserId("foo").size());
 
         // updates
         savedStudyEntity1.setLoadFlowResult(loadFlowResultEntity);
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
-        StudyEntity savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("chmits", "mystudy").get();
+        StudyEntity savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").get();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowResult());
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
 
         assertEquals(1, loadFlowResultRepository.findAll().size());
-        assertEquals(1, loadFlowParametersRepository.findAll().size());
 
-        int nbRowsUpdated = studyRepository.updateLoadFlowStatus("mystudy", "chmits", LoadFlowStatus.CONVERGED);
+        int nbRowsUpdated = studyRepository.updateLoadFlowStatus("mystudy", "foo", LoadFlowStatus.CONVERGED);
         assertEquals(1, nbRowsUpdated);
-        savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("chmits", "mystudy").get();
+        savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").orElse(null);
+        assert savedStudyEntity1Updated != null;
         assertEquals(LoadFlowStatus.CONVERGED, savedStudyEntity1Updated.getLoadFlowStatus());
 
     }
 
     @Test
     public void testStudyCreationRequest() {
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity("chmits", "mystudy", ZonedDateTime.now(ZoneId.of("UTC")));
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity("foo", "mystudy", ZonedDateTime.now(ZoneId.of("UTC")));
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());
         assertEquals(savedStudyCreationRequestEntity.getUserId(), savedStudyCreationRequestEntity.getUserId());
         assertEquals(savedStudyCreationRequestEntity.getStudyName(), savedStudyCreationRequestEntity.getStudyName());
         assertEquals(savedStudyCreationRequestEntity.getDate(), savedStudyCreationRequestEntity.getDate());
-        assertTrue(studyCreationRequestRepository.findByUserIdAndStudyName("chmits", "mystudy").isPresent());
+        assertTrue(studyCreationRequestRepository.findByUserIdAndStudyName("foo", "mystudy").isPresent());
     }
 
 }
