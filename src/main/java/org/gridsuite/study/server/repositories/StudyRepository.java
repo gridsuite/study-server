@@ -13,8 +13,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,9 +45,4 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE study SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
     void updateSecurityAnalysisResultUuid(@Param("studyName") String studyName, @Param("userId") String userId, @Param("securityAnalysisResultUuid") UUID securityAnalysisResultUuid);
-
-    @Transactional
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "UPDATE study SET isPrivate = :isPrivate WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
-    void updateIsPrivate(@Param("studyName") String studyName, @Param("userId") String userId, @Param("isPrivate") boolean isPrivate);
 }

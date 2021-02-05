@@ -58,17 +58,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import javax.transaction.Transactional;
-
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 @Service
-@Transactional
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
@@ -201,7 +199,7 @@ public class StudyService {
                 .build();
     }
 
-    private static BasicStudyInfos toBasicInfos(BasicStudyEntity entity) {
+    private static BasicStudyInfos toBasicInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder().studyName(entity.getStudyName())
                 .creationDate(entity.getDate())
                 .userId(entity.getUserId())
@@ -263,12 +261,7 @@ public class StudyService {
     }
 
     Mono<StudyEntity> getStudy(String studyName, String userId) {
-        Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
-        if (studyEntity.isPresent()) {
-            return Mono.just(studyEntity.get());
-        } else {
-            return Mono.empty();
-        }
+        return studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty);
     }
 
     private Optional<StudyCreationRequestEntity> getStudyCreationRequest(String studyName, String userId) {
@@ -688,11 +681,10 @@ public class StudyService {
         if (!headerUserId.equals(userId)) {
             throw new StudyException(NOT_ALLOWED);
         }
-
         return getStudy(studyName, userId).switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).flatMap(studyEntity -> {
             if (studyEntity.isPrivate() != toPrivate) {
-                studyRepository.updateIsPrivate(userId, studyName, toPrivate);
                 studyEntity.setPrivate(toPrivate);
+                studyRepository.save(studyEntity); // optional if same transaction as getStudy
             }
             return Mono.just(studyEntity);
         }).map(StudyService::toInfos);
@@ -737,7 +729,7 @@ public class StudyService {
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {
-        return getStudy(studyName, userId).cast(BasicStudyEntity.class).hasElement().or(Mono.just(getStudyCreationRequest(studyName, userId)).hasElement());
+        return getStudy(studyName, userId).hasElement().or(Mono.just(getStudyCreationRequest(studyName, userId)).hasElement());
     }
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {

@@ -48,6 +48,6 @@ public class LoadFlowResultEntity {
 
     @OneToMany(fetch = FetchType.EAGER,
             mappedBy = "loadFlowResult",
-            cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
+            cascade = {CascadeType.ALL})
     private List<ComponentResultEntity> componentResults;
 }

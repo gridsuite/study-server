@@ -22,18 +22,19 @@ spring:
           destination: study.update
         consumeSaResult-in-0:
           destination: sa.result
+
   jpa:
     database: POSTGRESQL
     show-sql: true
     hibernate:
       ddl-auto: create
+      format_sql: true
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
       format_sql: true
-
   datasource:
     platform: postgres
     url: jdbc:postgresql://localhost:5432/chmitsdb

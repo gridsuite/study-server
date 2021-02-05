@@ -21,7 +21,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Table(name = "studycreationrequest")
-public class StudyCreationRequestEntity implements BasicStudyEntity {
+public class StudyCreationRequestEntity {
 
     public StudyCreationRequestEntity(String userId, String studyName, ZonedDateTime date) {
         this.userId = userId;

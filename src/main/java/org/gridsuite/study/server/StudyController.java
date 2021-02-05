@@ -406,7 +406,7 @@ public class StudyController {
     public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyName") String studyName,
                                                                     @PathVariable("userId") String userId,
                                                                     @RequestHeader("userId") String headerUserId) {
-
+        System.out.println("YOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
         return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, true));
     }
 

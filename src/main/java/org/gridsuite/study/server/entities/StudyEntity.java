@@ -26,7 +26,7 @@ import javax.persistence.*;
 @Entity
 @Builder
 @Table(name = "study")
-public class StudyEntity implements BasicStudyEntity {
+public class StudyEntity {
 
     public StudyEntity(String userId, String studyName, ZonedDateTime date, UUID networkUuid, String networkId,
                        String description, String caseFormat, UUID caseUuid, boolean casePrivate, boolean isPrivate,
@@ -99,7 +99,7 @@ public class StudyEntity implements BasicStudyEntity {
     @JoinColumn(name  =  "loadFlowParameters_id",
             referencedColumnName  =  "id",
             foreignKey = @ForeignKey(
-                    name = "loadFlowResult_id_fk"
+                    name = "loadFlowParameters_id_fk"
             ))
     private LoadFlowParametersEntity loadFlowParameters;
 

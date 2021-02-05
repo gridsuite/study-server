@@ -36,3 +36,8 @@ spring:
     username: chmits
     password: chmits
     driverClassName: org.h2.Driver
+
+logging:
+  level:
+    org.springframework.orm.jpa: DEBUG
+    org.springframework.transaction: DEBUG
