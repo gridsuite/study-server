@@ -23,10 +23,11 @@ import javax.persistence.*;
 @Table(name = "studycreationrequest")
 public class StudyCreationRequestEntity {
 
-    public StudyCreationRequestEntity(String userId, String studyName, ZonedDateTime date) {
+    public StudyCreationRequestEntity(String userId, String studyName, ZonedDateTime date, boolean isPrivate) {
         this.userId = userId;
         this.studyName = studyName;
         this.date = date;
+        this.isPrivate = isPrivate;
     }
 
     @Id
@@ -42,4 +43,7 @@ public class StudyCreationRequestEntity {
 
     @Column(name = "creationDate")
     private ZonedDateTime date;
+
+    @Column(name = "isPrivate")
+    private Boolean isPrivate;
 }

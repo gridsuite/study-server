@@ -9,10 +9,10 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class CaseInfosTest {
+class CaseInfosTest {
 
     @Test
-    public void test() {
+    void test() {
         UUID uuid = UUID.randomUUID();
         CaseInfos caseInfos = new CaseInfos("case", "XIIDM", uuid);
         assertEquals("XIIDM", caseInfos.getFormat());
