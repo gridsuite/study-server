@@ -750,15 +750,13 @@ public class StudyService {
     }
 
     private Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
-        Mono<StudyEntity> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElse(Mono.empty());
-        return studyMono.map(StudyEntity::getLoadFlowStatus)
+        return getStudy(studyName, userId).map(StudyEntity::getLoadFlowStatus)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .flatMap(lfs -> lfs.equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
     }
 
     private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
-        Mono<String> statusMono = getSecurityAnalysisStatus(studyName, userId);
-        return statusMono
+        return getSecurityAnalysisStatus(studyName, userId)
                 .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING.name()) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
     }
 
@@ -768,8 +766,7 @@ public class StudyService {
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
         Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(
-                parameters.getVoltageInitMode(),
+        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
                 parameters.isTransformerVoltageControlOn(),
                 parameters.isNoGeneratorReactiveLimits(),
                 parameters.isPhaseShifterRegulationOn(),
@@ -799,8 +796,7 @@ public class StudyService {
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
         Objects.requireNonNull(result);
-        return new LoadFlowResultEntity(
-                result.isOk(),
+        return new LoadFlowResultEntity(result.isOk(),
                 result.getMetrics(),
                 result.getLogs(),
                 result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList()));
@@ -815,8 +811,7 @@ public class StudyService {
 
     public static ComponentResultEntity toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
-        return new ComponentResultEntity(
-                componentResult.getComponentNum(),
+        return new ComponentResultEntity(componentResult.getComponentNum(),
                 componentResult.getStatus(),
                 componentResult.getIterationCount(),
                 componentResult.getSlackBusId(),
@@ -881,12 +876,10 @@ public class StudyService {
                     .bodyToMono(UUID.class);
         })
                 .flatMap(result ->
-                        Mono.fromRunnable(() ->
-                                studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result))
-                                .doOnSuccess(e ->
-                                        emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
-                                .thenReturn(result)
-                );
+                        Mono.fromRunnable(() -> studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result))
+                .doOnSuccess(e -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                         .thenReturn(result)
+        );
     }
 
     public Mono<String> getSecurityAnalysisResult(String studyName, String userId, List<String> limitTypes) {
@@ -894,8 +887,7 @@ public class StudyService {
         Objects.requireNonNull(userId);
         Objects.requireNonNull(limitTypes);
 
-        Mono<StudyEntity> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElse(Mono.empty());
-        return   studyMono.flatMap(entity -> {
+        return   getStudy(studyName, userId).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
                 String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
@@ -921,19 +913,19 @@ public class StudyService {
 
         return networkUuid.flatMap(uuid ->
                 Flux.fromIterable(contingencyListNames)
-                        .flatMap(contingencyListName -> {
-                            String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
-                                    .queryParam("networkUuid", uuid)
-                                    .buildAndExpand(contingencyListName)
-                                    .toUriString();
-                            Mono<List<Contingency>> contingencies = webClient
-                                    .get()
-                                    .uri(actionsServerBaseUri + path)
-                                    .retrieve()
-                                    .bodyToMono(new ParameterizedTypeReference<>() { });
-                            return contingencies.map(List::size);
-                        })
-                        .reduce(0, Integer::sum)
+                    .flatMap(contingencyListName -> {
+                        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
+                                .queryParam("networkUuid", uuid)
+                                .buildAndExpand(contingencyListName)
+                                .toUriString();
+                        Mono<List<Contingency>> contingencies = webClient
+                                .get()
+                                .uri(actionsServerBaseUri + path)
+                                .retrieve()
+                                .bodyToMono(new ParameterizedTypeReference<>() { });
+                        return contingencies.map(List::size);
+                    })
+                    .reduce(0, Integer::sum)
         );
     }
 
@@ -976,8 +968,7 @@ public class StudyService {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
 
-        Mono<StudyEntity> studyMono = studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElse(Mono.empty());
-        return studyMono.flatMap(entity -> {
+        return getStudy(studyName, userId).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
                 String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
