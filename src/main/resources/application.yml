@@ -27,8 +27,7 @@ spring:
     database: POSTGRESQL
     show-sql: true
     hibernate:
-      ddl-auto: create
-      format_sql: true
+      ddl-auto: validate
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
@@ -37,9 +36,9 @@ spring:
       format_sql: true
   datasource:
     platform: postgres
-    url: jdbc:postgresql://localhost:5432/chmitsdb
-    username: chmits
-    password: chmits
+    url: jdbc:postgresql://localhost:5432/study
+    username: postgres
+    password: postgres
     driverClassName: org.postgresql.Driver
 
 backing-services:
