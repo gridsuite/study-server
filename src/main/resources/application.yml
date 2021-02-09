@@ -33,7 +33,7 @@ spring:
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
-      format_sql: true
+      hibernate.format_sql: true
   datasource:
     platform: postgres
     url: jdbc:postgresql://localhost:5432/study
