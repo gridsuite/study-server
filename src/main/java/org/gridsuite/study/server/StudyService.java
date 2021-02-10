@@ -538,7 +538,7 @@ public class StudyService {
                         return Mono.empty();
                     });
 
-            Mono<Void> monoUpdateLfState = Mono.just(studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE))
+            Mono<Void> monoUpdateLfState = Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE))
                     .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS))
                     .then(invalidateSecurityAnalysisStatus(studyName, userId)
                             .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
@@ -549,7 +549,10 @@ public class StudyService {
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<>() { });
 
-            return monoChangeSwitchState.flatMap(s -> Mono.fromRunnable(() -> emitStudyChanged(studyName, UPDATE_TYPE_STUDY, new TreeSet<>(s))))
+            return monoChangeSwitchState.flatMap(s -> {
+                emitStudyChanged(studyName, UPDATE_TYPE_STUDY, new TreeSet<>(s));
+                return Mono.empty();
+            })
                     .then(monoUpdateLfRes)
                     .then(monoUpdateLfState);
         });
