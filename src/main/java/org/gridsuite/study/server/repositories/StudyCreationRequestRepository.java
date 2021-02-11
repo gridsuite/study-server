@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -21,7 +22,7 @@ import java.util.Optional;
  */
 
 @Repository
-public interface StudyCreationRequestRepository extends JpaRepository<StudyCreationRequestEntity, Long> {
+public interface StudyCreationRequestRepository extends JpaRepository<StudyCreationRequestEntity, UUID> {
 
     List<StudyCreationRequestEntity> findAllByUserId(String userId);
 

@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.entities;
 
 import java.time.ZonedDateTime;
+import java.util.UUID;
 
 import lombok.*;
 
@@ -31,9 +32,9 @@ public class StudyCreationRequestEntity {
     }
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "userId", nullable = false)
     private String userId;

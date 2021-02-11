@@ -8,6 +8,8 @@ package org.gridsuite.study.server.dto;
 
 import io.swagger.annotations.ApiModel;
 import java.time.ZonedDateTime;
+import java.util.UUID;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -20,6 +22,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @ApiModel("Basic study attributes")
 public class BasicStudyInfos {
+    UUID id;
 
     String studyName;
 

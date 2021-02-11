@@ -40,7 +40,7 @@ create table if not exists LoadFlowResultEntity_metrics (
 )
 
 create table if not exists study (
-   id uuid not null,
+    id uuid not null,
     caseFormat varchar(255),
     casePrivate boolean,
     caseUuid uuid,
@@ -59,7 +59,7 @@ create table if not exists study (
 )
 
 create table if not exists studycreationrequest (
-   id  bigserial not null,
+    id  uuid not null,
     creationDate timestamp,
     isPrivate boolean,
     studyName varchar(255) not null,

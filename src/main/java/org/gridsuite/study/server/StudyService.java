@@ -188,7 +188,8 @@ public class StudyService {
     }
 
     private static StudyInfos toInfos(StudyEntity entity) {
-        return StudyInfos.builder().studyName(entity.getStudyName())
+        return StudyInfos.builder().id(entity.getId())
+                .studyName(entity.getStudyName())
                 .creationDate(entity.getDate())
                 .userId(entity.getUserId())
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
@@ -202,6 +203,7 @@ public class StudyService {
         return BasicStudyInfos.builder().studyName(entity.getStudyName())
                 .creationDate(entity.getDate())
                 .userId(entity.getUserId())
+                .id(entity.getId())
                 .build();
     }
 
