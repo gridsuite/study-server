@@ -1,18 +1,16 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.CaseInfos;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.UUID;
 
+import static org.junit.Assert.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
-class CaseInfosTest {
+public class CaseInfosTest {
 
     @Test
-    void test() {
+    public void test() {
         UUID uuid = UUID.randomUUID();
         CaseInfos caseInfos = new CaseInfos("case", "XIIDM", uuid);
         assertEquals("XIIDM", caseInfos.getFormat());
