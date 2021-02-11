@@ -87,7 +87,7 @@ public class StudyEntity {
     @Enumerated(EnumType.STRING)
     private LoadFlowStatus loadFlowStatus;
 
-    @OneToOne(cascade  =  CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name  =  "loadFlowResultEntity_id",
             referencedColumnName  =  "id",
             foreignKey = @ForeignKey(
@@ -95,8 +95,8 @@ public class StudyEntity {
             ))
     private LoadFlowResultEntity loadFlowResult;
 
-    @OneToOne(cascade  =  CascadeType.ALL)
-    @JoinColumn(name  =  "loadFlowParameters_id",
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "loadFlowParameters_id",
             referencedColumnName  =  "id",
             foreignKey = @ForeignKey(
                     name = "loadFlowParameters_id_fk"

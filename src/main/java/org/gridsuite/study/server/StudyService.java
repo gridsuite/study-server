@@ -285,10 +285,12 @@ public class StudyService {
         return Mono.empty();
     }
 
-    private Mono<Void> removeStudy(String studyName, String userId) {
-        studyRepository.deleteByStudyNameAndUserId(userId, studyName);
-        emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
-        return Mono.empty();
+    private void removeStudy(String studyName, String userId) {
+        Optional<StudyEntity> optionalStudyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+        optionalStudyEntity.ifPresent(studyEntity -> {
+            studyRepository.delete(studyEntity);
+            emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
+        });
     }
 
     private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
