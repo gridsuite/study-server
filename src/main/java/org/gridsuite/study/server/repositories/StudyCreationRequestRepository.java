@@ -9,6 +9,7 @@ package org.gridsuite.study.server.repositories;
 import org.gridsuite.study.server.entities.StudyCreationRequestEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.stereotype.Repository;
 
 import javax.transaction.Transactional;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.Optional;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
+@Repository
 public interface StudyCreationRequestRepository extends JpaRepository<StudyCreationRequestEntity, Long> {
 
     List<StudyCreationRequestEntity> findAllByUserId(String userId);

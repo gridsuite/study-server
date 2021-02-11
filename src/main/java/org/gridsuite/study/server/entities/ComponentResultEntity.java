@@ -56,9 +56,8 @@ public class ComponentResultEntity {
     @Column(name = "slackBusActivePowerMismatch")
     private double slackBusActivePowerMismatch;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "loadFlowResult_id",
-            //nullable = false,
             foreignKey = @ForeignKey(
                     name = "componentResult_loadFlowResult_fk"
             ))

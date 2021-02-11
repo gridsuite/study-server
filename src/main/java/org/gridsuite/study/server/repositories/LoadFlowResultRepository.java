@@ -8,10 +8,12 @@ package org.gridsuite.study.server.repositories;
 
 import org.gridsuite.study.server.entities.LoadFlowResultEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
+@Repository
 public interface LoadFlowResultRepository extends JpaRepository<LoadFlowResultEntity, Long> {
 }

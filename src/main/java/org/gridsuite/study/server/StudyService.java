@@ -604,7 +604,9 @@ public class StudyService {
                 .retrieve()
                 .bodyToMono(LoadFlowResult.class)
                 .flatMap(result -> getStudy(studyName, userId).flatMap(studyEntity -> {
-                    studyEntity.setLoadFlowResult(toEntity(result));
+                    LoadFlowResultEntity loadFlowResultEntity = toEntity(result);
+                    loadFlowResultEntity.getComponentResults().forEach(c -> c.setLoadFlowResult(loadFlowResultEntity));
+                    studyEntity.setLoadFlowResult(loadFlowResultEntity);
                     if (result.isOk()) {
                         studyEntity.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
                     } else {
