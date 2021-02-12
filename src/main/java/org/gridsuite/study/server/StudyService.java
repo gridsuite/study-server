@@ -204,7 +204,7 @@ public class StudyService {
                 .creationDate(entity.getDate())
                 .userId(entity.getUserId())
                 .id(entity.getId())
-                .isPrivate(entity.isPrivate())
+                .studyPrivate(entity.isPrivate())
                 .build();
     }
 
@@ -263,6 +263,10 @@ public class StudyService {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty);
     }
 
+    Mono<StudyEntity> getStudy2(UUID studyUuid, String userId) {
+        return studyRepository.findById(studyUuid).filter(s -> s.getUserId().equals(userId)).map(Mono::just).orElseGet(Mono::empty);
+    }
+
     private Optional<StudyCreationRequestEntity> getStudyCreationRequest(String studyName, String userId) {
         return studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName);
     }
@@ -275,6 +279,12 @@ public class StudyService {
             }
             deleteStudyCreationRequest(studyName, userId);
         });
+    }
+
+    @Synchronized
+    public Mono<Void> deleteStudy(UUID studyUuid, String userId) {
+        // if study exists in db then there's  no studyCreationRequest exists for it (it should be deleted previously)
+        return Mono.fromRunnable(() -> removeStudy2(studyUuid, userId));
     }
 
     private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
@@ -294,6 +304,14 @@ public class StudyService {
         });
     }
 
+    private void removeStudy2(UUID studyUuid, String userId) {
+        Optional<StudyEntity> optionalStudyEntity = studyRepository.findById(studyUuid).filter(s -> s.getUserId().equals(userId));
+        optionalStudyEntity.ifPresent(studyEntity -> {
+            studyRepository.delete(studyEntity);
+            emitStudyChanged(studyUuid.toString(), StudyService.UPDATE_TYPE_STUDIES);
+        });
+    }
+
     private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
         return Mono.fromRunnable(() -> {
             StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(userId, studyName, ZonedDateTime.now(ZoneId.of("UTC")), isPrivate);
@@ -305,6 +323,11 @@ public class StudyService {
     private void deleteStudyCreationRequest(String studyName, String userId) {
         studyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId);
         emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
+    }
+
+    private void deleteStudyCreationRequest2(UUID studyUuid, String userId) {
+        studyCreationRequestRepository.deleteById(studyUuid);
+        emitStudyChanged(studyUuid.toString(), StudyService.UPDATE_TYPE_STUDIES);
     }
 
     private Mono<String> getCaseFormat(UUID caseUuid) {
@@ -624,13 +647,14 @@ public class StudyService {
         }).doFinally(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW)));
     }
 
-    public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
-        return getStudy(studyName, userId)
+    public Mono<StudyInfos> renameStudy(UUID studyUuid, String userId, String newStudyName) {
+        return getStudy2(studyUuid, userId)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .flatMap(studyEntity -> {
                     studyEntity.setStudyName(newStudyName);
-                    StudyEntity newStudyEntity = studyRepository.save(studyEntity);
-                    return Mono.just(toInfos(newStudyEntity));
+                    studyRepository.save(studyEntity);
+                    emitStudyChanged(studyUuid.toString(), StudyService.UPDATE_TYPE_STUDIES);
+                    return Mono.just(toInfos(studyEntity));
                 });
     }
 

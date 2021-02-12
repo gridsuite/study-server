@@ -30,5 +30,5 @@ public class BasicStudyInfos {
 
     ZonedDateTime creationDate;
 
-    boolean isPrivate;
+    boolean studyPrivate;
 }

@@ -107,14 +107,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.studyExists(studyName, userId));
     }
 
-    @DeleteMapping(value = "/{userId}/studies/{studyName}")
+    @DeleteMapping(value = "/{userId}/studies/{studyUuid}")
     @ApiOperation(value = "delete the study")
     @ApiResponse(code = 200, message = "Study deleted")
-    public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("userId") String userId,
                                                   @RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId)
-                .doOnSuccess(s -> studyService.deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()));
+                .doOnSuccess(s -> studyService.deleteStudy(studyUuid, userId).subscribe()));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg")
@@ -378,15 +378,15 @@ public class StudyController {
                 .then(studyService.runLoadFlow(studyName, userId)));
     }
 
-    @PostMapping(value = "/{userId}/studies/{studyName}/rename")
+    @PostMapping(value = "/{userId}/studies/{studyUuid}/rename")
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
     public ResponseEntity<Mono<StudyInfos>> renameStudy(@RequestHeader("userId") String headerUserId,
-                                                         @PathVariable("studyName") String studyName,
+                                                         @PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("userId") String userId,
                                                          @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
-        Mono<StudyInfos> studyMono = studyService.renameStudy(studyName, userId, renameStudyAttributes.getNewStudyName());
+        Mono<StudyInfos> studyMono = studyService.renameStudy(studyUuid, userId, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId).then(studyMono));
     }
 

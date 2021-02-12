@@ -473,6 +473,19 @@ public class StudyTest {
         // drop the broker message for study creation request (deletion)
         output.receive(1000);
 
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(StudyInfos.class)
+                .value(studies -> {
+                    new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
+                            .description("description").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
+                            .build()).matchesSafely(studies.get(0));
+                });
+
         //Import the same case -> 409 conflict
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
@@ -502,14 +515,16 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("s2")
-                        .userId("userId")
-                        .studyPrivate(true)
-                        .description("desc")
-                        .caseFormat("XIIDM")
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
+                .value(val -> {
+                    new MatcherStudyInfos(StudyInfos.builder()
+                            .studyName("s2")
+                            .userId("userId")
+                            .studyPrivate(true)
+                            .description("desc")
+                            .caseFormat("XIIDM")
+                            .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                            .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()).matchesSafely(val);
+                });
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}", "s2")
@@ -730,9 +745,10 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
+        UUID uuidS2 = studyRepository.findByUserIdAndStudyName("userId", "s2").get().getId();
         //delete existing study s2
         webTestClient.delete()
-                .uri("/v1/userId/studies/{studyName}/", "s2")
+                .uri("/v1/userId/studies/" + uuidS2 + "/", "s2")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
@@ -741,10 +757,10 @@ public class StudyTest {
         messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
-        assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(uuidS2.toString(), headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
         messageSwitch = output.receive(1000);
-        assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(uuidS2.toString(), headersSwitch.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         //update switch
@@ -806,6 +822,9 @@ public class StudyTest {
         assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
         assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
 
+        // discard securityAnalysis_status
+        messageLFStatus = output.receive(1000);
+
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("userId", "userId")
@@ -838,8 +857,10 @@ public class StudyTest {
         String newStudyName = "newName";
         RenameStudyAttributes renameStudyAttributes = new RenameStudyAttributes(newStudyName);
 
+        UUID uuidStudyName = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
+
         webTestClient.post()
-                .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
+                .uri("/v1/userId/studies/" + uuidStudyName + "/rename")
                 .header("userId", "userId")
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
@@ -855,21 +876,8 @@ public class StudyTest {
                         .studyPrivate(false)
                         .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
 
-        // drop the broker message for study deletion
+        // drop the broker message for study rename
         output.receive(1000);
-        // drop the broker message for study creation request (creation)
-        output.receive(1000);
-        // drop the broker message for study creation
-        output.receive(1000);
-        // drop the broker message for study creation request (deletion)
-        output.receive(1000);
-
-        webTestClient.post()
-                .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
-                .header("userId", "userId")
-                .body(BodyInserters.fromValue(renameStudyAttributes))
-                .exchange()
-                .expectStatus().isNotFound();
 
         //run a loadflow
         webTestClient.put()

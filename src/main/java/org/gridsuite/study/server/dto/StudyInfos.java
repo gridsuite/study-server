@@ -28,6 +28,4 @@ public class StudyInfos extends BasicStudyInfos {
     LoadFlowStatus loadFlowStatus;
 
     LoadFlowResult loadFlowResult;
-
-    boolean studyPrivate;
 }
