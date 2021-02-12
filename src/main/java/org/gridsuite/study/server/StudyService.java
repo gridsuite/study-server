@@ -204,6 +204,7 @@ public class StudyService {
                 .creationDate(entity.getDate())
                 .userId(entity.getUserId())
                 .id(entity.getId())
+                .isPrivate(entity.isPrivate())
                 .build();
     }
 

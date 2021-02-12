@@ -46,5 +46,5 @@ public class StudyCreationRequestEntity {
     private ZonedDateTime date;
 
     @Column(name = "isPrivate")
-    private Boolean isPrivate;
+    private boolean isPrivate;
 }
