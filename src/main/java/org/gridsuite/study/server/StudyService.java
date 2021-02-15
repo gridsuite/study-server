@@ -208,9 +208,9 @@ public class StudyService {
     }
 
     Flux<StudyInfos> getStudyList(String userId) {
-        Stream<StudyEntity> allMyStudiesStream = studyRepository.findAllByUserId(userId).stream();
-        Stream<StudyEntity> allPublicStudiesStream = studyRepository.findAll().stream().filter(s -> !s.getUserId().equals(userId) && !s.isPrivate());
-        return Flux.fromIterable(Stream.concat(allMyStudiesStream, allPublicStudiesStream).map(StudyService::toInfos)
+        Stream<StudyEntity> allUserPrivateStudies = studyRepository.findAllByUserIdAndIsPrivate(userId, true).stream();
+        Stream<StudyEntity> allPublicStudies = studyRepository.findAllByIsPrivate(false).stream();
+        return Flux.fromIterable(Stream.concat(allUserPrivateStudies, allPublicStudies).map(StudyService::toInfos)
                 .sorted(Comparator.comparing(StudyInfos::getCreationDate).reversed()).collect(Collectors.toList()));
     }
 

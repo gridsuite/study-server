@@ -43,7 +43,7 @@ public class LoadFlowResultEntity {
     @ElementCollection(fetch = FetchType.EAGER)
     private Map<String, String> metrics;
 
-    @Column(name = "logs")
+    @Column(name = "logs", columnDefinition = "TEXT")
     private String logs;
 
     @OneToMany(fetch = FetchType.EAGER,

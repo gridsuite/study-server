@@ -25,7 +25,7 @@ spring:
 
   jpa:
     database: POSTGRESQL
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: validate
       naming:
@@ -34,12 +34,6 @@ spring:
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.format_sql: false
-  datasource:
-    platform: postgres
-    url: jdbc:postgresql://localhost:5432/study
-    username: postgres
-    password: postgres
-    driverClassName: org.postgresql.Driver
 
 backing-services:
   case:

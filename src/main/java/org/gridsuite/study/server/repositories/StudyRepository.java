@@ -31,6 +31,10 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
     Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
+    List<StudyEntity> findAllByUserIdAndIsPrivate(String userId, boolean isPrivate);
+
+    List<StudyEntity> findAllByIsPrivate(boolean isPrivate);
+
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE study SET loadFlowStatus = :#{#loadFlowStatus.name()} WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
