@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,11 +22,9 @@ import javax.sql.DataSource;
 @PropertySource(value = {"classpath:database.properties"})
 @PropertySource(value = {"file:/config/database.properties"}, ignoreResourceNotFound = true)
 public class DataSourceConfig {
-    @Autowired
-    Environment env;
 
     @Bean
-    public DataSource getDataSource() {
+    public DataSource getDataSource(Environment env) {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.driverClassName(env.getRequiredProperty("driverClassName"));
         dataSourceBuilder.url(env.getRequiredProperty("url"));

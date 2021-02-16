@@ -1109,7 +1109,7 @@ public class StudyTest {
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation
-            message = output.receive(10000);
+            message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
@@ -1122,6 +1122,7 @@ public class StudyTest {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
+        cleanDB();
     }
 
     @Test
@@ -1151,7 +1152,7 @@ public class StudyTest {
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation
-            message = output.receive(10000);
+            message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
@@ -1164,6 +1165,7 @@ public class StudyTest {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
+        cleanDB();
     }
 
     @After
