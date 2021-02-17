@@ -533,4 +533,12 @@ public class StudyController {
                 .map(result -> ResponseEntity.ok().body(result))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
+
+    @PutMapping(value = "/{userId}/studies/{studyName}/security-analysis/stop")
+    @ApiOperation(value = "stop security analysis on study")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The security analysis has been stopped")})
+    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
+                                                           @ApiParam(value = "User ID") @PathVariable("userId") String userId) {
+        return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyName, userId));
+    }
 }
