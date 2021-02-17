@@ -24,8 +24,6 @@ import static org.gridsuite.study.server.StudyException.Type.DRIVER_NOT_SUPPORTE
 @PropertySource(value = {"classpath:database.properties"})
 @PropertySource(value = {"file:/config/database.properties"}, ignoreResourceNotFound = true)
 public class DataSourceConfig {
-    private static final String DATABASE_NAME = "study";
-
     @Bean
     public DataSource getDataSource(Environment env) {
 
@@ -38,7 +36,7 @@ public class DataSourceConfig {
             dataSourceBuilder.url("jdbc:postgresql://" +
                     env.getRequiredProperty("host") + ":" +
                     env.getRequiredProperty("port") + "/" +
-                    DATABASE_NAME);
+                    env.getRequiredProperty("database"));
             dataSourceBuilder.username(env.getRequiredProperty("login"));
             dataSourceBuilder.password(env.getRequiredProperty("password"));
         } else {
