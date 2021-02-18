@@ -79,7 +79,7 @@ import static org.mockito.BDDMockito.given;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "10000")
+@AutoConfigureWebTestClient
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
