@@ -1046,7 +1046,7 @@ public class StudyService {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
 
-        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+        return getStudy(studyName, userId).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
 
             String receiver;
@@ -1083,12 +1083,14 @@ public class StudyService {
                             resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
 
                     // delete security analysis result in database
-                    return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), null)
-                            .then(Mono.fromCallable(() -> {
+                    return getStudy(receiverObj.getStudyName(), receiverObj.getUserId())
+                            .flatMap(study -> {
+                                study.setLoadFlowResult(null);
+                                studyRepository.save(study);
                                 // send notification for stopped computation
                                 emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                return null;
-                            }));
+                                return Mono.empty();
+                            });
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
