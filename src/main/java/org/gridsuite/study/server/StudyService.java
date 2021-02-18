@@ -87,6 +87,7 @@ public class StudyService {
     static final String UPDATE_TYPE_STUDY = "study";
     static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
+    static final String RECEIVER = "receiver";
 
     @Data
     @AllArgsConstructor
@@ -127,7 +128,7 @@ public class StudyService {
     public Consumer<Flux<Message<String>>> consumeSaResult() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
             UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
-            String receiver = message.getHeaders().get("receiver", String.class);
+            String receiver = message.getHeaders().get(RECEIVER, String.class);
             if (receiver != null) {
                 Receiver receiverObj;
                 try {
@@ -860,7 +861,7 @@ public class StudyService {
             }
             String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                     .queryParam("contingencyListName", contingencyListNames)
-                    .queryParam("receiver", receiver)
+                    .queryParam(RECEIVER, receiver)
                     .buildAndExpand(uuid)
                     .toUriString();
 
@@ -1039,5 +1040,62 @@ public class StudyService {
 
     public void setActionsServerBaseUri(String actionsServerBaseUri) {
         this.actionsServerBaseUri = actionsServerBaseUri;
+    }
+
+    public Mono<Void> stopSecurityAnalysis(String studyName, String userId) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+
+        return studyRepository.findStudy(userId, studyName).flatMap(entity -> {
+            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
+
+            String receiver;
+            try {
+                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyName, userId)), StandardCharsets.UTF_8);
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
+                        .queryParam(RECEIVER, receiver)
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .put()
+                        .uri(securityAnalysisServerBaseUri + path)
+                        .retrieve()
+                        .bodyToMono(Void.class);
+            });
+        });
+    }
+
+    @Bean
+    public Consumer<Flux<Message<String>>> consumeSaStopped() {
+        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
+            String receiver = message.getHeaders().get(RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
+
+                    LOGGER.info("Security analysis stopped for study '{}' and user '{}'",
+                            resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
+
+                    // delete security analysis result in database
+                    return studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), null)
+                            .then(Mono.fromCallable(() -> {
+                                // send notification for stopped computation
+                                emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                return null;
+                            }));
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+            return Mono.empty();
+        })
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .subscribe();
     }
 }

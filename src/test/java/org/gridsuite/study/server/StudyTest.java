@@ -342,6 +342,14 @@ public class StudyTest {
                             return new MockResponse().setResponseCode(200)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                        case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
+                            input.send(MessageBuilder.withPayload("")
+                                    .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
+                                    .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
+                                    .build(), "sa.stopped");
+                            return new MockResponse().setResponseCode(200)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+
                         default:
                             LOGGER.error("Path not supported: " + request.getPath());
                             return new MockResponse().setResponseCode(404);
@@ -947,6 +955,16 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectBody(String.class)
                 .isEqualTo(SECURITY_ANALYSIS_STATUS_JSON);
+
+        // stop security analysis
+        webTestClient.put()
+                .uri("/v1/userId/studies/{studyName}/security-analysis/stop", newStudyName)
+                .exchange()
+                .expectStatus().isOk();
+
+        securityAnalysisStatusMessage = output.receive(1000);
+        assertEquals(newStudyName, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
 
         // get contingency count
         webTestClient.get()
