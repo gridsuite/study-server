@@ -554,19 +554,12 @@ public class StudyService {
                     .buildAndExpand(uuid, switchId)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfRes = getStudy(studyName, userId)
-                    .flatMap(studyEntity -> {
-                        studyEntity.setLoadFlowResult(null);
-                        studyRepository.save(studyEntity);
-                        return Mono.empty();
-                    });
-
+            Mono<Void> monoUpdateLfRes =  updateLoadFlowResult(studyName, userId, null);
             Mono<Void> monoUpdateLfState = Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE))
                     .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS))
                     .then(invalidateSecurityAnalysisStatus(studyName, userId)
                             .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                     .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_SWITCH));
-
             Mono<Set<String>> monoChangeSwitchState = webClient.put()
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
@@ -581,6 +574,16 @@ public class StudyService {
         });
     }
 
+    private Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResultEntity) {
+        return Mono.fromRunnable(() -> {
+            Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+            studyEntity.ifPresent(studyEntity1 -> {
+                studyEntity1.setLoadFlowResult(loadFlowResultEntity);
+                studyRepository.save(studyEntity1);
+            });
+        });
+    }
+
     public Mono<Void> applyGroovyScript(String studyName, String userId, String groovyScript) {
         Mono<UUID> networkUuid = getNetworkUuid(studyName, userId);
 
@@ -589,13 +592,7 @@ public class StudyService {
                     .buildAndExpand(uuid)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfRes = Mono.fromRunnable(() -> {
-                Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
-                studyEntity.ifPresent(studyEntity1 -> {
-                    studyEntity1.setLoadFlowResult(null);
-                    studyRepository.save(studyEntity1);
-                });
-            });
+            Mono<Void> monoUpdateLfRes = updateLoadFlowResult(studyName, userId, null);
             Mono<Void> monoUpdateLfState = Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.NOT_DONE))
                     .doOnSuccess(e -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS))
                     .then(invalidateSecurityAnalysisStatus(studyName, userId)
@@ -652,11 +649,13 @@ public class StudyService {
                 });
     }
 
+    private Mono<Void> setLoadFlowRunningInStudyEntity(String studyName, String userId, LoadFlowStatus loadFlowStatus) {
+        return Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, loadFlowStatus));
+    }
+
     private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
-        return Mono.fromRunnable(() -> {
-            studyRepository.updateLoadFlowStatus(studyName, userId, LoadFlowStatus.RUNNING);
-            emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS);
-        });
+        return setLoadFlowRunningInStudyEntity(studyName, userId, LoadFlowStatus.RUNNING)
+                .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
     public Mono<Collection<String>> getExportFormats() {
@@ -715,8 +714,7 @@ public class StudyService {
     }
 
     private void emitStudyChanged(String studyName, String updateType) {
-        studyUpdatePublisher
-                .onNext(MessageBuilder.withPayload("")
+        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build()
