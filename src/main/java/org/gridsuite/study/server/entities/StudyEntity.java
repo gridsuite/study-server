@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.entities;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
@@ -28,7 +28,7 @@ import javax.persistence.*;
 @Table(name = "study")
 public class StudyEntity {
 
-    public StudyEntity(String userId, String studyName, ZonedDateTime date, UUID networkUuid, String networkId,
+    public StudyEntity(String userId, String studyName, LocalDateTime date, UUID networkUuid, String networkId,
                        String description, String caseFormat, UUID caseUuid, boolean casePrivate, boolean isPrivate,
                        LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity
                                loadFlowParameters, UUID securityAnalysisResultUuid) {
@@ -60,7 +60,7 @@ public class StudyEntity {
     private String studyName;
 
     @Column(name = "creationDate")
-    private ZonedDateTime date;
+    private LocalDateTime date;
 
     @Column(name = "networkUuid")
     private UUID networkUuid;

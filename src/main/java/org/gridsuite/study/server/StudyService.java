@@ -18,7 +18,9 @@ import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.function.Consumer;
@@ -191,7 +193,7 @@ public class StudyService {
     private static StudyInfos toInfos(StudyEntity entity) {
         return StudyInfos.builder().id(entity.getId())
                 .studyName(entity.getStudyName())
-                .creationDate(entity.getDate())
+                .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
                 .loadFlowStatus(entity.getLoadFlowStatus())
@@ -202,7 +204,7 @@ public class StudyService {
 
     private static BasicStudyInfos toBasicInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder().studyName(entity.getStudyName())
-                .creationDate(entity.getDate())
+                .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .id(entity.getId())
                 .build();
@@ -280,7 +282,7 @@ public class StudyService {
     private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                           String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
                                           LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
-        StudyEntity studyEntity = new StudyEntity(userId, studyName, ZonedDateTime.now(ZoneId.of("UTC")), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
+        StudyEntity studyEntity = new StudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
         studyRepository.save(studyEntity);
         emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
         return Mono.empty();
@@ -296,7 +298,7 @@ public class StudyService {
 
     private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
         return Mono.fromRunnable(() -> {
-            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(userId, studyName, ZonedDateTime.now(ZoneId.of("UTC")), isPrivate);
+            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
             studyCreationRequestRepository.save(studyCreationRequestEntity);
             emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
         });

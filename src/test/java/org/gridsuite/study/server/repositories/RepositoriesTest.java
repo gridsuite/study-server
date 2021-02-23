@@ -17,8 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
@@ -84,7 +84,7 @@ public class RepositoriesTest {
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .userId("foo")
                 .studyName("mystudy")
-                .date(ZonedDateTime.now(ZoneId.of("UTC")))
+                .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId")
                 .description("description")
@@ -101,7 +101,7 @@ public class RepositoriesTest {
         StudyEntity studyEntity2 = StudyEntity.builder()
                 .userId("foo2")
                 .studyName("mystudy2")
-                .date(ZonedDateTime.now(ZoneId.of("UTC")))
+                .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId2")
                 .description("description2")
@@ -152,7 +152,7 @@ public class RepositoriesTest {
 
     @Test
     public void testStudyCreationRequest() {
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity("foo", "mystudy", ZonedDateTime.now(ZoneId.of("UTC")), true);
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity("foo", "mystudy", LocalDateTime.now(ZoneOffset.UTC), true);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());

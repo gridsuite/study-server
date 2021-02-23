@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.entities;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
@@ -24,7 +24,7 @@ import javax.persistence.*;
 @Table(name = "studycreationrequest")
 public class StudyCreationRequestEntity {
 
-    public StudyCreationRequestEntity(String userId, String studyName, ZonedDateTime date, boolean isPrivate) {
+    public StudyCreationRequestEntity(String userId, String studyName, LocalDateTime date, boolean isPrivate) {
         this.userId = userId;
         this.studyName = studyName;
         this.date = date;
@@ -43,7 +43,7 @@ public class StudyCreationRequestEntity {
     private String studyName;
 
     @Column(name = "creationDate")
-    private ZonedDateTime date;
+    private LocalDateTime date;
 
     @Column(name = "isPrivate")
     private Boolean isPrivate;
