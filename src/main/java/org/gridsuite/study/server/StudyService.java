@@ -304,12 +304,16 @@ public class StudyService {
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
-    private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
+    private Mono<Void> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate) {
         return Mono.fromRunnable(() -> {
             StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
             studyCreationRequestRepository.save(studyCreationRequestEntity);
-            emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
         });
+    }
+
+    private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
+        return insertStudyCreationRequestEntity(studyName, userId, isPrivate)
+                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
     private Mono<Void> deleteStudyCreationEntity(String studyName, String userId) {
@@ -889,8 +893,8 @@ public class StudyService {
         })
                 .flatMap(result ->
                         Mono.fromRunnable(() -> studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result))
-                .doOnSuccess(e -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
-                         .thenReturn(result)
+                                .doOnSuccess(e -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                                .thenReturn(result)
         );
     }
 
@@ -999,21 +1003,20 @@ public class StudyService {
     public Mono<Void> invalidateSecurityAnalysisStatus(String studyName, String userId) {
         Objects.requireNonNull(studyName);
         Objects.requireNonNull(userId);
-        return getStudy(studyName, userId)
-                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .flatMap(studyEntity -> {
-                    UUID resultUuid = studyEntity.getSecurityAnalysisResultUuid();
-                    return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/invalidate-status")
-                                .buildAndExpand(resultUuid)
-                                .toUriString();
-                        return webClient
-                                .put()
-                                .uri(securityAnalysisServerBaseUri + path)
-                                .retrieve()
-                                .bodyToMono(Void.class);
-                    });
-                });
+
+        return getStudy(studyName, userId).flatMap(studyEntity -> {
+            UUID resultUuid = studyEntity.getSecurityAnalysisResultUuid();
+            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/invalidate-status")
+                        .buildAndExpand(resultUuid)
+                        .toUriString();
+                return webClient
+                        .put()
+                        .uri(securityAnalysisServerBaseUri + path)
+                        .retrieve()
+                        .bodyToMono(Void.class);
+            });
+        });
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {
