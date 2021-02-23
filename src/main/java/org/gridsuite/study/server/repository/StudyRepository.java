@@ -30,6 +30,8 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
     Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
+    void deleteByUserIdAndStudyName(String userId, String name);
+
     @Query(value = "SELECT * from study WHERE userId = :userId or isPrivate = false", nativeQuery = true)
     List<StudyEntity> getStudyList(@Param("userId") String userId);
 
