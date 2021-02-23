@@ -31,9 +31,8 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
     Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
-    List<StudyEntity> findAllByUserIdAndIsPrivate(String userId, boolean isPrivate);
-
-    List<StudyEntity> findAllByIsPrivate(boolean isPrivate);
+    @Query(value = "SELECT * from study WHERE userId = :userId or isPrivate = false", nativeQuery = true)
+    List<StudyEntity> getStudyList(@Param("userId") String userId);
 
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)

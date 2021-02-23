@@ -108,6 +108,23 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat2")
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
+                .isPrivate(false)
+                .loadFlowStatus(LoadFlowStatus.RUNNING)
+                .loadFlowResult(null)
+                .loadFlowParameters(null)
+                .securityAnalysisResultUuid(UUID.randomUUID())
+                .build();
+
+        StudyEntity studyEntity3 = StudyEntity.builder()
+                .userId("foo3")
+                .studyName("mystudy3")
+                .date(LocalDateTime.now(ZoneOffset.UTC))
+                .networkUuid(UUID.randomUUID())
+                .networkId("networkId3")
+                .description("description3")
+                .caseFormat("caseFormat3")
+                .caseUuid(UUID.randomUUID())
+                .casePrivate(true)
                 .isPrivate(true)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
                 .loadFlowResult(null)
@@ -117,7 +134,10 @@ public class RepositoriesTest {
 
         studyRepository.save(studyEntity1);
         studyRepository.save(studyEntity2);
-        assertEquals(2, studyRepository.findAll().size());
+        studyRepository.save(studyEntity3);
+        assertEquals(3, studyRepository.findAll().size());
+
+        assertEquals(2, studyRepository.getStudyList("foo").size());
 
         StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
         StudyEntity savedStudyEntity2 = studyRepository.findAll().get(1);

@@ -27,7 +27,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -211,10 +210,7 @@ public class StudyService {
     }
 
     Flux<StudyInfos> getStudyList(String userId) {
-        Stream<StudyEntity> allUserPrivateStudies = studyRepository.findAllByUserIdAndIsPrivate(userId, true).stream();
-        Stream<StudyEntity> allPublicStudies = studyRepository.findAllByIsPrivate(false).stream();
-        return Flux.fromIterable(Stream.concat(allUserPrivateStudies, allPublicStudies).map(StudyService::toInfos)
-                .sorted(Comparator.comparing(StudyInfos::getCreationDate).reversed()).collect(Collectors.toList()));
+        return Flux.fromIterable(studyRepository.getStudyList(userId)).map(StudyService::toInfos);
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
@@ -251,7 +247,6 @@ public class StudyService {
 
     Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
         return getStudy(studyName, userId)
-                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .flatMap(study -> {
                     if (study.isPrivate() && !userId.equals(headerUserId)) {
                         return Mono.error(new StudyException(NOT_ALLOWED));
@@ -283,9 +278,9 @@ public class StudyService {
                                           String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
                                           LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         StudyEntity studyEntity = new StudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
-        studyRepository.save(studyEntity);
+        StudyEntity savedStudyEntity = studyRepository.save(studyEntity);
         emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
-        return Mono.empty();
+        return Mono.just(savedStudyEntity);
     }
 
     private void removeStudy(String studyName, String userId) {
