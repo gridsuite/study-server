@@ -37,7 +37,7 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "UPDATE study SET loadFlowStatus = :#{#loadFlowStatus.name()} WHERE userId = :userId and studyName = :studyName", nativeQuery = true)
-    int updateLoadFlowStatus(@Param("studyName") String studyName, @Param("userId") String userId, @Param("loadFlowStatus") LoadFlowStatus loadFlowStatus);
+    void updateLoadFlowStatus(@Param("studyName") String studyName, @Param("userId") String userId, @Param("loadFlowStatus") LoadFlowStatus loadFlowStatus);
 
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)

@@ -161,8 +161,7 @@ public class RepositoriesTest {
 
         assertEquals(1, loadFlowResultRepository.findAll().size());
 
-        int nbRowsUpdated = studyRepository.updateLoadFlowStatus("mystudy", "foo", LoadFlowStatus.CONVERGED);
-        assertEquals(1, nbRowsUpdated);
+        studyRepository.updateLoadFlowStatus("mystudy", "foo", LoadFlowStatus.CONVERGED);
         savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").orElse(null);
         assert savedStudyEntity1Updated != null;
         assertEquals(LoadFlowStatus.CONVERGED, savedStudyEntity1Updated.getLoadFlowStatus());
