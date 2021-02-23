@@ -28,7 +28,7 @@ public class DataSourceConfig {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.driverClassName(env.getRequiredProperty("driverClassName"));
         dataSourceBuilder.url(env.getRequiredProperty("url"));
-        dataSourceBuilder.username(env.getRequiredProperty("username"));
+        dataSourceBuilder.username(env.getRequiredProperty("login"));
         dataSourceBuilder.password(env.getRequiredProperty("password"));
         return dataSourceBuilder.build();
     }
