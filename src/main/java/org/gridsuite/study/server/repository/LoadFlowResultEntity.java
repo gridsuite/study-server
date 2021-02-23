@@ -19,18 +19,12 @@ import java.util.Map;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
 @Table(name = "loadFlowResult")
 public class LoadFlowResultEntity {
-
-    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEntity> componentResults) {
-        this.ok = ok;
-        this.metrics = metrics;
-        this.logs = logs;
-        this.componentResults = componentResults;
-    }
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)

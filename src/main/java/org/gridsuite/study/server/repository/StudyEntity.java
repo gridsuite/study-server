@@ -20,33 +20,13 @@ import javax.persistence.*;
  */
 
 @NoArgsConstructor
-@AllArgsConstructor()
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
 @Builder
 @Table(name = "study")
 public class StudyEntity {
-
-    public StudyEntity(String userId, String studyName, LocalDateTime date, UUID networkUuid, String networkId,
-                       String description, String caseFormat, UUID caseUuid, boolean casePrivate, boolean isPrivate,
-                       LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity
-                               loadFlowParameters, UUID securityAnalysisResultUuid) {
-        this.userId = userId;
-        this.studyName = studyName;
-        this.date = date;
-        this.networkUuid = networkUuid;
-        this.networkId = networkId;
-        this.description = description;
-        this.caseFormat = caseFormat;
-        this.caseUuid = caseUuid;
-        this.casePrivate = casePrivate;
-        this.isPrivate = isPrivate;
-        this.loadFlowStatus = loadFlowStatus;
-        this.loadFlowResult = loadFlowResult;
-        this.loadFlowParameters = loadFlowParameters;
-        this.securityAnalysisResultUuid = securityAnalysisResultUuid;
-    }
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)

@@ -18,18 +18,12 @@ import javax.persistence.*;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
 @Table(name = "studycreationrequest")
 public class StudyCreationRequestEntity {
-
-    public StudyCreationRequestEntity(String userId, String studyName, LocalDateTime date, boolean isPrivate) {
-        this.userId = userId;
-        this.studyName = studyName;
-        this.date = date;
-        this.isPrivate = isPrivate;
-    }
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)

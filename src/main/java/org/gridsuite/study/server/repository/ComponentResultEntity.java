@@ -19,22 +19,12 @@ import javax.persistence.*;
  */
 
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
 @Table(name = "componentResult")
 public class ComponentResultEntity {
-
-    public ComponentResultEntity(int componentNum, LoadFlowResult.ComponentResult.Status status,
-                                 int iterationCount, String slackBusId, double slackBusActivePowerMismatch,
-                                 LoadFlowResultEntity loadFlowResult) {
-        this.componentNum = componentNum;
-        this.status = status;
-        this.iterationCount = iterationCount;
-        this.slackBusId = slackBusId;
-        this.slackBusActivePowerMismatch = slackBusActivePowerMismatch;
-        this.loadFlowResult = loadFlowResult;
-    }
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)

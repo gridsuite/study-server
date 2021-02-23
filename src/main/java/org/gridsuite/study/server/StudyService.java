@@ -738,7 +738,8 @@ public class StudyService {
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
         Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
+        return new LoadFlowParametersEntity(null,
+                parameters.getVoltageInitMode(),
                 parameters.isTransformerVoltageControlOn(),
                 parameters.isNoGeneratorReactiveLimits(),
                 parameters.isPhaseShifterRegulationOn(),
@@ -768,7 +769,8 @@ public class StudyService {
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
         Objects.requireNonNull(result);
-        return new LoadFlowResultEntity(result.isOk(),
+        return new LoadFlowResultEntity(null,
+                result.isOk(),
                 result.getMetrics(),
                 result.getLogs(),
                 result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList()));
@@ -783,7 +785,8 @@ public class StudyService {
 
     public static ComponentResultEntity toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
-        return new ComponentResultEntity(componentResult.getComponentNum(),
+        return new ComponentResultEntity(null,
+                componentResult.getComponentNum(),
                 componentResult.getStatus(),
                 componentResult.getIterationCount(),
                 componentResult.getSlackBusId(),
@@ -1080,7 +1083,7 @@ public class StudyService {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowStatus);
         Objects.requireNonNull(loadFlowParameters);
-        StudyEntity studyEntity = new StudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
+        StudyEntity studyEntity = new StudyEntity(null, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
         StudyEntity savedStudyEntity = studyRepository.save(studyEntity);
         return Mono.just(savedStudyEntity);
     }
@@ -1108,7 +1111,7 @@ public class StudyService {
 
     private Mono<Void> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate) {
         return Mono.fromRunnable(() -> {
-            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
+            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(null, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
             studyCreationRequestRepository.save(studyCreationRequestEntity);
         });
     }

@@ -47,10 +47,10 @@ public class RepositoriesTest {
         Map<String, String> metrics = new HashedMap<>();
         metrics.put("key1", "value1");
         metrics.put("key2", "value2");
-        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(true, metrics, "logs", new ArrayList<>());
+        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(null, true, metrics, "logs", new ArrayList<>());
 
-        ComponentResultEntity componentResultEntity1 = new ComponentResultEntity(1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0, loadFlowResultEntity);
-        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(2, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 2.0, loadFlowResultEntity);
+        ComponentResultEntity componentResultEntity1 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0, loadFlowResultEntity);
+        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(null, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 2.0, loadFlowResultEntity);
 
         loadFlowResultEntity.getComponentResults().add(componentResultEntity1);
         loadFlowResultEntity.getComponentResults().add(componentResultEntity2);
@@ -73,9 +73,9 @@ public class RepositoriesTest {
         Map<String, String> metrics = new HashedMap<>();
         metrics.put("key1", "value1");
         metrics.put("key2", "value2");
-        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(false, metrics, "logs", new ArrayList<>());
+        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(null, false, metrics, "logs", new ArrayList<>());
 
-        LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
+        LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(null, LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
@@ -170,7 +170,7 @@ public class RepositoriesTest {
 
     @Test
     public void testStudyCreationRequest() {
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity("foo", "mystudy", LocalDateTime.now(ZoneOffset.UTC), true);
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(null, "foo", "mystudy", LocalDateTime.now(ZoneOffset.UTC), true);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());
