@@ -209,12 +209,13 @@ public class StudyService {
     }
 
     Flux<StudyInfos> getStudyList(String userId) {
-        return Flux.fromIterable(studyRepository.getStudyList(userId)).map(StudyService::toInfos);
+        return Flux.fromIterable(studyRepository.getStudyList(userId)).map(StudyService::toInfos)
+                .sort(Comparator.comparing(StudyInfos::getCreationDate).reversed());
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
-        return Flux.fromIterable(studyCreationRequestRepository.findAllByUserId(userId).stream().map(StudyService::toBasicInfos)
-                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList()));
+        return Flux.fromStream(studyCreationRequestRepository.findAllByUserId(userId).stream().map(StudyService::toBasicInfos)
+                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()));
     }
 
     public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
