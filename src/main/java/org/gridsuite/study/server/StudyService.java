@@ -271,20 +271,37 @@ public class StudyService {
         ).doFinally(r -> deleteStudyCreationRequest(studyName, userId));
     }
 
-    private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
-                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
-                                          LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+    private Mono<StudyEntity> insertStudyEntity(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
+                                  String description, String caseFormat, UUID caseUuid, boolean casePrivate,
+                                  LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+        Objects.requireNonNull(studyName);
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(networkUuid);
+        Objects.requireNonNull(networkId);
+        Objects.requireNonNull(caseFormat);
+        Objects.requireNonNull(caseUuid);
+        Objects.requireNonNull(loadFlowStatus);
+        Objects.requireNonNull(loadFlowParameters);
         StudyEntity studyEntity = new StudyEntity(userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
         StudyEntity savedStudyEntity = studyRepository.save(studyEntity);
-        emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
         return Mono.just(savedStudyEntity);
     }
 
+    private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
+                                         String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
+                                         LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+        return insertStudyEntity(studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
+                                           loadFlowParameters, securityAnalysisUuid)
+                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
+    }
+
+    private Mono<Void> removeStudyEntity(String studyName, String userId) {
+        return Mono.fromRunnable(() ->  studyRepository.deleteByUserIdAndStudyName(studyName, userId));
+    }
+
     private Mono<Void> removeStudy(String studyName, String userId) {
-        return Mono.fromRunnable(() -> {
-            studyRepository.deleteByUserIdAndStudyName(studyName, userId);
-            emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
-        });
+        return removeStudyEntity(studyName, userId)
+                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
     private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
@@ -295,9 +312,14 @@ public class StudyService {
         });
     }
 
+    private Mono<Void> deleteStudyCreationEntity(String studyName, String userId) {
+        return Mono.fromRunnable(() -> studyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId));
+    }
+
     private void deleteStudyCreationRequest(String studyName, String userId) {
-        studyCreationRequestRepository.deleteByStudyNameAndUserId(studyName, userId);
-        emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
+        deleteStudyCreationEntity(studyName, userId)
+                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES))
+                .subscribe();
     }
 
     private Mono<String> getCaseFormat(UUID caseUuid) {
