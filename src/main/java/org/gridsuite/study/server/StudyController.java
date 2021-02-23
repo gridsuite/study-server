@@ -7,13 +7,12 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
 import io.swagger.annotations.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.entities.StudyEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -371,9 +370,10 @@ public class StudyController {
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
-    public ResponseEntity<Mono<LoadFlowResult>> runLoadFlow(
+    public ResponseEntity<Mono<Void>> runLoadFlow(
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
+
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyName, userId)
                 .then(studyService.runLoadFlow(studyName, userId)));
     }
@@ -406,6 +406,7 @@ public class StudyController {
     public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyName") String studyName,
                                                                     @PathVariable("userId") String userId,
                                                                     @RequestHeader("userId") String headerUserId) {
+
         return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, true));
     }
 

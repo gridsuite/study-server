@@ -4,13 +4,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.repositories;
+package org.gridsuite.study.server.repository;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.apache.commons.collections4.map.HashedMap;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.entities.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;

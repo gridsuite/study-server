@@ -14,8 +14,6 @@ import org.springframework.core.env.Environment;
 
 import javax.sql.DataSource;
 
-import static org.gridsuite.study.server.StudyException.Type.DRIVER_NOT_SUPPORTED;
-
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
@@ -24,25 +22,14 @@ import static org.gridsuite.study.server.StudyException.Type.DRIVER_NOT_SUPPORTE
 @PropertySource(value = {"classpath:database.properties"})
 @PropertySource(value = {"file:/config/database.properties"}, ignoreResourceNotFound = true)
 public class DataSourceConfig {
+
     @Bean
     public DataSource getDataSource(Environment env) {
-
-        String driver = env.getRequiredProperty("driver");
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-
-        if (driver.equals("h2")) {
-            dataSourceBuilder.url(env.getRequiredProperty("url"));
-        } else if (driver.equals("postgresql")) {
-            dataSourceBuilder.url("jdbc:postgresql://" +
-                    env.getRequiredProperty("host") + ":" +
-                    env.getRequiredProperty("port") + "/" +
-                    env.getRequiredProperty("database"));
-            dataSourceBuilder.username(env.getRequiredProperty("login"));
-            dataSourceBuilder.password(env.getRequiredProperty("password"));
-        } else {
-            throw new StudyException(DRIVER_NOT_SUPPORTED);
-        }
-
+        dataSourceBuilder.driverClassName(env.getRequiredProperty("driverClassName"));
+        dataSourceBuilder.url(env.getRequiredProperty("url"));
+        dataSourceBuilder.username(env.getRequiredProperty("username"));
+        dataSourceBuilder.password(env.getRequiredProperty("password"));
         return dataSourceBuilder.build();
     }
 }

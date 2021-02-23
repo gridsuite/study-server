@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.entities;
+package org.gridsuite.study.server.repository;
 
 import lombok.*;
 

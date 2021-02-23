@@ -35,7 +35,6 @@ spring:
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
-      hibernate.format_sql: false
 
 backing-services:
   case:
