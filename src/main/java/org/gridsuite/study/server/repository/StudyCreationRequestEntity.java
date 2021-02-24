@@ -23,7 +23,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Table(name = "studycreationrequest")
-public class StudyCreationRequestEntity {
+public class StudyCreationRequestEntity implements BasicStudyEntity {
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)

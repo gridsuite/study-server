@@ -26,7 +26,7 @@ import javax.persistence.*;
 @Entity
 @Builder
 @Table(name = "study")
-public class StudyEntity {
+public class StudyEntity implements BasicStudyEntity {
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)

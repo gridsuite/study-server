@@ -246,29 +246,30 @@ public class StudyService {
     }
 
     Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
-        return getStudy(studyName, userId)
-                .flatMap(study -> {
-                    if (study.isPrivate() && !userId.equals(headerUserId)) {
-                        return Mono.error(new StudyException(NOT_ALLOWED));
-                    } else {
-                        return Mono.just(study);
-                    }
-                }).map(StudyService::toInfos);
+        Mono<StudyEntity> studyMono = getStudy(studyName, userId);
+        return studyMono.flatMap(study -> {
+            if (study.isPrivate() && !userId.equals(headerUserId)) {
+                return Mono.error(new StudyException(NOT_ALLOWED));
+            } else {
+                return Mono.just(study);
+            }
+        }).map(StudyService::toInfos);
     }
 
     Mono<StudyEntity> getStudy(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty);
     }
 
-    private Mono<StudyCreationRequestEntity> getStudyCreationRequest(String studyName, String userId) {
-        return studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty);
+    private Mono<BasicStudyEntity> getStudyCreationRequest(String studyName, String userId) {
+        return studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty).cast(BasicStudyEntity.class);
     }
 
     @Synchronized
     public Mono<Void> deleteStudyIfNotCreationInProgress(String studyName, String userId) {
-        return getStudyCreationRequest(studyName, userId).hasElement().flatMap(b ->
-             !b ? removeStudy(studyName, userId) : Mono.empty()
-        ).doFinally(r -> deleteStudyCreationRequest(studyName, userId));
+        return getStudyCreationRequest(studyName, userId) // if creation in progress delete only the creation request
+                .switchIfEmpty(removeStudy(studyName, userId).cast(BasicStudyEntity.class))
+                .then()
+                .doFinally(r -> deleteStudyCreationRequest(studyName, userId));
     }
 
     private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
@@ -607,10 +608,6 @@ public class StudyService {
                 });
     }
 
-    private Mono<Void> setLoadFlowRunningInStudyEntity(String studyName, String userId, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, loadFlowStatus));
-    }
-
     private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
         return setLoadFlowRunningInStudyEntity(studyName, userId, LoadFlowStatus.RUNNING)
                 .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
@@ -697,7 +694,7 @@ public class StudyService {
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {
-        return getStudy(studyName, userId).hasElement().or(getStudyCreationRequest(studyName, userId).hasElement());
+        return getStudy(studyName, userId).cast(BasicStudyEntity.class).switchIfEmpty(getStudyCreationRequest(studyName, userId)).hasElement();
     }
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {
@@ -728,7 +725,8 @@ public class StudyService {
     }
 
     private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
-        return getSecurityAnalysisStatus(studyName, userId)
+        Mono<String> statusMono = getSecurityAnalysisStatus(studyName, userId);
+        return statusMono
                 .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING.name()) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
     }
 
@@ -846,9 +844,9 @@ public class StudyService {
                     .bodyToMono(UUID.class);
         })
                 .flatMap(result ->
-                        Mono.fromRunnable(() -> studyRepository.updateSecurityAnalysisResultUuid(studyName, userId, result))
-                                .doOnSuccess(e -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
-                                .thenReturn(result)
+                  updateSecurityAnalysisResultUuid(studyName, userId, result)
+                .doOnSuccess(e -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                         .thenReturn(result)
         );
     }
 
@@ -1128,5 +1126,9 @@ public class StudyService {
                 studyRepository.save(studyEntity1);
             });
         });
+    }
+
+    private Mono<Void> setLoadFlowRunningInStudyEntity(String studyName, String userId, LoadFlowStatus loadFlowStatus) {
+        return Mono.fromRunnable(() -> studyRepository.updateLoadFlowStatus(studyName, userId, loadFlowStatus));
     }
 }
