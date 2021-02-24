@@ -28,6 +28,7 @@ public class LoadFlowResultEntity {
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name = "id")
     private Long id;
 
     @Column(name = "ok")
@@ -43,5 +44,6 @@ public class LoadFlowResultEntity {
     @OneToMany(fetch = FetchType.EAGER,
             mappedBy = "loadFlowResult",
             cascade = {CascadeType.ALL})
+    @Column(name = "componentResults")
     private List<ComponentResultEntity> componentResults;
 }

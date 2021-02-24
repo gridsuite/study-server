@@ -75,7 +75,7 @@ alter table if exists componentResult
    references loadFlowResult
 
 alter table if exists LoadFlowResultEntity_metrics
-   add constraint FK4le4ft8plnrh3e1hgslauh1md
+   add constraint loadFlowResultEntity_metrics_fk
    foreign key (LoadFlowResultEntity_id)
    references loadFlowResult
 

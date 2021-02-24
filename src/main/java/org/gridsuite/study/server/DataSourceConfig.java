@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,16 +21,12 @@ import javax.sql.DataSource;
 @Configuration
 @PropertySource(value = {"classpath:database.properties"})
 @PropertySource(value = {"file:/config/database.properties"}, ignoreResourceNotFound = true)
-@PropertySource(value = {"file:/config/application.yml"}, ignoreResourceNotFound = true)
 public class DataSourceConfig {
-
-    @Value("${database-name}")
-    private String database;
 
     @Bean
     public DataSource getDataSource(Environment env) {
-        String url = env.getRequiredProperty("scheme") + env.getRequiredProperty("hostPort")
-                + "/" + env.getProperty("database", database) + env.getProperty("query");
+        String url = env.getRequiredProperty("scheme") + "://" + env.getRequiredProperty("hostPort")
+                + "/" + env.getRequiredProperty("spring.jpa.database-name") + env.getProperty("query");
 
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.driverClassName(env.getRequiredProperty("driverClassName"));

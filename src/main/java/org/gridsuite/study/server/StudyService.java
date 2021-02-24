@@ -1068,7 +1068,7 @@ public class StudyService {
                 .subscribe();
     }
 
-    // wrappers to Mono/Flux for Repositories
+    // wrappers to Mono/Flux for repositories
 
     private Mono<StudyEntity> insertStudyEntity(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                                 String description, String caseFormat, UUID caseUuid, boolean casePrivate,
