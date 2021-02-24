@@ -1,5 +1,7 @@
+create sequence hibernate_sequence start 1 increment 1
+
 create table if not exists componentResult (
-   id  bigserial not null,
+   id int8 not null,
     componentNum int4,
     iterationCount int4,
     slackBusActivePowerMismatch float8,
@@ -10,7 +12,7 @@ create table if not exists componentResult (
 )
 
 create table if not exists loadFlowParameters (
-   id  bigserial not null,
+   id int8 not null,
     balanceType varchar(255),
     dc boolean,
     distributedSlack boolean,
@@ -26,8 +28,8 @@ create table if not exists loadFlowParameters (
 )
 
 create table if not exists loadFlowResult (
-   id  bigserial not null,
-    logs varchar(255),
+   id int8 not null,
+    logs TEXT,
     ok boolean,
     primary key (id)
 )
