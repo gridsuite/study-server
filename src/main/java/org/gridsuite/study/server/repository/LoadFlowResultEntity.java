@@ -36,6 +36,7 @@ public class LoadFlowResultEntity {
 
     @Column(name = "metrics")
     @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name="LoadFlowResultEntity_metrics", foreignKey = @ForeignKey( name = "loadFlowResultEntity_metrics_fk"))
     private Map<String, String> metrics;
 
     @Column(name = "logs", columnDefinition = "TEXT")
