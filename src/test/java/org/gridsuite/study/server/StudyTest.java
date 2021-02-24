@@ -358,6 +358,7 @@ public class StudyTest {
                 }
             };
             server.setDispatcher(dispatcher);
+            cleanDB();
         } catch (Exception e) {
             // Nothing to do
         }
@@ -1094,7 +1095,6 @@ public class StudyTest {
         headersLF = messageLf.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-        cleanDB();
         output.receive(1000);
         output.receive(1000);
         output.receive(1000);
@@ -1140,7 +1140,6 @@ public class StudyTest {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
-        cleanDB();
     }
 
     @Test
@@ -1183,7 +1182,6 @@ public class StudyTest {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
-        cleanDB();
     }
 
     @After
