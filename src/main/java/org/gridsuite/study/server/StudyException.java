@@ -15,6 +15,7 @@ class StudyException  extends RuntimeException {
 
     public enum Type {
         STUDY_ALREADY_EXISTS,
+        ELEMENT_NOT_FOUND,
         STUDY_NOT_FOUND,
         CASE_NOT_FOUND,
         LOADFLOW_NOT_RUNNABLE,

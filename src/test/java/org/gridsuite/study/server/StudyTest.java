@@ -6,29 +6,26 @@
  */
 package org.gridsuite.study.server;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
-import com.powsybl.iidm.import_.Importers;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VoltageLevel;
+import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.model.Resource;
 import com.powsybl.network.store.model.ResourceType;
 import com.powsybl.network.store.model.TopLevelDocument;
 import com.powsybl.network.store.model.VoltageLevelAttributes;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -37,8 +34,9 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.hamcrest.Description;
-import org.hamcrest.TypeSafeMatcher;
+import org.gridsuite.study.server.utils.MatcherJson;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,10 +65,11 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
+import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -155,213 +154,212 @@ public class StudyTest {
     }
 
     @Before
-    public void setup() {
-        try {
-            ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
-                    new ResourceSet("", TEST_FILE));
-            Network network = Importers.importData("XIIDM", dataSource, null);
-            given(networkStoreClient.getNetwork(NETWORK_UUID)).willReturn(network);
+    public void setup() throws IOException {
+        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
+                new ResourceSet("", TEST_FILE));
+        Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
+        given(networkStoreClient.getNetwork(NETWORK_UUID)).willReturn(network);
 
-            List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
+        List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
-            Iterable<VoltageLevel> vls = network.getVoltageLevels();
-            vls.forEach(vl -> data.add(new Resource<>(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build(), null, null)));
+        Iterable<VoltageLevel> vls = network.getVoltageLevels();
+        vls.forEach(vl -> data.add(new Resource<>(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build(), null, null)));
 
-            topLevelDocument = new TopLevelDocument<>(data, null);
+        topLevelDocument = new TopLevelDocument<>(data, null);
 
-            server = new MockWebServer();
+        server = new MockWebServer();
 
-            // Start the server.
-            server.start();
+        // Start the server.
+        server.start();
 
-            // Ask the server for its URL. You'll need this to make HTTP requests.
-            HttpUrl baseHttpUrl = server.url("");
-            String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-            studyService.setCaseServerBaseUri(baseUrl);
-            studyService.setNetworkConversionServerBaseUri(baseUrl);
-            studyService.setNetworkModificationServerBaseUri(baseUrl);
-            studyService.setSingleLineDiagramServerBaseUri(baseUrl);
-            studyService.setGeoDataServerBaseUri(baseUrl);
-            studyService.setNetworkMapServerBaseUri(baseUrl);
-            studyService.setLoadFlowServerBaseUri(baseUrl);
-            studyService.setNetworkStoreServerBaseUri(baseUrl);
-            studyService.setSecurityAnalysisServerBaseUri(baseUrl);
-            studyService.setActionsServerBaseUri(baseUrl);
+        // Ask the server for its URL. You'll need this to make HTTP requests.
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+        studyService.setCaseServerBaseUri(baseUrl);
+        studyService.setNetworkConversionServerBaseUri(baseUrl);
+        studyService.setNetworkModificationServerBaseUri(baseUrl);
+        studyService.setSingleLineDiagramServerBaseUri(baseUrl);
+        studyService.setGeoDataServerBaseUri(baseUrl);
+        studyService.setNetworkMapServerBaseUri(baseUrl);
+        studyService.setLoadFlowServerBaseUri(baseUrl);
+        studyService.setNetworkStoreServerBaseUri(baseUrl);
+        studyService.setSecurityAnalysisServerBaseUri(baseUrl);
+        studyService.setActionsServerBaseUri(baseUrl);
 
-            String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
-            String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
-            String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
-            String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
+        String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
+        String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
+        String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
+        String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
 
-            final Dispatcher dispatcher = new Dispatcher() {
-                @Override
-                public MockResponse dispatch(RecordedRequest request) {
-                    switch (Objects.requireNonNull(request.getPath())) {
-                        case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
-                            return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
+        final Dispatcher dispatcher = new Dispatcher() {
+            @Override
+            public MockResponse dispatch(RecordedRequest request) {
+                switch (Objects.requireNonNull(request.getPath())) {
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
+                        return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/studies/{studyName}/cases/{caseUuid}":
+                        return new MockResponse().setResponseCode(200).setBody("CGMES")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/studies/newStudy/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
+                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
+                    case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
+                    case "/v1/cases/88888888-0000-0000-0000-000000000000/exists":
+                        return new MockResponse().setResponseCode(200).setBody("true")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format":
+                        return new MockResponse().setResponseCode(200).setBody("UCTE")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
+                    case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
+                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
+                        return new MockResponse().setResponseCode(200).setBody("false")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/" + CASE_API_VERSION + "/cases/private": {
+                        String body = request.getBody().readUtf8();
+                        if (body.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
+                            return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
-                        case "/v1/studies/{studyName}/cases/{caseUuid}":
-                            return new MockResponse().setResponseCode(200).setBody("CGMES")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                        case "/v1/studies/newStudy/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
-                            return new MockResponse().setResponseCode(200).setBody("XIIDM")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
-                        case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
-                        case "/v1/cases/88888888-0000-0000-0000-000000000000/exists":
-                            return new MockResponse().setResponseCode(200).setBody("true")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format":
-                            return new MockResponse().setResponseCode(200).setBody("UCTE")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
-                        case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
-                            return new MockResponse().setResponseCode(200).setBody("XIIDM")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
-                            return new MockResponse().setResponseCode(200).setBody("false")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/" + CASE_API_VERSION + "/cases/private": {
-                            String body = request.getBody().readUtf8();
-                            if (body.contains("filename=\"caseFile_with_errors\"")) {  // import file with errors
-                                return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
-                                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                            } else if (body.contains("filename=\"caseFile_import_errors\"")) {  // import file with errors during import in the case server
-                                return new MockResponse().setResponseCode(500)
-                                        .addHeader("Content-Type", "application/json; charset=utf-8")
-                                        .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                            } else {
-                                return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
-                                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                            }
-                        }
-
-                        case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
-
-                        case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
-                            return new MockResponse().setResponseCode(200)
-                                    .setBody("[\"s1\", \"s2\", \"s3\"]")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
-                            return new MockResponse().setResponseCode(200)
-                                    .setBody("{\n" +
-                                            "\"version\":\"1.1\",\n" +
-                                            "\"metrics\":{\n" +
-                                            "\"network_0_iterations\":\"7\",\n" +
-                                            "\"network_0_status\":\"CONVERGED\"\n" +
-                                            "},\n" +
-                                            "\"isOK\":true,\n" +
-                                            "\"componentResults\": [{\"componentNum\":0,\"status\":\"CONVERGED\",\"iterationCount\":7, \"slackBusId\": \"c6ace316-6b39-40ec-b1d6-09ab2fe42992\", \"slackBusActivePowerMismatch\": 3.7}]\n" +
-                                            "}")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                        case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
-                        case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
-                        case "/v1/networks?caseName=" + IMPORTED_CASE_UUID_STRING:
-                            return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
-                            return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
+                        } else if (body.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
+                            return new MockResponse().setResponseCode(500)
                                     .addHeader("Content-Type", "application/json; charset=utf-8")
-                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
-
-                        case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/2-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/3-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/generators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/batteries/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/dangling-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/hvdc-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/lcc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/vsc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/loads/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/shunt-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/static-var-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                            return new MockResponse().setBody(" ").setResponseCode(200)
+                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                        } else {
+                            return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                            return new MockResponse().setResponseCode(200).setBody("byte")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                            return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                            return new MockResponse().setResponseCode(200).setBody("substation-byte")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                            return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/export/formats":
-                            return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
-                            return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=ls&receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
-                            input.send(MessageBuilder.withPayload("")
-                                    .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                                    .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
-                                    .build());
-                            return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/results/" + SECURITY_ANALYSIS_UUID + "?limitType":
-                            return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/contingency-lists/" + CONTIGENCY_LIST_NAME + "/export?networkUuid=" + NETWORK_UUID_STRING:
-                            return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                        case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/groovy/":
-                            return new MockResponse().setResponseCode(200)
-                                    .setBody("[\"s4\", \"s5\", \"s6\", \"s7\"]")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/status":
-                            return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/invalidate-status":
-                            return new MockResponse().setResponseCode(200)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
-                            input.send(MessageBuilder.withPayload("")
-                                    .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                                    .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
-                                    .build(), "sa.stopped");
-                            return new MockResponse().setResponseCode(200)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                        default:
-                            LOGGER.error("Path not supported: " + request.getPath());
-                            return new MockResponse().setResponseCode(404);
-
+                        }
                     }
+
+                    case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
+
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/modifications":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/switches/switchId?open=true":
+                        JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\n" +
+                                        "\"version\":\"1.1\",\n" +
+                                        "\"metrics\":{\n" +
+                                        "\"network_0_iterations\":\"7\",\n" +
+                                        "\"network_0_status\":\"CONVERGED\"\n" +
+                                        "},\n" +
+                                        "\"isOK\":true,\n" +
+                                        "\"componentResults\": [{\"componentNum\":0,\"status\":\"CONVERGED\",\"iterationCount\":7, \"slackBusId\": \"c6ace316-6b39-40ec-b1d6-09ab2fe42992\", \"slackBusActivePowerMismatch\": 3.7}]\n" +
+                                        "}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
+                    case "/v1/networks?caseName=" + IMPORTED_CASE_UUID_STRING:
+                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
+                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
+
+                    case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/2-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/3-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/generators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/batteries/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/dangling-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/hvdc-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/lcc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/vsc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/loads/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/shunt-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/static-var-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        return new MockResponse().setBody(" ").setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
+                        return new MockResponse().setResponseCode(200).setBody("byte")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
+                        return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-byte")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                        return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/export/formats":
+                        return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
+                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=ls&receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
+                        input.send(MessageBuilder.withPayload("")
+                                .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
+                                .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
+                                .build());
+                        return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "?limitType":
+                        return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/contingency-lists/" + CONTIGENCY_LIST_NAME + "/export?networkUuid=" + NETWORK_UUID_STRING:
+                        return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/groovy/":
+                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s4", "s5", "s6", "s7")));
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/status":
+                        return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/invalidate-status":
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
+                        input.send(MessageBuilder.withPayload("")
+                                .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
+                                .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
+                                .build(), "sa.stopped");
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    default:
+                        LOGGER.error("Path not supported: " + request.getPath());
+                        return new MockResponse().setResponseCode(404);
+
                 }
-            };
-            server.setDispatcher(dispatcher);
-            cleanDB();
-        } catch (Exception e) {
-            // Nothing to do
-        }
+            }
+        };
+        server.setDispatcher(dispatcher);
+        cleanDB();
     }
 
     @Test
@@ -388,32 +386,7 @@ public class StudyTest {
                 .isEqualTo("[]");
 
         //insert a study
-        webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "false")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk();
-
-        // assert that the broker message has been sent a study creation request message
-        Message<byte[]> messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        MessageHeaders headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent a study creation message for creation
-        messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent a study creation request message for deletion
-        messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
 
         //insert a study with a non existing case and except exception
         webTestClient.post()
@@ -431,10 +404,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                        .description("description").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                        .build()).matchesSafely(studies.get(0)));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
 
         //insert the same study => 409 conflict
         webTestClient.post()
@@ -447,17 +419,7 @@ public class StudyTest {
                 .isEqualTo(STUDY_ALREADY_EXISTS.name());
 
         //insert the same study but with another user (should work)
-        webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "true")
-                .header("userId", "userId2")
-                .exchange()
-                .expectStatus().isEqualTo(200);
-        // drop the broker message for study creation request (creation)
-        output.receive(1000);
-        // drop the broker message for study creation
-        output.receive(1000);
-        // drop the broker message for study creation request (deletion)
-        output.receive(1000);
+        createStudy("userId2", STUDY_NAME, CASE_UUID, DESCRIPTION, true, true);
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -465,57 +427,19 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> {
-                    new MatcherStudyInfos(StudyInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
-                            .description(DESCRIPTION).studyPrivate(true).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                            .build()).matchesSafely(studies.get(1));
-                });
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(1),
+                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
 
         //insert a study with a case (multipartfile)
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
-
-            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-            bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("caseFile")
-                    .contentType(MediaType.TEXT_XML);
-
-            webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s2", "desc", "true")
-                    .header("userId", "userId")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .exchange()
-                    .expectStatus().isOk();
-        }
-        // drop the broker message for study creation request (creation)
-        output.receive(1000);
-        // drop the broker message for study creation
-        output.receive(1000);
-        // drop the broker message for study creation request (deletion)
-        output.receive(1000);
+        createStudy("userId", "s2", TEST_FILE, "desc", true, true);
 
         //Import the same case -> 409 conflict
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
-
-            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-            bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("caseFile")
-                    .contentType(MediaType.TEXT_XML);
-
-            webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s2", "desc", "false")
-                    .header("userId", "userId")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .exchange()
-                    .expectStatus().isEqualTo(409)
-                    .expectBody()
-                    .jsonPath("$")
-                    .isEqualTo(STUDY_ALREADY_EXISTS.name());
-        }
+        WebTestClient.ResponseSpec exchange = createStudy("userId", "s2", TEST_FILE, "desc", false, false);
+        exchange.expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$")
+                .isEqualTo(STUDY_ALREADY_EXISTS.name());
 
         // check the study s2
         webTestClient.get()
@@ -525,14 +449,8 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("s2")
-                        .userId("userId")
-                        .studyPrivate(true)
-                        .description("desc")
-                        .caseFormat("XIIDM")
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
+                .value(createMatcherStudyInfos("s2", "userId", "XIIDM", "desc", true));
+
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}", "s2")
@@ -629,17 +547,19 @@ public class StudyTest {
                 .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels", "userId", STUDY_NAME)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo("[{\"id\":\"BBE1AA1\",\"name\":\"BBE1AA1\",\"substationId\":\"BBE1AA\"}," +
-                        "{\"id\":\"BBE2AA1\",\"name\":\"BBE2AA1\",\"substationId\":\"BBE2AA\"}," +
-                        "{\"id\":\"DDE1AA1\",\"name\":\"DDE1AA1\",\"substationId\":\"DDE1AA\"}," +
-                        "{\"id\":\"DDE2AA1\",\"name\":\"DDE2AA1\",\"substationId\":\"DDE2AA\"}," +
-                        "{\"id\":\"DDE3AA1\",\"name\":\"DDE3AA1\",\"substationId\":\"DDE3AA\"}," +
-                        "{\"id\":\"FFR1AA1\",\"name\":\"FFR1AA1\",\"substationId\":\"FFR1AA\"}," +
-                        "{\"id\":\"FFR3AA1\",\"name\":\"FFR3AA1\",\"substationId\":\"FFR3AA\"}," +
-                        "{\"id\":\"NNL1AA1\",\"name\":\"NNL1AA1\",\"substationId\":\"NNL1AA\"}," +
-                        "{\"id\":\"NNL2AA1\",\"name\":\"NNL2AA1\",\"substationId\":\"NNL2AA\"}," +
-                        "{\"id\":\"NNL3AA1\",\"name\":\"NNL3AA1\",\"substationId\":\"NNL3AA\"}]");
+                .expectBodyList(VoltageLevelInfos.class)
+                .value(new MatcherJson<>(List.of(
+                        VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
+                        VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
+                        VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
+                        VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
+                        VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
+                        VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
+                        VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
+                        VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
+                        VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
+                        VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build()
+                )));
 
         //get the lines-graphics of a network
         webTestClient.get()
@@ -761,96 +681,11 @@ public class StudyTest {
                 .expectStatus().isOk();
 
         // assert that the broker message has been sent
-        messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        headersSwitch = messageSwitch.getHeaders();
-        assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-        messageSwitch = output.receive(1000);
-        assertEquals("s2", headersSwitch.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
-        //update switch
-        webTestClient.put()
-                .uri("/v1/{userId}/studies/{studyName}/network-modification/switches/{switchId}?open=true", "userId", STUDY_NAME, "switchId")
-                .exchange()
-                .expectStatus().isOk();
-
-        // assert that the broker message has been sent
-        Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
-        Message<byte[]> messageStudyUpdate = output.receive(1000);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
-        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(STUDY_NAME, headersStudyUpdate.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(substationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
-
-        // assert that the broker message has been sent
-        Message<byte[]> messageLFStatus = output.receive(1000);
-        assertEquals("", new String(messageLFStatus.getPayload()));
-        MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
-        assertEquals(STUDY_NAME, headersLFStatus.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals("loadflow_status", headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent
-        messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent
-        messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
-        //update equipment
-        webTestClient.put()
-                .uri("/v1/{userId}/studies/{studyName}/network-modification/groovy", "userId", STUDY_NAME)
-                .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
-                .exchange()
-                .expectStatus().isOk();
-
-        // assert that the broker message has been sent
-        substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
-        messageStudyUpdate = output.receive(1000);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
-        headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(STUDY_NAME, headersStudyUpdate.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(substationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
-
-        // assert that the broker message has been sent
-        messageLFStatus = output.receive(1000);
-        assertEquals("", new String(messageLFStatus.getPayload()));
-        headersLFStatus = messageLFStatus.getHeaders();
-        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
-        assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent
-        messageLFStatus = output.receive(1000);
-        assertEquals("", new String(messageLFStatus.getPayload()));
-        headersLFStatus = messageLFStatus.getHeaders();
-        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
-        assertEquals("securityAnalysis_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
-
-        webTestClient.get()
-                .uri("/v1/studies")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("studyName")
-                        .userId("userId").caseFormat("UCTE")
-                        .description("description")
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                        .studyPrivate(false)
-                        .build()).matchesSafely(studies.get(0)));
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("s2", headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -859,10 +694,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("a").caseFormat("UCTE")
-                        .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                        .build()).matchesSafely(studies.get(0)));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
 
         //rename the study
         String newStudyName = "newName";
@@ -876,21 +710,14 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .studyPrivate(false)
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
+                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", false));
 
         // broker message for study rename
-        messageLFStatus = output.receive(1000);
-        assertEquals("", new String(messageLFStatus.getPayload()));
-        headersLFStatus = messageLFStatus.getHeaders();
-        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
-        assertEquals("studies", headersLFStatus.get(HEADER_UPDATE_TYPE));
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
@@ -1001,14 +828,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .studyPrivate(true)
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study private should work
         webTestClient.post()
@@ -1017,14 +837,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .studyPrivate(true)
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study public
         webTestClient.post()
@@ -1033,14 +846,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .studyPrivate(false)
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", false, LoadFlowStatus.CONVERGED));
 
         // drop the broker message for study deletion (due to right access change)
         output.receive(1000);
@@ -1118,90 +924,233 @@ public class StudyTest {
         output.receive(1000);
         output.receive(1000);
         output.receive(1000);
+
+        assertNull(output.receive(1000));
+    }
+
+    @Test
+    public void testNetworkModificationSwitch() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+
+        //update switch
+        webTestClient.put()
+                .uri("/v1/{userId}/studies/{studyName}/network-modification/switches/{switchId}?open=true", "userId", STUDY_NAME, "switchId")
+                .exchange()
+                .expectStatus().isOk();
+
+        Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDY, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(substationsSet, headers.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SWITCH, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
+
+        assertNull(output.receive(1000));
+    }
+
+    @Test
+    public void testNetworkModificationEquipment() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+
+        //update equipment
+        webTestClient.put()
+                .uri("/v1/{userId}/studies/{studyName}/network-modification/groovy", "userId", STUDY_NAME)
+                .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+                .exchange()
+                .expectStatus().isOk();
+
+        Set<String> substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals("study", headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(substationsSet, headers.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
+
+        assertNull(output.receive(1000));
+    }
+
+    @Test
+    public void testDeleteNetwokModifications() {
+        createStudy("userId", "studyName", CASE_UUID, DESCRIPTION, false, true);
+
+        // get all modifications for the default group of a network
+        webTestClient.get()
+                .uri("/v1/userId/studies/studyName/network/modifications")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(Map.class)
+                .isEqualTo(List.of(Map.of("substationIds", List.of("s1", "s2", "s3"))));
+
+        // delete all modifications for the default group of a network
+        webTestClient.delete()
+                .uri("/v1/userId/studies/studyName/network/modifications")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        assertNull(output.receive(1000));
     }
 
     @Test
     public void testCreationWithErrorBadCaseFile() throws Exception {
         // Create study with a bad case file -> error
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE_WITH_ERRORS))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE_WITH_ERRORS, "text/xml", is);
+        createStudy("userId", "newStudy", TEST_FILE_WITH_ERRORS, "desc", false, true,
+                "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
 
-            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-            bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("caseFile_with_errors")
-                    .contentType(MediaType.TEXT_XML);
-
-            webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "newStudy", "desc", "false")
-                    .header("userId", "userId")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .exchange()
-                    .expectStatus().isOk();
-
-            // assert that the broker message has been sent a study creation request message
-            Message<byte[]> message = output.receive(1000);
-            assertEquals("", new String(message.getPayload()));
-            MessageHeaders headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
-
-            // assert that the broker message has been sent a error message for study creation
-            message = output.receive(1000);
-            assertEquals("", new String(message.getPayload()));
-            headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-            assertEquals("The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'", headers.get(StudyService.HEADER_ERROR));
-
-            // assert that the broker message has been sent a study creation request message for deletion
-            message = output.receive(1000);
-            assertEquals("", new String(message.getPayload()));
-            headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
-        }
+        assertNull(output.receive(1000));
     }
 
     @Test
     public void testCreationWithErrorBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE_IMPORT_ERRORS))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE_IMPORT_ERRORS, "text/xml", is);
+        createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, "desc", false, true,
+                "Error during import in the case server");
+
+        assertNull(output.receive(1000));
+    }
+
+    private WebTestClient.ResponseSpec createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate,
+                                                   boolean withStatusOk, String... errorMessage) {
+        final WebTestClient.ResponseSpec exchange = webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", studyName, caseUuid, description, isPrivate)
+                .header("userId", userId)
+                .exchange();
+
+        if (!withStatusOk) {
+            return exchange;
+        }
+
+        exchange.expectStatus().isOk();
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a study creation message for creation
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(StudyService.HEADER_ERROR));
+
+        // assert that the broker message has been sent a study creation request message for deletion
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        return exchange;
+    }
+
+    private WebTestClient.ResponseSpec createStudy(String userId, String studyName, String fileName, String description, boolean isPrivate,
+                                                   boolean withStatusOk, String... errorMessage) throws Exception {
+        final WebTestClient.ResponseSpec exchange;
+
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
 
             MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
             bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("caseFile_import_errors")
+                    .filename(fileName)
                     .contentType(MediaType.TEXT_XML);
 
-            webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "newStudy", "desc", "false")
-                    .header("userId", "userId")
+            exchange = webTestClient.post()
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", studyName, description, isPrivate)
+                    .header("userId", userId)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .exchange()
-                    .expectStatus().isOk();
+                    .exchange();
 
-            // assert that the broker message has been sent a study creation request message
-            Message<byte[]> message = output.receive(1000);
-            assertEquals("", new String(message.getPayload()));
-            MessageHeaders headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+            if (!withStatusOk) {
+                return exchange;
+            }
 
-            // assert that the broker message has been sent a error message for study creation
-            message = output.receive(1000);
-            assertEquals("", new String(message.getPayload()));
-            headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-            assertEquals("Error during import in the case server", headers.get(StudyService.HEADER_ERROR));
-
-            // assert that the broker message has been sent a study creation request message for deletion
-            message = output.receive(1000);
-            assertEquals("", new String(message.getPayload()));
-            headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
-            assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+            exchange.expectStatus().isOk();
         }
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a study creation message for creation
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(StudyService.HEADER_ERROR));
+
+        // assert that the broker message has been sent a study creation request message for deletion
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        return exchange;
     }
 
     @After
@@ -1211,43 +1160,6 @@ public class StudyTest {
             server.shutdown();
         } catch (Exception e) {
             // Nothing to do
-        }
-    }
-
-    private static class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeMatcher<T> {
-        T source;
-
-        public MatcherBasicStudyInfos(T val) {
-            this.source = val;
-        }
-
-        @Override
-        public boolean matchesSafely(T s) {
-            return source.getStudyName().equals(s.getStudyName())
-                    && source.getUserId().equals(s.getUserId())
-                    && s.getCreationDate().toEpochSecond() - source.getCreationDate().toEpochSecond() < 2;
-        }
-
-        @Override
-        public void describeTo(Description description) {
-            description.toString();
-        }
-    }
-
-    private static class MatcherStudyInfos extends MatcherBasicStudyInfos<StudyInfos> {
-
-        public MatcherStudyInfos(StudyInfos val) {
-            super(val);
-        }
-
-        @Override
-        public boolean matchesSafely(StudyInfos s) {
-            boolean match = super.matchesSafely(s)
-                    && source.getCaseFormat().equals(s.getCaseFormat())
-                    && source.getDescription().equals(s.getDescription())
-                    && source.isStudyPrivate() == s.isStudyPrivate()
-                    && source.getLoadFlowStatus().equals(s.getLoadFlowStatus());
-            return match;
         }
     }
 }

@@ -9,17 +9,20 @@ package org.gridsuite.study.server.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-
-@AllArgsConstructor
+@SuperBuilder
 @NoArgsConstructor
 @Getter
+@ToString
 @ApiModel("Voltage level attributes")
-public class VoltageLevelAttributes {
+public class VoltageLevelInfos {
 
     @ApiModelProperty("Voltage level ID")
     private String id;

@@ -6,11 +6,12 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.loadflow.LoadFlowParameters;
-import io.swagger.annotations.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
+
+import com.powsybl.loadflow.LoadFlowParameters;
+import io.swagger.annotations.*;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
@@ -66,7 +67,7 @@ public class StudyController {
                 .subscribeOn(Schedulers.boundedElastic())
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
-            .doOnSuccess(s -> createStudy.subscribe()));
+                .doOnSuccess(s -> createStudy.subscribe()));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -149,7 +150,7 @@ public class StudyController {
     @GetMapping(value = "/{userId}/studies/{studyName}/network/voltage-levels")
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
-    public ResponseEntity<Mono<List<VoltageLevelAttributes>>> getNetworkVoltageLevels(
+    public ResponseEntity<Mono<List<VoltageLevelInfos>>> getNetworkVoltageLevels(
             @PathVariable("studyName") String studyName,
             @PathVariable("userId") String userId) {
 
@@ -358,13 +359,29 @@ public class StudyController {
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/network-modification/groovy")
-    @ApiOperation(value = "update a switch position", produces = "application/text")
+    @ApiOperation(value = "change an equipment state in the network", produces = "application/text")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The equipment is updated")})
     public ResponseEntity<Mono<Void>> applyGroovyScript(@PathVariable("studyName") String studyName,
                                                         @PathVariable("userId") String userId,
                                                         @RequestBody String groovyScript) {
 
         return ResponseEntity.ok().body(studyService.applyGroovyScript(studyName, userId, groovyScript).then());
+    }
+
+    @GetMapping(value = "/{userId}/studies/{studyName}/network/modifications")
+    @ApiOperation(value = "Get all network modifications", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of network modifications")})
+    public ResponseEntity<Flux<Map<String, Object>>> getModifications(@PathVariable("studyName") String studyName,
+                                                                      @PathVariable("userId") String userId) {
+        return ResponseEntity.ok().body(studyService.getModifications(studyName, userId));
+    }
+
+    @DeleteMapping(value = "/{userId}/studies/{studyName}/network/modifications")
+    @ApiOperation(value = "Delete all network modifications")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Network modifications deleted")})
+    public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("studyName") String studyName,
+                                                          @PathVariable("userId") String userId) {
+        return ResponseEntity.ok().body(studyService.deleteModifications(studyName, userId));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyName}/loadflow/run")
@@ -449,7 +466,7 @@ public class StudyController {
     @GetMapping(value = "/{userId}/studies/{studyName}/security-analysis/result")
     @ApiOperation(value = "Get a security analysis result on study", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The security analysis result"),
-                           @ApiResponse(code = 404, message = "The security analysis has not been found")})
+            @ApiResponse(code = 404, message = "The security analysis has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisResult(@ApiParam(value = "Study name") @PathVariable("studyName") String studyName,
                                                                   @ApiParam(value = "User ID") @PathVariable("userId") String userId,
                                                                   @ApiParam(value = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
