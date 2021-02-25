@@ -1,7 +1,7 @@
-create sequence hibernate_sequence start 1 increment 1
+create sequence  if not exists hibernate_sequence start 1 increment 1;
 
 create table if not exists componentResult (
-   id int8 not null,
+    id int8 not null,
     componentNum int4,
     iterationCount int4,
     slackBusActivePowerMismatch float8,
@@ -9,10 +9,10 @@ create table if not exists componentResult (
     status int4,
     loadFlowResult_id int8,
     primary key (id)
-)
+);
 
 create table if not exists loadFlowParameters (
-   id int8 not null,
+    id int8 not null,
     balanceType varchar(255),
     dc boolean,
     distributedSlack boolean,
@@ -25,21 +25,21 @@ create table if not exists loadFlowParameters (
     voltageInitMode varchar(255),
     writeSlackBus boolean,
     primary key (id)
-)
+);
 
 create table if not exists loadFlowResult (
-   id int8 not null,
+    id int8 not null,
     logs TEXT,
     ok boolean,
     primary key (id)
-)
+);
 
 create table if not exists LoadFlowResultEntity_metrics (
-   LoadFlowResultEntity_id int8 not null,
+    LoadFlowResultEntity_id int8 not null,
     metrics varchar(255),
     metrics_KEY varchar(255) not null,
     primary key (LoadFlowResultEntity_id, metrics_KEY)
-)
+);
 
 create table if not exists study (
     id uuid not null,
@@ -58,7 +58,7 @@ create table if not exists study (
     loadFlowParameters_id int8,
     loadFlowResultEntity_id int8,
     primary key (id)
-)
+);
 
 create table if not exists studycreationrequest (
     id  uuid not null,
@@ -67,24 +67,24 @@ create table if not exists studycreationrequest (
     studyName varchar(255) not null,
     userId varchar(255) not null,
     primary key (id)
-)
+);
 
 alter table if exists componentResult
    add constraint componentResult_loadFlowResult_fk
    foreign key (loadFlowResult_id)
-   references loadFlowResult
+   references loadFlowResult;
 
 alter table if exists LoadFlowResultEntity_metrics
    add constraint loadFlowResultEntity_metrics_fk
    foreign key (LoadFlowResultEntity_id)
-   references loadFlowResult
+   references loadFlowResult;
 
 alter table if exists study
    add constraint loadFlowParameters_id_fk
    foreign key (loadFlowParameters_id)
-   references loadFlowParameters
+   references loadFlowParameters;
 
 alter table if exists study
    add constraint loadFlowResult_id_fk
    foreign key (loadFlowResultEntity_id)
-   references loadFlowResult
+   references loadFlowResult;
