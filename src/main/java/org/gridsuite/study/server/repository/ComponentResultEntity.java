@@ -26,6 +26,11 @@ import javax.persistence.*;
 @Table(name = "componentResult")
 public class ComponentResultEntity {
 
+    public ComponentResultEntity(int componentNum, LoadFlowResult.ComponentResult.Status status,
+                                 int iterationCount, String slackBusId, double slackBusActivePowerMismatch) {
+        this(null, componentNum, status, iterationCount, slackBusId, slackBusActivePowerMismatch, null);
+    }
+
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")

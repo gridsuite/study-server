@@ -26,6 +26,15 @@ import javax.persistence.*;
 @Table(name = "loadFlowParameters")
 public class LoadFlowParametersEntity {
 
+    public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
+                                    boolean transformerVoltageControlOn, boolean noGeneratorReactiveLimits,
+                                    boolean phaseShifterRegulationOn, boolean twtSplitShuntAdmittance,
+                                    boolean simulShunt, boolean readSlackBus, boolean writeSlackBus, boolean dc,
+                                    boolean distributedSlack, LoadFlowParameters.BalanceType balanceType) {
+        this(null, voltageInitMode, transformerVoltageControlOn, noGeneratorReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
+                simulShunt, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType);
+    }
+
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")

@@ -189,8 +189,8 @@ public class StudyService {
     }
 
     private static StudyInfos toInfos(StudyEntity entity) {
-        return StudyInfos.builder().id(entity.getId())
-                .studyName(entity.getStudyName())
+        return StudyInfos.builder().studyName(entity.getStudyName())
+                .id(entity.getId())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
@@ -736,8 +736,7 @@ public class StudyService {
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
         Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(null,
-                parameters.getVoltageInitMode(),
+        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
                 parameters.isTransformerVoltageControlOn(),
                 parameters.isNoGeneratorReactiveLimits(),
                 parameters.isPhaseShifterRegulationOn(),
@@ -767,8 +766,7 @@ public class StudyService {
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
         Objects.requireNonNull(result);
-        return new LoadFlowResultEntity(null,
-                result.isOk(),
+        return new LoadFlowResultEntity(result.isOk(),
                 result.getMetrics(),
                 result.getLogs(),
                 result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList()));
@@ -783,13 +781,11 @@ public class StudyService {
 
     public static ComponentResultEntity toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
-        return new ComponentResultEntity(null,
-                componentResult.getComponentNum(),
+        return new ComponentResultEntity(componentResult.getComponentNum(),
                 componentResult.getStatus(),
                 componentResult.getIterationCount(),
                 componentResult.getSlackBusId(),
-                componentResult.getSlackBusActivePowerMismatch(),
-                null
+                componentResult.getSlackBusActivePowerMismatch()
         );
     }
 

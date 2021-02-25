@@ -25,6 +25,10 @@ import javax.persistence.*;
 @Table(name = "studycreationrequest")
 public class StudyCreationRequestEntity implements BasicStudyEntity {
 
+    public StudyCreationRequestEntity(String userId, String studyName, LocalDateTime date, boolean isPrivate) {
+        this(null, userId, studyName, date, isPrivate);
+    }
+
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")

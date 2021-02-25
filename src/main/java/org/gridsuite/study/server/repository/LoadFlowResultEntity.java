@@ -26,6 +26,10 @@ import java.util.Map;
 @Table(name = "loadFlowResult")
 public class LoadFlowResultEntity {
 
+    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEntity> componentResults) {
+        this(null, ok, metrics, logs, componentResults);
+    }
+
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
@@ -36,7 +40,7 @@ public class LoadFlowResultEntity {
 
     @Column(name = "metrics")
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(foreignKey = @ForeignKey( name = "loadFlowResultEntity_metrics_fk"))
+    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_metrics_fk"))
     private Map<String, String> metrics;
 
     @Column(name = "logs", columnDefinition = "TEXT")
