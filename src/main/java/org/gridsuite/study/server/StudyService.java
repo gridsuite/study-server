@@ -1100,7 +1100,7 @@ public class StudyService {
     }
 
     private Mono<Void> removeStudyEntity(String studyName, String userId) {
-        return Mono.fromRunnable(() ->  studyRepository.deleteByUserIdAndStudyName(studyName, userId));
+        return Mono.fromRunnable(() ->  studyRepository.deleteByUserIdAndStudyName(userId, studyName));
     }
 
     private Mono<Void> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate) {
