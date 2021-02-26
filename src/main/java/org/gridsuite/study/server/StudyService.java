@@ -1118,6 +1118,9 @@ public class StudyService {
         return Mono.fromRunnable(() -> {
             Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
             studyEntity.ifPresent(studyEntity1 -> {
+                if (loadFlowResultEntity != null) {
+                    loadFlowResultEntity.getComponentResults().forEach(componentResultEntity -> componentResultEntity.setLoadFlowResult(loadFlowResultEntity));
+                }
                 studyEntity1.setLoadFlowResult(loadFlowResultEntity);
                 studyRepository.save(studyEntity1);
             });
