@@ -47,7 +47,6 @@ public class LoadFlowResultEntity {
     private String logs;
 
     @OneToMany(fetch = FetchType.EAGER,
-            mappedBy = "loadFlowResult",
             cascade = {CascadeType.ALL})
     @Column(name = "componentResults")
     private List<ComponentResultEntity> componentResults;

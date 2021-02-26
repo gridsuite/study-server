@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.repository;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
 
@@ -28,7 +27,7 @@ public class ComponentResultEntity {
 
     public ComponentResultEntity(int componentNum, LoadFlowResult.ComponentResult.Status status,
                                  int iterationCount, String slackBusId, double slackBusActivePowerMismatch) {
-        this(null, componentNum, status, iterationCount, slackBusId, slackBusActivePowerMismatch, null);
+        this(null, componentNum, status, iterationCount, slackBusId, slackBusActivePowerMismatch);
     }
 
     @Id
@@ -50,13 +49,5 @@ public class ComponentResultEntity {
 
     @Column(name = "slackBusActivePowerMismatch")
     private double slackBusActivePowerMismatch;
-
-    @ManyToOne
-    @JoinColumn(name = "loadFlowResult_id",
-            foreignKey = @ForeignKey(
-                    name = "componentResult_loadFlowResult_fk"
-            ))
-    @JsonIgnore
-    private LoadFlowResultEntity loadFlowResult;
 }
 

@@ -49,8 +49,8 @@ public class RepositoriesTest {
         metrics.put("key2", "value2");
         LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(null, true, metrics, "logs", new ArrayList<>());
 
-        ComponentResultEntity componentResultEntity1 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0, loadFlowResultEntity);
-        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(null, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 2.0, loadFlowResultEntity);
+        ComponentResultEntity componentResultEntity1 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0);
+        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(null, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 2.0);
 
         loadFlowResultEntity.getComponentResults().add(componentResultEntity1);
         loadFlowResultEntity.getComponentResults().add(componentResultEntity2);
