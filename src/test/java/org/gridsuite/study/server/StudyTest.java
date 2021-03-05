@@ -366,6 +366,7 @@ public class StudyTest {
 
     @Test
     public void test() throws Exception {
+
         //empty list
         webTestClient.get()
                 .uri("/v1/studies")
@@ -1095,6 +1096,7 @@ public class StudyTest {
         headersLF = messageLf.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
+
         output.receive(1000);
         output.receive(1000);
         output.receive(1000);

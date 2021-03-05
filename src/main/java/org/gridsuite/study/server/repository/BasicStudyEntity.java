@@ -7,11 +7,13 @@
 package org.gridsuite.study.server.repository;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public interface BasicStudyEntity {
+    UUID getId();
 
     String getUserId();
 

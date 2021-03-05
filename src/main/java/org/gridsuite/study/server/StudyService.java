@@ -138,13 +138,13 @@ public class StudyService {
                             resultUuid, receiverObj.getStudyName(), receiverObj.getUserId());
 
                     // update DB
-                    return Mono.<Void>fromCallable(() -> {
-                        studyRepository.updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid);
-                        // send notifications
-                        emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                        emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-                        return null;
-                    });
+                    return updateSecurityAnalysisResultUuid(receiverObj.getStudyName(), receiverObj.getUserId(), resultUuid)
+                                    .then(Mono.fromCallable(() -> {
+                                        // send notifications
+                                        emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                        emitStudyChanged(receiverObj.getStudyName(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+                                        return null;
+                                    }));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -200,7 +200,7 @@ public class StudyService {
                 .build();
     }
 
-    private static BasicStudyInfos toBasicInfos(StudyCreationRequestEntity entity) {
+    private static BasicStudyInfos toBasicInfos(BasicStudyEntity entity) {
         return BasicStudyInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
@@ -209,7 +209,7 @@ public class StudyService {
     }
 
     Flux<StudyInfos> getStudyList(String userId) {
-        return Flux.fromIterable(studyRepository.getStudyList(userId)).map(StudyService::toInfos)
+        return Flux.fromIterable(studyRepository.findByUserIdOrIsPrivate(userId, false)).map(StudyService::toInfos)
                 .sort(Comparator.comparing(StudyInfos::getCreationDate).reversed());
     }
 
@@ -1117,6 +1117,9 @@ public class StudyService {
     private Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResultEntity) {
         return Mono.fromRunnable(() -> {
             Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+            if (loadFlowResultEntity != null) {
+                loadFlowResultEntity.getComponentResults().forEach(componentResultEntity -> componentResultEntity.setLoadFlowResult(loadFlowResultEntity));
+            }
             studyEntity.ifPresent(studyEntity1 -> {
                 studyEntity1.setLoadFlowResult(loadFlowResultEntity);
                 studyRepository.save(studyEntity1);

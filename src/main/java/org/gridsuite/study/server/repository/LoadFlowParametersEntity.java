@@ -11,6 +11,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.UUID;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -38,7 +39,7 @@ public class LoadFlowParametersEntity {
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "voltageInitMode")
     @Enumerated(EnumType.STRING)

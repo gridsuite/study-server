@@ -8,10 +8,14 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -33,7 +37,7 @@ public class LoadFlowResultEntity {
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "ok")
     private boolean ok;
@@ -47,7 +51,14 @@ public class LoadFlowResultEntity {
     private String logs;
 
     @OneToMany(fetch = FetchType.EAGER,
+            mappedBy = "loadFlowResult",
             cascade = {CascadeType.ALL})
     @Column(name = "componentResults")
-    private List<ComponentResultEntity> componentResults;
+    @Fetch(FetchMode.SELECT)
+    private List<ComponentResultEntity> componentResults = new ArrayList<>();
+
+    public void addComponentResults(ComponentResultEntity componentResultEntity) {
+        componentResultEntity.setLoadFlowResult(this);
+        componentResults.add(componentResultEntity);
+    }
 }

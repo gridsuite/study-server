@@ -7,10 +7,12 @@
 
 package org.gridsuite.study.server.repository;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.UUID;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -27,13 +29,13 @@ public class ComponentResultEntity {
 
     public ComponentResultEntity(int componentNum, LoadFlowResult.ComponentResult.Status status,
                                  int iterationCount, String slackBusId, double slackBusActivePowerMismatch) {
-        this(null, componentNum, status, iterationCount, slackBusId, slackBusActivePowerMismatch);
+        this(null, componentNum, status, iterationCount, slackBusId, slackBusActivePowerMismatch, null);
     }
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
-    private Long id;
+    private UUID id;
 
     @Column(name = "componentNum")
     private int componentNum;
@@ -49,5 +51,13 @@ public class ComponentResultEntity {
 
     @Column(name = "slackBusActivePowerMismatch")
     private double slackBusActivePowerMismatch;
+
+    @ManyToOne
+    @JoinColumn(name = "loadFlowResult_id",
+            foreignKey = @ForeignKey(
+                    name = "componentResult_loadFlowResult_fk"
+            ))
+    @JsonIgnore
+    private LoadFlowResultEntity loadFlowResult;
 }
 

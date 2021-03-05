@@ -34,46 +34,23 @@ import static org.junit.Assert.*;
 public class RepositoriesTest {
 
     @Autowired
-    LoadFlowResultRepository loadFlowResultRepository;
-
-    @Autowired
     StudyRepository studyRepository;
 
     @Autowired
     StudyCreationRequestRepository studyCreationRequestRepository;
 
     @Test
-    public void testLoadFlowResultRepository() {
-        Map<String, String> metrics = new HashedMap<>();
-        metrics.put("key1", "value1");
-        metrics.put("key2", "value2");
-        LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(null, true, metrics, "logs", new ArrayList<>());
-
-        ComponentResultEntity componentResultEntity1 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0);
-        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(null, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 2.0);
-
-        loadFlowResultEntity.getComponentResults().add(componentResultEntity1);
-        loadFlowResultEntity.getComponentResults().add(componentResultEntity2);
-
-        // save loadFlowResultEntity
-        LoadFlowResultEntity savedLoadFlowResultEntity  = loadFlowResultRepository.save(loadFlowResultEntity);
-
-        assertEquals(loadFlowResultEntity.getLogs(), savedLoadFlowResultEntity.getLogs());
-        assertEquals(loadFlowResultEntity.getMetrics(), savedLoadFlowResultEntity.getMetrics());
-        assertEquals(savedLoadFlowResultEntity.getComponentResults().size(), loadFlowResultEntity.getComponentResults().size());
-
-        // delete loadFlowResultEntity
-        loadFlowResultRepository.deleteById(savedLoadFlowResultEntity.getId());
-        assertEquals(0, loadFlowResultRepository.findAll().size());
-    }
-
-    @Test
     public void testStudyRepository() {
-        studyRepository.deleteAll();
         Map<String, String> metrics = new HashedMap<>();
         metrics.put("key1", "value1");
         metrics.put("key2", "value2");
         LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(null, false, metrics, "logs", new ArrayList<>());
+
+        ComponentResultEntity componentResultEntity1 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0, null);
+        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(null, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 2.0, null);
+
+        loadFlowResultEntity.addComponentResults(componentResultEntity1);
+        loadFlowResultEntity.addComponentResults(componentResultEntity2);
 
         LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(null, LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
@@ -92,7 +69,7 @@ public class RepositoriesTest {
                 .casePrivate(true)
                 .isPrivate(true)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
-                .loadFlowResult(null)
+                .loadFlowResult(loadFlowResultEntity)
                 .loadFlowParameters(null)
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
@@ -136,7 +113,7 @@ public class RepositoriesTest {
         studyRepository.save(studyEntity3);
         assertEquals(3, studyRepository.findAll().size());
 
-        assertEquals(2, studyRepository.getStudyList("foo").size());
+        assertEquals(2, studyRepository.findByUserIdOrIsPrivate("foo", true).size());
 
         StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
         StudyEntity savedStudyEntity2 = studyRepository.findAll().get(1);
@@ -157,9 +134,8 @@ public class RepositoriesTest {
 
         StudyEntity savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").get();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowResult());
+        assertEquals(2, savedStudyEntity1Updated.getLoadFlowResult().getComponentResults().size());
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
-
-        assertEquals(1, loadFlowResultRepository.findAll().size());
 
         studyRepository.updateLoadFlowStatus("mystudy", "foo", LoadFlowStatus.CONVERGED);
         savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").orElse(null);

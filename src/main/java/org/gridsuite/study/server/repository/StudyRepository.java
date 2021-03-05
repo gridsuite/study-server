@@ -29,10 +29,10 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
     Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
+    @Transactional
     void deleteByUserIdAndStudyName(String userId, String name);
 
-    @Query(value = "SELECT * from study WHERE userId = :userId or isPrivate = false", nativeQuery = true)
-    List<StudyEntity> getStudyList(@Param("userId") String userId);
+    List<StudyEntity> findByUserIdOrIsPrivate(@Param("userId") String userId, @Param("isPrivate") boolean isPrivate);
 
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
