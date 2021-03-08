@@ -32,10 +32,10 @@ spring:
     properties:
       dialect: org.hibernate.dialect.H2Dialect
       format_sql: true
-    database-name: study
 
 logging:
   level:
     org.springframework.orm.jpa: DEBUG
     org.springframework.transaction: DEBUG
 
+dbname: study

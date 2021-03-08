@@ -25,12 +25,8 @@ public class DataSourceConfig {
 
     @Bean
     public DataSource getDataSource(Environment env) {
-        String url = env.getRequiredProperty("scheme") + "://" + env.getRequiredProperty("hostPort")
-                + "/" + env.getRequiredProperty("spring.jpa.database-name") + env.getProperty("query");
-
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-        dataSourceBuilder.driverClassName(env.getRequiredProperty("driverClassName"));
-        dataSourceBuilder.url(url);
+        dataSourceBuilder.url(env.getProperty("url"));
         dataSourceBuilder.username(env.getRequiredProperty("login"));
         dataSourceBuilder.password(env.getRequiredProperty("password"));
         return dataSourceBuilder.build();

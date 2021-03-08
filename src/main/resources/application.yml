@@ -35,7 +35,6 @@ spring:
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
-    database-name: study
 
 backing-services:
   case:
@@ -60,3 +59,5 @@ backing-services:
 network-store-server:
   preloading-strategy: COLLECTION
   base-uri: http://localhost:8080/
+
+dbname: study
