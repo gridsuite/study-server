@@ -15,9 +15,11 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
@@ -40,6 +42,7 @@ public class RepositoriesTest {
     StudyCreationRequestRepository studyCreationRequestRepository;
 
     @Test
+    @Transactional
     public void testStudyRepository() {
         Map<String, String> metrics = new HashedMap<>();
         metrics.put("key1", "value1");

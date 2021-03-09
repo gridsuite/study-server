@@ -8,14 +8,9 @@
 package org.gridsuite.study.server.repository;
 
 import lombok.*;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -50,11 +45,10 @@ public class LoadFlowResultEntity {
     @Column(name = "logs", columnDefinition = "TEXT")
     private String logs;
 
-    @OneToMany(fetch = FetchType.EAGER,
+    @OneToMany(fetch = FetchType.LAZY,
             mappedBy = "loadFlowResult",
             cascade = {CascadeType.ALL})
     @Column(name = "componentResults")
-    @Fetch(FetchMode.SELECT)
     private List<ComponentResultEntity> componentResults = new ArrayList<>();
 
     public void addComponentResults(ComponentResultEntity componentResultEntity) {
