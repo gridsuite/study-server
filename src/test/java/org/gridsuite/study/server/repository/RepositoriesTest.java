@@ -45,12 +45,26 @@ public class RepositoriesTest {
         metrics.put("key1", "value1");
         metrics.put("key2", "value2");
         LoadFlowResultEntity loadFlowResultEntity = new LoadFlowResultEntity(null, false, metrics, "logs", new ArrayList<>());
+        LoadFlowResultEntity loadFlowResultEntity2 = new LoadFlowResultEntity(null, false, metrics, "logs2", new ArrayList<>());
+        LoadFlowResultEntity loadFlowResultEntity3 = new LoadFlowResultEntity(null, true, metrics, "logs3", new ArrayList<>());
 
         ComponentResultEntity componentResultEntity1 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0, null);
-        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(null, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 2.0, null);
+        ComponentResultEntity componentResultEntity2 = new ComponentResultEntity(null, 2, LoadFlowResult.ComponentResult.Status.CONVERGED, 2, "slackBusId", 2.0, null);
 
         loadFlowResultEntity.addComponentResults(componentResultEntity1);
         loadFlowResultEntity.addComponentResults(componentResultEntity2);
+
+        ComponentResultEntity componentResultEntity3 = new ComponentResultEntity(null, 3, LoadFlowResult.ComponentResult.Status.FAILED, 3, "slackBusId", 3.0, null);
+        ComponentResultEntity componentResultEntity4 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 4, "slackBusId", 4.0, null);
+
+        loadFlowResultEntity2.addComponentResults(componentResultEntity3);
+        loadFlowResultEntity2.addComponentResults(componentResultEntity4);
+
+        ComponentResultEntity componentResultEntity5 = new ComponentResultEntity(null, 3, LoadFlowResult.ComponentResult.Status.FAILED, 5, "slackBusId", 5.0, null);
+        ComponentResultEntity componentResultEntity6 = new ComponentResultEntity(null, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 6, "slackBusId", 6.0, null);
+
+        loadFlowResultEntity3.addComponentResults(componentResultEntity5);
+        loadFlowResultEntity3.addComponentResults(componentResultEntity6);
 
         LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(null, LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
@@ -86,7 +100,7 @@ public class RepositoriesTest {
                 .casePrivate(true)
                 .isPrivate(false)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
-                .loadFlowResult(null)
+                .loadFlowResult(loadFlowResultEntity2)
                 .loadFlowParameters(null)
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
@@ -103,7 +117,7 @@ public class RepositoriesTest {
                 .casePrivate(true)
                 .isPrivate(true)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
-                .loadFlowResult(null)
+                .loadFlowResult(loadFlowResultEntity3)
                 .loadFlowParameters(null)
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
