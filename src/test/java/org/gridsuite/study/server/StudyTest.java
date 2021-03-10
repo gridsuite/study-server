@@ -892,7 +892,7 @@ public class StudyTest {
         MessageHeaders headersLF = messageLfStatus.getHeaders();
         assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-        assertEquals(LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy(newStudyName, "userId", false).block()).getLoadFlowStatus());
+        assertEquals(LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy(newStudyName, "userId").block()).getLoadFlowStatus());
         Message<byte[]> messageLf = output.receive(1000);
         assertEquals("newName", messageLf.getHeaders().get(HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));

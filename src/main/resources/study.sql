@@ -1,107 +1,89 @@
-create table loadflowparameters
-(
-    id uuid not null
-        constraint loadflowparameters_pkey
-            primary key,
-    balancetype                 varchar(255),
-    dc                          boolean,
-    distributedslack            boolean,
-    nogeneratorreactivelimits   boolean,
-    phaseshifterregulationon    boolean,
-    readslackbus                boolean,
-    simulshunt                  boolean,
-    transformervoltagecontrolon boolean,
-    twtsplitshuntadmittance     boolean,
-    voltageinitmode             varchar(255),
-    writeslackbus               boolean
-);
 
-alter table loadflowparameters
-    owner to postgres;
+    create table componentResult (
+       id uuid not null,
+        componentNum int4,
+        iterationCount int4,
+        slackBusActivePowerMismatch float8,
+        slackBusId varchar(255),
+        status int4,
+        loadFlowResult_id uuid,
+        primary key (id)
+    )
 
-create table loadflowresult
-(
-    id uuid not null
-        constraint loadflowresult_pkey
-            primary key,
-    logs text,
-    ok   boolean
-);
+    create table loadFlowParameters (
+       id uuid not null,
+        balanceType varchar(255),
+        dc boolean,
+        distributedSlack boolean,
+        noGeneratorReactiveLimits boolean,
+        phaseShifterRegulationOn boolean,
+        readSlackBus boolean,
+        simulShunt boolean,
+        transformerVoltageControlOn boolean,
+        twtSplitShuntAdmittance boolean,
+        voltageInitMode varchar(255),
+        writeSlackBus boolean,
+        primary key (id)
+    )
 
-alter table loadflowresult
-    owner to postgres;
+    create table loadFlowResult (
+       id uuid not null,
+        logs TEXT,
+        ok boolean,
+        primary key (id)
+    )
 
-create table componentresult
-(
-    id uuid not null
-        constraint componentresult_pkey
-            primary key,
-    componentnum                integer,
-    iterationcount              integer,
-    slackbusactivepowermismatch double precision,
-    slackbusid                  varchar(255),
-    status                      integer,
-    loadflowresult_id           uuid
-        constraint componentresult_loadflowresult_fk
-            references loadflowresult
-);
+    create table LoadFlowResultEntity_metrics (
+       LoadFlowResultEntity_id uuid not null,
+        metrics varchar(255),
+        metrics_KEY varchar(255) not null,
+        primary key (LoadFlowResultEntity_id, metrics_KEY)
+    )
 
-alter table componentresult
-    owner to postgres;
+    create table study (
+       id uuid not null,
+        caseFormat varchar(255),
+        casePrivate boolean,
+        caseUuid uuid,
+        creationDate timestamp,
+        description varchar(255),
+        isPrivate boolean,
+        loadFlowStatus varchar(255),
+        networkId varchar(255),
+        networkUuid uuid,
+        securityAnalysisResultUuid uuid,
+        studyName varchar(255) not null,
+        userId varchar(255) not null,
+        loadFlowParameters_id uuid,
+        loadFlowResultEntity_id uuid,
+        primary key (id)
+    )
 
-create table loadflowresultentity_metrics
-(
-    loadflowresultentity_id uuid         not null
-        constraint loadflowresultentity_metrics_fk
-            references loadflowresult,
-    metrics                 varchar(255),
-    metrics_key             varchar(255) not null,
-    constraint loadflowresultentity_metrics_pkey
-        primary key (loadflowresultentity_id, metrics_key)
-);
+    create table studycreationrequest (
+       id uuid not null,
+        creationDate timestamp,
+        isPrivate boolean,
+        studyName varchar(255) not null,
+        userId varchar(255) not null,
+        primary key (id)
+    )
 
-alter table loadflowresultentity_metrics
-    owner to postgres;
+    alter table if exists componentResult 
+       add constraint componentResult_loadFlowResult_fk 
+       foreign key (loadFlowResult_id) 
+       references loadFlowResult
 
-create table study
-(
-    id uuid not null
-        constraint study_pkey
-            primary key,
-    caseformat                 varchar(255),
-    caseprivate                boolean,
-    caseuuid                   uuid,
-    creationdate               timestamp,
-    description                varchar(255),
-    isprivate                  boolean,
-    loadflowstatus             varchar(255),
-    networkid                  varchar(255),
-    networkuuid                uuid,
-    securityanalysisresultuuid uuid,
-    studyname                  varchar(255) not null,
-    userid                     varchar(255) not null,
-    loadflowparameters_id      uuid
-        constraint loadflowparameters_id_fk
-            references loadflowparameters,
-    loadflowresultentity_id    uuid
-        constraint loadflowresult_id_fk
-            references loadflowresult
-);
+    alter table if exists LoadFlowResultEntity_metrics 
+       add constraint loadFlowResultEntity_metrics_fk 
+       foreign key (LoadFlowResultEntity_id) 
+       references loadFlowResult
 
-alter table study
-    owner to postgres;
+    alter table if exists study 
+       add constraint loadFlowParameters_id_fk 
+       foreign key (loadFlowParameters_id) 
+       references loadFlowParameters
 
-create table studycreationrequest
-(
-    id uuid not null
-        constraint studycreationrequest_pkey
-            primary key,
-    creationdate timestamp,
-    isprivate    boolean,
-    studyname    varchar(255) not null,
-    userid       varchar(255) not null
-);
-
-alter table studycreationrequest
-    owner to postgres;
-
+    alter table if exists study 
+       add constraint loadFlowResult_id_fk 
+       foreign key (loadFlowResultEntity_id) 
+       references loadFlowResult

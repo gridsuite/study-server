@@ -34,6 +34,15 @@ spring:
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate.format_sql: true
+      # Uncomment this block to automatically generate the database sql schema file
+      #javax:
+       #persistence:
+        #schema-generation:
+         #scripts:
+          #action: create
+          #create-target: src/main/resources/study.sql
+          #create-source: metadata
 
 backing-services:
   case:

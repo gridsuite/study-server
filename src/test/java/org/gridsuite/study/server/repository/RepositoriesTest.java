@@ -86,7 +86,7 @@ public class RepositoriesTest {
                 .casePrivate(true)
                 .isPrivate(true)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
-                .loadFlowResult(loadFlowResultEntity)
+                .loadFlowResult(null)
                 .loadFlowParameters(null)
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
