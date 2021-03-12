@@ -25,7 +25,7 @@ import java.util.*;
 @Table(name = "loadFlowResult")
 public class LoadFlowResultEntity {
 
-    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEntity> componentResults) {
+    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEmbeddable> componentResults) {
         this(null, ok, metrics, logs, componentResults);
     }
 
@@ -38,21 +38,16 @@ public class LoadFlowResultEntity {
     private boolean ok;
 
     @Column(name = "metrics")
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection
     @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_metrics_fk"))
     private Map<String, String> metrics;
 
     @Column(name = "logs", columnDefinition = "TEXT")
     private String logs;
 
-    @OneToMany(fetch = FetchType.LAZY,
-            mappedBy = "loadFlowResult",
-            cascade = {CascadeType.ALL})
+    // we never need to access these without loading the study, and the number of items is small (roughly 10), so we can use ElementCollection
     @Column(name = "componentResults")
-    private List<ComponentResultEntity> componentResults = new ArrayList<>();
-
-    public void addComponentResults(ComponentResultEntity componentResultEntity) {
-        componentResultEntity.setLoadFlowResult(this);
-        componentResults.add(componentResultEntity);
-    }
+    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"))
+    @ElementCollection
+    private List<ComponentResultEmbeddable> componentResults = new ArrayList<>();
 }

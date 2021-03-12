@@ -1,15 +1,4 @@
 
-    create table componentResult (
-       id uuid not null,
-        componentNum int4,
-        iterationCount int4,
-        slackBusActivePowerMismatch float8,
-        slackBusId varchar(255),
-        status int4,
-        loadFlowResult_id uuid,
-        primary key (id)
-    )
-
     create table loadFlowParameters (
        id uuid not null,
         balanceType varchar(255),
@@ -31,6 +20,15 @@
         logs TEXT,
         ok boolean,
         primary key (id)
+    )
+
+    create table LoadFlowResultEntity_componentResults (
+       LoadFlowResultEntity_id uuid not null,
+        componentNum int4,
+        iterationCount int4,
+        slackBusActivePowerMismatch float8,
+        slackBusId varchar(255),
+        status int4
     )
 
     create table LoadFlowResultEntity_metrics (
@@ -69,22 +67,22 @@
     )
 create index isPrivate_index on study (isPrivate)
 
-    alter table if exists componentResult
-       add constraint componentResult_loadFlowResult_fk
-       foreign key (loadFlowResult_id)
+    alter table if exists LoadFlowResultEntity_componentResults 
+       add constraint loadFlowResultEntity_componentResults_fk 
+       foreign key (LoadFlowResultEntity_id) 
        references loadFlowResult
 
-    alter table if exists LoadFlowResultEntity_metrics
-       add constraint loadFlowResultEntity_metrics_fk
-       foreign key (LoadFlowResultEntity_id)
+    alter table if exists LoadFlowResultEntity_metrics 
+       add constraint loadFlowResultEntity_metrics_fk 
+       foreign key (LoadFlowResultEntity_id) 
        references loadFlowResult
 
-    alter table if exists study
-       add constraint loadFlowParameters_id_fk
-       foreign key (loadFlowParameters_id)
+    alter table if exists study 
+       add constraint loadFlowParameters_id_fk 
+       foreign key (loadFlowParameters_id) 
        references loadFlowParameters
 
-    alter table if exists study
-       add constraint loadFlowResult_id_fk
-       foreign key (loadFlowResultEntity_id)
+    alter table if exists study 
+       add constraint loadFlowResult_id_fk 
+       foreign key (loadFlowResultEntity_id) 
        references loadFlowResult
