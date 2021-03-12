@@ -24,6 +24,10 @@ spring:
           destination: sa.result
         consumeSaStopped-in-0:
           destination: sa.stopped
+  datasource:
+    url: ${scheme}://${hostPort}/${dbname}${query}
+    username: ${login}
+    password: ${password}
 
   jpa:
     database: POSTGRESQL

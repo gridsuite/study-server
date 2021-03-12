@@ -5,7 +5,4 @@
 
    To automatically generate the sql schema file you can use the following command:
    
-     java -jar target/gridsuite-study-server-1.0.0-SNAPSHOT-exec.jar 
-        --spring.jpa.properties.javax.persistence.schema-generation.scripts.action=create 
-        --spring.jpa.properties.javax.persistence.schema-generation.scripts.create-target=src/main/resources/study.sql 
-        --spring.jpa.properties.javax.persistence.schema-generation.scripts.create-source=metadata 
+     java -jar target/gridsuite-study-server-1.0.0-SNAPSHOT-exec.jar --spring.jpa.properties.javax.persistence.schema-generation.scripts.action=create --spring.jpa.properties.javax.persistence.schema-generation.scripts.create-target=src/main/resources/study.sql --spring.jpa.properties.javax.persistence.schema-generation.scripts.create-source=metadata 

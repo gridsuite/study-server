@@ -6,13 +6,8 @@
  */
 package org.gridsuite.study.server;
 
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.core.env.Environment;
-
-import javax.sql.DataSource;
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
@@ -22,13 +17,4 @@ import javax.sql.DataSource;
 @PropertySource(value = {"classpath:database.properties"})
 @PropertySource(value = {"file:/config/database.properties"}, ignoreResourceNotFound = true)
 public class DataSourceConfig {
-
-    @Bean
-    public DataSource getDataSource(Environment env) {
-        DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-        dataSourceBuilder.url(env.getProperty("url"));
-        dataSourceBuilder.username(env.getRequiredProperty("login"));
-        dataSourceBuilder.password(env.getRequiredProperty("password"));
-        return dataSourceBuilder.build();
-    }
 }

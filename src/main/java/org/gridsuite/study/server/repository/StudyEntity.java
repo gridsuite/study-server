@@ -25,7 +25,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Builder
-@Table(name = "study")
+@Table(name = "study", indexes = {@Index(name = "isPrivate_index", columnList = "isPrivate")})
 public class StudyEntity implements BasicStudyEntity {
 
     @Id
