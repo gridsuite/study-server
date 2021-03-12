@@ -201,22 +201,35 @@ public class StudyService {
                 .build();
     }
 
-    private static BasicStudyInfos toBasicInfos(BasicStudyEntity entity) {
-        return BasicStudyInfos.builder().studyName(entity.getStudyName())
+    private static StudyInCreationBasicInfos toBasicInfos(StudyCreationRequestEntity entity) {
+        return StudyInCreationBasicInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .id(entity.getId())
                 .build();
     }
 
-    Flux<StudyInfos> getStudyList(String userId) {
-        return Flux.fromIterable(studyRepository.findByUserIdOrIsPrivate(userId, false)).map(StudyService::toInfos)
-                .sort(Comparator.comparing(StudyInfos::getCreationDate).reversed());
+    private static BasicStudyInfos toBasicInfos(StudyEntity entity) {
+        return BasicStudyInfos.builder().studyName(entity.getStudyName())
+                .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
+                .userId(entity.getUserId())
+                .id(entity.getId())
+                .caseFormat(entity.getCaseFormat())
+                .build();
     }
 
-    Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
+    @Transactional
+    public Flux<BasicStudyInfos> getStudyList(String userId) {
+        List<BasicStudyInfos> studies = studyRepository.findByUserIdOrIsPrivate(userId, false).stream()
+                .map(StudyService::toBasicInfos)
+                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed())
+                .collect(Collectors.toList());
+        return Flux.fromIterable(studies);
+    }
+
+    Flux<StudyInCreationBasicInfos> getStudyCreationRequests(String userId) {
         return Flux.fromStream(studyCreationRequestRepository.findAllByUserId(userId).stream().map(StudyService::toBasicInfos)
-                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()));
+                .sorted(Comparator.comparing(StudyInCreationBasicInfos::getCreationDate).reversed()));
     }
 
     public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
@@ -246,8 +259,9 @@ public class StudyService {
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()); // delete the study if the creation has been canceled
     }
 
-    Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
-        Mono<StudyEntity> studyMono = getStudy(studyName, userId);
+    @Transactional
+    public Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
+        Mono<StudyEntity> studyMono = getStudyWithPreFetchedComponentResults(studyName, userId);
         return studyMono.flatMap(study -> {
             if (study.isPrivate() && !userId.equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
