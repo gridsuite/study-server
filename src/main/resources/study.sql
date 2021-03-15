@@ -67,22 +67,22 @@
     )
 create index isPrivate_index on study (isPrivate)
 
-    alter table if exists LoadFlowResultEntity_componentResults 
-       add constraint loadFlowResultEntity_componentResults_fk 
-       foreign key (LoadFlowResultEntity_id) 
+    alter table if exists LoadFlowResultEntity_componentResults
+       add constraint loadFlowResultEntity_componentResults_fk
+       foreign key (LoadFlowResultEntity_id)
        references loadFlowResult
 
-    alter table if exists LoadFlowResultEntity_metrics 
-       add constraint loadFlowResultEntity_metrics_fk 
-       foreign key (LoadFlowResultEntity_id) 
+    alter table if exists LoadFlowResultEntity_metrics
+       add constraint loadFlowResultEntity_metrics_fk
+       foreign key (LoadFlowResultEntity_id)
        references loadFlowResult
 
-    alter table if exists study 
-       add constraint loadFlowParameters_id_fk 
-       foreign key (loadFlowParameters_id) 
+    alter table if exists study
+       add constraint loadFlowParameters_id_fk
+       foreign key (loadFlowParameters_id)
        references loadFlowParameters
 
-    alter table if exists study 
-       add constraint loadFlowResult_id_fk 
-       foreign key (loadFlowResultEntity_id) 
+    alter table if exists study
+       add constraint loadFlowResult_id_fk
+       foreign key (loadFlowResultEntity_id)
        references loadFlowResult

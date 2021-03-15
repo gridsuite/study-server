@@ -90,6 +90,10 @@ public class StudyService {
     static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     static final String RECEIVER = "receiver";
 
+    // Self injection for @transactional support in internal calls to other methods of this service
+    @Autowired
+    StudyService studyService;
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -218,13 +222,10 @@ public class StudyService {
                 .build();
     }
 
-    @Transactional
     public Flux<BasicStudyInfos> getStudyList(String userId) {
-        List<BasicStudyInfos> studies = studyRepository.findByUserIdOrIsPrivate(userId, false).stream()
+        return Flux.fromStream(studyRepository.findByUserIdOrIsPrivate(userId, false).stream()
                 .map(StudyService::toBasicInfos)
-                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed())
-                .collect(Collectors.toList());
-        return Flux.fromIterable(studies);
+                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()));
     }
 
     Flux<StudyInCreationBasicInfos> getStudyCreationRequests(String userId) {
@@ -261,7 +262,7 @@ public class StudyService {
 
     @Transactional
     public Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
-        Mono<StudyEntity> studyMono = getStudyWithPreFetchedCollections(studyName, userId);
+        Mono<StudyEntity> studyMono = getStudyMonoWithPreFetchedCollections(studyName, userId);
         return studyMono.flatMap(study -> {
             if (study.isPrivate() && !userId.equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
@@ -275,7 +276,7 @@ public class StudyService {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty);
     }
 
-    public Mono<StudyEntity> getStudyWithPreFetchedCollections(String studyName, String userId) {
+    public StudyEntity getStudyWithPreFetchedCollections(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
                 // This is a workaround to prepare the componentResults which will be used later in the webflux pipeline
@@ -283,8 +284,25 @@ public class StudyService {
                 studyEntity.getLoadFlowResult().getComponentResults().size();
                 studyEntity.getLoadFlowResult().getMetrics().size();
             }
-            return Mono.just(studyEntity);
-        }).orElseGet(Mono::empty);
+            return studyEntity;
+        }).orElse(null);
+    }
+
+    @Transactional
+    public StudyEntity getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
+        StudyEntity studyEntity = getStudyWithPreFetchedCollections(studyName, userId);
+        if (studyEntity != null) {
+            studyEntity.setPrivate(toPrivate);
+        }
+        return studyEntity;
+    }
+
+    public Mono<StudyEntity> getStudyMonoWithPreFetchedCollections(String studyName, String userId) {
+        return Mono.fromCallable(() -> getStudyWithPreFetchedCollections(studyName, userId));
+    }
+
+    public Mono<StudyEntity> getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
+        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate));
     }
 
     private Mono<BasicStudyEntity> getStudyCreationRequest(String studyName, String userId) {
@@ -673,19 +691,14 @@ public class StudyService {
         });
     }
 
-    @Transactional
     public Mono<StudyInfos> changeStudyAccessRights(String studyName, String userId, String headerUserId, boolean toPrivate) {
         //only the owner of a study can change the access rights
         if (!headerUserId.equals(userId)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        return getStudyWithPreFetchedCollections(studyName, userId).switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND))).map(studyEntity -> {
-            if (studyEntity.isPrivate() != toPrivate) {
-                studyEntity.setPrivate(toPrivate);
-                studyRepository.save(studyEntity);
-            }
-            return studyEntity;
-        }).map(StudyService::toInfos);
+        return getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate)
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
+                .map(StudyService::toInfos);
     }
 
     Mono<UUID> getNetworkUuid(String studyName, String userId) {
