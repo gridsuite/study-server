@@ -260,7 +260,6 @@ public class StudyService {
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()); // delete the study if the creation has been canceled
     }
 
-    @Transactional
     public Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
         Mono<StudyEntity> studyMono = getStudyMonoWithPreFetchedCollections(studyName, userId);
         return studyMono.flatMap(study -> {
@@ -276,6 +275,7 @@ public class StudyService {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty);
     }
 
+    @Transactional
     public StudyEntity getStudyWithPreFetchedCollections(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
@@ -298,7 +298,7 @@ public class StudyService {
     }
 
     public Mono<StudyEntity> getStudyMonoWithPreFetchedCollections(String studyName, String userId) {
-        return Mono.fromCallable(() -> getStudyWithPreFetchedCollections(studyName, userId));
+        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollections(studyName, userId));
     }
 
     public Mono<StudyEntity> getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
