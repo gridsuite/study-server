@@ -25,14 +25,14 @@ spring:
         consumeSaStopped-in-0:
           destination: sa.stopped
   datasource:
-    url: ${scheme}://${hostPort}/${dbname}${query}
+    url: ${dbDriver}${scheme}://${hostPort}/${dbname}${query}
     username: ${login}
     password: ${password}
 
   jpa:
     database: POSTGRESQL
     hibernate:
-      ddl-auto: create
+      ddl-auto: validate
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
@@ -73,10 +73,4 @@ network-store-server:
   base-uri: http://localhost:8080/
 
 dbname: study
-
-logging:
-  level:
-    org.springframework.orm.jpa: DEBUG
-    org.springframework.transaction: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+dbDriver: jdbc://

@@ -67,7 +67,7 @@ public class StudyEntity implements BasicStudyEntity {
     @Enumerated(EnumType.STRING)
     private LoadFlowStatus loadFlowStatus;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name  =  "loadFlowResultEntity_id",
             referencedColumnName  =  "id",
             foreignKey = @ForeignKey(
