@@ -69,7 +69,7 @@ public class RepositoriesTest {
         loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable5);
         loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable6);
 
-        LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(null, LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
+        LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);

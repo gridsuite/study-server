@@ -75,12 +75,7 @@ public class StudyEntity implements BasicStudyEntity {
             ))
     private LoadFlowResultEntity loadFlowResult;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "loadFlowParameters_id",
-            referencedColumnName  =  "id",
-            foreignKey = @ForeignKey(
-                    name = "loadFlowParameters_id_fk"
-            ))
+    @Embedded
     private LoadFlowParametersEntity loadFlowParameters;
 
     @Column(name = "securityAnalysisResultUuid")

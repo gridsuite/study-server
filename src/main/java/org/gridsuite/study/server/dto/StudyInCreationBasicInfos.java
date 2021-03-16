@@ -7,9 +7,10 @@
 package org.gridsuite.study.server.dto;
 
 import io.swagger.annotations.ApiModel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
@@ -17,7 +18,8 @@ import java.util.UUID;
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-@SuperBuilder
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @ApiModel("Basic study in creation attributes")
