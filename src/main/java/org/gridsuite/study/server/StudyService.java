@@ -272,7 +272,7 @@ public class StudyService {
     }
 
     Mono<StudyEntity> getStudy(String studyName, String userId) {
-        return studyRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::just).orElseGet(Mono::empty);
+        return Mono.fromCallable(() -> studyRepository.findByUserIdAndStudyName(userId, studyName).orElse(null));
     }
 
     @Transactional
@@ -306,7 +306,7 @@ public class StudyService {
     }
 
     private Mono<BasicStudyEntity> getStudyCreationRequest(String studyName, String userId) {
-        return studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).map(Mono::<BasicStudyEntity>just).orElseGet(Mono::empty);
+        return Mono.fromCallable(() -> studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).orElse(null));
     }
 
     @Synchronized
@@ -643,14 +643,18 @@ public class StudyService {
 
     }
 
+    @Transactional
+    public StudyEntity getStudyThenRenameIt(String studyName, String userId, String newStudyName) {
+        return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
+            studyEntity.setStudyName(newStudyName);
+            return studyEntity;
+        }).orElse(null);
+    }
+
     public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
-        return getStudy(studyName, userId)
+        return Mono.fromCallable(() -> studyService.getStudyThenRenameIt(studyName, userId, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .map(studyEntity -> {
-                    studyEntity.setStudyName(newStudyName);
-                    StudyEntity newStudyEntity = studyRepository.save(studyEntity);
-                    return toInfos(newStudyEntity);
-                });
+                .map(StudyService::toInfos);
     }
 
     private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
@@ -1157,12 +1161,14 @@ public class StudyService {
 
     private Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResultEntity) {
         return Mono.fromRunnable(() -> {
-            Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
-            studyEntity.ifPresent(studyEntity1 -> {
-                studyEntity1.setLoadFlowResult(loadFlowResultEntity);
-                studyRepository.save(studyEntity1);
-            });
+            studyService.getStudyAndUpdateLoadFlowResult(studyName, userId, loadFlowResultEntity);
         });
+    }
+
+    @Transactional
+    public void getStudyAndUpdateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResultEntity) {
+        Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowResult(loadFlowResultEntity));
     }
 
     private Mono<Void> setLoadFlowRunningInStudyEntity(String studyName, String userId, LoadFlowStatus loadFlowStatus) {
