@@ -22,7 +22,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @ApiModel("Basic study attributes")
 public class BasicStudyInfos {
-    UUID id;
+    UUID studyUuid;
 
     String studyName;
 
@@ -31,4 +31,6 @@ public class BasicStudyInfos {
     ZonedDateTime creationDate;
 
     String caseFormat;
+
+    boolean studyPrivate;
 }
