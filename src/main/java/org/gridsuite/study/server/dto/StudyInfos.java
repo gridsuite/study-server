@@ -19,11 +19,9 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ApiModel("Study attributes")
-public class StudyInfos extends BasicStudyInfos {
+public class StudyInfos extends CreatedStudyBasicInfos {
 
     String description;
-
-    String caseFormat;
 
     LoadFlowStatus loadFlowStatus;
 

@@ -40,15 +40,15 @@ public class StudyController {
     @GetMapping(value = "/studies")
     @ApiOperation(value = "Get all studies for a user")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
-    public ResponseEntity<Flux<BasicStudyInfos>> getStudyList(@RequestHeader("userId") String userId) {
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyList(@RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(userId));
     }
 
     @GetMapping(value = "/study_creation_requests")
     @ApiOperation(value = "Get all study creation requests for a user")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of study creation requests")})
-    public ResponseEntity<Flux<StudyInCreationBasicInfos>> getStudyCreationRequestList(@RequestHeader("userId") String userId) {
-        Flux<StudyInCreationBasicInfos> studies = studyService.getStudyCreationRequests(userId);
+    public ResponseEntity<Flux<BasicStudyInfos>> getStudyCreationRequestList(@RequestHeader("userId") String userId) {
+        Flux<BasicStudyInfos> studies = studyService.getStudyCreationRequests(userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 
@@ -92,8 +92,8 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The study information"),
             @ApiResponse(code = 404, message = "The study doesn't exist")})
     public ResponseEntity<Mono<StudyInfos>> getStudy(@PathVariable("studyName") String studyName,
-                                                      @RequestHeader("userId") String headerUserId,
-                                                      @PathVariable("userId") String userId) {
+                                                     @RequestHeader("userId") String headerUserId,
+                                                     @PathVariable("userId") String userId) {
         Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyName, userId, headerUserId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
     }
@@ -382,9 +382,9 @@ public class StudyController {
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
     public ResponseEntity<Mono<StudyInfos>> renameStudy(@RequestHeader("userId") String headerUserId,
-                                                         @PathVariable("studyName") String studyName,
-                                                         @PathVariable("userId") String userId,
-                                                         @RequestBody RenameStudyAttributes renameStudyAttributes) {
+                                                        @PathVariable("studyName") String studyName,
+                                                        @PathVariable("userId") String userId,
+                                                        @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
         Mono<StudyInfos> studyMono = studyService.renameStudy(studyName, userId, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId).then(studyMono));
@@ -394,8 +394,8 @@ public class StudyController {
     @ApiOperation(value = "set study to public", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The switch is public")})
     public ResponseEntity<Mono<StudyInfos>> makeStudyPublic(@PathVariable("studyName") String studyName,
-                                                        @PathVariable("userId") String userId,
-                                                        @RequestHeader("userId") String headerUserId) {
+                                                            @PathVariable("userId") String userId,
+                                                            @RequestHeader("userId") String headerUserId) {
 
         return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, false));
     }
@@ -404,8 +404,8 @@ public class StudyController {
     @ApiOperation(value = "set study to private", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The study is private")})
     public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyName") String studyName,
-                                                                    @PathVariable("userId") String userId,
-                                                                    @RequestHeader("userId") String headerUserId) {
+                                                             @PathVariable("userId") String userId,
+                                                             @RequestHeader("userId") String headerUserId) {
 
         return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyName, userId, headerUserId, true));
     }

@@ -205,16 +205,16 @@ public class StudyService {
                 .build();
     }
 
-    private static StudyInCreationBasicInfos toBasicInfos(StudyCreationRequestEntity entity) {
-        return StudyInCreationBasicInfos.builder().studyName(entity.getStudyName())
+    private static BasicStudyInfos toBasicInfos(StudyCreationRequestEntity entity) {
+        return CreatedStudyBasicInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .id(entity.getId())
                 .build();
     }
 
-    private static BasicStudyInfos toBasicInfos(StudyEntity entity) {
-        return BasicStudyInfos.builder().studyName(entity.getStudyName())
+    private static CreatedStudyBasicInfos toBasicInfos(StudyEntity entity) {
+        return CreatedStudyBasicInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .id(entity.getId())
@@ -222,15 +222,15 @@ public class StudyService {
                 .build();
     }
 
-    public Flux<BasicStudyInfos> getStudyList(String userId) {
+    public Flux<CreatedStudyBasicInfos> getStudyList(String userId) {
         return Flux.fromStream(studyRepository.findByUserIdOrIsPrivate(userId, false).stream()
                 .map(StudyService::toBasicInfos)
-                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()));
+                .sorted(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed()));
     }
 
-    Flux<StudyInCreationBasicInfos> getStudyCreationRequests(String userId) {
+    Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
         return Flux.fromStream(studyCreationRequestRepository.findAllByUserId(userId).stream().map(StudyService::toBasicInfos)
-                .sorted(Comparator.comparing(StudyInCreationBasicInfos::getCreationDate).reversed()));
+                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()));
     }
 
     public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {

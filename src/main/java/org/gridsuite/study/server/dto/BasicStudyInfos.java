@@ -29,6 +29,4 @@ public class BasicStudyInfos {
     String userId;
 
     ZonedDateTime creationDate;
-
-    String caseFormat;
 }
