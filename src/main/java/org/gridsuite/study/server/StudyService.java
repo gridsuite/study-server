@@ -223,14 +223,15 @@ public class StudyService {
     }
 
     public Flux<CreatedStudyBasicInfos> getStudyList(String userId) {
-        return Flux.fromStream(studyRepository.findByUserIdOrIsPrivate(userId, false).stream()
+        return Flux.fromStream(() -> studyRepository.findByUserIdOrIsPrivate(userId, false).stream())
                 .map(StudyService::toBasicInfos)
-                .sorted(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed()));
+                .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
-        return Flux.fromStream(studyCreationRequestRepository.findAllByUserId(userId).stream().map(StudyService::toBasicInfos)
-                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()));
+        return Flux.fromStream(() -> studyCreationRequestRepository.findAllByUserId(userId).stream())
+                .map(StudyService::toBasicInfos)
+                .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
     public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
@@ -1173,9 +1174,7 @@ public class StudyService {
     }
 
     private Mono<Void> updateLoadFlowResult(String studyName, String userId, LoadFlowResultEntity loadFlowResultEntity) {
-        return Mono.fromRunnable(() -> {
-            studyService.doUpdateLoadFlowResult(studyName, userId, loadFlowResultEntity);
-        });
+        return Mono.fromRunnable(() -> studyService.doUpdateLoadFlowResult(studyName, userId, loadFlowResultEntity));
     }
 
     @Transactional
