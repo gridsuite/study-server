@@ -844,8 +844,15 @@ public class StudyService {
                 entity.getSlackBusActivePowerMismatch());
     }
 
+    @Transactional
+    public LoadFlowParameters doGetLoadFlowParameters(String studyName, String userId) {
+        return studyRepository.findByUserIdAndStudyName(userId, studyName)
+                .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
+                .orElse(null);
+    }
+
     public Mono<LoadFlowParameters> getLoadFlowParameters(String studyName, String userId) {
-        return getStudy(studyName, userId).map(study -> fromEntity(study.getLoadFlowParameters()));
+        return Mono.fromCallable(() -> studyService.doGetLoadFlowParameters(studyName, userId));
     }
 
     Mono<Void> setLoadFlowParameters(String studyName, String userId, LoadFlowParameters parameters) {

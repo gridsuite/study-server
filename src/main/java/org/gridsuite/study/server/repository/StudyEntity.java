@@ -75,7 +75,7 @@ public class StudyEntity implements BasicStudyEntity {
             ))
     private LoadFlowResultEntity loadFlowResult;
 
-    @Embedded
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private LoadFlowParametersEntity loadFlowParameters;
 
     @Column(name = "securityAnalysisResultUuid")
