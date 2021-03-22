@@ -42,17 +42,17 @@
        id uuid not null,
         caseFormat varchar(255),
         casePrivate boolean,
-        caseUuid uuid,
+        caseUuid uuid not null,
         creationDate timestamp,
         description varchar(255),
         isPrivate boolean,
         loadFlowStatus varchar(255),
-        networkId varchar(255),
-        networkUuid uuid,
+        networkId varchar(255) not null,
+        networkUuid uuid not null,
         securityAnalysisResultUuid uuid,
         studyName varchar(255) not null,
         userId varchar(255) not null,
-        loadFlowParametersEntity_id uuid,
+        loadFlowParametersEntity_id uuid not null,
         loadFlowResultEntity_id uuid,
         primary key (id)
     );
@@ -66,6 +66,7 @@
         primary key (id)
     );
 create index isPrivate_index on study (isPrivate);
+create index userId_index on study (userId);
 
     alter table if exists LoadFlowResultEntity_componentResults 
        add constraint loadFlowResultEntity_componentResults_fk 

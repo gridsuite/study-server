@@ -25,7 +25,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Builder
-@Table(name = "study", indexes = {@Index(name = "isPrivate_index", columnList = "isPrivate")})
+@Table(name = "study", indexes = {@Index(name = "isPrivate_index", columnList = "isPrivate"), @Index(name = "userId_index", columnList = "userId")})
 public class StudyEntity implements BasicStudyEntity {
 
     @Id
@@ -42,10 +42,10 @@ public class StudyEntity implements BasicStudyEntity {
     @Column(name = "creationDate")
     private LocalDateTime date;
 
-    @Column(name = "networkUuid")
+    @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;
 
-    @Column(name = "networkId")
+    @Column(name = "networkId", nullable = false)
     private String networkId;
 
     @Column(name = "description")
@@ -54,7 +54,7 @@ public class StudyEntity implements BasicStudyEntity {
     @Column(name = "caseFormat")
     private String caseFormat;
 
-    @Column(name = "caseUuid")
+    @Column(name = "caseUuid", nullable = false)
     private UUID caseUuid;
 
     @Column(name = "casePrivate")
@@ -80,7 +80,7 @@ public class StudyEntity implements BasicStudyEntity {
             referencedColumnName  =  "id",
             foreignKey = @ForeignKey(
                     name = "loadFlowParameters_id_fk"
-            ))
+            ), nullable = false)
     private LoadFlowParametersEntity loadFlowParameters;
 
     @Column(name = "securityAnalysisResultUuid")
