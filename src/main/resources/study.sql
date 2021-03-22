@@ -40,12 +40,12 @@
 
     create table study (
        id uuid not null,
-        caseFormat varchar(255),
-        casePrivate boolean,
+        caseFormat varchar(255) not null,
+        casePrivate boolean not null,
         caseUuid uuid not null,
-        creationDate timestamp,
-        description varchar(255),
-        isPrivate boolean,
+        creationDate timestamp not null,
+        description varchar(255) not null,
+        isPrivate boolean not null,
         loadFlowStatus varchar(255),
         networkId varchar(255) not null,
         networkUuid uuid not null,

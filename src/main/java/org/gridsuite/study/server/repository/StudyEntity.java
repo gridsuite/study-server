@@ -39,7 +39,7 @@ public class StudyEntity implements BasicStudyEntity {
     @Column(name = "studyName", nullable = false)
     private String studyName;
 
-    @Column(name = "creationDate")
+    @Column(name = "creationDate",  nullable = false)
     private LocalDateTime date;
 
     @Column(name = "networkUuid", nullable = false)
@@ -48,19 +48,19 @@ public class StudyEntity implements BasicStudyEntity {
     @Column(name = "networkId", nullable = false)
     private String networkId;
 
-    @Column(name = "description")
+    @Column(name = "description",  nullable = false)
     private String description;
 
-    @Column(name = "caseFormat")
+    @Column(name = "caseFormat",  nullable = false)
     private String caseFormat;
 
     @Column(name = "caseUuid", nullable = false)
     private UUID caseUuid;
 
-    @Column(name = "casePrivate")
+    @Column(name = "casePrivate",  nullable = false)
     private boolean casePrivate;
 
-    @Column(name = "isPrivate")
+    @Column(name = "isPrivate", nullable = false)
     private boolean isPrivate;
 
     @Column(name = "loadFlowStatus")

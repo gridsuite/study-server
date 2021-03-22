@@ -25,7 +25,7 @@ import java.util.*;
 @Table(name = "loadFlowResult")
 public class LoadFlowResultEntity {
 
-    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEmbeddable> componentResults) {
+    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResult> componentResults) {
         this(null, ok, metrics, logs, componentResults);
     }
 
@@ -49,5 +49,5 @@ public class LoadFlowResultEntity {
     @Column(name = "componentResults")
     @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"))
     @ElementCollection
-    private List<ComponentResultEmbeddable> componentResults = new ArrayList<>();
+    private List<ComponentResult> componentResults = new ArrayList<>();
 }

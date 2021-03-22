@@ -277,7 +277,7 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity getStudyWithPreFetchedCollections(String studyName, String userId) {
+    public StudyEntity getStudyWithPreFetchedCollectionsLoadFlowResult(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
                 // This is a workaround to prepare the componentResults which will be used later in the webflux pipeline
@@ -291,7 +291,7 @@ public class StudyService {
 
     @Transactional
     public StudyEntity getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
-        StudyEntity studyEntity = getStudyWithPreFetchedCollections(studyName, userId);
+        StudyEntity studyEntity = getStudyWithPreFetchedCollectionsLoadFlowResult(studyName, userId);
         if (studyEntity != null) {
             studyEntity.setPrivate(toPrivate);
         }
@@ -299,7 +299,7 @@ public class StudyService {
     }
 
     public Mono<StudyEntity> getStudyMonoWithPreFetchedCollections(String studyName, String userId) {
-        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollections(studyName, userId));
+        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollectionsLoadFlowResult(studyName, userId));
     }
 
     public Mono<StudyEntity> getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
@@ -659,7 +659,7 @@ public class StudyService {
     }
 
     private Mono<Void> setLoadFlowRunning(String studyName, String userId) {
-        return setLoadFlowRunningInStudyEntity(studyName, userId, LoadFlowStatus.RUNNING)
+        return setLoadFlowStatusInStudyEntity(studyName, userId, LoadFlowStatus.RUNNING)
                 .doOnSuccess(s -> emitStudyChanged(studyName, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
@@ -825,9 +825,9 @@ public class StudyService {
                 entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
     }
 
-    public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
+    public static ComponentResult toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
-        return new ComponentResultEmbeddable(componentResult.getComponentNum(),
+        return new ComponentResult(componentResult.getComponentNum(),
                 componentResult.getStatus(),
                 componentResult.getIterationCount(),
                 componentResult.getSlackBusId(),
@@ -835,7 +835,7 @@ public class StudyService {
         );
     }
 
-    public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
+    public static LoadFlowResult.ComponentResult fromEntity(ComponentResult entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowResultImpl.ComponentResultImpl(entity.getComponentNum(),
                 entity.getStatus(),
@@ -1190,7 +1190,7 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowResult(loadFlowResultEntity));
     }
 
-    private Mono<Void> setLoadFlowRunningInStudyEntity(String studyName, String userId, LoadFlowStatus loadFlowStatus) {
+    private Mono<Void> setLoadFlowStatusInStudyEntity(String studyName, String userId, LoadFlowStatus loadFlowStatus) {
         return Mono.fromRunnable(() -> studyService.doUpdateLoadFlowStatus(studyName, userId, loadFlowStatus));
     }
 }

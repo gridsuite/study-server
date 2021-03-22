@@ -51,23 +51,23 @@ public class RepositoriesTest {
         LoadFlowResultEntity loadFlowResultEntity2 = new LoadFlowResultEntity(null, false, metrics, "logs2", new ArrayList<>());
         LoadFlowResultEntity loadFlowResultEntity3 = new LoadFlowResultEntity(null, true, metrics, "logs3", new ArrayList<>());
 
-        ComponentResultEmbeddable componentResultEmbeddable1 = new ComponentResultEmbeddable(1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0);
-        ComponentResultEmbeddable componentResultEmbeddable2 = new ComponentResultEmbeddable(2, LoadFlowResult.ComponentResult.Status.CONVERGED, 2, "slackBusId", 2.0);
+        ComponentResult componentResult1 = new ComponentResult(1, LoadFlowResult.ComponentResult.Status.CONVERGED, 1, "slackBusId", 1.0);
+        ComponentResult componentResult2 = new ComponentResult(2, LoadFlowResult.ComponentResult.Status.CONVERGED, 2, "slackBusId", 2.0);
 
-        loadFlowResultEntity.getComponentResults().add(componentResultEmbeddable1);
-        loadFlowResultEntity.getComponentResults().add(componentResultEmbeddable2);
+        loadFlowResultEntity.getComponentResults().add(componentResult1);
+        loadFlowResultEntity.getComponentResults().add(componentResult2);
 
-        ComponentResultEmbeddable componentResultEmbeddable3 = new ComponentResultEmbeddable(3, LoadFlowResult.ComponentResult.Status.FAILED, 3, "slackBusId", 3.0);
-        ComponentResultEmbeddable componentResultEmbeddable4 = new ComponentResultEmbeddable(1, LoadFlowResult.ComponentResult.Status.CONVERGED, 4, "slackBusId", 4.0);
+        ComponentResult componentResult3 = new ComponentResult(3, LoadFlowResult.ComponentResult.Status.FAILED, 3, "slackBusId", 3.0);
+        ComponentResult componentResult4 = new ComponentResult(1, LoadFlowResult.ComponentResult.Status.CONVERGED, 4, "slackBusId", 4.0);
 
-        loadFlowResultEntity2.getComponentResults().add(componentResultEmbeddable3);
-        loadFlowResultEntity2.getComponentResults().add(componentResultEmbeddable4);
+        loadFlowResultEntity2.getComponentResults().add(componentResult3);
+        loadFlowResultEntity2.getComponentResults().add(componentResult4);
 
-        ComponentResultEmbeddable componentResultEmbeddable5 = new ComponentResultEmbeddable(3, LoadFlowResult.ComponentResult.Status.FAILED, 5, "slackBusId", 5.0);
-        ComponentResultEmbeddable componentResultEmbeddable6 = new ComponentResultEmbeddable(1, LoadFlowResult.ComponentResult.Status.CONVERGED, 6, "slackBusId", 6.0);
+        ComponentResult componentResult5 = new ComponentResult(3, LoadFlowResult.ComponentResult.Status.FAILED, 5, "slackBusId", 5.0);
+        ComponentResult componentResult6 = new ComponentResult(1, LoadFlowResult.ComponentResult.Status.CONVERGED, 6, "slackBusId", 6.0);
 
-        loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable5);
-        loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable6);
+        loadFlowResultEntity3.getComponentResults().add(componentResult5);
+        loadFlowResultEntity3.getComponentResults().add(componentResult6);
 
         LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
