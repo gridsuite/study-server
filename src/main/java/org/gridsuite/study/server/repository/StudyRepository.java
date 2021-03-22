@@ -6,10 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,14 +30,4 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
     void deleteByUserIdAndStudyName(String userId, String name);
 
     List<StudyEntity> findByUserIdOrIsPrivate(@Param("userId") String userId, @Param("isPrivate") boolean isPrivate);
-
-    @Transactional
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "UPDATE study SET loadFlowStatus = :#{#loadFlowStatus.name()} WHERE  id = :studyUuid", nativeQuery = true)
-    void updateLoadFlowStatus(@Param("studyUuid") UUID studyUuid, @Param("loadFlowStatus") LoadFlowStatus loadFlowStatus);
-
-    @Transactional
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "UPDATE study SET securityAnalysisResultUuid = :securityAnalysisResultUuid WHERE id = :studyUuid", nativeQuery = true)
-    void updateSecurityAnalysisResultUuid(@Param("studyUuid") UUID studyUuid, @Param("securityAnalysisResultUuid") UUID securityAnalysisResultUuid);
 }
