@@ -11,6 +11,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.UUID;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -22,9 +23,24 @@ import javax.persistence.*;
 @AllArgsConstructor
 @Getter
 @Setter
-@Embeddable
+@Entity
 @Table(name = "loadFlowParameters")
 public class LoadFlowParametersEntity {
+
+    public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
+                                    boolean transformerVoltageControlOn, boolean noGeneratorReactiveLimits,
+                                    boolean phaseShifterRegulationOn, boolean twtSplitShuntAdmittance,
+                                    boolean simulShunt, boolean readSlackBus, boolean writeSlackBus, boolean dc,
+                                    boolean distributedSlack, LoadFlowParameters.BalanceType balanceType) {
+        this(null, voltageInitMode, transformerVoltageControlOn, noGeneratorReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
+                simulShunt, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType);
+    }
+
+    @Id
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name = "id")
+    private UUID id;
+
     @Column(name = "voltageInitMode")
     @Enumerated(EnumType.STRING)
     private LoadFlowParameters.VoltageInitMode voltageInitMode;
