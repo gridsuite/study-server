@@ -75,6 +75,7 @@ public class RepositoriesTest {
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
+                .id(UUID.randomUUID())
                 .userId("foo")
                 .studyName("mystudy")
                 .date(LocalDateTime.now(ZoneOffset.UTC))
@@ -92,6 +93,7 @@ public class RepositoriesTest {
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
+                .id(UUID.randomUUID())
                 .userId("foo2")
                 .studyName("mystudy2")
                 .date(LocalDateTime.now(ZoneOffset.UTC))
@@ -109,6 +111,7 @@ public class RepositoriesTest {
                 .build();
 
         StudyEntity studyEntity3 = StudyEntity.builder()
+                .id(UUID.randomUUID())
                 .userId("foo3")
                 .studyName("mystudy3")
                 .date(LocalDateTime.now(ZoneOffset.UTC))

@@ -411,7 +411,7 @@ public class StudyTest {
         messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyRepository.findAll().get(0).getId(), headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         //insert a study with a non existing case and except exception
@@ -1145,7 +1145,7 @@ public class StudyTest {
             message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
     }
@@ -1187,7 +1187,7 @@ public class StudyTest {
             message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
     }

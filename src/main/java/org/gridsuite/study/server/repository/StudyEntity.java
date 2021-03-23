@@ -29,7 +29,6 @@ import javax.persistence.*;
 public class StudyEntity implements BasicStudyEntity {
 
     @Id
-    @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
