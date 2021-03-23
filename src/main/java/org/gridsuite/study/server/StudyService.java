@@ -219,6 +219,7 @@ public class StudyService {
                 .userId(entity.getUserId())
                 .id(entity.getId())
                 .caseFormat(entity.getCaseFormat())
+                .studyPrivate(entity.isPrivate())
                 .build();
     }
 
@@ -229,7 +230,7 @@ public class StudyService {
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
-        return Flux.fromStream(() -> studyCreationRequestRepository.findAllByUserId(userId).stream())
+        return Flux.fromStream(() -> studyCreationRequestRepository.findByUserIdOrIsPrivate(userId, false).stream())
                 .map(StudyService::toBasicInfos)
                 .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }

@@ -26,6 +26,4 @@ public class StudyInfos extends CreatedStudyBasicInfos {
     LoadFlowStatus loadFlowStatus;
 
     LoadFlowResult loadFlowResult;
-
-    boolean studyPrivate;
 }
