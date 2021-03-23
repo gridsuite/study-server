@@ -872,7 +872,7 @@ public class StudyTest {
                         .studyPrivate(false)
                         .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
 
-        // updateStudy event has been sent
+        // broker message for study rename
         messageLFStatus = output.receive(1000);
         assertEquals("", new String(messageLFStatus.getPayload()));
         headersLFStatus = messageLFStatus.getHeaders();
