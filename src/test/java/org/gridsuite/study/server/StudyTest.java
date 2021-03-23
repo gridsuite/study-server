@@ -459,6 +459,19 @@ public class StudyTest {
         // drop the broker message for study creation request (deletion)
         output.receive(1000);
 
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(StudyInfos.class)
+                .value(studies -> {
+                    new MatcherStudyInfos(StudyInfos.builder().studyName(STUDY_NAME).userId("qqsdqsd").caseFormat("UCTE")
+                            .description(DESCRIPTION).studyPrivate(true).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
+                            .build()).matchesSafely(studies.get(1));
+                });
+
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);

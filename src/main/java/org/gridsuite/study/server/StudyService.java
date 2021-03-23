@@ -263,7 +263,7 @@ public class StudyService {
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
-        Mono<StudyEntity> studyMono = getStudyMonoWithPreFetchedCollections(studyName, userId);
+        Mono<StudyEntity> studyMono = getStudyMonoWithPreFetchedLoadFlowResult(studyName, userId);
         return studyMono.flatMap(study -> {
             if (study.isPrivate() && !userId.equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
@@ -278,13 +278,15 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity getStudyWithPreFetchedCollectionsLoadFlowResult(String studyName, String userId) {
+    public StudyEntity getStudyWithPreFetchedLoadFlowResult(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
                 // This is a workaround to prepare the componentResults which will be used later in the webflux pipeline
                 // The goal is to avoid LazyInitializationException
-                studyEntity.getLoadFlowResult().getComponentResults().size();
-                studyEntity.getLoadFlowResult().getMetrics().size();
+                @SuppressWarnings("unused")
+                int ignoreSize = studyEntity.getLoadFlowResult().getComponentResults().size();
+                @SuppressWarnings("unused")
+                int ignoreSize2 = studyEntity.getLoadFlowResult().getMetrics().size();
             }
             return studyEntity;
         }).orElse(null);
@@ -292,15 +294,15 @@ public class StudyService {
 
     @Transactional
     public StudyEntity getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
-        StudyEntity studyEntity = getStudyWithPreFetchedCollectionsLoadFlowResult(studyName, userId);
+        StudyEntity studyEntity = getStudyWithPreFetchedLoadFlowResult(studyName, userId);
         if (studyEntity != null) {
             studyEntity.setPrivate(toPrivate);
         }
         return studyEntity;
     }
 
-    public Mono<StudyEntity> getStudyMonoWithPreFetchedCollections(String studyName, String userId) {
-        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollectionsLoadFlowResult(studyName, userId));
+    public Mono<StudyEntity> getStudyMonoWithPreFetchedLoadFlowResult(String studyName, String userId) {
+        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedLoadFlowResult(studyName, userId));
     }
 
     public Mono<StudyEntity> getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
