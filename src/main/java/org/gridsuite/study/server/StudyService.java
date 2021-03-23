@@ -692,7 +692,8 @@ public class StudyService {
     public Mono<StudyInfos> renameStudy(UUID studyUuid, String userId, String newStudyName) {
         return Mono.fromCallable(() -> studyService.doRenameStudy(studyUuid, userId, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .map(studyEntity -> toInfos(studyEntity));
+                .map(StudyService::toInfos)
+                .doOnSuccess(s -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_STUDIES));
     }
 
     private Mono<Void> setLoadFlowRunning(UUID studyUuid, String userId) {

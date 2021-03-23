@@ -820,8 +820,12 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
         assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
 
-        // discard securityAnalysis_status
+        // assert that the broker message has been sent
         messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals("securityAnalysis_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -874,8 +878,12 @@ public class StudyTest {
                         .studyPrivate(false)
                         .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
 
-        // drop the broker message for study rename
-        output.receive(1000);
+        // updateStudies event has been sent
+        messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLFStatus.get(studyService.HEADER_STUDY_UUID));
+        assertEquals("studies", headersLFStatus.get(HEADER_UPDATE_TYPE));
 
         //run a loadflow
         webTestClient.put()
