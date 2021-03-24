@@ -85,4 +85,10 @@ public class StudyEntity implements BasicStudyEntity {
 
     @Column(name = "securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
+
+    @Value
+    public static class StudyNetworkUuid {
+        UUID networkUuid;
+    }
 }
+

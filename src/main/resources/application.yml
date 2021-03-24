@@ -25,7 +25,7 @@ spring:
         consumeSaStopped-in-0:
           destination: sa.stopped
   datasource:
-    url: ${dbDriver}:${scheme}://${hostPort}/${dbname}${query}
+    url: ${dbApi}:${dbVendor}://${hostPort}/${dbName}${query}
     username: ${login}
     password: ${password}
 
@@ -76,5 +76,5 @@ network-store-server:
   preloading-strategy: COLLECTION
   base-uri: http://localhost:8080/
 
-dbname: study
-dbDriver: jdbc
+dbName: study
+dbApi: jdbc
