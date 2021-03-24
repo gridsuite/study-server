@@ -22,7 +22,7 @@ import javax.persistence.*;
 @Getter
 @Setter
 @Embeddable
-public class ComponentResult {
+public class ComponentResultEmbeddable {
     @Column(name = "componentNum")
     private int componentNum;
 
