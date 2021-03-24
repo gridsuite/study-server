@@ -699,8 +699,7 @@ public class StudyService {
     }
 
     Mono<UUID> getNetworkUuid(String studyName, String userId) {
-        Mono<StudyEntity> studyMono = getStudy(studyName, userId);
-        return studyMono.map(StudyEntity::getNetworkUuid)
+        return Mono.fromCallable(() -> studyRepository.findNetworkUuidByUserIdAndStudyName(userId, studyName).map(StudyEntity.StudyNetworkUuid::getNetworkUuid).orElse(null))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
 
     }

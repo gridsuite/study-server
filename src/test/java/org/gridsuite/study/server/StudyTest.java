@@ -467,7 +467,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
                 .value(studies -> {
-                    new MatcherStudyInfos(StudyInfos.builder().studyName(STUDY_NAME).userId("qqsdqsd").caseFormat("UCTE")
+                    new MatcherStudyInfos(StudyInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
                             .description(DESCRIPTION).studyPrivate(true).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
                             .build()).matchesSafely(studies.get(1));
                 });
