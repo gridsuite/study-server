@@ -433,7 +433,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
+                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos>(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
                         .studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
                         .build()).matchesSafely(studies.get(0))));
 
@@ -467,7 +467,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
+                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos>(CreatedStudyBasicInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
                         .studyPrivate(true).creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
                         .build()).matchesSafely(studies.get(0))));
 
@@ -857,7 +857,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
+                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos>(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
                         .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
                         .build()).matchesSafely(studies.get(0))));
 
