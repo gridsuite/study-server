@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Synchronized;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -350,19 +349,19 @@ public class StudyService {
         return studyCreationRequestRepository.findById(uuid).map(Mono::<BasicStudyEntity>just).orElseGet(Mono::empty);
     }
 
-    @Synchronized
-    public Mono<Void> deleteStudyIfNotCreationInProgress(String studyName, String userId) {
-        return getStudyCreationRequest(studyName, userId) // if creation in progress delete only the creation request
-                .switchIfEmpty(removeStudyByStudyNameAndUserId(studyName, userId).cast(BasicStudyEntity.class))
-                .then()
-                .doFinally(r -> deleteStudyCreationRequest(studyName, userId));
+    @Transactional
+    public void doDeleteStudyIfNotCreationInProgress(UUID uuid) {
+        Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(uuid);
+        if (studyCreationRequestEntity.isEmpty()) {
+            studyRepository.deleteById(uuid);
+        } else {
+            studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
+        }
+        emitStudyChanged(uuid, StudyService.UPDATE_TYPE_STUDIES);
     }
 
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid) {
-        return getStudyCreationRequest(uuid) // if creation in progress delete only the creation request
-                .switchIfEmpty(removeStudyByStudyUuid(uuid).cast(BasicStudyEntity.class))
-                .then()
-                .doFinally(r -> deleteStudyCreationRequest(uuid));
+        return Mono.fromRunnable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid));
     }
 
     private Mono<StudyEntity> insertStudy(UUID uuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,

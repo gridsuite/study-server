@@ -98,6 +98,8 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
     }
 
+    // TO BE USED LATER TO NOT ACCEPT STUDIES HAVING SAME NAME IN THE SAME DIRECTORY
+    // NOW WE ALLOW SAME NAME
     @GetMapping(value = "/{userId}/studies/{studyName}/exists")
     @ApiOperation(value = "Check if the study exists", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "If the study exists or not.")})
@@ -106,14 +108,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.studyExists(studyName, userId));
     }
 
-    @DeleteMapping(value = "/{userId}/studies/{studyName}")
+    @DeleteMapping(value = "/{userId}/studies/{studyUuid}")
     @ApiOperation(value = "delete the study")
     @ApiResponse(code = 200, message = "Study deleted")
-    public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("userId") String userId,
                                                   @RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId)
-                .doOnSuccess(s -> studyService.deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()));
+                .doOnSuccess(s -> studyService.deleteStudyIfNotCreationInProgress(studyUuid).subscribe()));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg")
