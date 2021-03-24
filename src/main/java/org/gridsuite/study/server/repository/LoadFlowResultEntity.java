@@ -7,33 +7,47 @@
 
 package org.gridsuite.study.server.repository;
 
-import com.datastax.driver.core.DataType;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.springframework.data.cassandra.core.mapping.*;
+import lombok.*;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
+import javax.persistence.*;
+import java.util.*;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  * @author Etienne Homer <etienne.homer at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
-@UserDefinedType("loadFlowResult")
-public class LoadFlowResultEntity implements Serializable {
+@Setter
+@Entity
+@Table(name = "loadFlowResult")
+public class LoadFlowResultEntity {
 
+    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEmbeddable> componentResultEmbeddables) {
+        this(null, ok, metrics, logs, componentResultEmbeddables);
+    }
+
+    @Id
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name = "id")
+    private UUID id;
+
+    @Column(name = "ok")
     private boolean ok;
 
-    @CassandraType(type = DataType.Name.MAP, typeArguments = { DataType.Name.TEXT, DataType.Name.TEXT })
+    @Column(name = "metrics")
+    @ElementCollection
+    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_metrics_fk"))
     private Map<String, String> metrics;
 
+    @Column(name = "logs", columnDefinition = "TEXT")
     private String logs;
 
-    @CassandraType(type = DataType.Name.LIST, typeArguments = { DataType.Name.UDT }, userTypeName = "componentResult")
-    private List<ComponentResultEntity> componentResults;
+    // we never need to access these without loading the study, and the number of items is small (roughly 10), so we can use ElementCollection
+    @Column(name = "componentResults")
+    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"))
+    @ElementCollection
+    private List<ComponentResultEmbeddable> componentResults = new ArrayList<>();
 }

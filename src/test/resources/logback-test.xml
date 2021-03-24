@@ -10,12 +10,6 @@
     </root>
     <!--
         suppress the following logs at the end of the tests:
-            ERROR com.datastax.driver.core.ControlConnection - [Control connection] Cannot connect to any host, scheduling retry in 1000 milliseconds
-    -->
-    <logger name="com.datastax.driver.core.ControlConnection" level="off"/>
-
-    <!--
-        suppress the following logs at the end of the tests:
 16:07:28.503 [cluster-nio-worker-0] WARN  io.netty.channel.AbstractChannelHandlerContext - An exception 'java.util.concurrent.RejectedExecutionException: Task com.google.common.util.concurrent.TrustedListenableFutureTask@6a91bfa4 (delegate = java.util.concurrent.Executors$RunnableAdapter@466afa5c[Wrapped task = com.datastax.driver.core.Cluster$Manager$5@6436dc03]) rejected from java.util.concurrent.ThreadPoolExecutor@78cabf[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]' [enable DEBUG level for full stacktrace] was thrown by a user handler's exceptionCaught() method while handling the following exception:
 java.io.IOException: Connexion ré-initialisée par le correspondant
 	at java.base/sun.nio.ch.FileDispatcherImpl.read0(Native Method)
@@ -45,11 +39,5 @@ java.io.IOException: Connexion ré-initialisée par le correspondant
     -->
     <logger name="org.springframework.test" level="warn"/>
     <logger name="org.springframework.boot.test" level="warn"/>
-    <logger name="com.datastax.driver.core" level="warn"/>
-
-    <!--
-        suppress forked cassandra stdout output
-    -->
-    <logger name="com.github.nosan.embedded.cassandra.api.Cassandra" level="warn"/>
 
 </configuration>

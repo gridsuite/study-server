@@ -7,43 +7,73 @@
 
 package org.gridsuite.study.server.repository;
 
-import com.datastax.driver.core.DataType;
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
-import org.springframework.data.cassandra.core.mapping.CassandraType;
-import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 
-import java.io.Serializable;
+import javax.persistence.*;
+import java.util.UUID;
 
-@UserDefinedType("loadFlowParameters")
-@AllArgsConstructor
+/**
+ * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
+ * @author Jacques Borsenberger <Jacques.Borsenberger at rte-france.com>
+ */
+
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
-@Builder(toBuilder = true)
-public class LoadFlowParametersEntity implements Serializable {
+@Entity
+@Table(name = "loadFlowParameters")
+public class LoadFlowParametersEntity {
 
-    @CassandraType(type = DataType.Name.TEXT)
+    public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
+                                    boolean transformerVoltageControlOn, boolean noGeneratorReactiveLimits,
+                                    boolean phaseShifterRegulationOn, boolean twtSplitShuntAdmittance,
+                                    boolean simulShunt, boolean readSlackBus, boolean writeSlackBus, boolean dc,
+                                    boolean distributedSlack, LoadFlowParameters.BalanceType balanceType) {
+        this(null, voltageInitMode, transformerVoltageControlOn, noGeneratorReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
+                simulShunt, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType);
+    }
+
+    @Id
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name = "id")
+    private UUID id;
+
+    @Column(name = "voltageInitMode")
+    @Enumerated(EnumType.STRING)
     private LoadFlowParameters.VoltageInitMode voltageInitMode;
 
+    @Column(name = "transformerVoltageControlOn")
     private boolean transformerVoltageControlOn;
 
+    @Column(name = "noGeneratorReactiveLimits")
     private boolean noGeneratorReactiveLimits;
 
+    @Column(name = "phaseShifterRegulationOn")
     private boolean phaseShifterRegulationOn;
 
+    @Column(name = "twtSplitShuntAdmittance")
     private boolean twtSplitShuntAdmittance;
 
+    @Column(name = "simulShunt")
     private boolean simulShunt;
 
+    @Column(name = "readSlackBus")
     private boolean readSlackBus;
 
+    @Column(name = "writeSlackBus")
     private boolean writeSlackBus;
 
+    @Column(name = "dc")
     private boolean dc;
 
+    @Column(name = "distributedSlack")
     private boolean distributedSlack;
 
-    @CassandraType(type = DataType.Name.TEXT)
+    @Column(name = "balanceType")
+    @Enumerated(EnumType.STRING)
     private LoadFlowParameters.BalanceType balanceType;
 }

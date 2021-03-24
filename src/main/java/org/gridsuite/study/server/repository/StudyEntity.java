@@ -6,36 +6,89 @@
  */
 package org.gridsuite.study.server.repository;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import lombok.*;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 
-import java.util.UUID;
+import javax.persistence.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-public interface StudyEntity extends BasicStudyEntity {
 
-    void setStudyName(String studyName);
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+@Entity
+@Builder
+@Table(name = "study", indexes = {@Index(name = "studyEntity_isPrivate_index", columnList = "isPrivate"), @Index(name = "studyEntity_userId_index", columnList = "userId")})
+public class StudyEntity implements BasicStudyEntity {
 
-    UUID getNetworkUuid();
+    @Id
+    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @Column(name = "id")
+    private UUID id;
 
-    String getNetworkId();
+    @Column(name = "userId", nullable = false)
+    private String userId;
 
-    String getDescription();
+    @Column(name = "studyName", nullable = false)
+    private String studyName;
 
-    String getCaseFormat();
+    @Column(name = "creationDate",  nullable = false)
+    private LocalDateTime date;
 
-    UUID getCaseUuid();
+    @Column(name = "networkUuid", nullable = false)
+    private UUID networkUuid;
 
-    boolean isCasePrivate();
+    @Column(name = "networkId", nullable = false)
+    private String networkId;
 
-    boolean isPrivate();
+    @Column(name = "description",  nullable = false)
+    private String description;
 
-    LoadFlowStatus getLoadFlowStatus();
+    @Column(name = "caseFormat",  nullable = false)
+    private String caseFormat;
 
-    LoadFlowResultEntity getLoadFlowResult();
+    @Column(name = "caseUuid", nullable = false)
+    private UUID caseUuid;
 
-    UUID getSecurityAnalysisResultUuid();
+    @Column(name = "casePrivate",  nullable = false)
+    private boolean casePrivate;
 
-    LoadFlowParametersEntity getLoadFlowParameters();
+    @Column(name = "isPrivate", nullable = false)
+    private boolean isPrivate;
+
+    @Column(name = "loadFlowStatus")
+    @Enumerated(EnumType.STRING)
+    private LoadFlowStatus loadFlowStatus;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name  =  "loadFlowResultEntity_id",
+            referencedColumnName  =  "id",
+            foreignKey = @ForeignKey(
+                    name = "loadFlowResult_id_fk"
+            ))
+    private LoadFlowResultEntity loadFlowResult;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name  =  "loadFlowParametersEntity_id",
+            referencedColumnName  =  "id",
+            foreignKey = @ForeignKey(
+                    name = "loadFlowParameters_id_fk"
+            ), nullable = false)
+    private LoadFlowParametersEntity loadFlowParameters;
+
+    @Column(name = "securityAnalysisResultUuid")
+    private UUID securityAnalysisResultUuid;
+
+    @Value
+    public static class StudyNetworkUuid {
+        UUID networkUuid;
+    }
 }
+

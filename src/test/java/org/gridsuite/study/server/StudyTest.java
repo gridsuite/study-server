@@ -35,6 +35,8 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
@@ -81,7 +83,7 @@ import static org.mockito.BDDMockito.given;
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
-public class StudyTest extends AbstractEmbeddedCassandraSetup {
+public class StudyTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
 
@@ -140,6 +142,17 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
     private TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
 
     private MockWebServer server;
+
+    @Autowired
+    private StudyRepository studyRepository;
+
+    @Autowired
+    private StudyCreationRequestRepository studyCreationRequestRepository;
+
+    private void cleanDB() {
+        studyRepository.deleteAll();
+        studyCreationRequestRepository.deleteAll();
+    }
 
     @Before
     public void setup() {
@@ -345,6 +358,7 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                 }
             };
             server.setDispatcher(dispatcher);
+            cleanDB();
         } catch (Exception e) {
             // Nothing to do
         }
@@ -444,6 +458,19 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         output.receive(1000);
         // drop the broker message for study creation request (deletion)
         output.receive(1000);
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(StudyInfos.class)
+                .value(studies -> {
+                    new MatcherStudyInfos(StudyInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
+                            .description(DESCRIPTION).studyPrivate(true).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
+                            .build()).matchesSafely(studies.get(1));
+                });
 
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
@@ -802,6 +829,13 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
         assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
         assertEquals("loadflow_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
 
+        // assert that the broker message has been sent
+        messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
+        assertEquals("securityAnalysis_status", headersLFStatus.get(HEADER_UPDATE_TYPE));
+
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("userId", "userId")
@@ -851,14 +885,12 @@ public class StudyTest extends AbstractEmbeddedCassandraSetup {
                         .studyPrivate(false)
                         .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
 
-        // drop the broker message for study deletion
-        output.receive(1000);
-        // drop the broker message for study creation request (creation)
-        output.receive(1000);
-        // drop the broker message for study creation
-        output.receive(1000);
-        // drop the broker message for study creation request (deletion)
-        output.receive(1000);
+        // broker message for study rename
+        messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(STUDY_NAME, headersLFStatus.get(HEADER_STUDY_NAME));
+        assertEquals("studies", headersLFStatus.get(HEADER_UPDATE_TYPE));
 
         webTestClient.post()
                 .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
