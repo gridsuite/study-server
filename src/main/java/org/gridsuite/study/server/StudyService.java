@@ -277,7 +277,7 @@ public class StudyService {
         return Mono.fromCallable(() -> studyRepository.findByUserIdAndStudyName(userId, studyName).orElse(null));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public StudyEntity getStudyWithPreFetchedLoadFlowResult(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
@@ -293,7 +293,7 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
+    public StudyEntity doGetStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
         StudyEntity studyEntity = getStudyWithPreFetchedLoadFlowResult(studyName, userId);
         if (studyEntity != null) {
             studyEntity.setPrivate(toPrivate);
@@ -305,8 +305,8 @@ public class StudyService {
         return Mono.fromCallable(() -> self.getStudyWithPreFetchedLoadFlowResult(studyName, userId));
     }
 
-    public Mono<StudyEntity> getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
-        return Mono.fromCallable(() -> self.getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate));
+    public Mono<StudyEntity> getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
+        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate));
     }
 
     private Mono<BasicStudyEntity> getStudyCreationRequest(String studyName, String userId) {
@@ -705,7 +705,7 @@ public class StudyService {
         if (!headerUserId.equals(userId)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        return getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate)
+        return getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .map(StudyService::toInfos);
     }
@@ -848,7 +848,7 @@ public class StudyService {
                 entity.getSlackBusActivePowerMismatch());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public LoadFlowParameters doGetLoadFlowParameters(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName)
                 .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
