@@ -40,32 +40,35 @@
 
     create table study (
        id uuid not null,
-        caseFormat varchar(255),
-        casePrivate boolean,
-        caseUuid uuid,
-        creationDate timestamp,
-        description varchar(255),
-        isPrivate boolean,
+        caseFormat varchar(255) not null,
+        casePrivate boolean not null,
+        caseUuid uuid not null,
+        creationDate timestamp not null,
+        description varchar(255) not null,
+        isPrivate boolean not null,
         loadFlowStatus varchar(255),
-        networkId varchar(255),
-        networkUuid uuid,
+        networkId varchar(255) not null,
+        networkUuid uuid not null,
         securityAnalysisResultUuid uuid,
         studyName varchar(255) not null,
         userId varchar(255) not null,
-        loadFlowParametersEntity_id uuid,
+        loadFlowParametersEntity_id uuid not null,
         loadFlowResultEntity_id uuid,
         primary key (id)
     );
 
     create table studycreationrequest (
        id uuid not null,
-        creationDate timestamp,
-        isPrivate boolean,
+        creationDate timestamp not null,
+        isPrivate boolean not null,
         studyName varchar(255) not null,
         userId varchar(255) not null,
         primary key (id)
     );
-create index isPrivate_index on study (isPrivate);
+create index studyEntity_isPrivate_index on study (isPrivate);
+create index studyEntity_userId_index on study (userId);
+create index studyCreationRequest_isPrivate_index on studycreationrequest (isPrivate);
+create index studyCreationRequest_userId_index on studycreationrequest (userId);
 
     alter table if exists LoadFlowResultEntity_componentResults
        add constraint loadFlowResultEntity_componentResults_fk

@@ -93,7 +93,7 @@ public class StudyService {
 
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
-    StudyService studyService;
+    StudyService self;
 
     @Data
     @AllArgsConstructor
@@ -219,8 +219,8 @@ public class StudyService {
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .studyUuid(entity.getId())
-                //.studyPrivate(entity.isPrivate())
                 .caseFormat(entity.getCaseFormat())
+                //.studyPrivate(entity.isPrivate())
                 .build();
     }
 
@@ -262,7 +262,7 @@ public class StudyService {
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String userId, String headerUserId) {
-        Mono<StudyEntity> studyMono = getStudyMonoWithPreFetchedCollections(studyUuid, userId);
+        Mono<StudyEntity> studyMono = getStudyMonoWithPreFetchedLoadFlowResult(studyUuid, userId);
         return studyMono.flatMap(study -> {
             if (study.isPrivate() && !userId.equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
@@ -280,8 +280,8 @@ public class StudyService {
         return studyRepository.findById(studyUuid).map(Mono::just).orElseGet(Mono::empty);
     }
 
-    @Transactional
-    public StudyEntity getStudyWithPreFetchedCollections(String studyName, String userId) {
+    @Transactional(readOnly = true)
+    public StudyEntity doGetStudyWithPreFetchedLoadFlowResult(String studyName, String userId) {
         return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
                 // This is a workaround to prepare the componentResults which will be used later in the webflux pipeline
@@ -293,22 +293,24 @@ public class StudyService {
         }).orElse(null);
     }
 
-    @Transactional
-    public StudyEntity getStudyWithPreFetchedCollections(UUID studyUuid) {
+    @Transactional(readOnly = true)
+    public StudyEntity doGetStudyWithPreFetchedLoadFlowResult(UUID studyUuid) {
         return studyRepository.findById(studyUuid).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
                 // This is a workaround to prepare the componentResults which will be used later in the webflux pipeline
                 // The goal is to avoid LazyInitializationException
-                studyEntity.getLoadFlowResult().getComponentResults().size();
-                studyEntity.getLoadFlowResult().getMetrics().size();
+                @SuppressWarnings("unused")
+                int ignoreSize = studyEntity.getLoadFlowResult().getComponentResults().size();
+                @SuppressWarnings("unused")
+                int ignoreSize2 = studyEntity.getLoadFlowResult().getMetrics().size();
             }
             return studyEntity;
         }).orElse(null);
     }
 
     @Transactional
-    public StudyEntity getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
-        StudyEntity studyEntity = getStudyWithPreFetchedCollections(studyName, userId);
+    public StudyEntity doGetStudyWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
+        StudyEntity studyEntity = doGetStudyWithPreFetchedLoadFlowResult(studyName, userId);
         if (studyEntity != null) {
             studyEntity.setPrivate(toPrivate);
         }
@@ -316,28 +318,28 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(UUID studyUuid, boolean toPrivate) {
-        StudyEntity studyEntity = getStudyWithPreFetchedCollections(studyUuid);
+    public StudyEntity doGetStudyWithPreFetchedCollectionsAndUpdateIsPrivate(UUID studyUuid, boolean toPrivate) {
+        StudyEntity studyEntity = doGetStudyWithPreFetchedLoadFlowResult(studyUuid);
         if (studyEntity != null) {
             studyEntity.setPrivate(toPrivate);
         }
         return studyEntity;
     }
 
-    public Mono<StudyEntity> getStudyMonoWithPreFetchedCollections(String studyName, String userId) {
-        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollections(studyName, userId));
+    public Mono<StudyEntity> getStudyMonoWithPreFetchedLoadFlowResult(String studyName, String userId) {
+        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResult(studyName, userId));
     }
 
-    public Mono<StudyEntity> getStudyMonoWithPreFetchedCollections(UUID studyUuid, String userId) {
-        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollections(studyUuid));
+    public Mono<StudyEntity> getStudyMonoWithPreFetchedLoadFlowResult(UUID studyUuid, String userId) {
+        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResult(studyUuid));
     }
 
     public Mono<StudyEntity> getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
-        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate));
+        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyName, userId, toPrivate));
     }
 
     public Mono<StudyEntity> getStudyMonoWithPreFetchedCollectionsAndUpdateIsPrivate(UUID studyUuid, boolean toPrivate) {
-        return Mono.fromCallable(() -> studyService.getStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyUuid, toPrivate));
+        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedCollectionsAndUpdateIsPrivate(studyUuid, toPrivate));
     }
 
     private Mono<BasicStudyEntity> getStudyCreationRequest(String studyName, String userId) {
@@ -708,14 +710,14 @@ public class StudyService {
     }
 
     public Mono<StudyInfos> renameStudy(UUID studyUuid, String userId, String newStudyName) {
-        return Mono.fromCallable(() -> studyService.doRenameStudy(studyUuid, userId, newStudyName))
+        return Mono.fromCallable(() -> self.doRenameStudy(studyUuid, userId, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .map(StudyService::toInfos)
                 .doOnSuccess(s -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_STUDIES));
     }
 
     private Mono<Void> setLoadFlowRunning(UUID studyUuid, String userId) {
-        return setLoadFlowRunningInStudyEntity(studyUuid, userId, LoadFlowStatus.RUNNING)
+        return updateLoadFlowStatus(studyUuid, userId, LoadFlowStatus.RUNNING)
                 .doOnSuccess(s -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
@@ -921,7 +923,7 @@ public class StudyService {
     }
 
     public Mono<LoadFlowParameters> getLoadFlowParameters(UUID studyUuid, String userId) {
-        return Mono.fromCallable(() -> studyService.doGetLoadFlowParameters(studyUuid, userId));
+        return Mono.fromCallable(() -> self.doGetLoadFlowParameters(studyUuid, userId));
     }
 
     Mono<Void> setLoadFlowParameters(UUID studyUuid, String userId, LoadFlowParameters parameters) {
@@ -1211,7 +1213,7 @@ public class StudyService {
     }
 
     Mono<Void> updateSecurityAnalysisResultUuid(UUID studyUuid, String userId, UUID securityAnalysisResultUuid) {
-        return Mono.fromRunnable(() -> studyService.doUpdateSecurityAnalysisResultUuid(studyUuid, userId, securityAnalysisResultUuid));
+        return Mono.fromRunnable(() -> self.doUpdateSecurityAnalysisResultUuid(studyUuid, userId, securityAnalysisResultUuid));
     }
 
     @Transactional
@@ -1223,7 +1225,7 @@ public class StudyService {
     }
 
     Mono<Void> updateLoadFlowParameters(UUID studyUuid, String userId, LoadFlowParametersEntity parameters) {
-        return Mono.fromRunnable(() -> studyService.doUpdateLoadFlowParameters(studyUuid, userId, parameters));
+        return Mono.fromRunnable(() -> self.doUpdateLoadFlowParameters(studyUuid, userId, parameters));
     }
 
     @Transactional
@@ -1232,7 +1234,7 @@ public class StudyService {
     }
 
     Mono<Void> updateLoadFlowStatus(UUID studyUuid, String userId, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> studyService.doUpdateLoadFlowStatus(studyUuid, userId, loadFlowStatus));
+        return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(studyUuid, userId, loadFlowStatus));
     }
 
     private Mono<Void> removeStudyEntity(UUID studyUuid, String userId) {
@@ -1265,16 +1267,12 @@ public class StudyService {
     }
 
     private Mono<Void> updateLoadFlowResult(UUID studyUuid, String userId, LoadFlowResultEntity loadFlowResultEntity) {
-        return Mono.fromRunnable(() -> studyService.doUpdateLoadFlowResult(studyUuid, userId, loadFlowResultEntity));
+        return Mono.fromRunnable(() -> self.doUpdateLoadFlowResult(studyUuid, userId, loadFlowResultEntity));
     }
 
     @Transactional
     public void doUpdateLoadFlowResult(UUID studyUuid, String userId, LoadFlowResultEntity loadFlowResultEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowResult(loadFlowResultEntity));
-    }
-
-    private Mono<Void> setLoadFlowRunningInStudyEntity(UUID studyUuid, String userId, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> studyService.doUpdateLoadFlowStatus(studyUuid, userId, loadFlowStatus));
     }
 }
