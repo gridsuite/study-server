@@ -326,7 +326,7 @@ public class StudyService {
 
     @Synchronized
     public Mono<Void> deleteStudyIfNotCreationInProgress(String studyName, String userId) {
-        return Mono.fromRunnable(() -> doDeleteStudyIfNotCreationInProgress(studyName, userId));
+        return Mono.fromRunnable(() -> self.doDeleteStudyIfNotCreationInProgress(studyName, userId));
     }
 
     private Mono<StudyEntity> insertStudy(String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
@@ -755,27 +755,20 @@ public class StudyService {
         return (userId.equals(headerUserId)) ? Mono.empty() : Mono.error(new StudyException(NOT_ALLOWED));
     }
 
-    @Transactional(readOnly = true)
-    public void doAssertComputationRunning(String studyName, String userId) {
-        Optional<StudyEntity> studyEntity = studyRepository.findByUserIdAndStudyName(userId, studyName);
+    private Mono<Void> assertLoadFlowNotRunning(String studyName, String userId) {
+        return getStudy(studyName, userId).map(StudyEntity::getLoadFlowStatus)
+                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
+                .flatMap(lfs -> lfs.equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
+    }
 
-        if (studyEntity.isEmpty()) {
-            throw new StudyException(STUDY_NOT_FOUND);
-        }
-
-        StudyEntity studyEntity1 = studyEntity.get();
-        if (studyEntity1.getLoadFlowStatus().equals(LoadFlowStatus.RUNNING)) {
-            throw new StudyException(LOADFLOW_RUNNING);
-        }
-
-        if (studyEntity1.getLoadFlowStatus().equals(SecurityAnalysisStatus.RUNNING)) {
-            throw new StudyException(SECURITY_ANALYSIS_RUNNING);
-        }
-
+    private Mono<Void> assertSecurityAnalysisNotRunning(String studyName, String userId) {
+        Mono<String> statusMono = getSecurityAnalysisStatus(studyName, userId);
+        return statusMono
+                .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING.name()) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
     }
 
     public Mono<Void> assertComputationNotRunning(String studyName, String userId) {
-        return Mono.fromRunnable(() -> doAssertComputationRunning(studyName, userId));
+        return assertLoadFlowNotRunning(studyName, userId).and(assertSecurityAnalysisNotRunning(studyName, userId));
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
