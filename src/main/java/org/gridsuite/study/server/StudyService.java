@@ -901,7 +901,7 @@ public class StudyService {
         Objects.requireNonNull(userId);
         Objects.requireNonNull(limitTypes);
 
-        return   getStudy(studyName, userId).flatMap(entity -> {
+        return getStudy(studyName, userId).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
             return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
                 String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
