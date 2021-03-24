@@ -19,6 +19,7 @@ import java.util.UUID;
  * @author Jacques Borsenberger <Jacques.Borsenberger at rte-france.com>
  */
 
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

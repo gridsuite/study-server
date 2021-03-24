@@ -204,12 +204,12 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else if (Objects.requireNonNull(request.getPath()).matches("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop.*")) {
-                            input.send(MessageBuilder.withPayload("")
-                                    .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                                    .setHeader("receiver", "%7B%22studyName%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                                    .build(), "sa.stopped");
-                            return new MockResponse().setResponseCode(200)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        input.send(MessageBuilder.withPayload("")
+                                .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
+                                .setHeader("receiver", "%7B%22studyName%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                                .build(), "sa.stopped");
+                        return new MockResponse().setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
 
                     switch (Objects.requireNonNull(request.getPath())) {
@@ -512,15 +512,15 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
                 .value(
-                    new MatcherStudyInfos(StudyInfos.builder()
-                            .studyUuid(s2Uuid)
-                            .studyName("s2")
-                            .userId("userId")
-                            .studyPrivate(true)
-                            .description("desc")
-                            .caseFormat("XIIDM")
-                            .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
+                        new MatcherStudyInfos(StudyInfos.builder()
+                                .studyUuid(s2Uuid)
+                                .studyName("s2")
+                                .userId("userId")
+                                .studyPrivate(true)
+                                .description("desc")
+                                .caseFormat("XIIDM")
+                                .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                                .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyUuid}", s2Uuid)

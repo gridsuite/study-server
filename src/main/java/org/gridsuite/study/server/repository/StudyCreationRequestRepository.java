@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import javax.transaction.Transactional;
@@ -26,6 +27,8 @@ public interface StudyCreationRequestRepository extends JpaRepository<StudyCreat
     List<StudyCreationRequestEntity> findAllByUserId(String userId);
 
     Optional<StudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String studyName);
+
+    List<StudyCreationRequestEntity> findByUserIdOrIsPrivate(@Param("userId") String userId, @Param("isPrivate") boolean isPrivate);
 
     @Transactional
     @Modifying

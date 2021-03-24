@@ -74,6 +74,16 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
 
+        LoadFlowParametersEntity loadFlowParametersEntity2 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
+                true, false, true, false, true,
+                false, true, false,
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+
+        LoadFlowParametersEntity loadFlowParametersEntity3 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
+                true, false, true, false, true,
+                false, true, false,
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .userId("foo")
@@ -88,7 +98,7 @@ public class RepositoriesTest {
                 .isPrivate(true)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
                 .loadFlowResult(null)
-                .loadFlowParameters(null)
+                .loadFlowParameters(loadFlowParametersEntity)
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
 
@@ -106,7 +116,7 @@ public class RepositoriesTest {
                 .isPrivate(false)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
                 .loadFlowResult(loadFlowResultEntity2)
-                .loadFlowParameters(null)
+                .loadFlowParameters(loadFlowParametersEntity2)
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
 
@@ -124,7 +134,7 @@ public class RepositoriesTest {
                 .isPrivate(true)
                 .loadFlowStatus(LoadFlowStatus.RUNNING)
                 .loadFlowResult(loadFlowResultEntity3)
-                .loadFlowParameters(null)
+                .loadFlowParameters(loadFlowParametersEntity3)
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
 

@@ -26,6 +26,8 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
     Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
 
+    Optional<StudyEntity.StudyNetworkUuid> findNetworkUuidByUserIdAndStudyName(String userId, String name);
+
     @Transactional
     void deleteByUserIdAndStudyName(String userId, String name);
 

@@ -25,7 +25,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Builder
-@Table(name = "study", indexes = {@Index(name = "isPrivate_index", columnList = "isPrivate")})
+@Table(name = "study", indexes = {@Index(name = "studyEntity_isPrivate_index", columnList = "isPrivate"), @Index(name = "studyEntity_userId_index", columnList = "userId")})
 public class StudyEntity implements BasicStudyEntity {
 
     @Id
@@ -38,28 +38,28 @@ public class StudyEntity implements BasicStudyEntity {
     @Column(name = "studyName", nullable = false)
     private String studyName;
 
-    @Column(name = "creationDate")
+    @Column(name = "creationDate",  nullable = false)
     private LocalDateTime date;
 
-    @Column(name = "networkUuid")
+    @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;
 
-    @Column(name = "networkId")
+    @Column(name = "networkId", nullable = false)
     private String networkId;
 
-    @Column(name = "description")
+    @Column(name = "description",  nullable = false)
     private String description;
 
-    @Column(name = "caseFormat")
+    @Column(name = "caseFormat",  nullable = false)
     private String caseFormat;
 
-    @Column(name = "caseUuid")
+    @Column(name = "caseUuid", nullable = false)
     private UUID caseUuid;
 
-    @Column(name = "casePrivate")
+    @Column(name = "casePrivate",  nullable = false)
     private boolean casePrivate;
 
-    @Column(name = "isPrivate")
+    @Column(name = "isPrivate", nullable = false)
     private boolean isPrivate;
 
     @Column(name = "loadFlowStatus")
@@ -79,9 +79,15 @@ public class StudyEntity implements BasicStudyEntity {
             referencedColumnName  =  "id",
             foreignKey = @ForeignKey(
                     name = "loadFlowParameters_id_fk"
-            ))
+            ), nullable = false)
     private LoadFlowParametersEntity loadFlowParameters;
 
     @Column(name = "securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
+
+    @Value
+    public static class StudyNetworkUuid {
+        UUID networkUuid;
+    }
 }
+
