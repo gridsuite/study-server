@@ -755,6 +755,21 @@ public class StudyService {
                 .map(StudyService::toStudyInfos);
     }
 
+    public Mono<Boolean> lockoutLine(UUID studyUuid, String lineId) {
+        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
+
+        return networkUuidMono.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/lockout")
+                    .buildAndExpand(uuid, lineId)
+                    .toUriString();
+
+            return webClient.put()
+                    .uri(networkModificationServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(Boolean.class);
+        });
+    }
+
     Mono<UUID> getNetworkUuid(UUID studyUuid) {
         return Mono.fromCallable(() -> doGetNetworkUuid(studyUuid).orElse(null))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));

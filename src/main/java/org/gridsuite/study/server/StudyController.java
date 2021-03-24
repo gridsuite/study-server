@@ -355,6 +355,15 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.deleteModifications(studyUuid));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/lockout")
+    @ApiOperation(value = "lockout the given line", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
+    public ResponseEntity<Mono<Boolean>> lockoutLine(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("lineId") String lineId) {
+        return ResponseEntity.ok().body(studyService.lockoutLine(studyUuid, lineId));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
