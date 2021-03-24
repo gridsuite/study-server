@@ -40,9 +40,9 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
     @Column(name = "studyName", nullable = false)
     private String studyName;
 
-    @Column(name = "creationDate")
+    @Column(name = "creationDate", nullable = false)
     private LocalDateTime date;
 
-    @Column(name = "isPrivate")
+    @Column(name = "isPrivate", nullable = false)
     private Boolean isPrivate;
 }
