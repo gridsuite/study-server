@@ -433,7 +433,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue(new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
+                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
                         .studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
                         .build()).matchesSafely(studies.get(0))));
 
@@ -467,7 +467,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue(new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
+                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
                         .studyPrivate(true).creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
                         .build()).matchesSafely(studies.get(0))));
 
@@ -524,7 +524,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue(new MatcherStudyInfos(StudyInfos.builder()
+                .value(val -> assertTrue("response should match", new MatcherStudyInfos(StudyInfos.builder()
                         .studyName("s2")
                         .userId("userId")
                         .studyPrivate(true)
@@ -842,7 +842,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue(new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder()
+                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos>(CreatedStudyBasicInfos.builder()
                         .studyName("studyName")
                         .userId("userId").caseFormat("UCTE")
                         .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
@@ -857,7 +857,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue(new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
+                .value(studies -> assertTrue("response should match", new MatcherCreatedStudyBasicInfos(CreatedStudyBasicInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
                         .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
                         .build()).matchesSafely(studies.get(0))));
 
@@ -873,7 +873,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue(new MatcherStudyInfos(StudyInfos.builder()
+                .value(val -> assertTrue("response should match", new MatcherStudyInfos(StudyInfos.builder()
                         .studyName("newName")
                         .userId("userId")
                         .description("description")
@@ -998,7 +998,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue(new MatcherStudyInfos(StudyInfos.builder()
+                .value(val -> assertTrue("response should match", new MatcherStudyInfos(StudyInfos.builder()
                         .studyName("newName")
                         .userId("userId")
                         .description("description")
@@ -1014,7 +1014,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue(new MatcherStudyInfos(StudyInfos.builder()
+                .value(val -> assertTrue("response should match", new MatcherStudyInfos(StudyInfos.builder()
                         .studyName("newName")
                         .userId("userId")
                         .description("description")
@@ -1030,7 +1030,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue(new MatcherStudyInfos(StudyInfos.builder()
+                .value(val -> assertTrue("response should match", new MatcherStudyInfos(StudyInfos.builder()
                         .studyName("newName")
                         .userId("userId")
                         .description("description")
@@ -1250,7 +1250,7 @@ public class StudyTest {
         }
     }
 
-    private static class MatcherStudyInfos extends MatcherBasicStudyInfos<StudyInfos> {
+    private static class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos> {
 
         public MatcherStudyInfos(StudyInfos val) {
             super(val);
