@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Synchronized;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -324,7 +323,6 @@ public class StudyService {
         emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES);
     }
 
-    @Synchronized
     public Mono<Void> deleteStudyIfNotCreationInProgress(String studyName, String userId) {
         return Mono.fromRunnable(() -> self.doDeleteStudyIfNotCreationInProgress(studyName, userId));
     }
