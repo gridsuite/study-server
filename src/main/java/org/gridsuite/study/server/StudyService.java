@@ -352,7 +352,6 @@ public class StudyService {
 
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid) {
         return Mono.fromRunnable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid));
-    }
 
     private Mono<StudyEntity> insertStudy(UUID uuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                           String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
