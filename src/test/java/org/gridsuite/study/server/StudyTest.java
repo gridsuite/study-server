@@ -513,16 +513,15 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(
-                        new MatcherStudyInfos(StudyInfos.builder()
-                                .studyUuid(s2Uuid)
-                                .studyName("s2")
-                                .userId("userId")
-                                .studyPrivate(true)
-                                .description("desc")
-                                .caseFormat("XIIDM")
-                                .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                                .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
+                .value(new MatcherStudyInfos(StudyInfos.builder()
+                        .studyUuid(s2Uuid)
+                        .studyName("s2")
+                        .userId("userId")
+                        .studyPrivate(true)
+                        .description("desc")
+                        .caseFormat("XIIDM")
+                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
+                        .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyUuid}", s2Uuid)
@@ -758,7 +757,6 @@ public class StudyTest {
         headersSwitch = messageSwitch.getHeaders();
         assertEquals(s2Uuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
         messageSwitch = output.receive(1000);
         assertEquals(s2Uuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));

@@ -98,8 +98,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
     }
 
-    // TO BE USED LATER TO NOT ACCEPT STUDIES HAVING SAME NAME IN THE SAME DIRECTORY
-    // NOW WE ALLOW SAME NAME
     @GetMapping(value = "/{userId}/studies/{studyName}/exists")
     @ApiOperation(value = "Check if the study exists", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "If the study exists or not.")})
@@ -130,7 +128,7 @@ public class StudyController {
             @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId).flatMap(uuid -> studyService.getVoltageLevelSvg(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvg(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring)));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
@@ -145,7 +143,7 @@ public class StudyController {
             @ApiParam(value = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId).flatMap(uuid -> studyService.getVoltageLevelSvgAndMetadata(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvgAndMetadata(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring)));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}/network/voltage-levels")
@@ -155,7 +153,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("userId") String userId) {
 
-        Mono<UUID> networkUuid = studyService.getNetworkUuidByStudyUuid(studyUuid, userId);
+        Mono<UUID> networkUuid = studyService.getNetworkUuid(studyUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(studyService::getNetworkVoltageLevels));
     }
 
@@ -166,7 +164,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("userId") String userId) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId).flatMap(studyService::getLinesGraphics));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(studyService::getLinesGraphics));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}/geo-data/substations")
@@ -176,7 +174,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("userId") String userId) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId).flatMap(studyService::getSubstationsGraphics));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(studyService::getSubstationsGraphics));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}/network-map/lines")
@@ -187,7 +185,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getLinesMapData(uuid, substationsIds)));
     }
 
@@ -199,7 +197,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getSubstationsMapData(uuid, substationsIds)));
     }
 
@@ -211,7 +209,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getTwoWindingsTransformersMapData(uuid, substationsIds)));
     }
 
@@ -223,7 +221,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getThreeWindingsTransformersMapData(uuid, substationsIds)));
     }
 
@@ -235,7 +233,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getGeneratorsMapData(uuid, substationsIds)));
     }
 
@@ -247,7 +245,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getBatteriesMapData(uuid, substationsIds)));
     }
 
@@ -259,7 +257,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getDanglingLinesMapData(uuid, substationsIds)));
     }
 
@@ -271,7 +269,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getHvdcLinesMapData(uuid, substationsIds)));
     }
 
@@ -283,7 +281,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getLccConverterStationsMapData(uuid, substationsIds)));
     }
 
@@ -295,7 +293,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getVscConverterStationsMapData(uuid, substationsIds)));
     }
 
@@ -307,7 +305,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getLoadsMapData(uuid, substationsIds)));
     }
 
@@ -319,7 +317,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getShuntCompensatorsMapData(uuid, substationsIds)));
     }
 
@@ -331,7 +329,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getStaticVarCompensatorsMapData(uuid, substationsIds)));
     }
 
@@ -343,7 +341,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @ApiParam(value = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
                 .flatMap(uuid -> studyService.getAllMapData(uuid, substationsIds)));
     }
 
@@ -355,7 +353,7 @@ public class StudyController {
                                                         @PathVariable("switchId") String switchId,
                                                         @RequestParam("open") boolean open) {
 
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid, userId)
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
                 .then(studyService.changeSwitchState(studyUuid, userId, switchId, open)));
     }
 
@@ -376,8 +374,8 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("userId") String userId) {
 
-        return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid, userId)
-                .then(studyService.runLoadFlow(studyUuid, userId)));
+        return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid)
+                .then(studyService.runLoadFlow(studyUuid)));
     }
 
     @PostMapping(value = "/{userId}/studies/{studyUuid}/rename")
@@ -388,7 +386,7 @@ public class StudyController {
                                                         @PathVariable("userId") String userId,
                                                         @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
-        Mono<StudyInfos> studyMono = studyService.renameStudy(studyUuid, userId, renameStudyAttributes.getNewStudyName());
+        Mono<StudyInfos> studyMono = studyService.renameStudy(studyUuid, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.assertUserAllowed(userId, headerUserId).then(studyMono));
     }
 
@@ -428,7 +426,7 @@ public class StudyController {
             @PathVariable("userId") String userId,
             @PathVariable("format") String format) {
 
-        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyUuid, userId, format);
+        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyUuid, format);
         return exportNetworkInfosMono.map(exportNetworkInfos -> {
             HttpHeaders header = new HttpHeaders();
             header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
@@ -479,7 +477,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("userId") String userId,
             @RequestBody(required = false) LoadFlowParameters lfParameter) {
-        return ResponseEntity.ok().body(studyService.setLoadFlowParameters(studyUuid, userId, lfParameter));
+        return ResponseEntity.ok().body(studyService.setLoadFlowParameters(studyUuid, lfParameter));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}/loadflow/parameters")
@@ -488,7 +486,7 @@ public class StudyController {
     public ResponseEntity<Mono<LoadFlowParameters>> getLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("userId") String userId) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyUuid, userId));
+        return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyUuid));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}/network/substations/{substationId}/svg")
@@ -504,7 +502,7 @@ public class StudyController {
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @ApiParam(value = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId).flatMap(uuid ->
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid ->
                 studyService.getSubstationSvg(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout)));
     }
 
@@ -521,7 +519,7 @@ public class StudyController {
             @ApiParam(value = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @ApiParam(value = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuidByStudyUuid(studyUuid, userId).flatMap(uuid ->
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid ->
                 studyService.getSubstationSvgAndMetadata(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout)));
     }
 
@@ -531,7 +529,7 @@ public class StudyController {
             @ApiResponse(code = 404, message = "The security analysis status has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@ApiParam(value = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @ApiParam(value = "User ID") @PathVariable("userId") String userId) {
-        return studyService.getSecurityAnalysisStatus(studyUuid, userId)
+        return studyService.getSecurityAnalysisStatus(studyUuid)
                 .map(result -> ResponseEntity.ok().body(result))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
