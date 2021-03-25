@@ -586,7 +586,7 @@ public class StudyService {
         return getEquipmentsMapData(networkUuid, substationsIds, "all");
     }
 
-    Mono<Void> changeSwitchState(UUID studyUuid, String userId, String switchId, boolean open) {
+    Mono<Void> changeSwitchState(UUID studyUuid, String switchId, boolean open) {
         Mono<UUID> networkUuid = getNetworkUuid(studyUuid);
 
         return networkUuid.flatMap(uuid -> {
@@ -614,7 +614,7 @@ public class StudyService {
         });
     }
 
-    public Mono<Void> applyGroovyScript(UUID studyUuid, String userId, String groovyScript) {
+    public Mono<Void> applyGroovyScript(UUID studyUuid, String groovyScript) {
         Mono<UUID> networkUuid = getNetworkUuid(studyUuid);
 
         return networkUuid.flatMap(uuid -> {

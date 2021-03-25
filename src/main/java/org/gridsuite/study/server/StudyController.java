@@ -354,7 +354,7 @@ public class StudyController {
                                                         @RequestParam("open") boolean open) {
 
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-                .then(studyService.changeSwitchState(studyUuid, userId, switchId, open)));
+                .then(studyService.changeSwitchState(studyUuid, switchId, open)));
     }
 
     @PutMapping(value = "/{userId}/studies/{studyUuid}/network-modification/groovy")
@@ -364,7 +364,7 @@ public class StudyController {
                                                         @PathVariable("userId") String userId,
                                                         @RequestBody String groovyScript) {
 
-        return ResponseEntity.ok().body(studyService.applyGroovyScript(studyUuid, userId, groovyScript).then());
+        return ResponseEntity.ok().body(studyService.applyGroovyScript(studyUuid, groovyScript).then());
     }
 
     @PutMapping(value = "/{userId}/studies/{studyUuid}/loadflow/run")
