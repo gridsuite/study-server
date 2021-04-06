@@ -358,16 +358,25 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/lockout")
     @ApiOperation(value = "lockout the given line", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
-    public ResponseEntity<Mono<Boolean>> lockoutLine(
+    public ResponseEntity<Mono<Void>> lockoutLine(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("lineId") String lineId) {
         return ResponseEntity.ok().body(studyService.lockoutLine(studyUuid, lineId));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/trip")
+    @ApiOperation(value = "trip the given line", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
+    public ResponseEntity<Mono<Void>> tripLine(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("lineId") String lineId) {
+        return ResponseEntity.ok().body(studyService.tripLine(studyUuid, lineId));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/switchOn")
     @ApiOperation(value = "switch on the given line", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
-    public ResponseEntity<Mono<Boolean>> switchOnLine(
+    public ResponseEntity<Mono<Void>> switchOnLine(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("lineId") String lineId) {
         return ResponseEntity.ok().body(studyService.switchOnLine(studyUuid, lineId));
