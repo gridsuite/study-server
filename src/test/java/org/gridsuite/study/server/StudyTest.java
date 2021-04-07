@@ -69,7 +69,6 @@ import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -430,9 +429,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue("response should match", MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName",
-                        "userId", "UCTE", false).matchesSafely(studies.get(0))));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
 
         //insert the same study => 409 conflict
         webTestClient.post()
@@ -463,10 +462,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue("response should match", MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId2", "UCTE",
-                        true)
-                        .matchesSafely(studies.get(0))));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId2", "UCTE", true));
 
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
@@ -521,12 +519,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue("response should match", MatcherStudyInfos.createMatcherStudyInfos("s2",
-                        "userId",
-                        "XIIDM",
-                        "desc",
-                        true,
-                        LoadFlowStatus.NOT_DONE).matchesSafely(val)));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("s2", "userId", "XIIDM", "desc", true, LoadFlowStatus.NOT_DONE));
 
     //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
@@ -837,9 +830,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue("response should match", MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName",
-                        "userId", "UCTE", false).matchesSafely(studies.get(0))));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE", false));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -848,9 +841,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> assertTrue("response should match",  MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName",
-                        "userId", "UCTE", false).matchesSafely(studies.get(0))));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE", false));
 
         //rename the study
         String newStudyName = "newName";
@@ -864,12 +857,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue("response should match", MatcherStudyInfos.createMatcherStudyInfos("newName",
-                        "userId",
-                        "UCTE",
-                        "description",
-                        false,
-                        LoadFlowStatus.NOT_DONE).matchesSafely(val)));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", false, LoadFlowStatus.NOT_DONE));
 
         // broker message for study rename
         messageLFStatus = output.receive(1000);
@@ -987,12 +975,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue("response should match", MatcherStudyInfos.createMatcherStudyInfos("newName",
-                        "userId",
-                        "UCTE",
-                        "description",
-                        true,
-                        LoadFlowStatus.CONVERGED).matchesSafely(val)));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study private should work
         webTestClient.post()
@@ -1001,12 +984,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue("response should match", MatcherStudyInfos.createMatcherStudyInfos("newName",
-                        "userId",
-                        "UCTE",
-                        "description",
-                        true,
-                        LoadFlowStatus.CONVERGED).matchesSafely(val)));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study public
         webTestClient.post()
@@ -1015,12 +993,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(val -> assertTrue("response should match", MatcherStudyInfos.createMatcherStudyInfos("newName",
-                        "userId",
-                        "UCTE",
-                        "description",
-                        false,
-                        LoadFlowStatus.CONVERGED).matchesSafely(val)));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", false, LoadFlowStatus.CONVERGED));
 
         // drop the broker message for study deletion (due to right access change)
         output.receive(1000);
