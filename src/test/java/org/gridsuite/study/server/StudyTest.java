@@ -69,7 +69,6 @@ import org.springframework.web.reactive.function.BodyInserters;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
@@ -354,6 +353,7 @@ public class StudyTest {
                         default:
                             LOGGER.error("Path not supported: " + request.getPath());
                             return new MockResponse().setResponseCode(404);
+
                     }
                 }
             };
@@ -398,7 +398,7 @@ public class StudyTest {
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyCreationRequestRepository.findAll().get(0).getId(), headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
@@ -437,17 +437,8 @@ public class StudyTest {
                         .studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
                         .build()).matchesSafely(studies.get(0))));
 
-        //insert the same study => 409 conflict
-        webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "false")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isEqualTo(409)
-                .expectBody()
-                .jsonPath("$")
-                .isEqualTo(STUDY_ALREADY_EXISTS.name());
-
         //insert the same study but with another user (should work)
+        //even with the same name should work
         webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "true")
                 .header("userId", "userId2")
@@ -484,26 +475,6 @@ public class StudyTest {
         // drop the broker message for study creation request (deletion)
         output.receive(1000);
 
-        //Import the same case -> 409 conflict
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
-
-            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-            bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("caseFile")
-                    .contentType(MediaType.TEXT_XML);
-
-            webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s2", "desc", "false")
-                    .header("userId", "userId")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .exchange()
-                    .expectStatus().isEqualTo(409)
-                    .expectBody()
-                    .jsonPath("$")
-                    .isEqualTo(STUDY_ALREADY_EXISTS.name());
-        }
         UUID s2Uuid = studyRepository.findAll().get(2).getId();
         // check the study s2
         webTestClient.get()
@@ -755,9 +726,6 @@ public class StudyTest {
         messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
-        assertEquals(s2Uuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-        messageSwitch = output.receive(1000);
         assertEquals(s2Uuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
@@ -1137,7 +1105,7 @@ public class StudyTest {
             Message<byte[]> message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             MessageHeaders headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation
@@ -1179,7 +1147,7 @@ public class StudyTest {
             Message<byte[]> message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             MessageHeaders headers = message.getHeaders();
-            assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation

@@ -94,6 +94,10 @@ public class StudyService {
     @Autowired
     StudyService self;
 
+    public Mono<Void> assertStudyNotExists(String studyName, String userId) {
+        return Mono.empty();
+    }
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -193,19 +197,20 @@ public class StudyService {
         this.objectMapper = objectMapper;
     }
 
-    private static StudyInfos toInfos(StudyEntity entity) {
+    private static StudyInfos toStudyInfos(StudyEntity entity) {
         return StudyInfos.builder().studyName(entity.getStudyName())
                 .studyUuid(entity.getId())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
-                .description(entity.getDescription()).caseFormat(entity.getCaseFormat())
+                .description(entity.getDescription())
+                .caseFormat(entity.getCaseFormat())
                 .loadFlowStatus(entity.getLoadFlowStatus())
                 .loadFlowResult(fromEntity(entity.getLoadFlowResult()))
                 .studyPrivate(entity.isPrivate())
                 .build();
     }
 
-    private static BasicStudyInfos toBasicInfos(StudyCreationRequestEntity entity) {
+    private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
@@ -213,7 +218,7 @@ public class StudyService {
                 .build();
     }
 
-    private static CreatedStudyBasicInfos toBasicInfos(StudyEntity entity) {
+    private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder().studyName(entity.getStudyName())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
@@ -225,13 +230,13 @@ public class StudyService {
 
     public Flux<CreatedStudyBasicInfos> getStudyList(String userId) {
         return Flux.fromStream(() -> studyRepository.findByUserIdOrIsPrivate(userId, false).stream())
-                .map(StudyService::toBasicInfos)
+                .map(StudyService::toCreatedStudyBasicInfos)
                 .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
         return Flux.fromStream(() -> studyCreationRequestRepository.findByUserIdOrIsPrivate(userId, false).stream())
-                .map(StudyService::toBasicInfos)
+                .map(StudyService::toBasicStudyInfos)
                 .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
@@ -257,7 +262,8 @@ public class StudyService {
                                                     description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                                         })
                         ).doFinally(e -> deleteStudyIfNotCreationInProgress(insertStudyCreationRequestEntity.getId()).subscribe())
-                ).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+                ).doOnError(throwable ->
+                        LOGGER.error(throwable.toString(), throwable));
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String userId, String headerUserId) {
@@ -268,7 +274,7 @@ public class StudyService {
             } else {
                 return Mono.just(study);
             }
-        }).map(StudyService::toInfos);
+        }).map(StudyService::toStudyInfos);
     }
 
     Mono<StudyEntity> getStudyByNameAndUserId(String studyName, String userId) {
@@ -335,7 +341,7 @@ public class StudyService {
         return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, toPrivate));
     }
 
-    private Mono<BasicStudyEntity> getStudyCreationRequest(String studyName, String userId) {
+    private Mono<BasicStudyEntity> getStudyCreationRequestByNameAndUserId(String studyName, String userId) {
         return Mono.fromCallable(() -> studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).orElse(null));
     }
 
@@ -364,7 +370,10 @@ public class StudyService {
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
         return insertStudyCreationRequestEntity(studyName, userId, isPrivate)
-                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
+                .map(studyCreationRequestEntity -> {
+                    emitStudyChanged(studyCreationRequestEntity.getId(), StudyService.UPDATE_TYPE_STUDIES);
+                    return studyCreationRequestEntity;
+                });
     }
 
     private Mono<String> getCaseFormat(UUID caseUuid) {
@@ -671,7 +680,7 @@ public class StudyService {
     public Mono<StudyInfos> renameStudy(UUID studyUuid, String newStudyName) {
         return Mono.fromCallable(() -> self.doRenameStudy(studyUuid, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .map(StudyService::toInfos)
+                .map(StudyService::toStudyInfos)
                 .doOnSuccess(s -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_STUDIES));
     }
 
@@ -720,7 +729,7 @@ public class StudyService {
         }
         return getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, toPrivate)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .map(StudyService::toInfos);
+                .map(StudyService::toStudyInfos);
     }
 
     Mono<UUID> getNetworkUuid(UUID studyUuid) {
@@ -764,17 +773,12 @@ public class StudyService {
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {
-        return getStudyByNameAndUserId(studyName, userId).cast(BasicStudyEntity.class).switchIfEmpty(getStudyCreationRequest("TODO", userId)).hasElement();
+        return getStudyByNameAndUserId(studyName, userId).cast(BasicStudyEntity.class).switchIfEmpty(getStudyCreationRequestByNameAndUserId(studyName, userId)).hasElement();
     }
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {
         Mono<Boolean> caseExists = caseExists(caseUuid);
         return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
-    }
-
-    public Mono<Void> assertStudyNotExists(String studyName, String userId) {
-        Mono<Boolean> studyExists = studyExists(studyName, userId);
-        return studyExists.flatMap(s -> (boolean) s ? Mono.error(new StudyException(STUDY_ALREADY_EXISTS)) : Mono.empty());
     }
 
     public Mono<Void> assertLoadFlowRunnable(UUID studyUuid) {

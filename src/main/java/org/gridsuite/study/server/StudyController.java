@@ -65,7 +65,7 @@ public class StudyController {
         Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
                 .subscribeOn(Schedulers.boundedElastic())
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
-        return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
+        return ResponseEntity.ok().body(Mono.when(studyService.assertCaseExists(caseUuid))
             .doOnSuccess(s -> createStudy.subscribe()));
     }
 
@@ -95,7 +95,7 @@ public class StudyController {
                                                      @RequestHeader("userId") String headerUserId,
                                                      @PathVariable("userId") String userId) {
         Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyUuid, userId, headerUserId);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))).then(studyMono));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}/exists")
