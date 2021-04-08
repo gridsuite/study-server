@@ -22,8 +22,6 @@ import com.powsybl.network.store.model.TopLevelDocument;
 import com.powsybl.network.store.model.VoltageLevelAttributes;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -37,8 +35,8 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.hamcrest.Description;
-import org.hamcrest.TypeSafeMatcher;
+import org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos;
+import org.gridsuite.study.server.utils.MatcherStudyInfos;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -431,10 +429,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("userId").caseFormat("UCTE")
-                        .description("description").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                        .build()).matchesSafely(studies.get(0)));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
 
         //insert the same study => 409 conflict
         webTestClient.post()
@@ -465,12 +462,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> {
-                    new MatcherStudyInfos(StudyInfos.builder().studyName(STUDY_NAME).userId("userId2").caseFormat("UCTE")
-                            .description(DESCRIPTION).studyPrivate(true).creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                            .build()).matchesSafely(studies.get(1));
-                });
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId2", "UCTE", true));
 
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
@@ -525,15 +519,9 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("s2")
-                        .userId("userId")
-                        .studyPrivate(true)
-                        .description("desc")
-                        .caseFormat("XIIDM")
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
-        //try to get the study s2 with another user -> unauthorized because study is private
+                .value(MatcherStudyInfos.createMatcherStudyInfos("s2", "userId", "XIIDM", "desc", true, LoadFlowStatus.NOT_DONE));
+
+    //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
                 .uri("/v1/userId/studies/{studyName}", "s2")
                 .header("userId", "userId2")
@@ -842,15 +830,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("studyName")
-                        .userId("userId").caseFormat("UCTE")
-                        .description("description")
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                        .studyPrivate(false)
-                        .build()).matchesSafely(studies.get(0)));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE", false));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -859,10 +841,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(StudyInfos.class)
-                .value(studies -> new MatcherStudyInfos(StudyInfos.builder().studyName("studyName").userId("a").caseFormat("UCTE")
-                        .description("description").creationDate(ZonedDateTime.now(ZoneId.of("UTC"))).loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                        .build()).matchesSafely(studies.get(0)));
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE", false));
 
         //rename the study
         String newStudyName = "newName";
@@ -876,14 +857,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .studyPrivate(false)
-                        .loadFlowStatus(LoadFlowStatus.NOT_DONE).build()));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", false, LoadFlowStatus.NOT_DONE));
 
         // broker message for study rename
         messageLFStatus = output.receive(1000);
@@ -1001,14 +975,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .studyPrivate(true)
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study private should work
         webTestClient.post()
@@ -1017,14 +984,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .studyPrivate(true)
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study public
         webTestClient.post()
@@ -1033,14 +993,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(new MatcherStudyInfos(StudyInfos.builder()
-                        .studyName("newName")
-                        .userId("userId")
-                        .description("description")
-                        .caseFormat("UCTE")
-                        .studyPrivate(false)
-                        .creationDate(ZonedDateTime.now(ZoneId.of("UTC")))
-                        .loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", false, LoadFlowStatus.CONVERGED));
 
         // drop the broker message for study deletion (due to right access change)
         output.receive(1000);
@@ -1211,43 +1164,6 @@ public class StudyTest {
             server.shutdown();
         } catch (Exception e) {
             // Nothing to do
-        }
-    }
-
-    private static class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeMatcher<T> {
-        T source;
-
-        public MatcherBasicStudyInfos(T val) {
-            this.source = val;
-        }
-
-        @Override
-        public boolean matchesSafely(T s) {
-            return source.getStudyName().equals(s.getStudyName())
-                    && source.getUserId().equals(s.getUserId())
-                    && s.getCreationDate().toEpochSecond() - source.getCreationDate().toEpochSecond() < 2;
-        }
-
-        @Override
-        public void describeTo(Description description) {
-            description.toString();
-        }
-    }
-
-    private static class MatcherStudyInfos extends MatcherBasicStudyInfos<StudyInfos> {
-
-        public MatcherStudyInfos(StudyInfos val) {
-            super(val);
-        }
-
-        @Override
-        public boolean matchesSafely(StudyInfos s) {
-            boolean match = super.matchesSafely(s)
-                    && source.getCaseFormat().equals(s.getCaseFormat())
-                    && source.getDescription().equals(s.getDescription())
-                    && source.isStudyPrivate() == s.isStudyPrivate()
-                    && source.getLoadFlowStatus().equals(s.getLoadFlowStatus());
-            return match;
         }
     }
 }
