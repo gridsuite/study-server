@@ -576,7 +576,7 @@ public class StudyService {
             Mono<Set<String>> monoChangeSwitchState = webClient.put()
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<>() {
+                    .bodyToMono(new ParameterizedTypeReference<Set<String>>() {
                     });
 
             return monoChangeSwitchState.flatMap(s -> {
@@ -605,7 +605,7 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .body(BodyInserters.fromValue(groovyScript))
                     .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<>() {
+                    .bodyToMono(new ParameterizedTypeReference<Set<String>>() {
                     });
 
             return monoApplyGroovy.flatMap(s -> {
@@ -927,7 +927,7 @@ public class StudyService {
                                 .get()
                                 .uri(actionsServerBaseUri + path)
                                 .retrieve()
-                                .bodyToMono(new ParameterizedTypeReference<>() { });
+                                .bodyToMono(new ParameterizedTypeReference<List<Contingency>>() { });
                         return contingencies.map(List::size);
                     })
                     .reduce(0, Integer::sum)
