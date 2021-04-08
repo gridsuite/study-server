@@ -784,10 +784,38 @@ public class StudyService {
     }
 
     public Mono<Void> tripLine(UUID studyUuid, String lineId) {
-        Mono<UUID> networkUuid = getNetworkUuid(studyUuid);
+        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
 
-        return networkUuid.flatMap(uuid -> {
+        return networkUuidMono.flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/trip")
+                    .buildAndExpand(uuid, lineId)
+                    .toUriString();
+
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                    .then(invalidateSecurityAnalysisStatus(studyUuid)
+                            .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
+            Mono<Set<String>> monoChangeLineState = webClient.put()
+                    .uri(networkModificationServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<>() {
+                    });
+
+            return monoChangeLineState.flatMap(s -> {
+                emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, new TreeSet<>(s));
+                return Mono.empty();
+            })
+                    .then(monoUpdateLfState);
+        });
+    }
+
+    public Mono<Void> energiseLineEnd(UUID studyUuid, String lineId, String side) {
+        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
+
+        return networkUuidMono.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/energiseEnd")
+                    .queryParam("side", side)
                     .buildAndExpand(uuid, lineId)
                     .toUriString();
 

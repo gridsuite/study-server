@@ -357,7 +357,7 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/lockout")
     @ApiOperation(value = "lockout the given line", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Line locked-out")})
     public ResponseEntity<Mono<Void>> lockoutLine(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("lineId") String lineId) {
@@ -366,11 +366,21 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/trip")
     @ApiOperation(value = "trip the given line", produces = "application/json")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The network in the given format")})
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Line tripped")})
     public ResponseEntity<Mono<Void>> tripLine(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("lineId") String lineId) {
         return ResponseEntity.ok().body(studyService.tripLine(studyUuid, lineId));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/energiseEnd")
+    @ApiOperation(value = "energise the given line end", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Line end energised")})
+    public ResponseEntity<Mono<Void>> energiseLineEnd(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("lineId") String lineId,
+            @RequestParam("side") String side) {
+        return ResponseEntity.ok().body(studyService.energiseLineEnd(studyUuid, lineId, side));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/switchOn")
