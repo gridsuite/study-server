@@ -93,7 +93,7 @@ public class StudyService {
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
     StudyService self;
-    
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
