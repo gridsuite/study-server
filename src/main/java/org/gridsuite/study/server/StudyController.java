@@ -80,10 +80,11 @@ public class StudyController {
                                                   @RequestParam("description") String description,
                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                   @RequestHeader("userId") String userId) {
-        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
+        studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
                 .subscribeOn(Schedulers.boundedElastic())
-                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
-        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).doOnSuccess(s -> createStudy.subscribe()));
+                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE)
+                .subscribe();
+        return ResponseEntity.ok().body(Mono.empty());
     }
 
     @GetMapping(value = "/{userId}/studies/{studyUuid}")

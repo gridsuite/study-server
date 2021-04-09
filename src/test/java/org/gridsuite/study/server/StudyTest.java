@@ -390,12 +390,12 @@ public class StudyTest {
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
-
+        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
-        assertEquals(studyCreationRequestRepository.findAll().get(0).getId(), headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
@@ -409,7 +409,7 @@ public class StudyTest {
         messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
-        assertEquals(studyRepository.findAll().get(0).getId(), headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         //insert a study with a non existing case and except exception

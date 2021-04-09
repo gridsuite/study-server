@@ -93,11 +93,7 @@ public class StudyService {
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
     StudyService self;
-
-    public Mono<Void> assertStudyNotExists(String studyName, String userId) {
-        return Mono.empty();
-    }
-
+    
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -148,12 +144,12 @@ public class StudyService {
 
                     // update DB
                     return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), resultUuid)
-                            .then(Mono.fromCallable(() -> {
-                                // send notifications
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-                                return null;
-                            }));
+                                    .then(Mono.fromCallable(() -> {
+                                        // send notifications
+                                        emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                        emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+                                        return null;
+                                    }));
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -286,21 +282,6 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public StudyEntity doGetStudyWithPreFetchedLoadFlowResult(String studyName, String userId) {
-        return studyRepository.findByUserIdAndStudyName(userId, studyName).map(studyEntity -> {
-            if (studyEntity.getLoadFlowResult() != null) {
-                // This is a workaround to prepare the componentResultEmbeddables which will be used later in the webflux pipeline
-                // The goal is to avoid LazyInitializationException
-                @SuppressWarnings("unused")
-                int ignoreSize = studyEntity.getLoadFlowResult().getComponentResults().size();
-                @SuppressWarnings("unused")
-                int ignoreSize2 = studyEntity.getLoadFlowResult().getMetrics().size();
-            }
-            return studyEntity;
-        }).orElse(null);
-    }
-
-    @Transactional(readOnly = true)
     public StudyEntity doGetStudyWithPreFetchedLoadFlowResult(UUID studyUuid) {
         return studyRepository.findById(studyUuid).map(studyEntity -> {
             if (studyEntity.getLoadFlowResult() != null) {
@@ -313,15 +294,6 @@ public class StudyService {
             }
             return studyEntity;
         }).orElse(null);
-    }
-
-    @Transactional
-    public StudyEntity doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(String studyName, String userId, boolean toPrivate) {
-        StudyEntity studyEntity = doGetStudyWithPreFetchedLoadFlowResult(studyName, userId);
-        if (studyEntity != null) {
-            studyEntity.setPrivate(toPrivate);
-        }
-        return studyEntity;
     }
 
     @Transactional
