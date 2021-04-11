@@ -23,6 +23,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -52,9 +53,10 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.EmitterProcessor;
+//import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -121,11 +123,16 @@ public class StudyService {
 
     private ObjectMapper objectMapper;
 
-    private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
+    //private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
+
+    private final Sinks.Many studyUpdatePublisher2 = Sinks.many().multicast().onBackpressureBuffer();
+
+    //Sinks.Many.tryEmitNext(Object)
 
     @Bean
     public Supplier<Flux<Message<String>>> publishStudyUpdate() {
-        return () -> studyUpdatePublisher.log(CATEGORY_BROKER_OUTPUT, Level.FINE);
+        //return () -> studyUpdatePublisher.log(CATEGORY_BROKER_OUTPUT, Level.FINE);
+        return () -> studyUpdatePublisher2.asFlux().log(CATEGORY_BROKER_OUTPUT, Level.FINE);
     }
 
     @Bean
@@ -703,29 +710,49 @@ public class StudyService {
     }
 
     private void emitStudyChanged(String studyName, String updateType) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+        /*studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build()
-        );
+        );*/
+        while (studyUpdatePublisher2.tryEmitNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .build()).isFailure()) {
+            LockSupport.parkNanos(10);
+        }
     }
 
     private void emitStudyError(String studyName, String updateType, String errorMessage) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+        /*studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .setHeader(HEADER_ERROR, errorMessage)
                 .build()
-        );
+        );*/
+        while (studyUpdatePublisher2.tryEmitNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_ERROR, errorMessage)
+                .build()).isFailure()) {
+            LockSupport.parkNanos(10);
+        }
     }
 
     private void emitStudyChanged(String studyName, String updateType, Set<String> substationsIds) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+        /*studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
                 .build()
-        );
+        );*/
+        while (studyUpdatePublisher2.tryEmitNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_NAME, studyName)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
+                .build()).isFailure()) {
+            LockSupport.parkNanos(10);
+        }
     }
 
     Mono<Boolean> studyExists(String studyName, String userId) {

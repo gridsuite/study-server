@@ -453,11 +453,11 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isEqualTo(200);
         // drop the broker message for study creation request (creation)
-        output.receive(1000);
+        messageSwitch = output.receive(1000);
         // drop the broker message for study creation
-        output.receive(1000);
+        messageSwitch = output.receive(1000);
         // drop the broker message for study creation request (deletion)
-        output.receive(1000);
+        messageSwitch = output.receive(1000);
 
         webTestClient.get()
                 .uri("/v1/studies")
