@@ -261,9 +261,9 @@ public class StudyService {
                          }))
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(r -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe())
+                        .doFinally(r -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()) // delete the study if the creation has been canceled
                         .subscribe()
-                ); // delete the study if the creation has been canceled
+                ); 
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
