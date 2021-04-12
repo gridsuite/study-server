@@ -210,6 +210,7 @@ public class StudyService {
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .studyUuid(entity.getId())
+                .studyPrivate(entity.getIsPrivate())
                 .build();
     }
 
