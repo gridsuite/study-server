@@ -151,6 +151,7 @@ public class StudyTest {
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
+    //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 
     private void cleanDB() {
@@ -239,7 +240,7 @@ public class StudyTest {
                                 return new MockResponse().setResponseCode(500)
                                         .addHeader("Content-Type", "application/json; charset=utf-8")
                                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                            }  else if (body.contains("filename=\"caseFile2\"")) {
+                            }  else if (body.contains("filename=\"blocking-import\"")) {
                                 countDownLatch.await(2, TimeUnit.SECONDS);
                                 return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1171,12 +1172,12 @@ public class StudyTest {
     public void testGetStudyCreationRequests() throws Exception {
         countDownLatch = new CountDownLatch(1);
         //insert a study with a case (multipartfile)
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase2.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile2", "testCase2.xiidm", "text/xml", is);
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:blocking-import.xiidm"))) {
+            MockMultipartFile mockFile = new MockMultipartFile("blocking-import", "blocking-import.xiidm", "text/xml", is);
 
             MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
             bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("caseFile2")
+                    .filename("blocking-import")
                     .contentType(MediaType.TEXT_XML);
 
             webTestClient.post()
