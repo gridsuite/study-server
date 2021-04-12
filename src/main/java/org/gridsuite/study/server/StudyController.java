@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -57,16 +56,16 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
-    public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                   @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description,
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
-        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
                 .subscribeOn(Schedulers.boundedElastic())
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
-            .doOnSuccess(s -> createStudy.subscribe()));
+            .then(createStudy));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -236,17 +236,20 @@ public class StudyService {
                 .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
-    public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
+    public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .then(Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
+                .map(StudyService::toBasicStudyInfos)
+                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
                           .flatMap(t -> {
                               LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                               return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                                  description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
                           })
-                )
-                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe());
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                        .doFinally(r -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe())
+                        .subscribe()
+                );
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
