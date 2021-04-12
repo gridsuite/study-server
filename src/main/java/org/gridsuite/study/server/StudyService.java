@@ -211,6 +211,7 @@ public class StudyService {
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneId.of("UTC")))
                 .userId(entity.getUserId())
                 .studyUuid(entity.getId())
+                .studyPrivate(entity.getIsPrivate())
                 .build();
     }
 
@@ -236,30 +237,40 @@ public class StudyService {
                 .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
-    public Mono<StudyEntity> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
-        return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .flatMap(insertStudyCreationRequestEntity -> Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
-                        .flatMap(t -> {
-                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                            return insertStudy(insertStudyCreationRequestEntity.getId(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                    description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
-                        })
-                        .doFinally(e -> deleteStudyIfNotCreationInProgress(insertStudyCreationRequestEntity.getId()).subscribe())
-                ).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+    public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
+        Mono<BasicStudyInfos> basicStudyInfosMono = insertStudyCreationRequest(studyName, userId, isPrivate)
+                .map(StudyService::toBasicStudyInfos);
+
+        return basicStudyInfosMono.doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
+                .flatMap(t -> {
+                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                    return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                            description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null,  toEntity(loadFlowParameters), null);
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid()).subscribe())
+                .subscribe()
+        );
     }
 
-    public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
-        return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .flatMap(insertStudyCreationRequestEntity -> importCase(caseFile, studyName).flatMap(uuid ->
-                                Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
-                                        .flatMap(t -> {
-                                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                                            return insertStudy(insertStudyCreationRequestEntity.getId(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                    description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                                        })
-                        ).doFinally(e -> deleteStudyIfNotCreationInProgress(insertStudyCreationRequestEntity.getId()).subscribe())
-                ).doOnError(throwable ->
-                        LOGGER.error(throwable.toString(), throwable));
+    public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
+        Mono<BasicStudyInfos> basicStudyInfosMono = insertStudyCreationRequest(studyName, userId, isPrivate)
+                .map(StudyService::toBasicStudyInfos);
+
+        return basicStudyInfosMono.doOnSuccess(s -> importCase(caseFile, studyName)
+                .flatMap(uuid -> Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
+                        .flatMap(t -> {
+                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                            return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                    description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                        })
+                )
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid()).subscribe())
+                .subscribe()
+        );
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String userId, String headerUserId) {
