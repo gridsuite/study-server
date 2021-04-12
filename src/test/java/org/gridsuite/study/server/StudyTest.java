@@ -225,8 +225,6 @@ public class StudyTest {
 
                         case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                         case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
-                            return new MockResponse().setResponseCode(200).setBody("XIIDM")
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
                         case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
                             return new MockResponse().setResponseCode(200).setBody("XIIDM")
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
