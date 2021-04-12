@@ -756,6 +756,26 @@ public class StudyService {
                 .map(StudyService::toStudyInfos);
     }
 
+    private Mono<Void> applyLineChanges(UUID studyUuid, String path) {
+        Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(studyUuid)
+                        .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
+        Mono<Set<String>> monoChangeLineState = webClient.put()
+                .uri(networkModificationServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<>() {
+                });
+
+        return monoChangeLineState.flatMap(s -> {
+            emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, new TreeSet<>(s));
+            return Mono.empty();
+        })
+                .then(monoUpdateLfState);
+
+    }
+
     public Mono<Void> lockoutLine(UUID studyUuid, String lineId) {
         Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
 
@@ -764,22 +784,7 @@ public class StudyService {
                     .buildAndExpand(uuid, lineId)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                    .then(invalidateSecurityAnalysisStatus(studyUuid)
-                            .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
-            Mono<Set<String>> monoChangeLineState = webClient.put()
-                    .uri(networkModificationServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<>() {
-                    });
-
-            return monoChangeLineState.flatMap(s -> {
-                emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, new TreeSet<>(s));
-                return Mono.empty();
-            })
-                    .then(monoUpdateLfState);
+            return applyLineChanges(studyUuid, path);
         });
     }
 
@@ -791,22 +796,7 @@ public class StudyService {
                     .buildAndExpand(uuid, lineId)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                    .then(invalidateSecurityAnalysisStatus(studyUuid)
-                            .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
-            Mono<Set<String>> monoChangeLineState = webClient.put()
-                    .uri(networkModificationServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<>() {
-                    });
-
-            return monoChangeLineState.flatMap(s -> {
-                emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, new TreeSet<>(s));
-                return Mono.empty();
-            })
-                    .then(monoUpdateLfState);
+            return applyLineChanges(studyUuid, path);
         });
     }
 
@@ -819,22 +809,7 @@ public class StudyService {
                     .buildAndExpand(uuid, lineId)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                    .then(invalidateSecurityAnalysisStatus(studyUuid)
-                            .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
-            Mono<Set<String>> monoChangeLineState = webClient.put()
-                    .uri(networkModificationServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<>() {
-                    });
-
-            return monoChangeLineState.flatMap(s -> {
-                emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, new TreeSet<>(s));
-                return Mono.empty();
-            })
-                    .then(monoUpdateLfState);
+            return applyLineChanges(studyUuid, path);
         });
     }
 
@@ -846,22 +821,7 @@ public class StudyService {
                     .buildAndExpand(uuid, lineId)
                     .toUriString();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                    .then(invalidateSecurityAnalysisStatus(studyUuid)
-                            .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
-            Mono<Set<String>> monoChangeLineState = webClient.put()
-                    .uri(networkModificationServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<>() {
-                    });
-
-            return monoChangeLineState.flatMap(s -> {
-                emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, new TreeSet<>(s));
-                return Mono.empty();
-            })
-                    .then(monoUpdateLfState);
+            return applyLineChanges(studyUuid, path);
         });
     }
 
