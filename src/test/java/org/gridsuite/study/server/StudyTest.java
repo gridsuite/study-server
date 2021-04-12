@@ -98,6 +98,7 @@ public class StudyTest {
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
+    private static final String IMPORTED_BLOCKING_CASE_UUID_STRING = "22111111-0000-0000-0000-000000000000";
     private static final String IMPORTED_CASE_WITH_ERRORS_UUID_STRING = "88888888-0000-0000-0000-000000000000";
     private static final String NEW_STUDY_CASE_UUID = "11888888-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
@@ -197,6 +198,7 @@ public class StudyTest {
             String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
             String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
             String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
+            String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
             final Dispatcher dispatcher = new Dispatcher() {
                 @Override
@@ -226,6 +228,7 @@ public class StudyTest {
                         case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                         case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                         case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
+                        case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/format":
                             return new MockResponse().setResponseCode(200).setBody("XIIDM")
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -242,6 +245,9 @@ public class StudyTest {
                                 return new MockResponse().setResponseCode(500)
                                         .addHeader("Content-Type", "application/json; charset=utf-8")
                                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                            } else if (body.contains("filename=\"blockingCaseFile\"")) {
+                                return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
+                                        .addHeader("Content-Type", "application/json; charset=utf-8");
                             } else {
                                 return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -268,16 +274,15 @@ public class StudyTest {
                                             "}")
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
                         case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID:
-                        case "/v1/networks?caseName=" + IMPORTED_CASE_UUID_STRING:
+                        case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING:
                             countDownLatch.await(2, TimeUnit.SECONDS);
                             return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
                         case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
-                            return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
                         case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
                             return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
+
                         case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
                             return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                                     .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -1176,11 +1181,11 @@ public class StudyTest {
         countDownLatch = new CountDownLatch(1);
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", "testCase.xiidm", "text/xml", is);
+            MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm", "text/xml", is);
 
             MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
             bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("caseFile")
+                    .filename("blockingCaseFile")
                     .contentType(MediaType.TEXT_XML);
 
             webTestClient.post()
