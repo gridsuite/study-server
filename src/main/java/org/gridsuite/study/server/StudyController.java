@@ -75,15 +75,14 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@PathVariable("studyName") String studyName,
                                                   @RequestPart("caseFile") FilePart caseFile,
                                                   @RequestParam("description") String description,
                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                   @RequestHeader("userId") String userId) {
-        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
-                .subscribeOn(Schedulers.boundedElastic())
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
-        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).doOnSuccess(s -> createStudy.subscribe()));
+        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).then(createStudy));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}")

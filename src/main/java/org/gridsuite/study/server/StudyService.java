@@ -249,18 +249,21 @@ public class StudyService {
                 .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe());
     }
 
-    public Mono<StudyEntity> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
+    public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
-                .then(importCase(caseFile, studyName).flatMap(uuid ->
+                .map(StudyService::toBasicStudyInfos)
+                .doOnSuccess(s -> importCase(caseFile, studyName).flatMap(uuid ->
                      Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
                          .flatMap(t -> {
                              LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                              return insertStudy(studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                                 description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                         })
-                ))
-                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                .doFinally(s -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()); // delete the study if the creation has been canceled
+                         }))
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                        .doFinally(r -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe())
+                        .subscribe()
+                ); // delete the study if the creation has been canceled
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
@@ -337,7 +340,7 @@ public class StudyService {
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
-    private Mono<Void> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
+    private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
         return insertStudyCreationRequestEntity(studyName, userId, isPrivate)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
@@ -1152,10 +1155,10 @@ public class StudyService {
         return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(studyName, userId, loadFlowStatus));
     }
 
-    private Mono<Void> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate) {
-        return Mono.fromRunnable(() -> {
+    private Mono<StudyCreationRequestEntity> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate) {
+        return Mono.fromCallable(() -> {
             StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(null, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
-            studyCreationRequestRepository.save(studyCreationRequestEntity);
+            return studyCreationRequestRepository.save(studyCreationRequestEntity);
         });
     }
 

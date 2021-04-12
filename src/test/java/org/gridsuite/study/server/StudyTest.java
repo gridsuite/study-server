@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -69,6 +72,7 @@ import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -147,6 +151,8 @@ public class StudyTest {
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
+    CountDownLatch countDownLatch;
+
     private void cleanDB() {
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
@@ -193,7 +199,7 @@ public class StudyTest {
 
             final Dispatcher dispatcher = new Dispatcher() {
                 @Override
-                public MockResponse dispatch(RecordedRequest request) {
+                public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                     switch (Objects.requireNonNull(request.getPath())) {
                         case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                             return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
@@ -233,6 +239,10 @@ public class StudyTest {
                                 return new MockResponse().setResponseCode(500)
                                         .addHeader("Content-Type", "application/json; charset=utf-8")
                                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                            }  else if (body.contains("filename=\"caseFile2\"")) {
+                                countDownLatch.await(2, TimeUnit.SECONDS);
+                                return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
+                                        .addHeader("Content-Type", "application/json; charset=utf-8");
                             } else {
                                 return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1155,6 +1165,82 @@ public class StudyTest {
             assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
+    }
+
+    @Test
+    public void testGetStudyCreationRequests() throws Exception {
+        countDownLatch = new CountDownLatch(1);
+        //insert a study with a case (multipartfile)
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase2.xiidm"))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile2", "testCase2.xiidm", "text/xml", is);
+
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("caseFile", mockFile.getBytes())
+                    .filename("caseFile2")
+                    .contentType(MediaType.TEXT_XML);
+
+            webTestClient.post()
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s3", "description", "true")
+                    .header("userId", "userId")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody(String.class)
+                    .value(b -> {
+                        assertTrue(studyCreationRequestRepository.findAll().get(0).getIsPrivate());
+                        assertEquals("s3", studyCreationRequestRepository.findAll().get(0).getStudyName());
+                        assertEquals("userId", studyCreationRequestRepository.findAll().get(0).getUserId());
+                    });
+        }
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(BasicStudyInfos.class)
+                .value(b -> {
+                    assertTrue(b.get(0).isStudyPrivate());
+                    assertEquals("s3", b.get(0).getStudyName());
+                    assertEquals("userId", b.get(0).getUserId());
+                });
+
+        countDownLatch.countDown();
+
+        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
+        Thread.sleep(1000);
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[]");
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(StudyInfos.class)
+                .value(b -> {
+                    assertTrue(b.get(0).isStudyPrivate());
+                    assertEquals("s3", b.get(0).getStudyName());
+                    assertEquals("userId", b.get(0).getUserId());
+                    assertEquals("XIIDM", b.get(0).getCaseFormat());
+                });
+
+        // drop the broker message for study creation request (creation)
+        output.receive(1000);
+        // drop the broker message for study creation
+        output.receive(1000);
+        // drop the broker message for study creation request (deletion)
+        output.receive(1000);
     }
 
     @After
