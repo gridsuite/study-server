@@ -12,14 +12,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -57,16 +55,15 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
-    public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                   @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description,
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
-        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
-                .subscribeOn(Schedulers.boundedElastic())
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
-            .doOnSuccess(s -> createStudy.subscribe()));
+            .then(createStudy));
     }
 
     @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -75,15 +72,14 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
+    public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@PathVariable("studyName") String studyName,
                                                   @RequestPart("caseFile") FilePart caseFile,
                                                   @RequestParam("description") String description,
                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                   @RequestHeader("userId") String userId) {
-        Mono<StudyEntity> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
-                .subscribeOn(Schedulers.boundedElastic())
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
-        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).doOnSuccess(s -> createStudy.subscribe()));
+        return ResponseEntity.ok().body(studyService.assertStudyNotExists(studyName, userId).then(createStudy));
     }
 
     @GetMapping(value = "/{userId}/studies/{studyName}")
