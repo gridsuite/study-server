@@ -263,7 +263,7 @@ public class StudyService {
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                         .doFinally(r -> deleteStudyIfNotCreationInProgress(studyName, userId).subscribe()) // delete the study if the creation has been canceled
                         .subscribe()
-                ); 
+                );
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(String studyName, String userId, String headerUserId) {
