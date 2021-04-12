@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -62,7 +61,6 @@ public class StudyController {
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
                                                                   @RequestHeader("userId") String userId) {
         Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
-                .subscribeOn(Schedulers.boundedElastic())
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(Mono.when(studyService.assertStudyNotExists(studyName, userId), studyService.assertCaseExists(caseUuid))
             .then(createStudy));

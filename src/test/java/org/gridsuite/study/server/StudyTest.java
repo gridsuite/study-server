@@ -71,8 +71,7 @@ import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -100,6 +99,7 @@ public class StudyTest {
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
     private static final String IMPORTED_CASE_WITH_ERRORS_UUID_STRING = "88888888-0000-0000-0000-000000000000";
+    private static final String NEW_STUDY_CASE_UUID = "11888888-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String SECURITY_ANALYSIS_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
@@ -215,6 +215,7 @@ public class StudyTest {
                         case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
                         case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
                         case "/v1/cases/88888888-0000-0000-0000-000000000000/exists":
+                        case "/v1/cases/11888888-0000-0000-0000-000000000000/exists":
                             return new MockResponse().setResponseCode(200).setBody("true")
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -224,6 +225,9 @@ public class StudyTest {
 
                         case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                         case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
+                            return new MockResponse().setResponseCode(200).setBody("XIIDM")
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
                             return new MockResponse().setResponseCode(200).setBody("XIIDM")
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -240,10 +244,6 @@ public class StudyTest {
                                 return new MockResponse().setResponseCode(500)
                                         .addHeader("Content-Type", "application/json; charset=utf-8")
                                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                            }  else if (body.contains("filename=\"blocking-import\"")) {
-                                countDownLatch.await(2, TimeUnit.SECONDS);
-                                return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
-                                        .addHeader("Content-Type", "application/json; charset=utf-8");
                             } else {
                                 return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -269,12 +269,17 @@ public class StudyTest {
                                             "\"componentResults\": [{\"componentNum\":0,\"status\":\"CONVERGED\",\"iterationCount\":7, \"slackBusId\": \"c6ace316-6b39-40ec-b1d6-09ab2fe42992\", \"slackBusActivePowerMismatch\": 3.7}]\n" +
                                             "}")
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
-                        case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
-                        case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
+                        case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID:
                         case "/v1/networks?caseName=" + IMPORTED_CASE_UUID_STRING:
+                            countDownLatch.await(2, TimeUnit.SECONDS);
                             return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
-
+                        case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
+                            return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
+                            return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
                         case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
                             return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                                     .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -1172,12 +1177,12 @@ public class StudyTest {
     public void testGetStudyCreationRequests() throws Exception {
         countDownLatch = new CountDownLatch(1);
         //insert a study with a case (multipartfile)
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:blocking-import.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("blocking-import", "blocking-import.xiidm", "text/xml", is);
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", "testCase.xiidm", "text/xml", is);
 
             MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
             bodyBuilder.part("caseFile", mockFile.getBytes())
-                    .filename("blocking-import")
+                    .filename("caseFile")
                     .contentType(MediaType.TEXT_XML);
 
             webTestClient.post()
@@ -1242,6 +1247,62 @@ public class StudyTest {
         output.receive(1000);
         // drop the broker message for study creation request (deletion)
         output.receive(1000);
+
+        countDownLatch = new CountDownLatch(1);
+
+        //insert a study
+        webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", "NewStudy", NEW_STUDY_CASE_UUID, DESCRIPTION, "false")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(b -> {
+                    assertFalse(studyCreationRequestRepository.findAll().get(0).getIsPrivate());
+                    assertEquals("NewStudy", studyCreationRequestRepository.findAll().get(0).getStudyName());
+                    assertEquals("userId", studyCreationRequestRepository.findAll().get(0).getUserId());
+                });
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(BasicStudyInfos.class)
+                .value(b -> {
+                    assertFalse(b.get(0).isStudyPrivate());
+                    assertEquals("NewStudy", b.get(0).getStudyName());
+                    assertEquals("userId", b.get(0).getUserId());
+                });
+
+        countDownLatch.countDown();
+
+        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
+        Thread.sleep(2000);
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[]");
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(StudyInfos.class)
+                .value(b -> {
+                    assertFalse(b.get(0).isStudyPrivate());
+                    assertEquals("NewStudy", b.get(0).getStudyName());
+                    assertEquals("userId", b.get(0).getUserId());
+                    assertEquals("XIIDM", b.get(0).getCaseFormat());
+                });
     }
 
     @After
