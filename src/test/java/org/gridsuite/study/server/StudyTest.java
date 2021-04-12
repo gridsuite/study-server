@@ -1279,7 +1279,7 @@ public class StudyTest {
         countDownLatch.countDown();
 
         // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
-        Thread.sleep(2000);
+        Thread.sleep(1000);
 
         webTestClient.get()
                 .uri("/v1/study_creation_requests")
