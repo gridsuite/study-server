@@ -353,10 +353,7 @@ public class StudyService {
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
         return insertStudyCreationRequestEntity(studyName, userId, isPrivate)
-                .map(studyCreationRequestEntity -> {
-                    emitStudyChanged(studyCreationRequestEntity.getId(), StudyService.UPDATE_TYPE_STUDIES);
-                    return studyCreationRequestEntity;
-                });
+                .doOnSuccess(s -> emitStudyChanged(s.getId(), StudyService.UPDATE_TYPE_STUDIES));
     }
 
     private Mono<String> getCaseFormat(UUID caseUuid) {
@@ -636,7 +633,7 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(UUID studyUuid) {
-        return setLoadFlowRunning(studyUuid).then(getNetworkUuid(studyUuid).flatMap(uuid -> {
+        return setLoadFlowRunning(studyUuid).then(getNetworkUuid(studyUuid)).flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                     .buildAndExpand(uuid)
                     .toUriString();
@@ -649,7 +646,7 @@ public class StudyService {
                 .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
         }).doFinally(s ->
            emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
-        ));
+        );
     }
 
     @Transactional

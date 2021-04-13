@@ -1069,11 +1069,13 @@ public class StudyTest {
                     .exchange()
                     .expectStatus().isOk();
 
+            UUID uuid = studyCreationRequestRepository.findAll().get(0).getId();
+
             // assert that the broker message has been sent a study creation request message
             Message<byte[]> message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             MessageHeaders headers = message.getHeaders();
-            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(uuid, headers.get(StudyService.HEADER_STUDY_UUID));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation
@@ -1087,7 +1089,7 @@ public class StudyTest {
             message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
-            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(uuid, headers.get(StudyService.HEADER_STUDY_UUID));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
     }
@@ -1111,11 +1113,13 @@ public class StudyTest {
                     .exchange()
                     .expectStatus().isOk();
 
+            UUID uuid = studyCreationRequestRepository.findAll().get(0).getId();
+
             // assert that the broker message has been sent a study creation request message
             Message<byte[]> message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             MessageHeaders headers = message.getHeaders();
-            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(uuid, headers.get(StudyService.HEADER_STUDY_UUID));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
             // assert that the broker message has been sent a error message for study creation
@@ -1129,7 +1133,7 @@ public class StudyTest {
             message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
-            //assertEquals("newStudy", headers.get(StudyService.HEADER_STUDY_NAME));
+            assertEquals(uuid, headers.get(StudyService.HEADER_STUDY_UUID));
             assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         }
     }
