@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -201,14 +202,15 @@ public class StudyTest {
             final Dispatcher dispatcher = new Dispatcher() {
                 @Override
                 public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
-                    if (Objects.requireNonNull(request.getPath()).matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
+                    String path = Objects.requireNonNull(request.getPath());
+                    if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
                         input.send(MessageBuilder.withPayload("")
                                 .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
                                 .setHeader("receiver", "%7B%22studyUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                                 .build());
                         return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    } else if (Objects.requireNonNull(request.getPath()).matches("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop.*")) {
+                    } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop.*")) {
                         input.send(MessageBuilder.withPayload("")
                                 .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
                                 .setHeader("receiver", "%7B%22studyName%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
@@ -216,7 +218,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
-                    switch (Objects.requireNonNull(request.getPath())) {
+                    switch (path) {
                         case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                             return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -407,6 +409,7 @@ public class StudyTest {
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
+
         UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> messageSwitch = output.receive(1000);
@@ -419,7 +422,7 @@ public class StudyTest {
         messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         headersSwitch = messageSwitch.getHeaders();
-        assertEquals(STUDY_NAME, headersSwitch.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation request message for deletion
@@ -447,7 +450,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(studyRepository.findAll().get(0).getId(), STUDY_NAME, "userId", "UCTE", false));
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(studyUuid, STUDY_NAME, "userId", "UCTE", false));
 
         //insert the same study but with another user (should work)
         //even with the same name should work
@@ -504,10 +507,10 @@ public class StudyTest {
                 .header("userId", "userId2")
                 .exchange()
                 .expectStatus().isForbidden();
-
+        UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyUuid}", UUID.randomUUID())
+                .uri("/v1/userId/studies/{studyUuid}", randomUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isNotFound()
@@ -515,7 +518,7 @@ public class StudyTest {
 
         // check if a non existing study exists
         webTestClient.get()
-                .uri(STUDY_EXIST_URL, "userId", UUID.randomUUID())
+                .uri(STUDY_EXIST_URL, "userId", randomUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -532,7 +535,6 @@ public class StudyTest {
                 .isEqualTo("true");
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-        UUID randomUuid = UUID.randomUUID();
         //get the voltage level diagram svg
         webTestClient.get()
                 .uri("/v1/{userId}/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", "userId", studyNameUserIdUuid, "voltageLevelId")

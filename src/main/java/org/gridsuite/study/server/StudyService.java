@@ -348,7 +348,7 @@ public class StudyService {
                                           LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         return insertStudyEntity(uuid, studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
                 loadFlowParameters, securityAnalysisUuid)
-                .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
+                .doOnSuccess(s -> emitStudyChanged(uuid, StudyService.UPDATE_TYPE_STUDIES));
     }
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
@@ -724,14 +724,6 @@ public class StudyService {
     private void emitStudyChanged(UUID studyUuid, String updateType) {
         studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, updateType)
-                .build()
-        );
-    }
-
-    private void emitStudyChanged(String studyName, String updateType) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build()
         );
