@@ -19,7 +19,8 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 
 public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> extends MatcherBasicStudyInfos<T> {
 
-    public static MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> createMatcherCreatedStudyBasicInfos(UUID studyUuid, String studyName, String userId, String caseFormat, boolean studyPrivate) {
+    public static MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> createMatcherCreatedStudyBasicInfos(UUID studyUuid, String studyName, String userId,
+                                                                                                            String caseFormat, boolean studyPrivate, String description) {
         return new MatcherCreatedStudyBasicInfos<>(CreatedStudyBasicInfos.builder()
                 .studyUuid(studyUuid)
                 .studyName(studyName)
@@ -27,6 +28,7 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
                 .caseFormat(caseFormat)
                 .studyPrivate(studyPrivate)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
+                .description(description)
                 .build());
     }
 
@@ -38,6 +40,7 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
     public boolean matchesSafely(T s) {
         return super.matchesSafely(s)
                 && reference.getCaseFormat().equals(s.getCaseFormat())
+                && reference.getDescription().equals(s.getDescription())
                 && reference.isStudyPrivate() == s.isStudyPrivate();
     }
 }

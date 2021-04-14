@@ -219,6 +219,7 @@ public class StudyService {
                 .studyUuid(entity.getId())
                 .caseFormat(entity.getCaseFormat())
                 .studyPrivate(entity.isPrivate())
+                .description(entity.getDescription())
                 .build();
     }
 
@@ -334,7 +335,7 @@ public class StudyService {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(uuid);
         if (studyCreationRequestEntity.isEmpty()) {
             studyRepository.findById(uuid).ifPresent(s -> {
-                if (s.getUserId() != userId) {
+                if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
                 }
                 studyRepository.deleteById(uuid);
@@ -666,10 +667,10 @@ public class StudyService {
         }).orElse(null);
     }
 
-    public Mono<StudyInfos> renameStudy(UUID studyUuid, String userId, String newStudyName) {
+    public Mono<CreatedStudyBasicInfos> renameStudy(UUID studyUuid, String userId, String newStudyName) {
         return Mono.fromCallable(() -> self.doRenameStudy(studyUuid, userId, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .map(StudyService::toStudyInfos)
+                .map(StudyService::toCreatedStudyBasicInfos)
                 .doOnSuccess(s -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_STUDIES));
     }
 

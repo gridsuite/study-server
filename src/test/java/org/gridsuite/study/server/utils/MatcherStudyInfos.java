@@ -40,7 +40,6 @@ public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos>
     @Override
     public boolean matchesSafely(StudyInfos s) {
         return super.matchesSafely(s)
-                && reference.getDescription().equals(s.getDescription())
                 && reference.getLoadFlowStatus().equals(s.getLoadFlowStatus());
     }
 }
