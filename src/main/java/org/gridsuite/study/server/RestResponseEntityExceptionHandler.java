@@ -39,6 +39,8 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(SECURITY_ANALYSIS_RUNNING);
             case NOT_ALLOWED:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
+            case LINE_MODIFICATION_FAILED:
+                return ResponseEntity.status(HttpStatus.NOT_MODIFIED).body(LINE_MODIFICATION_FAILED);
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

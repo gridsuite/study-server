@@ -765,6 +765,7 @@ public class StudyService {
         Mono<Set<String>> monoChangeLineState = webClient.put()
                 .uri(networkModificationServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse -> Mono.error(new StudyException(LINE_MODIFICATION_FAILED)))
                 .bodyToMono(new ParameterizedTypeReference<>() {
                 });
 
