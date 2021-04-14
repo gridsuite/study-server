@@ -98,10 +98,7 @@ public class StudyService {
     @AllArgsConstructor
     @NoArgsConstructor
     private static class Receiver {
-
         private UUID studyUuid;
-
-        private String userId;
     }
 
     private WebClient webClient;
@@ -139,8 +136,8 @@ public class StudyService {
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                    LOGGER.info("Security analysis result '{}' available for study '{}' and user '{}'",
-                            resultUuid, receiverObj.getStudyUuid(), receiverObj.getUserId());
+                    LOGGER.info("Security analysis result '{}' available for study '{}'",
+                            resultUuid, receiverObj.getStudyUuid());
 
                     // update DB
                     return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), resultUuid)
@@ -249,7 +246,7 @@ public class StudyService {
                 })
                 .subscribeOn(Schedulers.boundedElastic())
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid()).subscribe())
+                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
                 .subscribe()
         );
     }
@@ -268,15 +265,15 @@ public class StudyService {
                 )
                 .subscribeOn(Schedulers.boundedElastic())
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid()).subscribe())
+                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
                 .subscribe()
         );
     }
 
-    public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String userId, String headerUserId) {
+    public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String headerUserId) {
         Mono<StudyEntity> studyMono = getStudyWithPreFetchedLoadFlowResult(studyUuid);
         return studyMono.flatMap(study -> {
-            if (study.isPrivate() && !userId.equals(headerUserId)) {
+            if (study.isPrivate() && !study.getUserId().equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
             } else {
                 return Mono.just(study);
@@ -308,9 +305,13 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(UUID studyUuid, boolean toPrivate) {
+    public StudyEntity doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
         StudyEntity studyEntity = doGetStudyWithPreFetchedLoadFlowResult(studyUuid);
         if (studyEntity != null) {
+            //only the owner of a study can change the access rights
+            if (!headerUserId.equals(studyEntity.getUserId())) {
+                throw new StudyException(NOT_ALLOWED);
+            }
             studyEntity.setPrivate(toPrivate);
         }
         return studyEntity;
@@ -320,8 +321,8 @@ public class StudyService {
         return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResult(studyUuid));
     }
 
-    public Mono<StudyEntity> getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(UUID studyUuid, boolean toPrivate) {
-        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, toPrivate));
+    public Mono<StudyEntity> getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(UUID studyUuid, String headerUserId,  boolean toPrivate) {
+        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate));
     }
 
     private Mono<BasicStudyEntity> getStudyCreationRequestByNameAndUserId(String studyName, String userId) {
@@ -329,18 +330,23 @@ public class StudyService {
     }
 
     @Transactional
-    public void doDeleteStudyIfNotCreationInProgress(UUID uuid) {
+    public void doDeleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(uuid);
         if (studyCreationRequestEntity.isEmpty()) {
-            studyRepository.deleteById(uuid);
+            studyRepository.findById(uuid).ifPresent(s -> {
+                if (s.getUserId() != userId) {
+                    throw new StudyException(NOT_ALLOWED);
+                }
+                studyRepository.deleteById(uuid);
+            });
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
         emitStudyChanged(uuid, StudyService.UPDATE_TYPE_STUDIES);
     }
 
-    public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid) {
-        return Mono.fromRunnable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid));
+    public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
+        return Mono.fromRunnable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid, userId));
     }
 
     private Mono<StudyEntity> insertStudy(UUID uuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
@@ -650,15 +656,18 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity doRenameStudy(UUID studyUuid, String newStudyName) {
+    public StudyEntity doRenameStudy(UUID studyUuid, String userId, String newStudyName) {
         return studyRepository.findById(studyUuid).map(studyEntity -> {
+            if (!studyEntity.getUserId().equals(userId)) {
+                throw new  StudyException(NOT_ALLOWED);
+            }
             studyEntity.setStudyName(newStudyName);
             return studyEntity;
         }).orElse(null);
     }
 
-    public Mono<StudyInfos> renameStudy(UUID studyUuid, String newStudyName) {
-        return Mono.fromCallable(() -> self.doRenameStudy(studyUuid, newStudyName))
+    public Mono<StudyInfos> renameStudy(UUID studyUuid, String userId, String newStudyName) {
+        return Mono.fromCallable(() -> self.doRenameStudy(studyUuid, userId, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .map(StudyService::toStudyInfos)
                 .doOnSuccess(s -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_STUDIES));
@@ -702,12 +711,8 @@ public class StudyService {
         });
     }
 
-    public Mono<StudyInfos> changeStudyAccessRights(UUID studyUuid, String userId, String headerUserId, boolean toPrivate) {
-        //only the owner of a study can change the access rights
-        if (!headerUserId.equals(userId)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
-        return getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, toPrivate)
+    public Mono<StudyInfos> changeStudyAccessRights(UUID studyUuid, String headerUserId, boolean toPrivate) {
+        return getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .map(StudyService::toStudyInfos);
     }
@@ -758,10 +763,6 @@ public class StudyService {
         return studyMono.map(StudyEntity::getLoadFlowStatus)
             .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
             .flatMap(lfs -> lfs.equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
-    }
-
-    public Mono<Void> assertUserAllowed(String userId, String headerUserId) {
-        return (userId.equals(headerUserId)) ? Mono.empty() : Mono.error(new StudyException(NOT_ALLOWED));
     }
 
     private Mono<Void> assertLoadFlowNotRunning(UUID studyUuid) {
@@ -862,9 +863,8 @@ public class StudyService {
                         .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
-    public Mono<UUID> runSecurityAnalysis(UUID studyUuid, String userId, List<String> contingencyListNames, String parameters) {
+    public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(userId);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(parameters);
 
@@ -873,7 +873,7 @@ public class StudyService {
         return networkUuid.flatMap(uuid -> {
             String receiver;
             try {
-                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid, userId)), StandardCharsets.UTF_8);
+                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid)), StandardCharsets.UTF_8);
             } catch (JsonProcessingException e) {
                 throw new UncheckedIOException(e);
             }
@@ -898,9 +898,8 @@ public class StudyService {
         );
     }
 
-    public Mono<String> getSecurityAnalysisResult(UUID studyUuid, String userId, List<String> limitTypes) {
+    public Mono<String> getSecurityAnalysisResult(UUID studyUuid, List<String> limitTypes) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(userId);
         Objects.requireNonNull(limitTypes);
 
         return getStudyByUuid(studyUuid).flatMap(entity -> {
@@ -920,9 +919,8 @@ public class StudyService {
         });
     }
 
-    public Mono<Integer> getContingencyCount(UUID studyUuid, String userId, List<String> contingencyListNames) {
+    public Mono<Integer> getContingencyCount(UUID studyUuid, List<String> contingencyListNames) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(userId);
         Objects.requireNonNull(contingencyListNames);
 
         Mono<UUID> networkUuid = getNetworkUuid(studyUuid);
@@ -1057,16 +1055,15 @@ public class StudyService {
         this.actionsServerBaseUri = actionsServerBaseUri;
     }
 
-    public Mono<Void> stopSecurityAnalysis(UUID studyUuid, String userId) {
+    public Mono<Void> stopSecurityAnalysis(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(userId);
 
         return getStudyByUuid(studyUuid).flatMap(entity -> {
             UUID resultUuid = entity.getSecurityAnalysisResultUuid();
 
             String receiver;
             try {
-                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid, userId)), StandardCharsets.UTF_8);
+                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid)), StandardCharsets.UTF_8);
             } catch (JsonProcessingException e) {
                 throw new UncheckedIOException(e);
             }
@@ -1094,8 +1091,8 @@ public class StudyService {
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                    LOGGER.info("Security analysis stopped for study '{}' and user '{}'",
-                            resultUuid, receiverObj.getStudyUuid(), receiverObj.getUserId());
+                    LOGGER.info("Security analysis stopped for study '{}'",
+                            resultUuid, receiverObj.getStudyUuid());
 
                     // delete security analysis result in database
                     return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), null)
