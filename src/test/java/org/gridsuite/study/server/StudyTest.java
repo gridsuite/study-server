@@ -10,6 +10,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
@@ -66,6 +68,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.junit.Assert.assertEquals;
@@ -96,7 +99,9 @@ public class StudyTest {
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
+    private static final String IMPORTED_BLOCKING_CASE_UUID_STRING = "22111111-0000-0000-0000-000000000000";
     private static final String IMPORTED_CASE_WITH_ERRORS_UUID_STRING = "88888888-0000-0000-0000-000000000000";
+    private static final String NEW_STUDY_CASE_UUID = "11888888-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String SECURITY_ANALYSIS_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
@@ -148,6 +153,9 @@ public class StudyTest {
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
+    //used by testGetStudyCreationRequests to control asynchronous case import
+    CountDownLatch countDownLatch;
+
     private void cleanDB() {
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
@@ -163,7 +171,7 @@ public class StudyTest {
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
         Iterable<VoltageLevel> vls = network.getVoltageLevels();
-        vls.forEach(vl -> data.add(new Resource<>(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build(), null, null)));
+        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
 
         topLevelDocument = new TopLevelDocument<>(data, null);
 
@@ -190,10 +198,11 @@ public class StudyTest {
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
         String topLevelDocumentAsString = mapper.writeValueAsString(topLevelDocument);
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
+        String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
-            public MockResponse dispatch(RecordedRequest request) {
+            public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 switch (Objects.requireNonNull(request.getPath())) {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                         return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
@@ -208,6 +217,7 @@ public class StudyTest {
                     case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
                     case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
                     case "/v1/cases/88888888-0000-0000-0000-000000000000/exists":
+                    case "/v1/cases/11888888-0000-0000-0000-000000000000/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -217,6 +227,8 @@ public class StudyTest {
 
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
+                    case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
+                    case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -233,6 +245,9 @@ public class StudyTest {
                             return new MockResponse().setResponseCode(500)
                                     .addHeader("Content-Type", "application/json; charset=utf-8")
                                     .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                        } else if (body.contains("filename=\"blockingCaseFile\"")) {
+                            return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
                         } else {
                             return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -260,9 +275,13 @@ public class StudyTest {
                                         "\"componentResults\": [{\"componentNum\":0,\"status\":\"CONVERGED\",\"iterationCount\":7, \"slackBusId\": \"c6ace316-6b39-40ec-b1d6-09ab2fe42992\", \"slackBusActivePowerMismatch\": 3.7}]\n" +
                                         "}")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID:
+                    case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING:
+                        countDownLatch.await(2, TimeUnit.SECONDS);
+                        return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
-                    case "/v1/networks?caseName=" + IMPORTED_CASE_UUID_STRING:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -1023,7 +1042,7 @@ public class StudyTest {
 
     @Test
     public void testDeleteNetwokModifications() {
-        createStudy("userId", "studyName", CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
 
         // get all modifications for the default group of a network
         webTestClient.get()
@@ -1106,6 +1125,9 @@ public class StudyTest {
                                                    boolean withStatusOk, String... errorMessage) throws Exception {
         final WebTestClient.ResponseSpec exchange;
 
+//        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
+//            MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm", "text/xml", is);
+
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
 
@@ -1125,7 +1147,9 @@ public class StudyTest {
                 return exchange;
             }
 
-            exchange.expectStatus().isOk();
+            exchange.expectStatus().isOk()
+                    .expectBody(BasicStudyInfos.class)
+                    .value(createMatcherStudyBasicInfos(userId, studyName, isPrivate));
         }
 
         // assert that the broker message has been sent a study creation request message
@@ -1151,6 +1175,125 @@ public class StudyTest {
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         return exchange;
+    }
+
+    @Test
+    public void testGetStudyCreationRequests() throws Exception {
+        countDownLatch = new CountDownLatch(1);
+        //insert a study with a case (multipartfile)
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
+            MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm", "text/xml", is);
+
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("caseFile", mockFile.getBytes())
+                    .filename("blockingCaseFile")
+                    .contentType(MediaType.TEXT_XML);
+
+            webTestClient.post()
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s3", "description", "true")
+                    .header("userId", "userId")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody(BasicStudyInfos.class)
+                    .value(createMatcherStudyBasicInfos("userId", "s3", true));
+        }
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(BasicStudyInfos.class)
+                .value(requests -> requests.get(0),
+                        createMatcherStudyBasicInfos("userId", "s3", true));
+
+        countDownLatch.countDown();
+
+        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
+        Thread.sleep(1000);
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(BasicStudyInfos.class)
+                .isEqualTo(List.of());
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(requests -> requests.get(0),
+                        createMatcherCreatedStudyBasicInfos("s3", "userId", "XIIDM", true));
+
+        // drop the broker message for study creation request (creation)
+        output.receive(1000);
+        // drop the broker message for study creation
+        output.receive(1000);
+        // drop the broker message for study creation request (deletion)
+        output.receive(1000);
+
+        countDownLatch = new CountDownLatch(1);
+
+        //insert a study
+        webTestClient.post()
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", "NewStudy", NEW_STUDY_CASE_UUID, DESCRIPTION, "false")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(BasicStudyInfos.class)
+                .value(createMatcherStudyBasicInfos("userId", "NewStudy", false));
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(BasicStudyInfos.class)
+                .value(requests -> requests.get(0),
+                        createMatcherStudyBasicInfos("userId", "NewStudy", false));
+
+        countDownLatch.countDown();
+
+        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
+        Thread.sleep(1000);
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(BasicStudyInfos.class)
+                .isEqualTo(List.of());
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(requests -> requests.get(0),
+                        createMatcherCreatedStudyBasicInfos("NewStudy", "userId", "XIIDM", false));
+
+        // drop the broker message for study creation request (creation)
+        output.receive(1000);
+        // drop the broker message for study creation
+        output.receive(1000);
+        // drop the broker message for study creation request (deletion)
+        output.receive(1000);
+
+        assertNull(output.receive(1000));
     }
 
     @After

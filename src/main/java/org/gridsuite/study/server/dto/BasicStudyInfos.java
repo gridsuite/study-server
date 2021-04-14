@@ -24,11 +24,13 @@ import java.util.UUID;
 @ToString
 @ApiModel("Basic study attributes")
 public class BasicStudyInfos {
-    UUID id;
+    UUID studyUuid;
 
     String studyName;
 
     String userId;
 
     ZonedDateTime creationDate;
+
+    boolean studyPrivate;
 }

@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.StudyInfos;
 
 /**
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos> {

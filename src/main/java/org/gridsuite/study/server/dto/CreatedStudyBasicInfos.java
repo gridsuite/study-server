@@ -22,9 +22,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString(callSuper = true)
-@ApiModel("Basic study in creation attributes")
+@ApiModel("Basic study attributes after creation succeeded ")
 public class CreatedStudyBasicInfos extends BasicStudyInfos {
     String caseFormat;
-
-    boolean studyPrivate;
 }
