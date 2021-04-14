@@ -55,6 +55,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
@@ -277,6 +278,38 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/lockout":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("[\"s1\", \"s2\"]")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/trip":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("[\"s2\", \"s3\"]")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/energiseEnd?side=ONE":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("[\"s1\", \"s3\"]")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/switchOn":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("[\"s1\", \"s3\"]")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/lockout":
+                        return new MockResponse().setResponseCode(500);
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/trip":
+                        return new MockResponse().setResponseCode(500);
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/energiseEnd?side=TWO":
+                        return new MockResponse().setResponseCode(500);
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/switchOn":
+                        return new MockResponse().setResponseCode(500);
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
                         return new MockResponse().setResponseCode(200)
@@ -1420,6 +1453,105 @@ public class StudyTest {
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", NEW_STUDY_CASE_UUID)));
+    }
+
+    @Test
+    public void testUpdateLines() throws Exception {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        // lockout line
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/lockout", studyNameUserIdUuid, "line12")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s2"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/lockout", studyNameUserIdUuid, "lineFailedId")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+
+        // trip line
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/trip", studyNameUserIdUuid, "line23")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2", "s3"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/trip", studyNameUserIdUuid, "lineFailedId")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+
+        // lockout line
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/energiseEnd?side=ONE", studyNameUserIdUuid, "line13")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/energiseEnd?side=TWO", studyNameUserIdUuid, "lineFailedId")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+
+        // lockout line
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/switchOn", studyNameUserIdUuid, "line13")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/switchOn", studyNameUserIdUuid, "lineFailedId")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+
+        var requests = getRequestsDone(8);
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line12/lockout", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line23/trip", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/energiseEnd?side=ONE", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/switchOn", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/lockout", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/trip", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/energiseEnd?side=TWO", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/switchOn", NETWORK_UUID_STRING)));
+    }
+
+    private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
+        // assert that the broker message has been sent
+        Message<byte[]> messageStudyUpdate = output.receive(1000);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(modifiedSubstationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+
+        // assert that the broker message has been sent
+        Message<byte[]> messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals("loadflow_status", headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent
+        Message<byte[]> messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        MessageHeaders headersSwitch = messageSwitch.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent
+        messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        headersSwitch = messageSwitch.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_LINE, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
     @After
