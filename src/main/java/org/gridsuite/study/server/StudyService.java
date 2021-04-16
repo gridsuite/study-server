@@ -236,10 +236,9 @@ public class StudyService {
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
-        Mono<BasicStudyInfos> basicStudyInfosMono = insertStudyCreationRequest(studyName, userId, isPrivate)
-                .map(StudyService::toBasicStudyInfos);
-
-        return basicStudyInfosMono.doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
+        return insertStudyCreationRequest(studyName, userId, isPrivate)
+                .map(StudyService::toBasicStudyInfos)
+                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, studyName), getCaseFormat(caseUuid))
                 .flatMap(t -> {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
@@ -253,20 +252,18 @@ public class StudyService {
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
-        Mono<BasicStudyInfos> basicStudyInfosMono = insertStudyCreationRequest(studyName, userId, isPrivate)
-                .map(StudyService::toBasicStudyInfos);
-
-        return basicStudyInfosMono.doOnSuccess(s -> importCase(caseFile, studyName)
-                .flatMap(uuid -> Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
+        return insertStudyCreationRequest(studyName, userId, isPrivate)
+                .map(StudyService::toBasicStudyInfos)
+                .doOnSuccess(s -> importCase(caseFile, studyName).flatMap(uuid ->
+                        Mono.zip(persistentStore(uuid, studyName), getCaseFormat(uuid))
                         .flatMap(t -> {
                             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                             return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                     description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                        })
-                )
+                        }))
                 .subscribeOn(Schedulers.boundedElastic())
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())  // delete the study if the creation has been canceled
                 .subscribe()
         );
     }
