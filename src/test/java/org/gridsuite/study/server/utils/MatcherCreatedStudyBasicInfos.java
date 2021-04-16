@@ -20,7 +20,7 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> extends MatcherBasicStudyInfos<T> {
 
     public static MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> createMatcherCreatedStudyBasicInfos(UUID studyUuid, String studyName, String userId,
-                                                                                                            String caseFormat, boolean studyPrivate, String description) {
+                                                                                                            String caseFormat, String description, boolean studyPrivate) {
         return new MatcherCreatedStudyBasicInfos<>(CreatedStudyBasicInfos.builder()
                 .studyUuid(studyUuid)
                 .studyName(studyName)
