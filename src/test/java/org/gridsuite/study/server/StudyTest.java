@@ -450,7 +450,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false, "description"));
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", "description", false));
 
         //insert the same study => 409 conflict
         webTestClient.post()
@@ -483,7 +483,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId2", "UCTE", true, "description"));
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId2", "UCTE", "description", true));
 
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
@@ -851,7 +851,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE", false, "description"));
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE",  "description", false));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -862,7 +862,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE", false, "description"));
+                        MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos("studyName", "userId", "UCTE",  "description", false));
 
         //rename the study
         String newStudyName = "newName";
@@ -876,7 +876,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(CreatedStudyBasicInfos.class)
-                .value(MatcherStudyInfos.createMatcherCreatedStudyBasicInfos("newName", "userId", "UCTE", false, "description"));
+                .value(MatcherStudyInfos.createMatcherCreatedStudyBasicInfos("newName", "userId", "UCTE",  "description", false));
 
         // broker message for study rename
         messageLFStatus = output.receive(1000);
