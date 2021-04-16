@@ -875,8 +875,8 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBody(StudyInfos.class)
-                .value(MatcherStudyInfos.createMatcherStudyInfos("newName", "userId", "UCTE", "description", false, LoadFlowStatus.NOT_DONE));
+                .expectBody(CreatedStudyBasicInfos.class)
+                .value(MatcherStudyInfos.createMatcherCreatedStudyBasicInfos("newName", "userId", "UCTE", false, "description"));
 
         // broker message for study rename
         messageLFStatus = output.receive(1000);

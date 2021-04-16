@@ -650,10 +650,10 @@ public class StudyService {
         }).orElse(null);
     }
 
-    public Mono<StudyInfos> renameStudy(String studyName, String userId, String newStudyName) {
+    public Mono<CreatedStudyBasicInfos> renameStudy(String studyName, String userId, String newStudyName) {
         return Mono.fromCallable(() -> self.doRenameStudy(studyName, userId, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .map(StudyService::toStudyInfos)
+                .map(StudyService::toCreatedStudyBasicInfos)
                 .doOnSuccess(s -> emitStudyChanged(studyName, StudyService.UPDATE_TYPE_STUDIES));
     }
 
