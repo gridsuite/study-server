@@ -25,7 +25,8 @@ public class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeM
 
     @Override
     public boolean matchesSafely(T s) {
-        return reference.getStudyName().equals(s.getStudyName())
+        return reference.getStudyUuid().equals(s.getStudyUuid())
+                && reference.getStudyName().equals(s.getStudyName())
                 && reference.getUserId().equals(s.getUserId())
                 && s.getCreationDate().toEpochSecond() - reference.getCreationDate().toEpochSecond() < 2;
     }
