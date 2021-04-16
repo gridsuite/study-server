@@ -221,6 +221,7 @@ public class StudyService {
                 .studyUuid(entity.getId())
                 .caseFormat(entity.getCaseFormat())
                 .studyPrivate(entity.isPrivate())
+                .description(entity.getDescription())
                 .build();
     }
 

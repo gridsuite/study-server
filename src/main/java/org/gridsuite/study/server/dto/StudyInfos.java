@@ -20,9 +20,6 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @ApiModel("Study attributes")
 public class StudyInfos extends CreatedStudyBasicInfos {
-
-    String description;
-
     LoadFlowStatus loadFlowStatus;
 
     LoadFlowResult loadFlowResult;
