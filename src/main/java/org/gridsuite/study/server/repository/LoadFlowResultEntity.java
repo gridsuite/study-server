@@ -25,8 +25,8 @@ import java.util.*;
 @Table(name = "loadFlowResult")
 public class LoadFlowResultEntity {
 
-    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEmbeddable> componentResultEmbeddables) {
-        this(null, ok, metrics, logs, componentResultEmbeddables);
+    public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEmbeddable> componentResults) {
+        this(null, ok, metrics, logs, componentResults);
     }
 
     @Id

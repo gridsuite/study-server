@@ -67,7 +67,8 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -203,7 +204,23 @@ public class StudyTest {
         final Dispatcher dispatcher = new Dispatcher() {
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
-                switch (Objects.requireNonNull(request.getPath())) {
+                String path = Objects.requireNonNull(request.getPath());
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
+                            .setHeader("receiver", "%7B%22studyUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .build());
+                    return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop.*")) {
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
+                            .setHeader("receiver", "%7B%22studyName%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .build(), "sa.stopped");
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                }
+                switch (path) {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                         return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -333,14 +350,6 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=ls&receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
-                        input.send(MessageBuilder.withPayload("")
-                                .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                                .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
-                                .build());
-                        return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
                     case "/v1/results/" + SECURITY_ANALYSIS_UUID + "?limitType":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -359,14 +368,6 @@ public class StudyTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/invalidate-status":
-                        return new MockResponse().setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522studyName%2522%253A%2522newName%2522%252C%2522userId%2522%253A%2522userId%2522%257D":
-                        input.send(MessageBuilder.withPayload("")
-                                .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                                .setHeader("receiver", "%7B%22studyName%22%3A%22newName%22%2C%22userId%22%3A%22userId%22%7D")
-                                .build(), "sa.stopped");
                         return new MockResponse().setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -406,6 +407,7 @@ public class StudyTest {
 
         //insert a study
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
 
         //insert a study with a non existing case and except exception
         webTestClient.post()
@@ -425,20 +427,12 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
-
-        //insert the same study => 409 conflict
-        webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", STUDY_NAME, CASE_UUID, DESCRIPTION, "false")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isEqualTo(409)
-                .expectBody()
-                .jsonPath("$")
-                .isEqualTo(STUDY_ALREADY_EXISTS.name());
+                        createMatcherCreatedStudyBasicInfos(studyUuid, STUDY_NAME, "userId", "UCTE", "description", false));
 
         //insert the same study but with another user (should work)
+        //even with the same name should work
         createStudy("userId2", STUDY_NAME, CASE_UUID, DESCRIPTION, true, true);
+        studyUuid = studyRepository.findByUserIdAndStudyName("userId2", STUDY_NAME).get().getId();
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -447,39 +441,35 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
-                .value(studies -> studies.get(1),
-                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
+                .value(studies -> studies.get(0),
+                        createMatcherCreatedStudyBasicInfos(studyUuid, STUDY_NAME, "userId2", "UCTE", DESCRIPTION, true));
 
         //insert a study with a case (multipartfile)
         createStudy("userId", "s2", TEST_FILE, "desc", true, true);
-
-        //Import the same case -> 409 conflict
-        WebTestClient.ResponseSpec exchange = createStudy("userId", "s2", TEST_FILE, "desc", false, false);
-        exchange.expectStatus().isEqualTo(409)
-                .expectBody()
-                .jsonPath("$")
-                .isEqualTo(STUDY_ALREADY_EXISTS.name());
+        UUID s2Uuid = studyRepository.findByUserIdAndStudyName("userId", "s2").get().getId();
+        //UUID s2Uuid = studyRepository.findAll().get(2).getId();
 
         // check the study s2
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}", "s2")
+                .uri("/v1/studies/{studyUuid}", s2Uuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos("s2", "userId", "XIIDM", "desc", true));
+                .value(createMatcherStudyInfos(s2Uuid, "s2", "userId", "XIIDM", "desc", true));
 
         //try to get the study s2 with another user -> unauthorized because study is private
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}", "s2")
+                .uri("/v1/studies/{studyUuid}", s2Uuid)
                 .header("userId", "userId2")
                 .exchange()
                 .expectStatus().isForbidden();
 
+        UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}", "s3")
+                .uri("/v1/studies/{studyUuid}", randomUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isNotFound()
@@ -487,7 +477,7 @@ public class StudyTest {
 
         // check if a non existing study exists
         webTestClient.get()
-                .uri(STUDY_EXIST_URL, "userId", "s3")
+                .uri(STUDY_EXIST_URL, "userId", randomUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -503,9 +493,10 @@ public class StudyTest {
                 .expectBody(String.class)
                 .isEqualTo("true");
 
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         //get the voltage level diagram svg
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg?useName=false", "userId", STUDY_NAME, "voltageLevelId")
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, "voltageLevelId")
                 .exchange()
                 .expectHeader().contentType(MediaType.APPLICATION_XML)
                 .expectStatus().isOk()
@@ -513,13 +504,13 @@ public class StudyTest {
 
         //get the voltage level diagram svg from a study that doesn't exist
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg", "userId", "notExistingStudy", "voltageLevelId")
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg", randomUuid, "voltageLevelId")
                 .exchange()
                 .expectStatus().isNotFound();
 
         //get the voltage level diagram svg and metadata
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", "userId", STUDY_NAME, "voltageLevelId")
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, "voltageLevelId")
                 .exchange()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectStatus().isOk()
@@ -528,13 +519,13 @@ public class StudyTest {
 
         //get the voltage level diagram svg and metadata from a study that doesn't exist
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", "userId", "notExistingStudy", "voltageLevelId")
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", randomUuid, "voltageLevelId")
                 .exchange()
                 .expectStatus().isNotFound();
 
         // get the substation diagram svg
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg?useName=false", "userId", STUDY_NAME, "substationId")
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, "substationId")
                 .exchange()
                 .expectHeader().contentType(MediaType.APPLICATION_XML)
                 .expectStatus().isOk()
@@ -542,13 +533,13 @@ public class StudyTest {
 
         // get the substation diagram svg from a study that doesn't exist
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg", "userId", "notExistingStudy", "substationId")
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg", randomUuid, "substationId")
                 .exchange()
                 .expectStatus().isNotFound();
 
         // get the substation diagram svg and metadata
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata?useName=false", "userId", STUDY_NAME, "substationId")
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, "substationId")
                 .exchange()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectStatus().isOk()
@@ -557,13 +548,13 @@ public class StudyTest {
 
         // get the substation diagram svg and metadata from a study that doesn't exist
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/substations/{substationId}/svg-and-metadata", "userId", "notExistingStudy", "substationId")
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata", randomUuid, "substationId")
                 .exchange()
                 .expectStatus().isNotFound();
 
         //get voltage levels
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network/voltage-levels", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(VoltageLevelInfos.class)
@@ -582,119 +573,119 @@ public class StudyTest {
 
         //get the lines-graphics of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/geo-data/lines/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/geo-data/lines/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the substation-graphics of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/geo-data/substations/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/geo-data/substations/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the lines map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/lines/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/lines/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the substation map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/substations/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/substations/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the 2 windings transformers map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/2-windings-transformers/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/2-windings-transformers/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the 3 windings transformers map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/3-windings-transformers/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/3-windings-transformers/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the generators map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/generators/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/generators/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the batteries map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/batteries/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/batteries/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the dangling lines map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/dangling-lines/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/dangling-lines/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the hvdc lines map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/hvdc-lines/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/hvdc-lines/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the lcc converter stations map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/lcc-converter-stations/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/lcc-converter-stations/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the vsc converter stations map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/vsc-converter-stations/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/vsc-converter-stations/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the loads map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/loads/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/loads/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the shunt compensators map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/shunt-compensators/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/shunt-compensators/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get the static var compensators map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/static-var-compensators/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/static-var-compensators/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //get all map data of a network
         webTestClient.get()
-                .uri("/v1/{userId}/studies/{studyName}/network-map/all/", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-map/all/", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //delete existing study s2
         webTestClient.delete()
-                .uri("/v1/userId/studies/{studyName}/", "s2")
+                .uri("/v1/studies/" + s2Uuid + "/", "s2")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
@@ -703,7 +694,7 @@ public class StudyTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals("s2", headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(s2Uuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         //expect only 1 study (public one) since the other is private and we use another userId
@@ -715,31 +706,31 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
+                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, STUDY_NAME, "userId", "UCTE", "description", false));
 
         //rename the study
         String newStudyName = "newName";
         RenameStudyAttributes renameStudyAttributes = new RenameStudyAttributes(newStudyName);
 
         webTestClient.post()
-                .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
+                .uri("/v1/studies/" + studyNameUserIdUuid + "/rename")
                 .header("userId", "userId")
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", false));
+                .expectBody(CreatedStudyBasicInfos.class)
+                .value(createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", false));
 
         // broker message for study rename
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(studyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         webTestClient.post()
-                .uri("/v1/userId/studies/" + STUDY_NAME + "/rename")
+                .uri("/v1/studies/" + randomUuid + "/rename")
                 .header("userId", "userId")
                 .body(BodyInserters.fromValue(renameStudyAttributes))
                 .exchange()
@@ -747,23 +738,23 @@ public class StudyTest {
 
         //run a loadflow
         webTestClient.put()
-                .uri("/v1/userId/studies/" + newStudyName + "/loadflow/run")
+                .uri("/v1/studies/" + studyNameUserIdUuid + "/loadflow/run")
                 .exchange()
                 .expectStatus().isOk();
         // assert that the broker message has been sent
         Message<byte[]> messageLfStatus = output.receive(1000);
         assertEquals("", new String(messageLfStatus.getPayload()));
         MessageHeaders headersLF = messageLfStatus.getHeaders();
-        assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headersLF.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-        assertEquals(LoadFlowStatus.CONVERGED, Objects.requireNonNull(this.studyService.getStudy(newStudyName, "userId").block()).getLoadFlowStatus());
+
         Message<byte[]> messageLf = output.receive(1000);
-        assertEquals("newName", messageLf.getHeaders().get(HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headersLF.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
 
         //try to run a another loadflow
         webTestClient.put()
-                .uri("/v1/userId/studies/" + "newName" + "/loadflow/run")
+                .uri("/v1/studies/" + studyNameUserIdUuid + "/loadflow/run")
                 .exchange()
                 .expectStatus().isEqualTo(403)
                 .expectBody()
@@ -780,7 +771,7 @@ public class StudyTest {
 
         //export a network
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}/export-network/{format}", newStudyName, "XIIDM")
+                .uri("/v1/studies/{studyUuid}/export-network/{format}", studyNameUserIdUuid, "XIIDM")
                 .exchange()
                 .expectStatus().isOk();
 
@@ -792,23 +783,23 @@ public class StudyTest {
 
         // run security analysis
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/security-analysis/run?contingencyListName={contingencyListName}", newStudyName, CONTIGENCY_LIST_NAME)
+                .uri("/v1/studies/{studyUuid}/security-analysis/run?contingencyListName={contingencyListName}", studyNameUserIdUuid, CONTIGENCY_LIST_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(UUID.class)
                 .isEqualTo(UUID.fromString(SECURITY_ANALYSIS_UUID));
 
         Message<byte[]> securityAnalysisStatusMessage = output.receive(1000);
-        assertEquals(newStudyName, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
 
         Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
-        assertEquals(newStudyName, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
 
         // get security analysis result
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}/security-analysis/result", newStudyName)
+                .uri("/v1/studies/{studyUuid}/security-analysis/result", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)
@@ -816,7 +807,7 @@ public class StudyTest {
 
         // get security analysis status
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}/security-analysis/status", newStudyName)
+                .uri("/v1/studies/{studyUuid}/security-analysis/status", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class)
@@ -824,17 +815,17 @@ public class StudyTest {
 
         // stop security analysis
         webTestClient.put()
-                .uri("/v1/userId/studies/{studyName}/security-analysis/stop", newStudyName)
+                .uri("/v1/studies/{studyUuid}/security-analysis/stop", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk();
 
         securityAnalysisStatusMessage = output.receive(1000);
-        assertEquals(newStudyName, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
 
         // get contingency count
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}/contingency-count?contingencyListName={contingencyListName}", newStudyName, CONTIGENCY_LIST_NAME)
+                .uri("/v1/studies/{studyUuid}/contingency-count?contingencyListName={contingencyListName}", studyNameUserIdUuid, CONTIGENCY_LIST_NAME)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(Integer.class)
@@ -842,30 +833,30 @@ public class StudyTest {
 
         // make public study private
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .uri("/v1/studies/{studyUuid}/private", studyNameUserIdUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
+                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study private should work
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .uri("/v1/studies/{studyUuid}/private", studyNameUserIdUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
+                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
 
         // make private study public
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/public", newStudyName)
+                .uri("/v1/studies/{studyUuid}/public", studyNameUserIdUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos("newName", "userId", "UCTE", "description", false, LoadFlowStatus.CONVERGED));
+                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", false, LoadFlowStatus.CONVERGED));
 
         // drop the broker message for study deletion (due to right access change)
         output.receive(1000);
@@ -874,35 +865,36 @@ public class StudyTest {
 
         // try to change access rights of a non-existing study
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/public", "nonExistingStudy")
+                .uri("/v1/studies/{studyUuid}/public", randomUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isNotFound();
 
         // try to change access rights of a non-existing study
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/private", "nonExistingStudy")
+                .uri("/v1/studies/{studyUuid}/private", randomUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isNotFound();
+        UUID studyNameUserId2Uuid = studyRepository.findAll().get(1).getId();
 
         // try to change access right for a study of another user -> forbidden
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/private", newStudyName)
+                .uri("/v1/studies/{studyUuid}/private", studyNameUserId2Uuid)
                 .header("userId", "notAuth")
                 .exchange()
                 .expectStatus().isForbidden();
 
         // get default LoadFlowParameters
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
+                .uri("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo(LOAD_PARAMETERS_JSON);
 
         // setting loadFlow Parameters
         webTestClient.post()
-                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
+                .uri("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(new LoadFlowParameters(
@@ -923,23 +915,22 @@ public class StudyTest {
 
         // getting setted values
         webTestClient.get()
-                .uri("/v1/userId/studies/{studyName}/loadflow/parameters", newStudyName)
+                .uri("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo(LOAD_PARAMETERS_JSON2);
 
         // run loadflow with new parameters
         webTestClient.put()
-                .uri("/v1/userId/studies/{studyName}/loadflow/run", newStudyName)
+                .uri("/v1/studies/{studyUuid}/loadflow/run", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk();
         // assert that the broker message has been sent
         messageLf = output.receive(1000);
         assertEquals("", new String(messageLf.getPayload()));
         headersLF = messageLf.getHeaders();
-        assertEquals("newName", headersLF.get(HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headersLF.get(studyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-
         output.receive(1000);
         output.receive(1000);
         output.receive(1000);
@@ -950,10 +941,11 @@ public class StudyTest {
     @Test
     public void testNetworkModificationSwitch() {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         //update switch
         webTestClient.put()
-                .uri("/v1/{userId}/studies/{studyName}/network-modification/switches/{switchId}?open=true", "userId", STUDY_NAME, "switchId")
+                .uri("/v1/studies/{studyUuid}/network-modification/switches/{switchId}?open=true", studyNameUserIdUuid, "switchId")
                 .exchange()
                 .expectStatus().isOk();
 
@@ -961,26 +953,26 @@ public class StudyTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDY, headers.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(substationsSet, headers.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SWITCH, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         webTestClient.get()
@@ -991,7 +983,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
+                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, STUDY_NAME, "userId", "UCTE", DESCRIPTION, false));
 
         assertNull(output.receive(1000));
     }
@@ -999,10 +991,11 @@ public class StudyTest {
     @Test
     public void testNetworkModificationEquipment() {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         //update equipment
         webTestClient.put()
-                .uri("/v1/{userId}/studies/{studyName}/network-modification/groovy", "userId", STUDY_NAME)
+                .uri("/v1/studies/{studyUuid}/network-modification/groovy", studyNameUserIdUuid)
                 .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
                 .exchange()
                 .expectStatus().isOk();
@@ -1011,20 +1004,20 @@ public class StudyTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals("study", headers.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(substationsSet, headers.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(STUDY_NAME, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyNameUserIdUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         webTestClient.get()
@@ -1035,7 +1028,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(STUDY_NAME, "userId", "UCTE", false));
+                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, STUDY_NAME, "userId", "UCTE", DESCRIPTION, false));
 
         assertNull(output.receive(1000));
     }
@@ -1043,10 +1036,11 @@ public class StudyTest {
     @Test
     public void testDeleteNetwokModifications() {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         // get all modifications for the default group of a network
         webTestClient.get()
-                .uri("/v1/userId/studies/studyName/network/modifications")
+                .uri("/v1/studies/{studyUuid}/network/modifications", studyNameUserIdUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
@@ -1056,7 +1050,7 @@ public class StudyTest {
 
         // delete all modifications for the default group of a network
         webTestClient.delete()
-                .uri("/v1/userId/studies/studyName/network/modifications")
+                .uri("/v1/studies/{studyUuid}/network/modifications", studyNameUserIdUuid)
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus()
@@ -1096,18 +1090,20 @@ public class StudyTest {
 
         exchange.expectStatus().isOk();
 
+        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
+
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(StudyService.HEADER_ERROR));
 
@@ -1115,7 +1111,7 @@ public class StudyTest {
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         return exchange;
@@ -1124,10 +1120,7 @@ public class StudyTest {
     private WebTestClient.ResponseSpec createStudy(String userId, String studyName, String fileName, String description, boolean isPrivate,
                                                    boolean withStatusOk, String... errorMessage) throws Exception {
         final WebTestClient.ResponseSpec exchange;
-
-//        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-//            MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm", "text/xml", is);
-
+        final UUID studyUuid;
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
 
@@ -1147,23 +1140,26 @@ public class StudyTest {
                 return exchange;
             }
 
+            studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
+
             exchange.expectStatus().isOk()
                     .expectBody(BasicStudyInfos.class)
-                    .value(createMatcherStudyBasicInfos(userId, studyName, isPrivate));
+                    .value(createMatcherStudyBasicInfos(studyUuid, userId, studyName, isPrivate));
         }
 
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(errorMessage.length == 0 ? studyUuid : null, headers.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(errorMessage.length != 0 ? studyName : null, headers.get(StudyService.HEADER_STUDY_NAME));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(StudyService.HEADER_ERROR));
 
@@ -1171,7 +1167,7 @@ public class StudyTest {
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(studyName, headers.get(StudyService.HEADER_STUDY_NAME));
+        assertEquals(studyUuid, headers.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
         return exchange;
@@ -1180,6 +1176,7 @@ public class StudyTest {
     @Test
     public void testGetStudyCreationRequests() throws Exception {
         countDownLatch = new CountDownLatch(1);
+
         //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
             MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm", "text/xml", is);
@@ -1190,15 +1187,17 @@ public class StudyTest {
                     .contentType(MediaType.TEXT_XML);
 
             webTestClient.post()
-                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s3", "description", "true")
+                    .uri(STUDIES_URL + "?description={description}&isPrivate={isPrivate}", "s3", DESCRIPTION, "true")
                     .header("userId", "userId")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .exchange()
                     .expectStatus().isOk()
                     .expectBody(BasicStudyInfos.class)
-                    .value(createMatcherStudyBasicInfos("userId", "s3", true));
+                    .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId", "s3", true));
         }
+
+        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
         webTestClient.get()
                 .uri("/v1/study_creation_requests")
@@ -1208,7 +1207,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(BasicStudyInfos.class)
                 .value(requests -> requests.get(0),
-                        createMatcherStudyBasicInfos("userId", "s3", true));
+                        createMatcherStudyBasicInfos(studyUuid, "userId", "s3", true));
 
         countDownLatch.countDown();
 
@@ -1232,7 +1231,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(requests -> requests.get(0),
-                        createMatcherCreatedStudyBasicInfos("s3", "userId", "XIIDM", true));
+                        createMatcherCreatedStudyBasicInfos(studyUuid, "s3", "userId", "XIIDM", DESCRIPTION, true));
 
         // drop the broker message for study creation request (creation)
         output.receive(1000);
@@ -1250,7 +1249,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(BasicStudyInfos.class)
-                .value(createMatcherStudyBasicInfos("userId", "NewStudy", false));
+                .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId", "NewStudy", false));
+
+        studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
         webTestClient.get()
                 .uri("/v1/study_creation_requests")
@@ -1260,7 +1261,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(BasicStudyInfos.class)
                 .value(requests -> requests.get(0),
-                        createMatcherStudyBasicInfos("userId", "NewStudy", false));
+                        createMatcherStudyBasicInfos(studyUuid, "userId", "NewStudy", false));
 
         countDownLatch.countDown();
 
@@ -1284,7 +1285,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(requests -> requests.get(0),
-                        createMatcherCreatedStudyBasicInfos("NewStudy", "userId", "XIIDM", false));
+                        createMatcherCreatedStudyBasicInfos(studyUuid, "NewStudy", "userId", "XIIDM", DESCRIPTION, false));
 
         // drop the broker message for study creation request (creation)
         output.receive(1000);

@@ -25,4 +25,6 @@ import lombok.experimental.SuperBuilder;
 @ApiModel("Basic study attributes after creation succeeded ")
 public class CreatedStudyBasicInfos extends BasicStudyInfos {
     String caseFormat;
+
+    String description;
 }

@@ -26,10 +26,9 @@ import javax.persistence.*;
 @Entity
 @Builder
 @Table(name = "study", indexes = {@Index(name = "studyEntity_isPrivate_index", columnList = "isPrivate"), @Index(name = "studyEntity_userId_index", columnList = "userId")})
-public class StudyEntity implements BasicStudyEntity {
+public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
     @Id
-    @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 

@@ -22,9 +22,6 @@ import lombok.experimental.SuperBuilder;
 @ToString(callSuper = true)
 @ApiModel("Study attributes")
 public class StudyInfos extends CreatedStudyBasicInfos {
-
-    String description;
-
     LoadFlowStatus loadFlowStatus;
 
     LoadFlowResult loadFlowResult;

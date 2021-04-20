@@ -8,6 +8,7 @@ package org.gridsuite.study.server.utils;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.UUID;
 
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.StudyInfos;
@@ -18,14 +19,15 @@ import org.gridsuite.study.server.dto.StudyInfos;
  */
 public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos> {
 
-    public static MatcherStudyInfos createMatcherStudyInfos(String studyName, String userId, String caseFormat,
+    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String studyName, String userId, String caseFormat,
                                                             String description, boolean studyPrivate) {
-        return createMatcherStudyInfos(studyName, userId, caseFormat, description, studyPrivate, LoadFlowStatus.NOT_DONE);
+        return createMatcherStudyInfos(studyUuid, studyName, userId, caseFormat, description, studyPrivate, LoadFlowStatus.NOT_DONE);
     }
 
-    public static MatcherStudyInfos createMatcherStudyInfos(String studyName, String userId, String caseFormat,
+    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String studyName, String userId, String caseFormat,
                                                             String description, boolean studyPrivate, LoadFlowStatus loadFlowStatus) {
         return new MatcherStudyInfos(StudyInfos.builder()
+                .studyUuid(studyUuid)
                 .studyName(studyName)
                 .userId(userId)
                 .caseFormat(caseFormat)

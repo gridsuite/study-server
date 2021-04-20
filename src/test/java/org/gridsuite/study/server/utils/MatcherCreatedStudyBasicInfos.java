@@ -8,6 +8,7 @@ package org.gridsuite.study.server.utils;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.UUID;
 
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 
@@ -17,13 +18,16 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
  */
 public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> extends MatcherBasicStudyInfos<T> {
 
-    public static MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> createMatcherCreatedStudyBasicInfos(String studyName, String userId, String caseFormat, boolean studyPrivate) {
+    public static MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> createMatcherCreatedStudyBasicInfos(UUID studyUuid, String studyName, String userId,
+                                                                                                            String caseFormat, String description, boolean studyPrivate) {
         return new MatcherCreatedStudyBasicInfos<>(CreatedStudyBasicInfos.builder()
+                .studyUuid(studyUuid)
                 .studyName(studyName)
                 .userId(userId)
                 .caseFormat(caseFormat)
                 .studyPrivate(studyPrivate)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
+                .description(description)
                 .build());
     }
 
@@ -35,6 +39,7 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
     public boolean matchesSafely(T s) {
         return super.matchesSafely(s)
                 && reference.getCaseFormat().equals(s.getCaseFormat())
+                && reference.getDescription().equals(s.getDescription())
                 && reference.isStudyPrivate() == s.isStudyPrivate();
     }
 }
