@@ -13,6 +13,7 @@ import java.util.logging.Level;
 import com.powsybl.loadflow.LoadFlowParameters;
 import io.swagger.annotations.*;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -343,7 +344,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/network/modifications")
     @ApiOperation(value = "Get all network modifications", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of network modifications")})
-    public ResponseEntity<Flux<Map<String, Object>>> getModifications(@PathVariable("studyUuid") UUID studyUuid) {
+    public ResponseEntity<Flux<ModificationInfos>> getModifications(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getModifications(studyUuid));
     }
 
@@ -368,8 +369,8 @@ public class StudyController {
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
     public ResponseEntity<Mono<CreatedStudyBasicInfos>> renameStudy(@RequestHeader("userId") String headerUserId,
-                                                        @PathVariable("studyUuid") UUID studyUuid,
-                                                        @RequestBody RenameStudyAttributes renameStudyAttributes) {
+                                                                    @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
         Mono<CreatedStudyBasicInfos> studyMono = studyService.renameStudy(studyUuid, headerUserId, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);

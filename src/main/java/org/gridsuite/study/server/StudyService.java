@@ -26,12 +26,13 @@ import com.powsybl.contingency.Contingency;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
-import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.TopLevelDocument;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ElementaryModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,7 +116,6 @@ public class StudyService {
     private String securityAnalysisServerBaseUri;
     private String actionsServerBaseUri;
 
-    private NetworkStoreService networkStoreService;
     private StudyRepository studyRepository;
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
@@ -171,7 +171,6 @@ public class StudyService {
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
             @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
-            NetworkStoreService networkStoreService,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             WebClient.Builder webClientBuilder,
@@ -187,7 +186,6 @@ public class StudyService {
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
         this.actionsServerBaseUri = actionsServerBaseUri;
 
-        this.networkStoreService = networkStoreService;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.webClient = webClientBuilder.build();
@@ -336,7 +334,7 @@ public class StudyService {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(uuid);
         Optional<UUID> networkUuid = Optional.empty();
         if (studyCreationRequestEntity.isEmpty()) {
-            networkUuid = findNetworkUuid(uuid);
+            networkUuid = doGetNetworkUuid(uuid);
             studyRepository.findById(uuid).ifPresent(s -> {
                 if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
@@ -351,14 +349,29 @@ public class StudyService {
     }
 
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
-        return Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid, userId))
+        var allDeletedInParallel = Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid, userId))
                 .flatMap(Mono::justOrEmpty)
-                .map(networkUuid -> {
-                    networkStoreService.deleteNetwork(networkUuid);
-                    return networkUuid;
-                })
-                .flatMap(this::deleteNetworkModifications)
-                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+                .publish(networkIdMono ->
+                        Mono.when(
+                                networkIdMono.flatMap(this::deleteNetwork),
+                                networkIdMono.flatMap(this::deleteNetworkModifications)
+                        )
+                );
+
+        return allDeletedInParallel.doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+    }
+
+    // This function call directly the network store server without using the dedicated client because it's a blocking client.
+    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
+    Mono<Void> deleteNetwork(UUID networkUuid) {
+        var path = UriComponentsBuilder.fromPath("v1/networks/{networkId}")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        return webClient.delete()
+                .uri(networkStoreServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(Void.class);
     }
 
     private Mono<StudyEntity> insertStudy(UUID uuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
@@ -611,19 +624,19 @@ public class StudyService {
                             .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SWITCH));
 
-            // There is currently no class in iidm api for network modification
-            Flux<Map<String, Object>> fluxChangeSwitchState = webClient.put()
+            Flux<ElementaryModificationInfos> fluxChangeSwitchState = webClient.put()
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
-                    .bodyToFlux(new ParameterizedTypeReference<>() {
+                    .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
                     });
 
-            return fluxChangeSwitchState.flatMap(modification -> {
-                Set<String> substationIds = new TreeSet<>((List<String>) modification.get("substationIds"));
-                emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds);
-                return Flux.fromIterable(substationIds);
-            })
+            return fluxChangeSwitchState
+                    .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                    .collect(Collectors.toSet())
+                    .doOnSuccess(substationIds ->
+                            emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                    )
                     .then(monoUpdateLfState);
         });
     }
@@ -642,19 +655,19 @@ public class StudyService {
                     .then(invalidateSecurityAnalysisStatus(studyUuid)
                             .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
 
-            // There is currently no class in iidm api for network modification
-            Flux<Map<String, Object>> fluxApplyGroovy = webClient.put()
+            Flux<ElementaryModificationInfos> fluxApplyGroovy = webClient.put()
                     .uri(networkModificationServerBaseUri + path)
                     .body(BodyInserters.fromValue(groovyScript))
                     .retrieve()
-                    .bodyToFlux(new ParameterizedTypeReference<>() {
+                    .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
                     });
 
-            return fluxApplyGroovy.flatMap(modification -> {
-                Set<String> substationIds = new TreeSet<>((List<String>) modification.get("substationIds"));
-                emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds);
-                return Flux.fromIterable(substationIds);
-            })
+            return fluxApplyGroovy
+                    .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                    .collect(Collectors.toSet())
+                    .doOnSuccess(substationIds ->
+                            emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                    )
                     .then(monoUpdateLfState);
         });
     }
@@ -740,11 +753,11 @@ public class StudyService {
     }
 
     Mono<UUID> getNetworkUuid(UUID studyUuid) {
-        return Mono.fromCallable(() -> findNetworkUuid(studyUuid).orElse(null))
+        return Mono.fromCallable(() -> doGetNetworkUuid(studyUuid).orElse(null))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
     }
 
-    private Optional<UUID> findNetworkUuid(UUID studyUuid) {
+    private Optional<UUID> doGetNetworkUuid(UUID studyUuid) {
         return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid);
     }
 
@@ -961,7 +974,7 @@ public class StudyService {
                                     .get()
                                     .uri(actionsServerBaseUri + path)
                                     .retrieve()
-                                    .bodyToMono(new ParameterizedTypeReference<>() {
+                                    .bodyToMono(new ParameterizedTypeReference<List<Contingency>>() {
                                     });
                             return contingencies.map(List::size);
                         })
@@ -1216,8 +1229,7 @@ public class StudyService {
         });
     }
 
-    // There is currently no class in iidm api for network modification
-    public Flux<Map<String, Object>> getModifications(UUID studyUuid) {
+    public Flux<ModificationInfos> getModifications(UUID studyUuid) {
         return getNetworkUuid(studyUuid)
                 .flatMapMany(networkUuid -> {
                     var path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/modifications")
@@ -1236,6 +1248,9 @@ public class StudyService {
         var path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/modifications")
                 .buildAndExpand(networkUuid)
                 .toUriString();
-        return webClient.delete().uri(networkModificationServerBaseUri + path).retrieve().bodyToMono(Void.class);
+        return webClient.delete()
+                .uri(networkModificationServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(Void.class);
     }
 }
