@@ -6,12 +6,14 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.loadflow.LoadFlowParameters;
-import io.swagger.annotations.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
+
+import com.powsybl.loadflow.LoadFlowParameters;
+import io.swagger.annotations.*;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -56,10 +58,10 @@ public class StudyController {
             @ApiResponse(code = 200, message = "The id of the network imported"),
             @ApiResponse(code = 409, message = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                                  @PathVariable("caseUuid") UUID caseUuid,
-                                                                  @RequestParam("description") String description,
-                                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                                  @RequestHeader("userId") String userId) {
+                                                                             @PathVariable("caseUuid") UUID caseUuid,
+                                                                             @RequestParam("description") String description,
+                                                                             @RequestParam("isPrivate") Boolean isPrivate,
+                                                                             @RequestHeader("userId") String userId) {
         Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(studyService.assertCaseExists(caseUuid).then(createStudy));
@@ -72,10 +74,10 @@ public class StudyController {
             @ApiResponse(code = 409, message = "The study already exist"),
             @ApiResponse(code = 500, message = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@PathVariable("studyName") String studyName,
-                                                  @RequestPart("caseFile") FilePart caseFile,
-                                                  @RequestParam("description") String description,
-                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                  @RequestHeader("userId") String userId) {
+                                                             @RequestPart("caseFile") FilePart caseFile,
+                                                             @RequestParam("description") String description,
+                                                             @RequestParam("isPrivate") Boolean isPrivate,
+                                                             @RequestHeader("userId") String userId) {
         Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(createStudy);
@@ -140,7 +142,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels")
     @ApiOperation(value = "get the voltage levels for a given network")
     @ApiResponse(code = 200, message = "The voltage level list of the network")
-    public ResponseEntity<Mono<List<VoltageLevelAttributes>>> getNetworkVoltageLevels(
+    public ResponseEntity<Mono<List<VoltageLevelInfos>>> getNetworkVoltageLevels(
             @PathVariable("studyUuid") UUID studyUuid) {
 
         Mono<UUID> networkUuid = studyService.getNetworkUuid(studyUuid);
@@ -331,12 +333,26 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/network-modification/groovy")
-    @ApiOperation(value = "update a switch position", produces = "application/text")
+    @ApiOperation(value = "change an equipment state in the network", produces = "application/text")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The equipment is updated")})
     public ResponseEntity<Mono<Void>> applyGroovyScript(@PathVariable("studyUuid") UUID studyUuid,
                                                         @RequestBody String groovyScript) {
 
         return ResponseEntity.ok().body(studyService.applyGroovyScript(studyUuid, groovyScript).then());
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/network/modifications")
+    @ApiOperation(value = "Get all network modifications", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of network modifications")})
+    public ResponseEntity<Flux<ModificationInfos>> getModifications(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getModifications(studyUuid));
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/network/modifications")
+    @ApiOperation(value = "Delete all network modifications")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Network modifications deleted")})
+    public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.deleteModifications(studyUuid));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
@@ -353,8 +369,8 @@ public class StudyController {
     @ApiOperation(value = "Update the study name", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The updated study")})
     public ResponseEntity<Mono<CreatedStudyBasicInfos>> renameStudy(@RequestHeader("userId") String headerUserId,
-                                                        @PathVariable("studyUuid") UUID studyUuid,
-                                                        @RequestBody RenameStudyAttributes renameStudyAttributes) {
+                                                                    @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
 
         Mono<CreatedStudyBasicInfos> studyMono = studyService.renameStudy(studyUuid, headerUserId, renameStudyAttributes.getNewStudyName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
