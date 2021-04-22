@@ -455,7 +455,7 @@ public class StudyTest {
                         createMatcherCreatedStudyBasicInfos(studyUuid, STUDY_NAME, "userId2", "UCTE", DESCRIPTION, true));
 
         //insert a study with a case (multipartfile)
-        createStudy("userId", "s2", TEST_FILE, "desc", true, true);
+        createStudy("userId", "s2", TEST_FILE, IMPORTED_CASE_UUID_STRING, "desc", true, true);
         UUID s2Uuid = studyRepository.findByUserIdAndStudyName("userId", "s2").get().getId();
         //UUID s2Uuid = studyRepository.findAll().get(2).getId();
 
@@ -1074,7 +1074,7 @@ public class StudyTest {
     @Test
     public void testCreationWithErrorBadCaseFile() throws Exception {
         // Create study with a bad case file -> error
-        createStudy("userId", "newStudy", TEST_FILE_WITH_ERRORS, "desc", false, true,
+        createStudy("userId", "newStudy", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, "desc", false, true,
                 "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
 
         assertNull(output.receive(1000));
@@ -1083,7 +1083,7 @@ public class StudyTest {
     @Test
     public void testCreationWithErrorBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
-        createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, "desc", false, true,
+        createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, null, "desc", false, true,
                 "Error during import in the case server");
 
         assertNull(output.receive(1000));
@@ -1135,7 +1135,7 @@ public class StudyTest {
         return exchange;
     }
 
-    private WebTestClient.ResponseSpec createStudy(String userId, String studyName, String fileName, String description, boolean isPrivate,
+    private WebTestClient.ResponseSpec createStudy(String userId, String studyName, String fileName, String caseUuid, String description, boolean isPrivate,
                                                    boolean withStatusOk, String... errorMessage) throws Exception {
         final WebTestClient.ResponseSpec exchange;
         final UUID studyUuid;
@@ -1187,6 +1187,14 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that all http requests have been sent to remote services
+        var requests = getRequestsDone(caseUuid == null ? 1 : 3);
+        assertTrue(requests.contains("/v1/cases/private"));
+        if (caseUuid != null) {
+            assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
+            assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", caseUuid)));
+        }
 
         return exchange;
     }
