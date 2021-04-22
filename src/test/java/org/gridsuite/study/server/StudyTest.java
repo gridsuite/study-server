@@ -30,6 +30,7 @@ import com.powsybl.network.store.model.Resource;
 import com.powsybl.network.store.model.ResourceType;
 import com.powsybl.network.store.model.TopLevelDocument;
 import com.powsybl.network.store.model.VoltageLevelAttributes;
+import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -382,7 +383,7 @@ public class StudyTest {
     private Set<String> getRequestsDone(int n) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
-                return server.takeRequest(1, TimeUnit.SECONDS).getPath();
+                return server.takeRequest(0, TimeUnit.SECONDS).getPath();
             } catch (InterruptedException e) {
                 LOGGER.error("Error while attempting to get the request done : ", e);
             }
@@ -391,8 +392,7 @@ public class StudyTest {
     }
 
     @Test
-    public void test() throws Exception {
-
+    public void test() {
         //empty list
         webTestClient.get()
                 .uri("/v1/studies")
@@ -457,7 +457,6 @@ public class StudyTest {
         //insert a study with a case (multipartfile)
         createStudy("userId", "s2", TEST_FILE, IMPORTED_CASE_UUID_STRING, "desc", true, true);
         UUID s2Uuid = studyRepository.findByUserIdAndStudyName("userId", "s2").get().getId();
-        //UUID s2Uuid = studyRepository.findAll().get(2).getId();
 
         // check the study s2
         webTestClient.get()
@@ -504,194 +503,6 @@ public class StudyTest {
                 .isEqualTo("true");
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-        //get the voltage level diagram svg
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, "voltageLevelId")
-                .exchange()
-                .expectHeader().contentType(MediaType.APPLICATION_XML)
-                .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo("byte");
-
-        //get the voltage level diagram svg from a study that doesn't exist
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg", randomUuid, "voltageLevelId")
-                .exchange()
-                .expectStatus().isNotFound();
-
-        //get the voltage level diagram svg and metadata
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, "voltageLevelId")
-                .exchange()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo("svgandmetadata");
-
-        //get the voltage level diagram svg and metadata from a study that doesn't exist
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", randomUuid, "voltageLevelId")
-                .exchange()
-                .expectStatus().isNotFound();
-
-        // get the substation diagram svg
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, "substationId")
-                .exchange()
-                .expectHeader().contentType(MediaType.APPLICATION_XML)
-                .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo("substation-byte");
-
-        // get the substation diagram svg from a study that doesn't exist
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg", randomUuid, "substationId")
-                .exchange()
-                .expectStatus().isNotFound();
-
-        // get the substation diagram svg and metadata
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, "substationId")
-                .exchange()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo("substation-svgandmetadata");
-
-        // get the substation diagram svg and metadata from a study that doesn't exist
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata", randomUuid, "substationId")
-                .exchange()
-                .expectStatus().isNotFound();
-
-        //get voltage levels
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network/voltage-levels", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(VoltageLevelInfos.class)
-                .value(new MatcherJson<>(List.of(
-                        VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
-                        VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
-                        VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
-                        VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
-                        VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
-                        VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
-                        VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
-                        VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
-                        VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
-                        VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build()
-                )));
-
-        //get the lines-graphics of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/geo-data/lines/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the substation-graphics of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/geo-data/substations/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the lines map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/lines/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the substation map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/substations/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the 2 windings transformers map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/2-windings-transformers/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the 3 windings transformers map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/3-windings-transformers/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the generators map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/generators/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the batteries map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/batteries/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the dangling lines map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/dangling-lines/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the hvdc lines map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/hvdc-lines/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the lcc converter stations map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/lcc-converter-stations/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the vsc converter stations map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/vsc-converter-stations/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the loads map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/loads/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the shunt compensators map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/shunt-compensators/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get the static var compensators map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/static-var-compensators/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
-
-        //get all map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/network-map/all/", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         //delete existing study s2
         webTestClient.delete()
@@ -706,6 +517,9 @@ public class StudyTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/modifications", NETWORK_UUID_STRING)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -746,31 +560,6 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isNotFound();
 
-        //run a loadflow
-        webTestClient.put()
-                .uri("/v1/studies/" + studyNameUserIdUuid + "/loadflow/run")
-                .exchange()
-                .expectStatus().isOk();
-        // assert that the broker message has been sent
-        Message<byte[]> messageLfStatus = output.receive(1000);
-        assertEquals("", new String(messageLfStatus.getPayload()));
-        MessageHeaders headersLF = messageLfStatus.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-
-        Message<byte[]> messageLf = output.receive(1000);
-        assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        //try to run a another loadflow
-        webTestClient.put()
-                .uri("/v1/studies/" + studyNameUserIdUuid + "/loadflow/run")
-                .exchange()
-                .expectStatus().isEqualTo(403)
-                .expectBody()
-                .jsonPath("$")
-                .isEqualTo(LOADFLOW_NOT_RUNNABLE.name());
-
         //get available export format
         webTestClient.get()
                 .uri("/v1/export-network-formats")
@@ -779,67 +568,15 @@ public class StudyTest {
                 .expectBody(String.class)
                 .isEqualTo("[\"CGMES\",\"UCTE\",\"XIIDM\"]");
 
+        assertTrue(getRequestsDone(1).contains("/v1/export/formats"));
+
         //export a network
         webTestClient.get()
                 .uri("/v1/studies/{studyUuid}/export-network/{format}", studyNameUserIdUuid, "XIIDM")
                 .exchange()
                 .expectStatus().isOk();
 
-        // security analysis not found
-        webTestClient.get()
-                .uri("/v1/security-analysis/results/{resultUuid}", NOT_FOUND_SECURITY_ANALYSIS_UUID)
-                .exchange()
-                .expectStatus().isNotFound();
-
-        // run security analysis
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/security-analysis/run?contingencyListName={contingencyListName}", studyNameUserIdUuid, CONTIGENCY_LIST_NAME)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(UUID.class)
-                .isEqualTo(UUID.fromString(SECURITY_ANALYSIS_UUID));
-
-        Message<byte[]> securityAnalysisStatusMessage = output.receive(1000);
-        assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
-
-        Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
-        assertEquals(studyNameUserIdUuid, securityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
-
-        // get security analysis result
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/security-analysis/result", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo(SECURITY_ANALYSIS_RESULT_JSON);
-
-        // get security analysis status
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/security-analysis/status", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo(SECURITY_ANALYSIS_STATUS_JSON);
-
-        // stop security analysis
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/security-analysis/stop", studyNameUserIdUuid)
-                .exchange()
-                .expectStatus().isOk();
-
-        securityAnalysisStatusMessage = output.receive(1000);
-        assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
-
-        // get contingency count
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/contingency-count?contingencyListName={contingencyListName}", studyNameUserIdUuid, CONTIGENCY_LIST_NAME)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(Integer.class)
-                .isEqualTo(1);
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
 
         // make public study private
         webTestClient.post()
@@ -848,7 +585,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
+                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true));
 
         // make private study private should work
         webTestClient.post()
@@ -857,7 +594,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true, LoadFlowStatus.CONVERGED));
+                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true));
 
         // make private study public
         webTestClient.post()
@@ -866,7 +603,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", false, LoadFlowStatus.CONVERGED));
+                .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", false));
 
         // drop the broker message for study deletion (due to right access change)
         output.receive(1000);
@@ -894,6 +631,50 @@ public class StudyTest {
                 .header("userId", "notAuth")
                 .exchange()
                 .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testLoadFlow() {
+        //insert a study
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyNameUserIdUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
+
+        //run a loadflow
+        webTestClient.put()
+                .uri("/v1/studies/" + studyNameUserIdUuid + "/loadflow/run")
+                .exchange()
+                .expectStatus().isOk();
+        // assert that the broker message has been sent
+        Message<byte[]> messageLfStatus = output.receive(1000);
+        assertEquals("", new String(messageLfStatus.getPayload()));
+        MessageHeaders headersLF = messageLfStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
+
+        Message<byte[]> messageLf = output.receive(1000);
+        assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run", NETWORK_UUID_STRING)));
+
+        // check load flow status
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}", studyNameUserIdUuid)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(StudyInfos.class)
+                .value(createMatcherStudyInfos(studyNameUserIdUuid, STUDY_NAME, "userId", "UCTE", DESCRIPTION, false, LoadFlowStatus.CONVERGED));
+
+        //try to run a another loadflow
+        webTestClient.put()
+                .uri("/v1/studies/" + studyNameUserIdUuid + "/loadflow/run")
+                .exchange()
+                .expectStatus().isEqualTo(403)
+                .expectBody()
+                .jsonPath("$")
+                .isEqualTo(LOADFLOW_NOT_RUNNABLE.name());
 
         // get default LoadFlowParameters
         webTestClient.get()
@@ -935,6 +716,7 @@ public class StudyTest {
                 .uri("/v1/studies/{studyUuid}/loadflow/run", studyNameUserIdUuid)
                 .exchange()
                 .expectStatus().isOk();
+
         // assert that the broker message has been sent
         messageLf = output.receive(1000);
         assertEquals("", new String(messageLf.getPayload()));
@@ -945,7 +727,319 @@ public class StudyTest {
         output.receive(1000);
         output.receive(1000);
 
-        assertNull(output.receive(1000));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run", NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testSecurityAnalysis() {
+        //insert a study
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyNameUserIdUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
+
+        // security analysis not found
+        webTestClient.get()
+                .uri("/v1/security-analysis/results/{resultUuid}", NOT_FOUND_SECURITY_ANALYSIS_UUID)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // run security analysis
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/security-analysis/run?contingencyListName={contingencyListName}", studyNameUserIdUuid, CONTIGENCY_LIST_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(UUID.class)
+                .isEqualTo(UUID.fromString(SECURITY_ANALYSIS_UUID));
+
+        Message<byte[]> securityAnalysisStatusMessage = output.receive(1000);
+        assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+
+        Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
+        assertEquals(studyNameUserIdUuid, securityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+
+        assertTrue(getRequestsDone(1).contains("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=" + CONTIGENCY_LIST_NAME + "&receiver=%257B%2522studyUuid%2522%253A%2522" + studyNameUserIdUuid + "%2522%257D"));
+
+        // get security analysis result
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/security-analysis/result", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo(SECURITY_ANALYSIS_RESULT_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/results/%s?limitType", SECURITY_ANALYSIS_UUID)));
+
+        // get security analysis status
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/security-analysis/status", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo(SECURITY_ANALYSIS_STATUS_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/results/%s/status", SECURITY_ANALYSIS_UUID)));
+
+        // stop security analysis
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/security-analysis/stop", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk();
+
+        securityAnalysisStatusMessage = output.receive(1000);
+        assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+
+        assertTrue(getRequestsDone(1).contains("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522studyUuid%2522%253A%2522" + studyNameUserIdUuid + "%2522%257D"));
+
+        // get contingency count
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/contingency-count?contingencyListName={contingencyListName}", studyNameUserIdUuid, CONTIGENCY_LIST_NAME)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Integer.class)
+                .isEqualTo(1);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/contingency-lists/%s/export?networkUuid=%s", CONTIGENCY_LIST_NAME, NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testDiagramsAndGraphics() {
+        //insert a study
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        UUID studyNameUserIdUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
+        UUID randomUuid = UUID.randomUUID();
+
+        //get the voltage level diagram svg
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, "voltageLevelId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_XML)
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("byte");
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false", NETWORK_UUID_STRING)));
+
+        //get the voltage level diagram svg from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg", randomUuid, "voltageLevelId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        //get the voltage level diagram svg and metadata
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, "voltageLevelId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("svgandmetadata");
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false", NETWORK_UUID_STRING)));
+
+        //get the voltage level diagram svg and metadata from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", randomUuid, "voltageLevelId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_XML)
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("substation-byte");
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/substation-svg/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
+
+        // get the substation diagram svg from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg", randomUuid, "substationId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // get the substation diagram svg and metadata
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, "substationId")
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("substation-svgandmetadata");
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/substation-svg-and-metadata/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
+
+        // get the substation diagram svg and metadata from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata", randomUuid, "substationId")
+                .exchange()
+                .expectStatus().isNotFound();
+
+        //get voltage levels
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network/voltage-levels", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(VoltageLevelInfos.class)
+                .value(new MatcherJson<>(List.of(
+                        VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
+                        VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
+                        VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
+                        VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
+                        VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
+                        VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
+                        VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
+                        VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
+                        VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
+                        VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build()
+                )));
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
+
+        //get the lines-graphics of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/geo-data/lines/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/lines?networkUuid=%s", NETWORK_UUID_STRING)));
+
+        //get the substation-graphics of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/geo-data/substations/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/substations?networkUuid=%s", NETWORK_UUID_STRING)));
+
+        //get the lines map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/lines/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/lines/%s", NETWORK_UUID_STRING)));
+
+        //get the substation map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/substations/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/substations/%s", NETWORK_UUID_STRING)));
+
+        //get the 2 windings transformers map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/2-windings-transformers/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/2-windings-transformers/%s", NETWORK_UUID_STRING)));
+
+        //get the 3 windings transformers map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/3-windings-transformers/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/3-windings-transformers/%s", NETWORK_UUID_STRING)));
+
+        //get the generators map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/generators/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/generators/%s", NETWORK_UUID_STRING)));
+
+        //get the batteries map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/batteries/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/batteries/%s", NETWORK_UUID_STRING)));
+
+        //get the dangling lines map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/dangling-lines/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/dangling-lines/%s", NETWORK_UUID_STRING)));
+
+        //get the hvdc lines map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/hvdc-lines/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/hvdc-lines/%s", NETWORK_UUID_STRING)));
+
+        //get the lcc converter stations map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/lcc-converter-stations/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/lcc-converter-stations/%s", NETWORK_UUID_STRING)));
+
+        //get the vsc converter stations map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/vsc-converter-stations/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/vsc-converter-stations/%s", NETWORK_UUID_STRING)));
+
+        //get the loads map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/loads/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/loads/%s", NETWORK_UUID_STRING)));
+
+        //get the shunt compensators map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/shunt-compensators/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/shunt-compensators/%s", NETWORK_UUID_STRING)));
+
+        //get the static var compensators map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/static-var-compensators/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/static-var-compensators/%s", NETWORK_UUID_STRING)));
+
+        //get all map data of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/network-map/all/", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/all/%s", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -985,6 +1079,8 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SWITCH, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/switches/%s?open=true", NETWORK_UUID_STRING, "switchId")));
+
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("userId", "userId")
@@ -994,8 +1090,6 @@ public class StudyTest {
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
                         createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, STUDY_NAME, "userId", "UCTE", DESCRIPTION, false));
-
-        assertNull(output.receive(1000));
     }
 
     @Test
@@ -1030,6 +1124,8 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
 
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/groovy/", NETWORK_UUID_STRING)));
+
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("userId", "userId")
@@ -1039,8 +1135,6 @@ public class StudyTest {
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
                         createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, STUDY_NAME, "userId", "UCTE", DESCRIPTION, false));
-
-        assertNull(output.receive(1000));
     }
 
     @Test
@@ -1067,8 +1161,6 @@ public class StudyTest {
                 .isOk();
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/modifications", NETWORK_UUID_STRING)));
-
-        assertNull(output.receive(1000));
     }
 
     @Test
@@ -1076,8 +1168,6 @@ public class StudyTest {
         // Create study with a bad case file -> error
         createStudy("userId", "newStudy", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, "desc", false, true,
                 "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
-
-        assertNull(output.receive(1000));
     }
 
     @Test
@@ -1085,10 +1175,9 @@ public class StudyTest {
         // Create study with a bad case file -> error when importing in the case server
         createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, null, "desc", false, true,
                 "Error during import in the case server");
-
-        assertNull(output.receive(1000));
     }
 
+    @SneakyThrows
     private WebTestClient.ResponseSpec createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate,
                                                    boolean withStatusOk, String... errorMessage) {
         final WebTestClient.ResponseSpec exchange = webTestClient.post()
@@ -1135,8 +1224,9 @@ public class StudyTest {
         return exchange;
     }
 
+    @SneakyThrows
     private WebTestClient.ResponseSpec createStudy(String userId, String studyName, String fileName, String caseUuid, String description, boolean isPrivate,
-                                                   boolean withStatusOk, String... errorMessage) throws Exception {
+                                                   boolean withStatusOk, String... errorMessage) {
         final WebTestClient.ResponseSpec exchange;
         final UUID studyUuid;
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
@@ -1266,6 +1356,12 @@ public class StudyTest {
         // drop the broker message for study creation request (deletion)
         output.receive(1000);
 
+        // assert that all http requests have been sent to remote services
+        var httpRequests = getRequestsDone(3);
+        assertTrue(httpRequests.contains("/v1/cases/private"));
+        assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
+        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s", IMPORTED_BLOCKING_CASE_UUID_STRING)));
+
         countDownLatch = new CountDownLatch(1);
 
         //insert a study
@@ -1320,16 +1416,30 @@ public class StudyTest {
         // drop the broker message for study creation request (deletion)
         output.receive(1000);
 
-        assertNull(output.receive(1000));
+        // assert that all http requests have been sent to remote services
+        var requests = getRequestsDone(3);
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
+        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", NEW_STUDY_CASE_UUID)));
     }
 
     @After
     public void tearDown() {
+        Set<String> httpRequest = null;
+        try {
+            httpRequest = getRequestsDone(1);
+        } catch (NullPointerException e) {
+            // Ignoring
+        }
+
         // Shut down the server. Instances cannot be reused.
         try {
             server.shutdown();
         } catch (Exception e) {
-            // Nothing to do
+            // Ignoring
         }
+
+        assertNull(output.receive(1000));
+        assertNull(httpRequest);
     }
 }

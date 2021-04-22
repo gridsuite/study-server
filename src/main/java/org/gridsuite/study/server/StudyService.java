@@ -1235,7 +1235,7 @@ public class StudyService {
                     var path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/modifications")
                             .buildAndExpand(networkUuid)
                             .toUriString();
-                    return webClient.get().uri(networkModificationServerBaseUri + path).retrieve().bodyToFlux(new ParameterizedTypeReference<>() {
+                    return webClient.get().uri(networkModificationServerBaseUri + path).retrieve().bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
                     });
                 });
     }
