@@ -1439,7 +1439,7 @@ public class StudyTest {
             // Ignoring
         }
 
-        assertNull(output.receive(1000));
-        assertNull(httpRequest);
+        assertNull("Should not be any messages", output.receive(1000));
+        assertNull("Should not be any http requests", httpRequest);
     }
 }
