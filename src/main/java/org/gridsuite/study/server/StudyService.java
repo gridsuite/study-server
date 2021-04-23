@@ -1251,6 +1251,7 @@ public class StudyService {
         return webClient.delete()
                 .uri(networkModificationServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
                 .bodyToMono(Void.class);
     }
 }
