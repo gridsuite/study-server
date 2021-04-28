@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>3</version>
+        <version>4</version>
         <relativePath/>
     </parent>
 
@@ -46,7 +46,7 @@
     <properties>
         <java.version>11</java.version>
 
-        <gridsuite-dependencies.version>5</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>6</gridsuite-dependencies.version>
     </properties>
 
     <build>
