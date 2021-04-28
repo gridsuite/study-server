@@ -72,7 +72,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
-import static org.gridsuite.study.server.StudyService.HEADER_STUDY_UUID;
+import static org.gridsuite.study.server.StudyService.*;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -515,8 +515,10 @@ public class StudyTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
+        assertEquals("userId", headers.get(HEADER_USER_ID));
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(Boolean.FALSE, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/modifications", NETWORK_UUID_STRING)));
@@ -551,7 +553,7 @@ public class StudyTest {
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         webTestClient.post()
                 .uri("/v1/studies/" + randomUuid + "/rename")
@@ -649,11 +651,11 @@ public class StudyTest {
         assertEquals("", new String(messageLfStatus.getPayload()));
         MessageHeaders headersLF = messageLfStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
 
         Message<byte[]> messageLf = output.receive(1000);
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run", NETWORK_UUID_STRING)));
 
@@ -722,7 +724,7 @@ public class StudyTest {
         assertEquals("", new String(messageLf.getPayload()));
         headersLF = messageLf.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
         output.receive(1000);
         output.receive(1000);
         output.receive(1000);
@@ -752,11 +754,11 @@ public class StudyTest {
 
         Message<byte[]> securityAnalysisStatusMessage = output.receive(1000);
         assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         Message<byte[]> securityAnalysisUpdateMessage = output.receive(1000);
         assertEquals(studyNameUserIdUuid, securityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=" + CONTIGENCY_LIST_NAME + "&receiver=%257B%2522studyUuid%2522%253A%2522" + studyNameUserIdUuid + "%2522%257D"));
 
@@ -788,7 +790,7 @@ public class StudyTest {
 
         securityAnalysisStatusMessage = output.receive(1000);
         assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522studyUuid%2522%253A%2522" + studyNameUserIdUuid + "%2522%257D"));
 
@@ -1058,26 +1060,26 @@ public class StudyTest {
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDY, headers.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(substationsSet, headers.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+        assertEquals(UPDATE_TYPE_STUDY, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(substationsSet, headers.get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headers.get(HEADER_UPDATE_TYPE));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(HEADER_UPDATE_TYPE));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SWITCH, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SWITCH, headers.get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/switches/%s?open=true", NETWORK_UUID_STRING, "switchId")));
 
@@ -1109,20 +1111,20 @@ public class StudyTest {
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals("study", headers.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(substationsSet, headers.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+        assertEquals("study", headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(substationsSet, headers.get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_LOADFLOW_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headers.get(HEADER_UPDATE_TYPE));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/groovy/", NETWORK_UUID_STRING)));
 
@@ -1164,14 +1166,14 @@ public class StudyTest {
     }
 
     @Test
-    public void testCreationWithErrorBadCaseFile() throws Exception {
+    public void testCreationWithErrorBadCaseFile() {
         // Create study with a bad case file -> error
         createStudy("userId", "newStudy", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, "desc", false, true,
                 "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
     }
 
     @Test
-    public void testCreationWithErrorBadExistingCase() throws Exception {
+    public void testCreationWithErrorBadExistingCase() {
         // Create study with a bad case file -> error when importing in the case server
         createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, null, "desc", false, true,
                 "Error during import in the case server");
@@ -1197,23 +1199,29 @@ public class StudyTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(StudyService.HEADER_ERROR));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
         // assert that the broker message has been sent a study creation request message for deletion
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(3);
@@ -1259,24 +1267,30 @@ public class StudyTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(errorMessage.length == 0 ? studyUuid : null, headers.get(HEADER_STUDY_UUID));
-        assertEquals(errorMessage.length != 0 ? studyName : null, headers.get(StudyService.HEADER_STUDY_NAME));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(StudyService.HEADER_ERROR));
+        assertEquals(errorMessage.length != 0 ? studyName : null, headers.get(HEADER_STUDY_NAME));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
         // assert that the broker message has been sent a study creation request message for deletion
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_STUDIES, headers.get(StudyService.HEADER_UPDATE_TYPE));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(caseUuid == null ? 1 : 3);
