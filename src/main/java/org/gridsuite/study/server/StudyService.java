@@ -762,19 +762,20 @@ public class StudyService {
                 .then(invalidateSecurityAnalysisStatus(studyUuid)
                         .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
-        Mono<Set<String>> monoChangeLineState = webClient.put()
+        Flux<ElementaryModificationInfos> fluxChangeLineState = webClient.put()
                 .uri(networkModificationServerBaseUri + path)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse -> Mono.error(new StudyException(LINE_MODIFICATION_FAILED)))
-                .bodyToMono(new ParameterizedTypeReference<>() {
+                .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
                 });
 
-        return monoChangeLineState.flatMap(s -> {
-            emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, new TreeSet<>(s));
-            return Mono.empty();
-        })
+        return fluxChangeLineState
+                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                .collect(Collectors.toSet())
+                .doOnSuccess(substationIds ->
+                        emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
                 .then(monoUpdateLfState);
-
     }
 
     public Mono<Void> lockoutLine(UUID studyUuid, String lineId) {

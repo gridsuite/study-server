@@ -280,23 +280,27 @@ public class StudyTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/lockout":
+                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody("[\"s1\", \"s2\"]")
+                                .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/trip":
+                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody("[\"s2\", \"s3\"]")
+                                .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/energiseEnd?side=ONE":
+                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody("[\"s1\", \"s3\"]")
+                                .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/switchOn":
+                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody("[\"s1\", \"s3\"]")
+                                .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/lockout":
