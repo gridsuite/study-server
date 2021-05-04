@@ -47,7 +47,7 @@ public class LoadFlowResultEntity {
 
     // we never need to access these without loading the study, and the number of items is small (roughly 10), so we can use ElementCollection
     @Column(name = "componentResults")
-    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"))
+    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"), indexes = @Index(columnList = "loadflowresultentity_id"))
     @ElementCollection
     private List<ComponentResultEmbeddable> componentResults = new ArrayList<>();
 }
