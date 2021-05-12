@@ -242,7 +242,7 @@ public class StudyService {
     public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, studyName, userId, isPrivate), getCaseFormat(caseUuid))
+                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
                         .flatMap(t -> {
                             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                             return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
@@ -258,8 +258,8 @@ public class StudyService {
     public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> importCase(caseFile, studyName, userId, isPrivate).flatMap(uuid ->
-                        Mono.zip(persistentStore(uuid, studyName, userId, isPrivate), getCaseFormat(uuid))
+                .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
+                        Mono.zip(persistentStore(uuid,  s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
                                 .flatMap(t -> {
                                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                                     return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
@@ -403,23 +403,23 @@ public class StudyService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    private Mono<? extends Throwable> handleStudyCreationError(String studyName, String userId, boolean isPrivate, ClientResponse clientResponse) {
+    private Mono<? extends Throwable> handleStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, ClientResponse clientResponse) {
         return clientResponse.bodyToMono(String.class).flatMap(body -> {
             try {
                 JsonNode node = new ObjectMapper().readTree(body).path("message");
                 if (!node.isMissingNode()) {
-                    emitStudyCreationError(studyName, userId, isPrivate, node.asText());
+                    emitStudyCreationError(studyUuid, studyName, userId, isPrivate, node.asText());
                 }
             } catch (JsonProcessingException e) {
                 if (!body.isEmpty()) {
-                    emitStudyCreationError(studyName, userId, isPrivate, body);
+                    emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
                 }
             }
             return Mono.error(new StudyException(STUDY_CREATION_FAILED));
         });
     }
 
-    Mono<UUID> importCase(Mono<FilePart> multipartFile, String studyName, String userId, boolean isPrivate) {
+    Mono<UUID> importCase(Mono<FilePart> multipartFile, UUID studyUuid, String studyName, String userId, boolean isPrivate) {
 
         return multipartFile.flatMap(file -> {
             MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
@@ -431,7 +431,7 @@ public class StudyService {
                     .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                            handleStudyCreationError(studyName, userId, isPrivate, clientResponse)
+                            handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse)
                     )
                     .bodyToMono(UUID.class)
                     .publishOn(Schedulers.boundedElastic())
@@ -471,7 +471,7 @@ public class StudyService {
                 .bodyToMono(String.class);
     }
 
-    private Mono<NetworkInfos> persistentStore(UUID caseUuid, String studyName, String userId, boolean isPrivate) {
+    private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String studyName, String userId, boolean isPrivate) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
                 .queryParam(CASE_UUID, caseUuid)
                 .buildAndExpand()
@@ -481,7 +481,7 @@ public class StudyService {
                 .uri(networkConversionServerBaseUri + path)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                        handleStudyCreationError(studyName, userId, isPrivate, clientResponse)
+                        handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse)
                 )
                 .bodyToMono(NetworkInfos.class)
                 .publishOn(Schedulers.boundedElastic())
@@ -780,8 +780,9 @@ public class StudyService {
         );
     }
 
-    private void emitStudyCreationError(String studyName, String userId, boolean isPrivate, String errorMessage) {
+    private void emitStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, String errorMessage) {
         studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID,  studyUuid)
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_IS_PUBLIC_STUDY, !isPrivate)

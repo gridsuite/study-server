@@ -414,7 +414,7 @@ public class StudyTest {
                 .isEqualTo("[]");
 
         //insert a study
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
         UUID studyUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
 
         //insert a study with a non existing case and except exception
@@ -441,7 +441,7 @@ public class StudyTest {
 
         //insert the same study but with another user (should work)
         //even with the same name should work
-        createStudy("userId2", STUDY_NAME, CASE_UUID, DESCRIPTION, true, true);
+        createStudy("userId2", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
         studyUuid = studyRepository.findByUserIdAndStudyName("userId2", STUDY_NAME).get().getId();
 
         webTestClient.get()
@@ -455,7 +455,7 @@ public class StudyTest {
                         createMatcherCreatedStudyBasicInfos(studyUuid, STUDY_NAME, "userId2", "UCTE", DESCRIPTION, true));
 
         //insert a study with a case (multipartfile)
-        createStudy("userId", "s2", TEST_FILE, IMPORTED_CASE_UUID_STRING, "desc", true, true);
+        createStudy("userId", "s2", TEST_FILE, IMPORTED_CASE_UUID_STRING, "desc", true);
         UUID s2Uuid = studyRepository.findByUserIdAndStudyName("userId", "s2").get().getId();
 
         // check the study s2
@@ -638,7 +638,7 @@ public class StudyTest {
     @Test
     public void testLoadFlow() {
         //insert a study
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
         UUID studyNameUserIdUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
 
         //run a loadflow
@@ -735,7 +735,7 @@ public class StudyTest {
     @Test
     public void testSecurityAnalysis() {
         //insert a study
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
         UUID studyNameUserIdUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
 
         // security analysis not found
@@ -808,7 +808,7 @@ public class StudyTest {
     @Test
     public void testDiagramsAndGraphics() {
         //insert a study
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
         UUID studyNameUserIdUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
         UUID randomUuid = UUID.randomUUID();
 
@@ -1046,7 +1046,7 @@ public class StudyTest {
 
     @Test
     public void testNetworkModificationSwitch() {
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         //update switch
@@ -1096,7 +1096,7 @@ public class StudyTest {
 
     @Test
     public void testNetworkModificationEquipment() {
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         //update equipment
@@ -1141,7 +1141,7 @@ public class StudyTest {
 
     @Test
     public void testDeleteNetwokModifications() {
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         // get all modifications for the default group of a network
@@ -1168,30 +1168,24 @@ public class StudyTest {
     @Test
     public void testCreationWithErrorBadCaseFile() {
         // Create study with a bad case file -> error
-        createStudy("userId", "newStudy", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, "desc", false, true,
+        createStudy("userId", "newStudy", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, "desc", false,
                 "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
     }
 
     @Test
     public void testCreationWithErrorBadExistingCase() {
         // Create study with a bad case file -> error when importing in the case server
-        createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, null, "desc", false, true,
+        createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, null, "desc", false,
                 "Error during import in the case server");
     }
 
     @SneakyThrows
-    private WebTestClient.ResponseSpec createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate,
-                                                   boolean withStatusOk, String... errorMessage) {
-        final WebTestClient.ResponseSpec exchange = webTestClient.post()
+    private void createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate, String... errorMessage) {
+        webTestClient.post()
                 .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", studyName, caseUuid, description, isPrivate)
                 .header("userId", userId)
-                .exchange();
-
-        if (!withStatusOk) {
-            return exchange;
-        }
-
-        exchange.expectStatus().isOk();
+                .exchange()
+                .expectStatus().isOk();
 
         UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
@@ -1228,13 +1222,10 @@ public class StudyTest {
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", CASE_UUID_STRING)));
         assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", CASE_UUID_STRING)));
-
-        return exchange;
     }
 
     @SneakyThrows
-    private WebTestClient.ResponseSpec createStudy(String userId, String studyName, String fileName, String caseUuid, String description, boolean isPrivate,
-                                                   boolean withStatusOk, String... errorMessage) {
+    private void createStudy(String userId, String studyName, String fileName, String caseUuid, String description, boolean isPrivate, String... errorMessage) {
         final WebTestClient.ResponseSpec exchange;
         final UUID studyUuid;
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
@@ -1251,10 +1242,6 @@ public class StudyTest {
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
                     .exchange();
-
-            if (!withStatusOk) {
-                return exchange;
-            }
 
             studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
@@ -1277,7 +1264,7 @@ public class StudyTest {
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(errorMessage.length == 0 ? studyUuid : null, headers.get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(errorMessage.length != 0 ? studyName : null, headers.get(HEADER_STUDY_NAME));
         assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
@@ -1299,8 +1286,6 @@ public class StudyTest {
             assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
             assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", caseUuid)));
         }
-
-        return exchange;
     }
 
     @Test
