@@ -10,6 +10,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import io.swagger.annotations.ApiModel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -18,6 +19,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @Getter
+@ToString(callSuper = true)
 @ApiModel("Study attributes")
 public class StudyInfos extends CreatedStudyBasicInfos {
     LoadFlowStatus loadFlowStatus;

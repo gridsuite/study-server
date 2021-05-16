@@ -23,6 +23,7 @@ public class RestResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleException(RuntimeException exception) {
         StudyException studyException = (StudyException) exception;
         switch (studyException.getType()) {
+            case ELEMENT_NOT_FOUND:
             case STUDY_NOT_FOUND:
             case SECURITY_ANALYSIS_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getType());

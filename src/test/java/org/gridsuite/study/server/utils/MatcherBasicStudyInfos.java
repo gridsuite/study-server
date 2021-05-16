@@ -6,6 +6,10 @@
  */
 package org.gridsuite.study.server.utils;
 
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.UUID;
+
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
@@ -14,12 +18,21 @@ import org.hamcrest.TypeSafeMatcher;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-
 public class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeMatcher<T> {
+
+    public static MatcherBasicStudyInfos<BasicStudyInfos> createMatcherStudyBasicInfos(UUID studyUuid, String userId, String studyName, boolean studyPrivate) {
+        return new MatcherBasicStudyInfos<>(BasicStudyInfos.builder()
+                .studyUuid(studyUuid)
+                .studyName(studyName)
+                .userId(userId)
+                .studyPrivate(studyPrivate)
+                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
+                .build());
+    }
 
     T reference;
 
-    public MatcherBasicStudyInfos(T val) {
+    protected MatcherBasicStudyInfos(T val) {
         this.reference = val;
     }
 
