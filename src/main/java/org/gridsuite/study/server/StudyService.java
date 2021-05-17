@@ -676,17 +676,19 @@ public class StudyService {
     Mono<Void> runLoadFlow(UUID studyUuid) {
         return setLoadFlowRunning(studyUuid).then(getNetworkUuid(studyUuid)).flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                    .buildAndExpand(uuid)
-                    .toUriString();
+                .buildAndExpand(uuid)
+                .toUriString();
             return webClient.put()
-                    .uri(loadFlowServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(LoadFlowResult.class)
-                    .flatMap(result -> updateLoadFlowResultAndStatus(studyUuid, toEntity(result), result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
-                    .doOnError(e -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe())
-                    .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
+                .uri(loadFlowServerBaseUri + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
+                .retrieve()
+                .bodyToMono(LoadFlowResult.class)
+                .flatMap(result -> updateLoadFlowResultAndStatus(studyUuid, toEntity(result), result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
+                .doOnError(e -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe())
+                .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
         }).doFinally(s ->
-                emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
+            emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
         );
     }
 
