@@ -65,6 +65,7 @@
         userId varchar(255) not null,
         primary key (id)
     );
+create index loadFlowResultEntity_componentResults_id_index on LoadFlowResultEntity_componentResults (LoadFlowResultEntity_id);
 create index studyEntity_isPrivate_index on study (isPrivate);
 create index studyEntity_userId_index on study (userId);
 create index studyCreationRequest_isPrivate_index on studycreationrequest (isPrivate);
