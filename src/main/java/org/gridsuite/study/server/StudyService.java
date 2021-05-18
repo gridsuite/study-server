@@ -672,9 +672,10 @@ public class StudyService {
         });
     }
 
-    Mono<Void> runLoadFlow(UUID studyUuid) {
+    Mono<Void> runLoadFlow(UUID studyUuid, String providerName) {
         return setLoadFlowRunning(studyUuid).then(getNetworkUuid(studyUuid)).flatMap(uuid -> {
             String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+                .queryParam("provider", providerName)
                 .buildAndExpand(uuid)
                 .toUriString();
             return webClient.put()
@@ -903,7 +904,7 @@ public class StudyService {
                         .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
-    public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters) {
+    public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String providerName, String parameters) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(parameters);
@@ -915,11 +916,12 @@ public class StudyService {
             try {
                 receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid)), StandardCharsets.UTF_8);
             } catch (JsonProcessingException e) {
-                throw new UncheckedIOException(e);
+                return Mono.error(new UncheckedIOException(e));
             }
             String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                     .queryParam("contingencyListName", contingencyListNames)
                     .queryParam(RECEIVER, receiver)
+                    .queryParam("provider", providerName)
                     .buildAndExpand(uuid)
                     .toUriString();
 

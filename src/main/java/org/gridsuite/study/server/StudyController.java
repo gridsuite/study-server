@@ -358,11 +358,10 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
-    public ResponseEntity<Mono<Void>> runLoadFlow(
-            @PathVariable("studyUuid") UUID studyUuid) {
-
+    public ResponseEntity<Mono<Void>> runLoadFlow(@PathVariable("studyUuid") UUID studyUuid,
+                                                  @ApiParam(value = "Provider name") @RequestParam(name = "provider-name", required = false) String providerName) {
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid)
-                .then(studyService.runLoadFlow(studyUuid)));
+                .then(studyService.runLoadFlow(studyUuid, providerName)));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/rename")
@@ -422,10 +421,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The security analysis has started")})
     public ResponseEntity<Mono<UUID>> runSecurityAnalysis(@ApiParam(value = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @ApiParam(value = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contigencyListNames,
+                                                          @ApiParam(value = "Provider name") @RequestParam(name = "provider-name", required = false) String providerName,
                                                           @RequestBody(required = false) String parameters) {
         List<String> nonNullcontingencyListNames = contigencyListNames != null ? contigencyListNames : Collections.emptyList();
         String nonNullParameters = Objects.toString(parameters, "");
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, providerName, nonNullParameters));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/result")
