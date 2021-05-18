@@ -1204,7 +1204,7 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(errorMessage.length != 0 || isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
@@ -1266,7 +1266,7 @@ public class StudyTest {
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(errorMessage.length != 0 ? studyName : null, headers.get(HEADER_STUDY_NAME));
-        assertNotEquals(errorMessage.length != 0 || isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
