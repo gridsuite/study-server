@@ -674,8 +674,11 @@ public class StudyService {
 
     Mono<Void> runLoadFlow(UUID studyUuid, String providerName) {
         return setLoadFlowRunning(studyUuid).then(getNetworkUuid(studyUuid)).flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                .queryParam("provider", providerName)
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run");
+            if (providerName != null) {
+                uriComponentsBuilder.queryParam("provider", providerName);
+            }
+            String path = uriComponentsBuilder
                 .buildAndExpand(uuid)
                 .toUriString();
             return webClient.put()
@@ -918,10 +921,13 @@ public class StudyService {
             } catch (JsonProcessingException e) {
                 return Mono.error(new UncheckedIOException(e));
             }
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save");
+            if (providerName != null) {
+                uriComponentsBuilder.queryParam("provider", providerName);
+            }
+            String path = uriComponentsBuilder
                     .queryParam("contingencyListName", contingencyListNames)
                     .queryParam(RECEIVER, receiver)
-                    .queryParam("provider", providerName)
                     .buildAndExpand(uuid)
                     .toUriString();
 
