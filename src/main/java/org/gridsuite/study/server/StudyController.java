@@ -358,7 +358,9 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
-    public ResponseEntity<Mono<Void>> runLoadFlow(@PathVariable("studyUuid") UUID studyUuid) {
+    public ResponseEntity<Mono<Void>> runLoadFlow(
+            @PathVariable("studyUuid") UUID studyUuid) {
+
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid)
                 .then(studyService.runLoadFlow(studyUuid)));
     }

@@ -1,7 +1,6 @@
 
     create table loadFlowParameters (
        id uuid not null,
-        provider varchar(255),
         balanceType varchar(255),
         dc boolean,
         distributedSlack boolean,
