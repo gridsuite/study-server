@@ -733,7 +733,8 @@ public class StudyTest {
         webTestClient.get()
                 .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("");
 
         // set load flow provider
         webTestClient.post()
@@ -762,7 +763,8 @@ public class StudyTest {
         webTestClient.get()
                 .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("");
     }
 
     @Test

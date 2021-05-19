@@ -358,10 +358,9 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
-    public ResponseEntity<Mono<Void>> runLoadFlow(@PathVariable("studyUuid") UUID studyUuid,
-                                                  @ApiParam(value = "Provider name") @RequestParam(name = "provider-name", required = false) String providerName) {
+    public ResponseEntity<Mono<Void>> runLoadFlow(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid)
-                .then(studyService.runLoadFlow(studyUuid, providerName)));
+                .then(studyService.runLoadFlow(studyUuid)));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/rename")
@@ -421,11 +420,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The security analysis has started")})
     public ResponseEntity<Mono<UUID>> runSecurityAnalysis(@ApiParam(value = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @ApiParam(value = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contigencyListNames,
-                                                          @ApiParam(value = "Provider name") @RequestParam(name = "provider-name", required = false) String providerName,
                                                           @RequestBody(required = false) String parameters) {
         List<String> nonNullcontingencyListNames = contigencyListNames != null ? contigencyListNames : Collections.emptyList();
         String nonNullParameters = Objects.toString(parameters, "");
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, providerName, nonNullParameters));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/result")
@@ -468,7 +466,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
-    @ApiOperation(value = "set load flow provider for the specified study", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @ApiOperation(value = "set load flow provider for the specified study, no body means reset to default provider", consumes = MediaType.TEXT_PLAIN_VALUE)
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The load flow provider is set")})
     public ResponseEntity<Mono<Void>> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
                                                           @RequestBody(required = false) String provider) {
@@ -476,12 +474,10 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")
-    @ApiOperation(value = "Get load flow provider for a specified study", produces = MediaType.TEXT_PLAIN_VALUE)
+    @ApiOperation(value = "Get load flow provider for a specified study, empty string means default provider", produces = MediaType.TEXT_PLAIN_VALUE)
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The load flow provider is returned")})
-    public Mono<ResponseEntity<String>> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return studyService.getLoadFlowProvider(studyUuid)
-                .map(result -> ResponseEntity.ok().body(result))
-                .defaultIfEmpty(ResponseEntity.notFound().build());
+    public ResponseEntity<Mono<String>> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/substations/{substationId}/svg")

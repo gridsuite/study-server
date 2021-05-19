@@ -672,14 +672,16 @@ public class StudyService {
         });
     }
 
-    Mono<Void> runLoadFlow(UUID studyUuid, String providerName) {
-        return setLoadFlowRunning(studyUuid).then(getNetworkUuid(studyUuid)).flatMap(uuid -> {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run");
-            if (providerName != null) {
-                uriComponentsBuilder.queryParam("provider", providerName);
+    Mono<Void> runLoadFlow(UUID studyUuid) {
+        return setLoadFlowRunning(studyUuid).then(Mono.zip(getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid))).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String provider = tuple.getT2();
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run");
+            if (!provider.isEmpty()) {
+                uriComponentsBuilder.queryParam("provider", provider);
             }
-            String path = uriComponentsBuilder
-                .buildAndExpand(uuid)
+            var path = uriComponentsBuilder
+                .buildAndExpand(networkUuid)
                 .toUriString();
             return webClient.put()
                 .uri(loadFlowServerBaseUri + path)
@@ -911,7 +913,7 @@ public class StudyService {
     public String doGetLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getLoadFlowProvider)
-                .orElse(null);
+                .orElse("");
     }
 
     public Mono<String> getLoadFlowProvider(UUID studyUuid) {
@@ -930,28 +932,29 @@ public class StudyService {
         return Mono.fromRunnable(() -> self.doUpdateLoadFlowProvider(studyUuid, provider));
     }
 
-    public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String providerName, String parameters) {
+    public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(parameters);
 
-        Mono<UUID> networkUuid = getNetworkUuid(studyUuid);
+        return Mono.zip(getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String provider = tuple.getT2();
 
-        return networkUuid.flatMap(uuid -> {
             String receiver;
             try {
                 receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid)), StandardCharsets.UTF_8);
             } catch (JsonProcessingException e) {
                 return Mono.error(new UncheckedIOException(e));
             }
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save");
-            if (providerName != null) {
-                uriComponentsBuilder.queryParam("provider", providerName);
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save");
+            if (!provider.isEmpty()) {
+                uriComponentsBuilder.queryParam("provider", provider);
             }
-            String path = uriComponentsBuilder
+            var path = uriComponentsBuilder
                     .queryParam("contingencyListName", contingencyListNames)
                     .queryParam(RECEIVER, receiver)
-                    .buildAndExpand(uuid)
+                    .buildAndExpand(networkUuid)
                     .toUriString();
 
             return webClient
@@ -961,12 +964,11 @@ public class StudyService {
                     .body(BodyInserters.fromValue(parameters))
                     .retrieve()
                     .bodyToMono(UUID.class);
-        })
-                .flatMap(result ->
-                        updateSecurityAnalysisResultUuid(studyUuid, result)
-                                .doOnSuccess(e -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
-                                .thenReturn(result)
-                );
+        }).flatMap(result ->
+            updateSecurityAnalysisResultUuid(studyUuid, result)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                    .thenReturn(result)
+        );
     }
 
     public Mono<String> getSecurityAnalysisResult(UUID studyUuid, List<String> limitTypes) {
