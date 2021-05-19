@@ -1,6 +1,7 @@
 
     create table loadFlowParameters (
        id uuid not null,
+        provider varchar(255),
         balanceType varchar(255),
         dc boolean,
         distributedSlack boolean,
@@ -52,6 +53,7 @@
         securityAnalysisResultUuid uuid,
         studyName varchar(255) not null,
         userId varchar(255) not null,
+        loadFlowProvider varchar(255),
         loadFlowParametersEntity_id uuid not null,
         loadFlowResultEntity_id uuid,
         primary key (id)

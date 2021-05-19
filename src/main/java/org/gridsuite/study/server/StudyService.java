@@ -907,6 +907,29 @@ public class StudyService {
                         .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
+    @Transactional
+    public String doGetLoadFlowProvider(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(StudyEntity::getLoadFlowProvider)
+                .orElse(null);
+    }
+
+    public Mono<String> getLoadFlowProvider(UUID studyUuid) {
+        return Mono.fromCallable(() -> self.doGetLoadFlowProvider(studyUuid));
+    }
+
+    @Transactional
+    public void doUpdateLoadFlowProvider(UUID studyUuid, String provider) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> {
+            studyEntity1.setLoadFlowProvider(provider);
+        });
+    }
+
+    public Mono<Void> updateLoadFlowProvider(UUID studyUuid, String provider) {
+        return Mono.fromRunnable(() -> self.doUpdateLoadFlowProvider(studyUuid, provider));
+    }
+
     public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String providerName, String parameters) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
@@ -1175,7 +1198,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowStatus);
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
-            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
+            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid);
             return studyRepository.save(studyEntity);
         });
     }

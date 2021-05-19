@@ -467,6 +467,23 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyUuid));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
+    @ApiOperation(value = "set load flow provider for the specified study", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The load flow provider is set")})
+    public ResponseEntity<Mono<Void>> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
+                                                          @RequestBody(required = false) String provider) {
+        return ResponseEntity.ok().body(studyService.updateLoadFlowProvider(studyUuid, provider));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")
+    @ApiOperation(value = "Get load flow provider for a specified study", produces = MediaType.TEXT_PLAIN_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The load flow provider is returned")})
+    public Mono<ResponseEntity<String>> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return studyService.getLoadFlowProvider(studyUuid)
+                .map(result -> ResponseEntity.ok().body(result))
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/network/substations/{substationId}/svg")
     @ApiOperation(value = "get the substation diagram for the given network and substation")
     @ApiResponse(code = 200, message = "The svg")

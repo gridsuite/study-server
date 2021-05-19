@@ -728,6 +728,41 @@ public class StudyTest {
         output.receive(1000);
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run", NETWORK_UUID_STRING)));
+
+        // get default load flow provider
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isNotFound();
+
+        // set load flow provider
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
+                .header("userId", "userId")
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(BodyInserters.fromValue("Hades2"))
+                .exchange()
+                .expectStatus().isOk();
+
+        // get load flow provider
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("Hades2");
+
+        // reset load flow provider to default one
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk();
+
+        // get default load flow provider again
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
+                .exchange()
+                .expectStatus().isNotFound();
     }
 
     @Test
