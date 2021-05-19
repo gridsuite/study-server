@@ -106,9 +106,9 @@ public class StudyController {
     @ApiOperation(value = "delete the study")
     @ApiResponse(code = 200, message = "Study deleted")
     public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
-                                                  @RequestHeader("userId") String headerUserId) {
+                                                  @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
-                studyService.deleteStudyIfNotCreationInProgress(studyUuid, headerUserId));
+                studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg")
