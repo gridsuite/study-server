@@ -756,7 +756,7 @@ public class StudyService {
                 .map(StudyService::toStudyInfos);
     }
 
-    private Mono<Void> applyLineChanges(UUID studyUuid, String path) {
+    private Mono<Void> applyLineChanges(UUID studyUuid, String path, String state) {
         Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
                 .then(invalidateSecurityAnalysisStatus(studyUuid)
@@ -764,6 +764,7 @@ public class StudyService {
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
         Flux<ElementaryModificationInfos> fluxChangeLineState = webClient.put()
                 .uri(networkModificationServerBaseUri + path)
+                .body(BodyInserters.fromValue(state))
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse -> Mono.error(new StudyException(LINE_MODIFICATION_FAILED)))
                 .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
@@ -778,52 +779,15 @@ public class StudyService {
                 .then(monoUpdateLfState);
     }
 
-    public Mono<Void> lockoutLine(UUID studyUuid, String lineId) {
+    public Mono<Void> changeLineState(UUID studyUuid, String lineId, String state) {
         Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
 
         return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/lockout")
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/state")
                     .buildAndExpand(uuid, lineId)
                     .toUriString();
 
-            return applyLineChanges(studyUuid, path);
-        });
-    }
-
-    public Mono<Void> tripLine(UUID studyUuid, String lineId) {
-        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
-
-        return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/trip")
-                    .buildAndExpand(uuid, lineId)
-                    .toUriString();
-
-            return applyLineChanges(studyUuid, path);
-        });
-    }
-
-    public Mono<Void> energiseLineEnd(UUID studyUuid, String lineId, String side) {
-        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
-
-        return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/energiseEnd")
-                    .queryParam("side", side)
-                    .buildAndExpand(uuid, lineId)
-                    .toUriString();
-
-            return applyLineChanges(studyUuid, path);
-        });
-    }
-
-    public Mono<Void> switchOnLine(UUID studyUuid, String lineId) {
-        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
-
-        return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/switchOn")
-                    .buildAndExpand(uuid, lineId)
-                    .toUriString();
-
-            return applyLineChanges(studyUuid, path);
+            return applyLineChanges(studyUuid, path, state);
         });
     }
 

@@ -36,6 +36,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -203,6 +204,7 @@ public class StudyTest {
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 String path = Objects.requireNonNull(request.getPath());
+                Buffer body = request.getBody();
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
@@ -253,15 +255,15 @@ public class StudyTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/" + CASE_API_VERSION + "/cases/private": {
-                        String body = request.getBody().readUtf8();
-                        if (body.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
+                        String bodyStr = body.readUtf8();
+                        if (bodyStr.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
                             return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
-                        } else if (body.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
+                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
                             return new MockResponse().setResponseCode(500)
                                     .addHeader("Content-Type", "application/json; charset=utf-8")
                                     .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                        } else if (body.contains("filename=\"blockingCaseFile\"")) {
+                        } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
                             return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
                         } else {
@@ -279,40 +281,38 @@ public class StudyTest {
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/lockout":
-                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
-                        return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/state":
+                        if (Objects.nonNull(body) && body.readUtf8().equals("lockout")) {
+                            jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
+                            return new MockResponse().setResponseCode(200)
+                                    .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else {
+                            return new MockResponse().setResponseCode(500);
+                        }
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/state":
+                        if (Objects.nonNull(body) && body.readUtf8().equals("trip")) {
+                            jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
+                            return new MockResponse().setResponseCode(200)
+                                    .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else {
+                            return new MockResponse().setResponseCode(500);
+                        }
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/trip":
-                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
-                        return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/state": {
+                        String bodyStr = Objects.nonNull(body) ? body.readUtf8() : "";
+                        if (bodyStr.equals("switchOn") || bodyStr.equals("energiseEndOne")) {
+                            jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
+                            return new MockResponse().setResponseCode(200)
+                                    .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else {
+                            return new MockResponse().setResponseCode(500);
+                        }
+                    }
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/energiseEnd?side=ONE":
-                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
-                        return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/switchOn":
-                        jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
-                        return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/lockout":
-                        return new MockResponse().setResponseCode(500);
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/trip":
-                        return new MockResponse().setResponseCode(500);
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/energiseEnd?side=TWO":
-                        return new MockResponse().setResponseCode(500);
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/switchOn":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/state":
                         return new MockResponse().setResponseCode(500);
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
@@ -1466,65 +1466,69 @@ public class StudyTest {
 
         // lockout line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/lockout", studyNameUserIdUuid, "line12")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line12")
+                .bodyValue("lockout")
                 .exchange()
                 .expectStatus().isOk();
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s2"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/lockout", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("lockout")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         // trip line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/trip", studyNameUserIdUuid, "line23")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line23")
+                .bodyValue("trip")
                 .exchange()
                 .expectStatus().isOk();
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2", "s3"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/trip", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("trip")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         // lockout line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/energiseEnd?side=ONE", studyNameUserIdUuid, "line13")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line13")
+                .bodyValue("energiseEndOne")
                 .exchange()
                 .expectStatus().isOk();
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/energiseEnd?side=TWO", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("energiseEndTwo")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         // lockout line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/switchOn", studyNameUserIdUuid, "line13")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line13")
+                .bodyValue("switchOn")
                 .exchange()
                 .expectStatus().isOk();
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/switchOn", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("switchOn")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         var requests = getRequestsDone(8);
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line12/lockout", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line23/trip", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/energiseEnd?side=ONE", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/switchOn", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/lockout", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/trip", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/energiseEnd?side=TWO", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/switchOn", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line12/state", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line23/state", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/state", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/state", NETWORK_UUID_STRING)));
     }
 
     private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
