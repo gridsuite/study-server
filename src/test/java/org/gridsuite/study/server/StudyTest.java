@@ -1461,7 +1461,7 @@ public class StudyTest {
 
     @Test
     public void testUpdateLines() throws Exception {
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, true);
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         // lockout line
