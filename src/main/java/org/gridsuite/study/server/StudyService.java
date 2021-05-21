@@ -10,6 +10,7 @@ import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -41,10 +42,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.support.MessageBuilder;
@@ -424,7 +423,35 @@ public class StudyService {
 
         return multipartFile.flatMap(file -> {
             MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-            multipartBodyBuilder.part("file", file);
+            multipartBodyBuilder.part("file", new FilePart() {
+                @Override
+                public String filename() {
+                    return file.filename();
+                }
+
+                @Override
+                public Mono<Void> transferTo(Path dest) {
+                    return file.transferTo(dest);
+                }
+
+                @Override
+                public String name() {
+                    return file.name();
+                }
+
+                @Override
+                public HttpHeaders headers() {
+                    var httpHeaders = new HttpHeaders();
+                    httpHeaders.putAll(file.headers());
+                    httpHeaders.setContentDisposition(ContentDisposition.formData().name("file").filename(file.filename()).build());
+                    return httpHeaders;
+                }
+
+                @Override
+                public Flux<DataBuffer> content() {
+                    return file.content();
+                }
+            });
 
             return webClient.post()
                     .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
