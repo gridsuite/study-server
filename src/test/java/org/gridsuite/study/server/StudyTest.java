@@ -281,7 +281,7 @@ public class StudyTest {
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/state":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status":
                         if (Objects.nonNull(body) && body.readUtf8().equals("lockout")) {
                             jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
                             return new MockResponse().setResponseCode(200)
@@ -290,7 +290,7 @@ public class StudyTest {
                         } else {
                             return new MockResponse().setResponseCode(500);
                         }
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/state":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/status":
                         if (Objects.nonNull(body) && body.readUtf8().equals("trip")) {
                             jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
                             return new MockResponse().setResponseCode(200)
@@ -300,7 +300,7 @@ public class StudyTest {
                             return new MockResponse().setResponseCode(500);
                         }
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/state": {
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status": {
                         String bodyStr = Objects.nonNull(body) ? body.readUtf8() : "";
                         if (bodyStr.equals("switchOn") || bodyStr.equals("energiseEndOne")) {
                             jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
@@ -312,7 +312,7 @@ public class StudyTest {
                         }
                     }
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/state":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status":
                         return new MockResponse().setResponseCode(500);
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
@@ -1466,7 +1466,7 @@ public class StudyTest {
 
         // lockout line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line12")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line12")
                 .bodyValue("lockout")
                 .exchange()
                 .expectStatus().isOk();
@@ -1474,14 +1474,14 @@ public class StudyTest {
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s2"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("lockout")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         // trip line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line23")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line23")
                 .bodyValue("trip")
                 .exchange()
                 .expectStatus().isOk();
@@ -1489,14 +1489,14 @@ public class StudyTest {
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2", "s3"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("trip")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         // lockout line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line13")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line13")
                 .bodyValue("energiseEndOne")
                 .exchange()
                 .expectStatus().isOk();
@@ -1504,14 +1504,14 @@ public class StudyTest {
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("energiseEndTwo")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         // lockout line
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "line13")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line13")
                 .bodyValue("switchOn")
                 .exchange()
                 .expectStatus().isOk();
@@ -1519,16 +1519,16 @@ public class StudyTest {
         checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
 
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/state", studyNameUserIdUuid, "lineFailedId")
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("switchOn")
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
 
         var requests = getRequestsDone(8);
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line12/state", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line23/state", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/state", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/state", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line12/status", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line23/status", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/status", NETWORK_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)));
     }
 
     private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {

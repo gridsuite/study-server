@@ -756,21 +756,21 @@ public class StudyService {
                 .map(StudyService::toStudyInfos);
     }
 
-    private Mono<Void> applyLineChanges(UUID studyUuid, String path, String state) {
+    private Mono<Void> applyLineChanges(UUID studyUuid, String path, String status) {
         Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
                 .then(invalidateSecurityAnalysisStatus(studyUuid)
                         .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
-        Flux<ElementaryModificationInfos> fluxChangeLineState = webClient.put()
+        Flux<ElementaryModificationInfos> fluxChangeLineStatus = webClient.put()
                 .uri(networkModificationServerBaseUri + path)
-                .body(BodyInserters.fromValue(state))
+                .body(BodyInserters.fromValue(status))
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse -> Mono.error(new StudyException(LINE_MODIFICATION_FAILED)))
                 .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
                 });
 
-        return fluxChangeLineState
+        return fluxChangeLineStatus
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
@@ -779,15 +779,15 @@ public class StudyService {
                 .then(monoUpdateLfState);
     }
 
-    public Mono<Void> changeLineState(UUID studyUuid, String lineId, String state) {
+    public Mono<Void> changeLineStatus(UUID studyUuid, String lineId, String status) {
         Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
 
         return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/state")
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/status")
                     .buildAndExpand(uuid, lineId)
                     .toUriString();
 
-            return applyLineChanges(studyUuid, path, state);
+            return applyLineChanges(studyUuid, path, status);
         });
     }
 
