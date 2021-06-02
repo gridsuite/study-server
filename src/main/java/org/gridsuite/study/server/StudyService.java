@@ -431,22 +431,19 @@ public class StudyService {
             multipartBodyBuilder.part("file", file);
 
             return webClient.post()
-                    .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
-                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                            handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "case-server")
-                    )
-                    .bodyToMono(UUID.class)
-                    .publishOn(Schedulers.boundedElastic())
-                    .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+                .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                    handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "case-server")
+                )
+                .bodyToMono(UUID.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
         })
-            .onErrorResume(t -> {
-                if (!(t instanceof StudyException)) {
-                    emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage());
-                }
-                return Mono.empty();
+            .doOnError(t -> !(t instanceof StudyException), t -> {
+                emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage());
             });
     }
 
@@ -484,24 +481,21 @@ public class StudyService {
 
     private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String studyName, String userId, boolean isPrivate) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-                .queryParam(CASE_UUID, caseUuid)
-                .buildAndExpand()
-                .toUriString();
+            .queryParam(CASE_UUID, caseUuid)
+            .buildAndExpand()
+            .toUriString();
 
         return webClient.post()
-                .uri(networkConversionServerBaseUri + path)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                        handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "network-conversion-server")
-                )
-                .bodyToMono(NetworkInfos.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE)
-            .onErrorResume(t -> {
-                if (!(t instanceof StudyException)) {
-                    emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage());
-                }
-                return Mono.empty();
+            .uri(networkConversionServerBaseUri + path)
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "network-conversion-server")
+            )
+            .bodyToMono(NetworkInfos.class)
+            .publishOn(Schedulers.boundedElastic())
+            .log(ROOT_CATEGORY_REACTOR, Level.FINE)
+            .doOnError(t -> !(t instanceof StudyException), t -> {
+                emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage());
             });
     }
 
