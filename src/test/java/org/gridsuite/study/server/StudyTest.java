@@ -200,6 +200,7 @@ public class StudyTest {
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
         final Dispatcher dispatcher = new Dispatcher() {
+            @SneakyThrows
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 String path = Objects.requireNonNull(request.getPath());
@@ -281,7 +282,7 @@ public class StudyTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status":
-                        if (Objects.nonNull(body) && body.readUtf8().equals("lockout")) {
+                        if (Objects.nonNull(body) && body.peek().readUtf8().equals("lockout")) {
                             jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
                             return new MockResponse().setResponseCode(200)
                                     .setBody(new JSONArray(List.of(jsonObject)).toString())
@@ -290,7 +291,7 @@ public class StudyTest {
                             return new MockResponse().setResponseCode(500);
                         }
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/status":
-                        if (Objects.nonNull(body) && body.readUtf8().equals("trip")) {
+                        if (Objects.nonNull(body) && body.peek().readUtf8().equals("trip")) {
                             jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
                             return new MockResponse().setResponseCode(200)
                                     .setBody(new JSONArray(List.of(jsonObject)).toString())
@@ -300,7 +301,7 @@ public class StudyTest {
                         }
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status": {
-                        String bodyStr = Objects.nonNull(body) ? body.readUtf8() : "";
+                        String bodyStr = Objects.nonNull(body) ? body.peek().readUtf8() : "";
                         if (bodyStr.equals("switchOn") || bodyStr.equals("energiseEndOne")) {
                             jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
                             return new MockResponse().setResponseCode(200)
@@ -420,6 +421,37 @@ public class StudyTest {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
                 return server.takeRequest(0, TimeUnit.SECONDS).getPath();
+            } catch (InterruptedException e) {
+                LOGGER.error("Error while attempting to get the request done : ", e);
+            }
+            return null;
+        }).collect(Collectors.toSet());
+    }
+
+    private class RequestWithBody {
+
+        public RequestWithBody(String path, String body) {
+            this.path = path;
+            this.body = body;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public String getBody() {
+            return body;
+        }
+
+        private String path;
+        private String body;
+    }
+
+    private Set<RequestWithBody> getRequestsWithBodyDone(int n) {
+        return IntStream.range(0, n).mapToObj(i -> {
+            try {
+                var request = server.takeRequest();
+                return new RequestWithBody(request.getPath(), request.getBody().readUtf8());
             } catch (InterruptedException e) {
                 LOGGER.error("Error while attempting to get the request done : ", e);
             }
@@ -1493,7 +1525,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
-        // lockout line
+        // energise line end
         webTestClient.put()
                 .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line13")
                 .bodyValue("energiseEndOne")
@@ -1508,7 +1540,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
-        // lockout line
+        // switch on line
         webTestClient.put()
                 .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line13")
                 .bodyValue("switchOn")
@@ -1523,11 +1555,15 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
-        var requests = getRequestsDone(8);
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line12/status", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line23/status", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line13/status", NETWORK_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)));
+        var requests = getRequestsWithBodyDone(8);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line12/status", NETWORK_UUID_STRING)) && r.getBody().equals("lockout")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line23/status", NETWORK_UUID_STRING)) && r.getBody().equals("trip")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line13/status", NETWORK_UUID_STRING)) && r.getBody().equals("energiseEndOne")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line13/status", NETWORK_UUID_STRING)) && r.getBody().equals("switchOn")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("lockout")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("trip")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("energiseEndTwo")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("switchOn")));
     }
 
     private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
