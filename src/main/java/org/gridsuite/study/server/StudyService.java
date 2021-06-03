@@ -442,9 +442,7 @@ public class StudyService {
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
         })
-            .doOnError(t -> !(t instanceof StudyException), t -> {
-                emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage());
-            });
+            .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
     }
 
     Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
@@ -494,9 +492,7 @@ public class StudyService {
             .bodyToMono(NetworkInfos.class)
             .publishOn(Schedulers.boundedElastic())
             .log(ROOT_CATEGORY_REACTOR, Level.FINE)
-            .doOnError(t -> !(t instanceof StudyException), t -> {
-                emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage());
-            });
+            .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
     }
 
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
