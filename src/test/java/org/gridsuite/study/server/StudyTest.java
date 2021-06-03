@@ -72,8 +72,7 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.*;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -313,7 +312,7 @@ public class StudyTest {
                     }
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status":
-                        return new MockResponse().setResponseCode(500);
+                        return new MockResponse().setResponseCode(500).setBody(LINE_MODIFICATION_FAILED.name());
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
                         return new MockResponse().setResponseCode(200)
@@ -1477,7 +1476,7 @@ public class StudyTest {
                 .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("lockout")
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         // trip line
         webTestClient.put()
@@ -1492,7 +1491,7 @@ public class StudyTest {
                 .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("trip")
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         // lockout line
         webTestClient.put()
@@ -1507,7 +1506,7 @@ public class StudyTest {
                 .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("energiseEndTwo")
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         // lockout line
         webTestClient.put()
@@ -1522,7 +1521,7 @@ public class StudyTest {
                 .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
                 .bodyValue("switchOn")
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.NOT_MODIFIED);
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         var requests = getRequestsDone(8);
         assertTrue(requests.contains(String.format("/v1/networks/%s/lines/line12/status", NETWORK_UUID_STRING)));

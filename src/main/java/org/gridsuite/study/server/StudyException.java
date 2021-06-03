@@ -34,6 +34,11 @@ class StudyException  extends RuntimeException {
         this.type = type;
     }
 
+    StudyException(Type type, String message) {
+        super(message);
+        this.type = type;
+    }
+
     Type getType() {
         return type;
     }

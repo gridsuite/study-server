@@ -756,6 +756,23 @@ public class StudyService {
                 .map(StudyService::toStudyInfos);
     }
 
+    private Mono<? extends Throwable> handleChangeLineError(UUID studyUuid, ClientResponse clientResponse) {
+        return clientResponse.bodyToMono(String.class).flatMap(body -> {
+            String message = null;
+            try {
+                JsonNode node = new ObjectMapper().readTree(body).path("message");
+                if (!node.isMissingNode()) {
+                    message = node.asText();
+                }
+            } catch (JsonProcessingException e) {
+                if (!body.isEmpty()) {
+                    message = body;
+                }
+            }
+            return Mono.error(new StudyException(LINE_MODIFICATION_FAILED, message));
+        });
+    }
+
     private Mono<Void> applyLineChanges(UUID studyUuid, String path, String status) {
         Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
@@ -766,7 +783,7 @@ public class StudyService {
                 .uri(networkModificationServerBaseUri + path)
                 .body(BodyInserters.fromValue(status))
                 .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.INTERNAL_SERVER_ERROR, clientResponse -> Mono.error(new StudyException(LINE_MODIFICATION_FAILED)))
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> handleChangeLineError(studyUuid, clientResponse))
                 .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
                 });
 
