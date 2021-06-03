@@ -37,11 +37,11 @@ public class StudyController {
         this.studyService = studyService;
     }
 
-    @GetMapping(value = "/studies")
-    @ApiOperation(value = "Get all studies for a user")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
-    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyList(@RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(userId));
+    @GetMapping(value = "/studies/metadata")
+    @ApiOperation(value = "Get studies metadata")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies metadata")})
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyList(@RequestHeader("uuids") List<UUID> uuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids));
     }
 
     @GetMapping(value = "/study_creation_requests")
@@ -50,6 +50,13 @@ public class StudyController {
     public ResponseEntity<Flux<BasicStudyInfos>> getStudyCreationRequestList(@RequestHeader("userId") String userId) {
         Flux<BasicStudyInfos> studies = studyService.getStudyCreationRequests(userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
+    }
+
+    @GetMapping(value = "/studies")
+    @ApiOperation(value = "Get all studies for a user")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The list of studies")})
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(userId));
     }
 
     @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")

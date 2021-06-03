@@ -233,6 +233,10 @@ public class StudyService {
                 .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
 
+    public Flux<CreatedStudyBasicInfos> getStudyListMetadata(List<UUID> uuids) {
+        return Flux.fromStream(() -> studyRepository.findAllByUuids(uuids).stream().map(StudyService::toCreatedStudyBasicInfos));
+    }
+
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
         return Flux.fromStream(() -> studyCreationRequestRepository.findByUserIdOrIsPrivate(userId, false).stream())
                 .map(StudyService::toBasicStudyInfos)
