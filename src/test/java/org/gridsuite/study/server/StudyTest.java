@@ -747,6 +747,9 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk();
 
+        messageLfStatus = output.receive(1000);
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, messageLfStatus.getHeaders().get(HEADER_UPDATE_TYPE));
+
         // get load flow provider
         webTestClient.get()
                 .uri("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)
@@ -760,6 +763,9 @@ public class StudyTest {
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
+
+        messageLfStatus = output.receive(1000);
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, messageLfStatus.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // get default load flow provider again
         webTestClient.get()
