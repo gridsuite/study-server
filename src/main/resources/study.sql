@@ -52,6 +52,7 @@
         securityAnalysisResultUuid uuid,
         studyName varchar(255) not null,
         userId varchar(255) not null,
+        loadFlowProvider varchar(255),
         loadFlowParametersEntity_id uuid not null,
         loadFlowResultEntity_id uuid,
         primary key (id)
