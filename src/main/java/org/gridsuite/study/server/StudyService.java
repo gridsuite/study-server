@@ -86,6 +86,7 @@ public class StudyService {
     static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
+    static final String UPDATE_TYPE_LINE = "line";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
     static final String HEADER_ERROR = "error";
@@ -753,6 +754,58 @@ public class StudyService {
         return getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .map(StudyService::toStudyInfos);
+    }
+
+    private Mono<? extends Throwable> handleChangeLineError(UUID studyUuid, ClientResponse clientResponse) {
+        return clientResponse.bodyToMono(String.class).flatMap(body -> {
+            String message = null;
+            try {
+                JsonNode node = new ObjectMapper().readTree(body).path("message");
+                if (!node.isMissingNode()) {
+                    message = node.asText();
+                }
+            } catch (JsonProcessingException e) {
+                if (!body.isEmpty()) {
+                    message = body;
+                }
+            }
+            return Mono.error(new StudyException(LINE_MODIFICATION_FAILED, message));
+        });
+    }
+
+    private Mono<Void> applyLineChanges(UUID studyUuid, String path, String status) {
+        Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(studyUuid)
+                        .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
+        Flux<ElementaryModificationInfos> fluxChangeLineStatus = webClient.put()
+                .uri(networkModificationServerBaseUri + path)
+                .body(BodyInserters.fromValue(status))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> handleChangeLineError(studyUuid, clientResponse))
+                .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
+                });
+
+        return fluxChangeLineStatus
+                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                .collect(Collectors.toSet())
+                .doOnSuccess(substationIds ->
+                        emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
+                .then(monoUpdateLfState);
+    }
+
+    public Mono<Void> changeLineStatus(UUID studyUuid, String lineId, String status) {
+        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
+
+        return networkUuidMono.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/status")
+                    .buildAndExpand(uuid, lineId)
+                    .toUriString();
+
+            return applyLineChanges(studyUuid, path, status);
+        });
     }
 
     Mono<UUID> getNetworkUuid(UUID studyUuid) {

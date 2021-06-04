@@ -355,6 +355,16 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.deleteModifications(studyUuid));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @ApiOperation(value = "Change the given line status", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Line status changed")})
+    public ResponseEntity<Mono<Void>> changeLineStatus(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("lineId") String lineId,
+            @RequestBody(required = true) String status) {
+        return ResponseEntity.ok().body(studyService.changeLineStatus(studyUuid, lineId, status));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})

@@ -36,6 +36,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -55,6 +56,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
@@ -70,8 +72,7 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.*;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -199,9 +200,11 @@ public class StudyTest {
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
         final Dispatcher dispatcher = new Dispatcher() {
+            @SneakyThrows
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 String path = Objects.requireNonNull(request.getPath());
+                Buffer body = request.getBody();
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
@@ -252,15 +255,15 @@ public class StudyTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/" + CASE_API_VERSION + "/cases/private": {
-                        String body = request.getBody().readUtf8();
-                        if (body.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
+                        String bodyStr = body.readUtf8();
+                        if (bodyStr.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
                             return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
-                        } else if (body.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
+                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
                             return new MockResponse().setResponseCode(500)
                                     .addHeader("Content-Type", "application/json; charset=utf-8")
                                     .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                        } else if (body.contains("filename=\"blockingCaseFile\"")) {
+                        } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
                             return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
                         } else {
@@ -277,6 +280,40 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status":
+                        if (Objects.nonNull(body) && body.peek().readUtf8().equals("lockout")) {
+                            jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
+                            return new MockResponse().setResponseCode(200)
+                                    .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else {
+                            return new MockResponse().setResponseCode(500);
+                        }
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/status":
+                        if (Objects.nonNull(body) && body.peek().readUtf8().equals("trip")) {
+                            jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
+                            return new MockResponse().setResponseCode(200)
+                                    .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else {
+                            return new MockResponse().setResponseCode(500);
+                        }
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status": {
+                        String bodyStr = Objects.nonNull(body) ? body.peek().readUtf8() : "";
+                        if (bodyStr.equals("switchOn") || bodyStr.equals("energiseEndOne")) {
+                            jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
+                            return new MockResponse().setResponseCode(200)
+                                    .setBody(new JSONArray(List.of(jsonObject)).toString())
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else {
+                            return new MockResponse().setResponseCode(500);
+                        }
+                    }
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status":
+                        return new MockResponse().setResponseCode(500).setBody(LINE_MODIFICATION_FAILED.name());
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
                         return new MockResponse().setResponseCode(200)
@@ -384,6 +421,37 @@ public class StudyTest {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
                 return server.takeRequest(0, TimeUnit.SECONDS).getPath();
+            } catch (InterruptedException e) {
+                LOGGER.error("Error while attempting to get the request done : ", e);
+            }
+            return null;
+        }).collect(Collectors.toSet());
+    }
+
+    private class RequestWithBody {
+
+        public RequestWithBody(String path, String body) {
+            this.path = path;
+            this.body = body;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public String getBody() {
+            return body;
+        }
+
+        private String path;
+        private String body;
+    }
+
+    private Set<RequestWithBody> getRequestsWithBodyDone(int n) {
+        return IntStream.range(0, n).mapToObj(i -> {
+            try {
+                var request = server.takeRequest();
+                return new RequestWithBody(request.getPath(), request.getBody().readUtf8());
             } catch (InterruptedException e) {
                 LOGGER.error("Error while attempting to get the request done : ", e);
             }
@@ -1420,6 +1488,113 @@ public class StudyTest {
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", NEW_STUDY_CASE_UUID)));
+    }
+
+    @Test
+    public void testUpdateLines() throws Exception {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        // lockout line
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line12")
+                .bodyValue("lockout")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s2"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("lockout")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        // trip line
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line23")
+                .bodyValue("trip")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2", "s3"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("trip")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        // energise line end
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line13")
+                .bodyValue("energiseEndOne")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("energiseEndTwo")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        // switch on line
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "line13")
+                .bodyValue("switchOn")
+                .exchange()
+                .expectStatus().isOk();
+
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
+
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, "lineFailedId")
+                .bodyValue("switchOn")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        var requests = getRequestsWithBodyDone(8);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line12/status", NETWORK_UUID_STRING)) && r.getBody().equals("lockout")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line23/status", NETWORK_UUID_STRING)) && r.getBody().equals("trip")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line13/status", NETWORK_UUID_STRING)) && r.getBody().equals("energiseEndOne")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/line13/status", NETWORK_UUID_STRING)) && r.getBody().equals("switchOn")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("lockout")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("trip")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("energiseEndTwo")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().equals(String.format("/v1/networks/%s/lines/lineFailedId/status", NETWORK_UUID_STRING)) && r.getBody().equals("switchOn")));
+    }
+
+    private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
+        // assert that the broker message has been sent
+        Message<byte[]> messageStudyUpdate = output.receive(1000);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(modifiedSubstationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+
+        // assert that the broker message has been sent
+        Message<byte[]> messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals("loadflow_status", headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent
+        Message<byte[]> messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        MessageHeaders headersSwitch = messageSwitch.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent
+        messageSwitch = output.receive(1000);
+        assertEquals("", new String(messageSwitch.getPayload()));
+        headersSwitch = messageSwitch.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(StudyService.UPDATE_TYPE_LINE, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
     @After
