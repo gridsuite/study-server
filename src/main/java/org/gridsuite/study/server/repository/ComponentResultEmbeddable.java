@@ -23,8 +23,11 @@ import javax.persistence.*;
 @Setter
 @Embeddable
 public class ComponentResultEmbeddable {
-    @Column(name = "componentNum")
-    private int componentNum;
+    @Column(name = "connectedComponentNum")
+    private int connectedComponentNum;
+
+    @Column(name = "synchronousComponentNum")
+    private int synchronousComponentNum;
 
     @Column(name = "status")
     private LoadFlowResult.ComponentResult.Status status;
