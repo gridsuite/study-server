@@ -24,7 +24,8 @@
 
     create table LoadFlowResultEntity_componentResults (
        LoadFlowResultEntity_id uuid not null,
-        componentNum int4,
+        connectedComponentNum int4,
+        synchronousComponentNum int4,
         iterationCount int4,
         slackBusActivePowerMismatch float8,
         slackBusId varchar(255),

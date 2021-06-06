@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
+import com.powsybl.iidm.network.Country;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -921,7 +922,10 @@ public class StudyService {
                 entity.isWriteSlackBus(),
                 entity.isDc(),
                 entity.isDistributedSlack(),
-                entity.getBalanceType());
+                entity.getBalanceType(),
+                true, // FIXME to persist
+                EnumSet.noneOf(Country.class), // FIXME to persist
+                LoadFlowParameters.ConnectedComponentMode.MAIN); // FIXME to persist
     }
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
@@ -941,7 +945,8 @@ public class StudyService {
 
     public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
-        return new ComponentResultEmbeddable(componentResult.getComponentNum(),
+        return new ComponentResultEmbeddable(componentResult.getConnectedComponentNum(),
+                componentResult.getSynchronousComponentNum(),
                 componentResult.getStatus(),
                 componentResult.getIterationCount(),
                 componentResult.getSlackBusId(),
@@ -951,7 +956,8 @@ public class StudyService {
 
     public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
         Objects.requireNonNull(entity);
-        return new LoadFlowResultImpl.ComponentResultImpl(entity.getComponentNum(),
+        return new LoadFlowResultImpl.ComponentResultImpl(entity.getConnectedComponentNum(),
+                entity.getSynchronousComponentNum(),
                 entity.getStatus(),
                 entity.getIterationCount(),
                 entity.getSlackBusId(),
