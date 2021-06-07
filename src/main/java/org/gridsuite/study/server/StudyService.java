@@ -407,7 +407,7 @@ public class StudyService {
 
     private Mono<? extends Throwable> handleStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, ClientResponse clientResponse, String serverName) {
         return clientResponse.bodyToMono(String.class)
-            .switchIfEmpty(Mono.just(serverName + ": " + clientResponse.statusCode()))
+            .switchIfEmpty(Mono.just("{\"message\": \"" + serverName + ": " + clientResponse.statusCode() + "\"}"))
             .flatMap(body -> {
                 try {
                     JsonNode node = new ObjectMapper().readTree(body).path("message");
