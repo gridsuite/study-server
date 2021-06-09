@@ -193,6 +193,7 @@ public class StudyTest {
         studyService.setNetworkStoreServerBaseUri(baseUrl);
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
         studyService.setActionsServerBaseUri(baseUrl);
+        studyService.setReportServerBaseUri(baseUrl);
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
@@ -358,6 +359,7 @@ public class StudyTest {
                     case "/v1/loads/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/shunt-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/static-var-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/report/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -591,6 +593,7 @@ public class StudyTest {
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/modifications", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/report/%s", NETWORK_UUID_STRING)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
