@@ -500,7 +500,7 @@ public class StudyService {
         Mono<TopLevelDocument<com.powsybl.network.store.model.VoltageLevelAttributes>> mono = webClient.get()
                 .uri(networkStoreServerBaseUri + path)
                 .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.VoltageLevelAttributes>>() {
+                .bodyToMono(new ParameterizedTypeReference<>() {
                 });
 
         return mono.map(t -> t.getData().stream()
@@ -554,6 +554,15 @@ public class StudyService {
                 .uri(networkMapServerBaseUri + path)
                 .retrieve()
                 .bodyToMono(String.class);
+    }
+
+    public Mono<String> getEquipmentData(UUID networkUuid, EquipmentType equipmentType, String equipmentId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/{equipmentPath}/{equipmentId}");
+        String path = builder.buildAndExpand(networkUuid, equipmentType.getServerPath(), equipmentId).toUriString();
+        return webClient.get()
+            .uri(networkStoreServerBaseUri + path)
+            .retrieve()
+            .bodyToMono(String.class);
     }
 
     Mono<String> getSubstationsMapData(UUID networkUuid, List<String> substationsIds) {
@@ -631,7 +640,7 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
-                    .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
+                    .bodyToFlux(new ParameterizedTypeReference<>() {
                     });
 
             return fluxChangeSwitchState
@@ -662,7 +671,7 @@ public class StudyService {
                     .uri(networkModificationServerBaseUri + path)
                     .body(BodyInserters.fromValue(groovyScript))
                     .retrieve()
-                    .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
+                    .bodyToFlux(new ParameterizedTypeReference<>() {
                     });
 
             return fluxApplyGroovy
@@ -727,7 +736,7 @@ public class StudyService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
                 .toUriString();
 
-        ParameterizedTypeReference<Collection<String>> typeRef = new ParameterizedTypeReference<Collection<String>>() {
+        ParameterizedTypeReference<Collection<String>> typeRef = new ParameterizedTypeReference<>() {
         };
 
         return webClient.get()
@@ -1084,7 +1093,7 @@ public class StudyService {
                                     .get()
                                     .uri(actionsServerBaseUri + path)
                                     .retrieve()
-                                    .bodyToMono(new ParameterizedTypeReference<List<Contingency>>() {
+                                    .bodyToMono(new ParameterizedTypeReference<>() {
                                     });
                             return contingencies.map(List::size);
                         })
@@ -1345,7 +1354,7 @@ public class StudyService {
                     var path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/modifications")
                             .buildAndExpand(networkUuid)
                             .toUriString();
-                    return webClient.get().uri(networkModificationServerBaseUri + path).retrieve().bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
+                    return webClient.get().uri(networkModificationServerBaseUri + path).retrieve().bodyToFlux(new ParameterizedTypeReference<>() {
                     });
                 });
     }

@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
@@ -35,6 +36,11 @@ public class StudyController {
 
     public StudyController(StudyService studyService) {
         this.studyService = studyService;
+    }
+
+    @InitBinder
+    public void initBinder(final WebDataBinder webdataBinder) {
+        webdataBinder.registerCustomEditor(EquipmentType.class, new EquipmentTypeEnumConverter());
     }
 
     @GetMapping(value = "/studies")
@@ -540,4 +546,17 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@ApiParam(value = "Study name") @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid));
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/network-map/{equipmentType}/{equipmentId}")
+    @ApiOperation(value = "Get Network equipment description", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The equipment data")})
+    public ResponseEntity<Mono<String>> getEquipmentData(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("equipmentType") EquipmentType equipmentType,
+        @PathVariable("equipmentId") String equipmentId) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid)
+            .flatMap(uuid -> studyService.getEquipmentData(uuid, equipmentType, equipmentId)));
+    }
+
 }

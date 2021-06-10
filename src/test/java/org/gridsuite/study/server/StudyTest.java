@@ -111,6 +111,7 @@ public class StudyTest {
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String SECURITY_ANALYSIS_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String EQUIPMENT_UUID = "42666421-1111-6942-4242-123456789abc";
     private static final String HEADER_STUDY_NAME = "studyName";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
@@ -349,6 +350,8 @@ public class StudyTest {
                     case "/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/2-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/3-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/2-windings-transformers/" + EQUIPMENT_UUID:
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/3-windings-transformers/" + EQUIPMENT_UUID:
                     case "/v1/generators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/batteries/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/dangling-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
@@ -1157,6 +1160,24 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/all/%s", NETWORK_UUID_STRING)));
+
+        //get the 2 windings transformers map data of a network
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}/network-map/2-windings-transformers/{tranformerUUID}", studyNameUserIdUuid, EQUIPMENT_UUID)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON);
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/2-windings-transformers/%s", NETWORK_UUID_STRING, EQUIPMENT_UUID)));
+
+        //get the 3 windings transformers map data of a network
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}/network-map/3-windings-transformers/{tranformerUUID}", studyNameUserIdUuid, EQUIPMENT_UUID)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/3-windings-transformers/%s", NETWORK_UUID_STRING, EQUIPMENT_UUID)));
+
     }
 
     @Test
