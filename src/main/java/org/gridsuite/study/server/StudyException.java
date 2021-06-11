@@ -23,13 +23,19 @@ class StudyException  extends RuntimeException {
         SECURITY_ANALYSIS_RUNNING,
         SECURITY_ANALYSIS_NOT_FOUND,
         NOT_ALLOWED,
-        STUDY_CREATION_FAILED
+        STUDY_CREATION_FAILED,
+        LINE_MODIFICATION_FAILED
     }
 
     private final Type type;
 
     StudyException(Type type) {
         super(Objects.requireNonNull(type.name()));
+        this.type = type;
+    }
+
+    StudyException(Type type, String message) {
+        super(message);
         this.type = type;
     }
 

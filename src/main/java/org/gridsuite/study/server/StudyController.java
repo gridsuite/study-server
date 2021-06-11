@@ -362,6 +362,16 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.deleteModifications(studyUuid));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @ApiOperation(value = "Change the given line status", produces = "application/json")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Line status changed")})
+    public ResponseEntity<Mono<Void>> changeLineStatus(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("lineId") String lineId,
+            @RequestBody(required = true) String status) {
+        return ResponseEntity.ok().body(studyService.changeLineStatus(studyUuid, lineId, status));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
     @ApiOperation(value = "run loadflow on study", produces = "application/json")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The loadflow has started")})
@@ -472,6 +482,21 @@ public class StudyController {
     public ResponseEntity<Mono<LoadFlowParameters>> getLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
+    @ApiOperation(value = "set load flow provider for the specified study, no body means reset to default provider", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The load flow provider is set")})
+    public ResponseEntity<Mono<Void>> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
+                                                          @RequestBody(required = false) String provider) {
+        return ResponseEntity.ok().body(studyService.updateLoadFlowProvider(studyUuid, provider));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")
+    @ApiOperation(value = "Get load flow provider for a specified study, empty string means default provider", produces = MediaType.TEXT_PLAIN_VALUE)
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The load flow provider is returned")})
+    public ResponseEntity<Mono<String>> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/substations/{substationId}/svg")
