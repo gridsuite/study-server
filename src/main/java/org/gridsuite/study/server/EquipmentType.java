@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum EquipmentType {
     TWO_WINDINGS_TRANSFORMERS("2-windings-transformers"),
-    THREE_WINDINGS_TRANSFORMERS("3-windings-transformers");
+    THREE_WINDINGS_TRANSFORMERS("3-windings-transformers"),
+    GENERATORS("generators");
 
-    EquipmentType(String hop) {
-        this.serverPath = hop;
+    EquipmentType(String serverPath) {
+        this.serverPath = serverPath;
     }
 
     public static EquipmentType fromString(String str) {
