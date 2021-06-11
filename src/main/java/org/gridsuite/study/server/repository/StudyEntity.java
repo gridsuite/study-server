@@ -74,6 +74,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ))
     private LoadFlowResultEntity loadFlowResult;
 
+    @Column(name = "loadFlowProvider")
+    private String loadFlowProvider;
+
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name  =  "loadFlowParametersEntity_id",
             referencedColumnName  =  "id",

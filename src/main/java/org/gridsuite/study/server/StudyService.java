@@ -6,23 +6,11 @@
  */
 package org.gridsuite.study.server;
 
-import java.io.UncheckedIOException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
+import com.powsybl.iidm.network.Country;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -59,6 +47,19 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.io.UncheckedIOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
+
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 
@@ -86,6 +87,7 @@ public class StudyService {
     static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
+    static final String UPDATE_TYPE_LINE = "line";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
     static final String HEADER_ERROR = "error";
@@ -678,21 +680,27 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(UUID studyUuid) {
-        return setLoadFlowRunning(studyUuid).then(getNetworkUuid(studyUuid)).flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                    .buildAndExpand(uuid)
-                    .toUriString();
+        return setLoadFlowRunning(studyUuid).then(Mono.zip(getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid))).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String provider = tuple.getT2();
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run");
+            if (!provider.isEmpty()) {
+                uriComponentsBuilder.queryParam("provider", provider);
+            }
+            var path = uriComponentsBuilder
+                .buildAndExpand(networkUuid)
+                .toUriString();
             return webClient.put()
-                    .uri(loadFlowServerBaseUri + path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
-                    .retrieve()
-                    .bodyToMono(LoadFlowResult.class)
-                    .flatMap(result -> updateLoadFlowResultAndStatus(studyUuid, toEntity(result), result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
-                    .doOnError(e -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe())
-                    .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
+                .uri(loadFlowServerBaseUri + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
+                .retrieve()
+                .bodyToMono(LoadFlowResult.class)
+                .flatMap(result -> updateLoadFlowResultAndStatus(studyUuid, toEntity(result), result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
+                .doOnError(e -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe())
+                .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
         }).doFinally(s ->
-                emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
+            emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
         );
     }
 
@@ -757,6 +765,58 @@ public class StudyService {
         return getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate)
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
                 .map(StudyService::toStudyInfos);
+    }
+
+    private Mono<? extends Throwable> handleChangeLineError(UUID studyUuid, ClientResponse clientResponse) {
+        return clientResponse.bodyToMono(String.class).flatMap(body -> {
+            String message = null;
+            try {
+                JsonNode node = new ObjectMapper().readTree(body).path("message");
+                if (!node.isMissingNode()) {
+                    message = node.asText();
+                }
+            } catch (JsonProcessingException e) {
+                if (!body.isEmpty()) {
+                    message = body;
+                }
+            }
+            return Mono.error(new StudyException(LINE_MODIFICATION_FAILED, message));
+        });
+    }
+
+    private Mono<Void> applyLineChanges(UUID studyUuid, String path, String status) {
+        Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(studyUuid)
+                        .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
+        Flux<ElementaryModificationInfos> fluxChangeLineStatus = webClient.put()
+                .uri(networkModificationServerBaseUri + path)
+                .body(BodyInserters.fromValue(status))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> handleChangeLineError(studyUuid, clientResponse))
+                .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
+                });
+
+        return fluxChangeLineStatus
+                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                .collect(Collectors.toSet())
+                .doOnSuccess(substationIds ->
+                        emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
+                .then(monoUpdateLfState);
+    }
+
+    public Mono<Void> changeLineStatus(UUID studyUuid, String lineId, String status) {
+        Mono<UUID> networkUuidMono = getNetworkUuid(studyUuid);
+
+        return networkUuidMono.flatMap(uuid -> {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/networks/{networkUuid}/lines/{lineId}/status")
+                    .buildAndExpand(uuid, lineId)
+                    .toUriString();
+
+            return applyLineChanges(studyUuid, path, status);
+        });
     }
 
     Mono<UUID> getNetworkUuid(UUID studyUuid) {
@@ -866,7 +926,10 @@ public class StudyService {
                 entity.isWriteSlackBus(),
                 entity.isDc(),
                 entity.isDistributedSlack(),
-                entity.getBalanceType());
+                entity.getBalanceType(),
+                true, // FIXME to persist
+                EnumSet.noneOf(Country.class), // FIXME to persist
+                LoadFlowParameters.ConnectedComponentMode.MAIN); // FIXME to persist
     }
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
@@ -886,7 +949,8 @@ public class StudyService {
 
     public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
-        return new ComponentResultEmbeddable(componentResult.getComponentNum(),
+        return new ComponentResultEmbeddable(componentResult.getConnectedComponentNum(),
+                componentResult.getSynchronousComponentNum(),
                 componentResult.getStatus(),
                 componentResult.getIterationCount(),
                 componentResult.getSlackBusId(),
@@ -896,7 +960,8 @@ public class StudyService {
 
     public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
         Objects.requireNonNull(entity);
-        return new LoadFlowResultImpl.ComponentResultImpl(entity.getComponentNum(),
+        return new LoadFlowResultImpl.ComponentResultImpl(entity.getConnectedComponentNum(),
+                entity.getSynchronousComponentNum(),
                 entity.getStatus(),
                 entity.getIterationCount(),
                 entity.getSlackBusId(),
@@ -921,24 +986,54 @@ public class StudyService {
                         .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
     }
 
+    @Transactional
+    public String doGetLoadFlowProvider(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(StudyEntity::getLoadFlowProvider)
+                .orElse("");
+    }
+
+    public Mono<String> getLoadFlowProvider(UUID studyUuid) {
+        return Mono.fromCallable(() -> self.doGetLoadFlowProvider(studyUuid));
+    }
+
+    @Transactional
+    public void doUpdateLoadFlowProvider(UUID studyUuid, String provider) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> {
+            studyEntity1.setLoadFlowProvider(provider);
+            studyEntity1.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
+        });
+    }
+
+    public Mono<Void> updateLoadFlowProvider(UUID studyUuid, String provider) {
+        Mono<Void> updateProvider = Mono.fromRunnable(() -> self.doUpdateLoadFlowProvider(studyUuid, provider));
+        return updateProvider.doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS));
+    }
+
     public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(parameters);
 
-        Mono<UUID> networkUuid = getNetworkUuid(studyUuid);
+        return Mono.zip(getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String provider = tuple.getT2();
 
-        return networkUuid.flatMap(uuid -> {
             String receiver;
             try {
                 receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid)), StandardCharsets.UTF_8);
             } catch (JsonProcessingException e) {
-                throw new UncheckedIOException(e);
+                return Mono.error(new UncheckedIOException(e));
             }
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save");
+            if (!provider.isEmpty()) {
+                uriComponentsBuilder.queryParam("provider", provider);
+            }
+            var path = uriComponentsBuilder
                     .queryParam("contingencyListName", contingencyListNames)
                     .queryParam(RECEIVER, receiver)
-                    .buildAndExpand(uuid)
+                    .buildAndExpand(networkUuid)
                     .toUriString();
 
             return webClient
@@ -948,12 +1043,11 @@ public class StudyService {
                     .body(BodyInserters.fromValue(parameters))
                     .retrieve()
                     .bodyToMono(UUID.class);
-        })
-                .flatMap(result ->
-                        updateSecurityAnalysisResultUuid(studyUuid, result)
-                                .doOnSuccess(e -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
-                                .thenReturn(result)
-                );
+        }).flatMap(result ->
+            updateSecurityAnalysisResultUuid(studyUuid, result)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                    .thenReturn(result)
+        );
     }
 
     public Mono<String> getSecurityAnalysisResult(UUID studyUuid, List<String> limitTypes) {
@@ -1185,7 +1279,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowStatus);
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
-            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, loadFlowParameters, securityAnalysisUuid);
+            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid);
             return studyRepository.save(studyEntity);
         });
     }

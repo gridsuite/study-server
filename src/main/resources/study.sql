@@ -24,7 +24,8 @@
 
     create table LoadFlowResultEntity_componentResults (
        LoadFlowResultEntity_id uuid not null,
-        componentNum int4,
+        connectedComponentNum int4,
+        synchronousComponentNum int4,
         iterationCount int4,
         slackBusActivePowerMismatch float8,
         slackBusId varchar(255),
@@ -52,6 +53,7 @@
         securityAnalysisResultUuid uuid,
         studyName varchar(255) not null,
         userId varchar(255) not null,
+        loadFlowProvider varchar(255),
         loadFlowParametersEntity_id uuid not null,
         loadFlowResultEntity_id uuid,
         primary key (id)
