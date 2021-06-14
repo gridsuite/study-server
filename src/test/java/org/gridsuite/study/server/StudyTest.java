@@ -317,7 +317,7 @@ public class StudyTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status":
                         return new MockResponse().setResponseCode(500).setBody(LINE_MODIFICATION_FAILED.name());
 
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/run?reportId=38400000-8cf0-11bd-b23e-10b96e4ef00d&reportName=loadflow&overwrite=true":
                         return new MockResponse().setResponseCode(200)
                                 .setBody("{\n" +
                                         "\"version\":\"1.1\",\n" +
@@ -729,7 +729,7 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run?reportId=%s&reportName=loadflow&overwrite=true", NETWORK_UUID_STRING, NETWORK_UUID_STRING)));
 
         // check load flow status
         webTestClient.get()
@@ -804,7 +804,7 @@ public class StudyTest {
         output.receive(1000);
         output.receive(1000);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run?reportId=%s&reportName=loadflow&overwrite=true", NETWORK_UUID_STRING, NETWORK_UUID_STRING)));
 
         // get default load flow provider
         webTestClient.get()

@@ -683,7 +683,8 @@ public class StudyService {
         return setLoadFlowRunning(studyUuid).then(Mono.zip(getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid))).flatMap(tuple -> {
             UUID networkUuid = tuple.getT1();
             String provider = tuple.getT2();
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run");
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+                .queryParam("reportId", networkUuid.toString()).queryParam("reportName", "loadflow").queryParam("overwrite",true);
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
