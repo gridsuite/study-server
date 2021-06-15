@@ -1381,7 +1381,7 @@ public class StudyService {
         return webClient.delete()
             .uri(reportServerBaseUri + path)
             .retrieve()
-            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
+            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore report server do not return anything
             .bodyToMono(Void.class);
     }
 
