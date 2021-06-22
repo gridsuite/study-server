@@ -76,6 +76,10 @@ public class StudyService {
 
     private static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
 
+    private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
+
+    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
+
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_STUDY_NAME = "studyName";
@@ -819,17 +823,16 @@ public class StudyService {
     }
 
     private void emitStudiesChanged(UUID studyUuid, String userId, boolean isPrivateStudy) {
-        studyUpdatePublisher.send("publishStudyUpdate-out-0", MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_IS_PUBLIC_STUDY, !isPrivateStudy)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
-                .build()
-        );
+                .build());
     }
 
     private void emitStudyChanged(UUID studyUuid, String updateType) {
-        studyUpdatePublisher.send("publishStudyUpdate-out-0", MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build()
@@ -837,7 +840,7 @@ public class StudyService {
     }
 
     private void emitStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, String errorMessage) {
-        studyUpdatePublisher.send("publishStudyUpdate-out-0", MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_USER_ID, userId)
@@ -849,7 +852,7 @@ public class StudyService {
     }
 
     private void emitStudyChanged(UUID studyUuid, String updateType, Set<String> substationsIds) {
-        studyUpdatePublisher.send("publishStudyUpdate-out-0", MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
@@ -1357,5 +1360,10 @@ public class StudyService {
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
                 .bodyToMono(Void.class);
+    }
+
+    private void sendUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 }
