@@ -233,6 +233,10 @@ public class StudyService {
                 .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
 
+    public Flux<CreatedStudyBasicInfos> getStudyListMetadata(List<UUID> uuids, String userId) {
+        return Flux.fromStream(() -> studyRepository.findAllByUuids(uuids, userId).stream().map(StudyService::toCreatedStudyBasicInfos));
+    }
+
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
         return Flux.fromStream(() -> studyCreationRequestRepository.findByUserIdOrIsPrivate(userId, false).stream())
                 .map(StudyService::toBasicStudyInfos)
@@ -866,7 +870,7 @@ public class StudyService {
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {
         Mono<Boolean> caseExists = caseExists(caseUuid);
-        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
+        return caseExists.flatMap(c -> Boolean.TRUE.equals(c) ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
     }
 
     public Mono<Void> assertLoadFlowRunnable(UUID studyUuid) {
