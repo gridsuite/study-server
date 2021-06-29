@@ -870,7 +870,7 @@ public class StudyService {
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {
         Mono<Boolean> caseExists = caseExists(caseUuid);
-        return caseExists.flatMap(c -> c ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
+        return caseExists.flatMap(c -> Boolean.TRUE.equals(c) ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
     }
 
     public Mono<Void> assertLoadFlowRunnable(UUID studyUuid) {
