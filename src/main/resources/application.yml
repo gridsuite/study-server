@@ -1,5 +1,6 @@
 server :
   port : 5001
+  forward-headers-strategy: framework
 
 spring:
   servlet:
