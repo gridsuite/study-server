@@ -1,5 +1,6 @@
 server :
   port : 5001
+  forward-headers-strategy: framework
 
 spring:
   servlet:
@@ -15,7 +16,7 @@ spring:
 
   cloud:
     function:
-      definition: publishStudyUpdate;consumeSaResult;consumeSaStopped
+      definition: consumeSaResult;consumeSaStopped
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -24,6 +25,7 @@ spring:
           destination: sa.result
         consumeSaStopped-in-0:
           destination: sa.stopped
+      source: publishStudyUpdate
   datasource:
     url: ${dbApi}:${dbVendor}://${hostPort}/${dbName}${query}
     username: ${login}

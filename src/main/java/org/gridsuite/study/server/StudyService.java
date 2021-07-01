@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -42,7 +43,6 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -56,7 +56,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -76,7 +75,10 @@ public class StudyService {
     public static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
+
     private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
+
+    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
@@ -125,12 +127,8 @@ public class StudyService {
 
     private ObjectMapper objectMapper;
 
-    private EmitterProcessor<Message<String>> studyUpdatePublisher = EmitterProcessor.create();
-
-    @Bean
-    public Supplier<Flux<Message<String>>> publishStudyUpdate() {
-        return () -> studyUpdatePublisher.log(CATEGORY_BROKER_OUTPUT, Level.FINE);
-    }
+    @Autowired
+    private StreamBridge studyUpdatePublisher;
 
     @Bean
     public Consumer<Flux<Message<String>>> consumeSaResult() {
@@ -233,6 +231,10 @@ public class StudyService {
         return Flux.fromStream(() -> studyRepository.findByUserIdOrIsPrivate(userId, false).stream())
                 .map(StudyService::toCreatedStudyBasicInfos)
                 .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
+    }
+
+    public Flux<CreatedStudyBasicInfos> getStudyListMetadata(List<UUID> uuids, String userId) {
+        return Flux.fromStream(() -> studyRepository.findAllByUuids(uuids, userId).stream().map(StudyService::toCreatedStudyBasicInfos));
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
@@ -830,17 +832,16 @@ public class StudyService {
     }
 
     private void emitStudiesChanged(UUID studyUuid, String userId, boolean isPrivateStudy) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_IS_PUBLIC_STUDY, !isPrivateStudy)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
-                .build()
-        );
+                .build());
     }
 
     private void emitStudyChanged(UUID studyUuid, String updateType) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build()
@@ -848,7 +849,7 @@ public class StudyService {
     }
 
     private void emitStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, String errorMessage) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_STUDY_NAME, studyName)
                 .setHeader(HEADER_USER_ID, userId)
@@ -860,7 +861,7 @@ public class StudyService {
     }
 
     private void emitStudyChanged(UUID studyUuid, String updateType, Set<String> substationsIds) {
-        studyUpdatePublisher.onNext(MessageBuilder.withPayload("")
+        sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
@@ -874,7 +875,7 @@ public class StudyService {
 
     public Mono<Void> assertCaseExists(UUID caseUuid) {
         Mono<Boolean> caseExists = caseExists(caseUuid);
-        return caseExists.flatMap(c -> (boolean) c ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
+        return caseExists.flatMap(c -> Boolean.TRUE.equals(c) ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
     }
 
     public Mono<Void> assertLoadFlowRunnable(UUID studyUuid) {
@@ -1368,5 +1369,10 @@ public class StudyService {
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
                 .bodyToMono(Void.class);
+    }
+
+    private void sendUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 }
