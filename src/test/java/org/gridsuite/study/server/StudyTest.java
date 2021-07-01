@@ -476,6 +476,17 @@ public class StudyTest {
 
         //empty list
         webTestClient.get()
+                .uri("/v1/studies/metadata")
+                .header("userId", "userId")
+                .header("uuids", "")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[]");
+
+        //empty list
+        webTestClient.get()
                 .uri("/v1/study_creation_requests")
                 .header("userId", "userId")
                 .exchange()
@@ -514,6 +525,18 @@ public class StudyTest {
         //even with the same name should work
         createStudy("userId2", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
         studyUuid = studyRepository.findByUserIdAndStudyName("userId2", STUDY_NAME).get().getId();
+        UUID oldStudyUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
+
+        webTestClient.get()
+                .uri("/v1/studies/metadata")
+                .header("userId", "userId")
+                .header("uuids", oldStudyUuid + "," + studyUuid)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(studies -> studies.get(0),
+                        createMatcherCreatedStudyBasicInfos(oldStudyUuid, STUDY_NAME, "userId", "UCTE", "description", false));
 
         webTestClient.get()
                 .uri("/v1/studies")
