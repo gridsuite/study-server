@@ -297,7 +297,7 @@ public class StudyService {
     public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> insertDirectoryElement(parentDirectoryUuid, s)  // insert study in directory server
+                .doOnSuccess(s -> insertDirectoryElement(parentDirectoryUuid, s) // insert study in directory server
                         .then(
                                 Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
                                         .flatMap(t -> {
@@ -308,9 +308,9 @@ public class StudyService {
                                         .subscribeOn(Schedulers.boundedElastic())
                                         .doOnError(throwable -> {
                                             LOGGER.error(throwable.toString(), throwable);
-                                            deleteDirectoryElement(s.getStudyUuid()).subscribe();
+                                            deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
                                         })
-                                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                                        .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
                         ).subscribe());
     }
 
@@ -327,8 +327,11 @@ public class StudyService {
                                                             description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                                                 }))
                                         .subscribeOn(Schedulers.boundedElastic())
-                                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                                        .doOnError(throwable -> {
+                                            LOGGER.error(throwable.toString(), throwable);
+                                            deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
+                                        })
+                                        .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
                         ).subscribe());
     }
 

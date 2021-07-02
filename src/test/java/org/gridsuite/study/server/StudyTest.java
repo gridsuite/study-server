@@ -208,6 +208,7 @@ public class StudyTest {
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 String path = Objects.requireNonNull(request.getPath());
                 Buffer body = request.getBody();
+
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
@@ -222,10 +223,10 @@ public class StudyTest {
                             .build(), "sa.stopped");
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/directories/.*")) {
+                    return new MockResponse().setResponseCode(200);
                 }
                 switch (path) {
-                    case "/v1/directories/" + DIRECTORY_SERVER_ROOT_UUID:
-                        return new MockResponse().setResponseCode(200);
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                         return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
@@ -1418,7 +1419,7 @@ public class StudyTest {
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
         // assert that the broker message has been sent a study creation request message for deletion
-        message = output.receive(1000);
+        message = output.receive(20000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1427,12 +1428,15 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
-        var requests = getRequestsDone(caseUuid == null ? 2 : 4);
+        var requests = getRequestsDone(caseUuid == null ? errorMessage.length != 0 ? 3 : 2 : errorMessage.length != 0 ? 5 : 4);
         assertTrue(requests.contains(String.format("/v1/directories/%s", DIRECTORY_SERVER_ROOT_UUID)));
         assertTrue(requests.contains("/v1/cases/private"));
         if (caseUuid != null) {
             assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
             assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", caseUuid)));
+        }
+        if (errorMessage.length != 0) {
+            assertTrue(requests.contains(String.format("/v1/directories/%s", DIRECTORY_SERVER_ROOT_UUID)));
         }
     }
 
