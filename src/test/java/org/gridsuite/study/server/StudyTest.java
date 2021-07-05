@@ -224,10 +224,12 @@ public class StudyTest {
                             .build(), "sa.stopped");
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/directories/.*")) {
+                } else if (path.matches("/v1/directories/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
                 }
                 switch (path) {
+                    case "/v1/directories/" + DIRECTORY_SERVER_ROOT_UUID:
+                        return new MockResponse().setResponseCode(200);
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                         return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
@@ -1344,6 +1346,7 @@ public class StudyTest {
         assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
+        // drop the broker message for directory server insertion
         message = output.receive(1000);
 
         // assert that the broker message has been sent a study creation message for creation
@@ -1408,6 +1411,7 @@ public class StudyTest {
         assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
+        // drop the broker message for directory server insertion
         output.receive(1000);
 
         // assert that the broker message has been sent a study creation message for creation
@@ -1422,7 +1426,7 @@ public class StudyTest {
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
         // assert that the broker message has been sent a study creation request message for deletion
-        message = output.receive(20000);
+        message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));

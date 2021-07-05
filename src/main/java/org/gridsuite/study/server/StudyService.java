@@ -250,10 +250,6 @@ public class StudyService {
     }
 
     private Mono<Void> insertDirectoryElement(UUID parentDirectoryUuid, DirectoryElement directoryElement) {
-        //To be removed after removing the study manager
-        if (parentDirectoryUuid == null) {
-            return Mono.empty();
-        }
         String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_SERVER_API_VERSION + "/directories/{parentUuid}")
                 .buildAndExpand(parentDirectoryUuid)
                 .toUriString();
@@ -454,7 +450,7 @@ public class StudyService {
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
         return insertStudyCreationRequestEntity(studyName, userId, isPrivate)
-                .doOnSuccess(ignore -> emitStudiesChanged(ignore.getId(), userId, isPrivate));
+                .doOnSuccess(s -> emitStudiesChanged(s.getId(), userId, isPrivate));
     }
 
     private Mono<String> getCaseFormat(UUID caseUuid) {
