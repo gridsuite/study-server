@@ -11,7 +11,6 @@ import lombok.*;
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-@NoArgsConstructor
 @AllArgsConstructor
 @Getter
 public class AccessRightsAttributes {

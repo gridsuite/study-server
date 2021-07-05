@@ -81,6 +81,7 @@ public class StudyService {
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
     static final String HEADER_USER_ID = "userId";
+    static final String STUDY = "STUDY";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_STUDY_NAME = "studyName";
     static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
@@ -267,7 +268,7 @@ public class StudyService {
     private Mono<Void> insertDirectoryElement(UUID parentDirectoryUuid, BasicStudyInfos studyInfos) {
         DirectoryElement directoryElement = DirectoryElement.builder().elementUuid(studyInfos.getStudyUuid())
                 .elementName(studyInfos.getStudyName())
-                .type("STUDY")
+                .type(STUDY)
                 .owner(studyInfos.getUserId())
                 .accessRights(new AccessRightsAttributes(studyInfos.isStudyPrivate()))
                 .build();

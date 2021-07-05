@@ -13,10 +13,8 @@ import java.util.UUID;
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
-@NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@ToString
 @Builder
 @ApiModel("Basic study attributes")
 public class DirectoryElement {

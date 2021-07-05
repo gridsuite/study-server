@@ -103,6 +103,7 @@ public class StudyTest {
     private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
     private static final String STUDY_NAME = "studyName";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String PARENT_DIRECTORY_UUID = "22400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String DIRECTORY_SERVER_ROOT_UUID = StudyController.TMP_LEGACY_DIRECTORY;
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
@@ -230,6 +231,8 @@ public class StudyTest {
                 switch (path) {
                     case "/v1/directories/" + DIRECTORY_SERVER_ROOT_UUID:
                         return new MockResponse().setResponseCode(200);
+                    case "/v1/directories/" + PARENT_DIRECTORY_UUID:
+                        return new MockResponse().setResponseCode(500);
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
                         return new MockResponse().setResponseCode(200).setBody(topLevelDocumentAsString)
@@ -1327,10 +1330,23 @@ public class StudyTest {
                 "Error during import in the case server");
     }
 
+    @Test
+    public void testCreationWithErrorInImportingTheElementInDirectoryServer() {
+        // Create study with a directory server non reachable -> error
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, UUID.fromString(PARENT_DIRECTORY_UUID));
+
+    }
+
     @SneakyThrows
     private void createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate, String... errorMessage) {
+        createStudy(userId, studyName, caseUuid, description, isPrivate, null, errorMessage);
+    }
+
+    @SneakyThrows
+    private void createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate, UUID parentUuid, String... errorMessage) {
         webTestClient.post()
-                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}", studyName, caseUuid, description, isPrivate)
+                .uri("/v1/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}&parentDirectoryUuid={parentUuid}",
+                        studyName, caseUuid, description, isPrivate, parentUuid)
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isOk();
@@ -1349,31 +1365,39 @@ public class StudyTest {
         // drop the broker message for directory server insertion
         message = output.receive(1000);
 
-        // assert that the broker message has been sent a study creation message for creation
-        message = output.receive(1000);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
-        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
+        if (parentUuid == null) {
+            // assert that the broker message has been sent a study creation message for creation
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals(userId, headers.get(HEADER_USER_ID));
+            assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
+            assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+            assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+            assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
-        // assert that the broker message has been sent a study creation request message for deletion
-        message = output.receive(1000);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+            // assert that the broker message has been sent a study creation request message for deletion
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals(userId, headers.get(HEADER_USER_ID));
+            assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
+            assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+            assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        }
 
         // assert that all http requests have been sent to remote services
-        var requests = getRequestsDone(4);
-        assertTrue(requests.contains(String.format("/v1/directories/%s", DIRECTORY_SERVER_ROOT_UUID)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/format", CASE_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", CASE_UUID_STRING)));
+        var requests = getRequestsDone(parentUuid != null ? 3 : 4);
+        if (parentUuid != null) {
+            assertTrue(requests.contains(String.format("/v1/directories/%s", PARENT_DIRECTORY_UUID)));
+            assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
+            assertTrue(requests.contains(String.format("/v1/directories/%s", studyUuid)));
+        } else {
+            assertTrue(requests.contains(String.format("/v1/directories/%s", DIRECTORY_SERVER_ROOT_UUID)));
+            assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
+            assertTrue(requests.contains(String.format("/v1/cases/%s/format", CASE_UUID_STRING)));
+            assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", CASE_UUID_STRING)));
+        }
     }
 
     @SneakyThrows
