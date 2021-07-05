@@ -268,7 +268,8 @@ public class StudyTest {
                                     .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
                         } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
                             return new MockResponse().setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
                         } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
                             return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1328,7 +1329,7 @@ public class StudyTest {
     public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server without message in response body
         createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, "desc", false,
-            "case-server: 500 INTERNAL_SERVER_ERROR");
+            "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
     }
 
     @SneakyThrows
