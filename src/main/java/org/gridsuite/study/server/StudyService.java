@@ -117,6 +117,7 @@ public class StudyService {
     private String geoDataServerBaseUri;
     private String networkMapServerBaseUri;
     private String networkModificationServerBaseUri;
+    private String reportServerBaseUri;
     private String loadFlowServerBaseUri;
     private String networkStoreServerBaseUri;
     private String securityAnalysisServerBaseUri;
@@ -175,6 +176,7 @@ public class StudyService {
             @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
             @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
             @Value("${backing-services.directory-server.base-uri:http://directory-server/}") String directoryServerBaseUri,
+            @Value("${backing-services.report-server.base-uri:http://report-server/}") String reportServerBaseUri,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             WebClient.Builder webClientBuilder,
@@ -185,6 +187,7 @@ public class StudyService {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
         this.networkMapServerBaseUri = networkMapServerBaseUri;
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
+        this.reportServerBaseUri = reportServerBaseUri;
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
         this.networkStoreServerBaseUri = networkStoreServerBaseUri;
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
@@ -420,7 +423,8 @@ public class StudyService {
                 .publish(networkIdMono ->
                         Mono.when(
                                 networkIdMono.flatMap(this::deleteNetwork),
-                                networkIdMono.flatMap(this::deleteNetworkModifications)
+                                networkIdMono.flatMap(this::deleteNetworkModifications),
+                                networkIdMono.flatMap(this::deleteReport)
                         )
                 );
 
@@ -740,7 +744,8 @@ public class StudyService {
         return setLoadFlowRunning(studyUuid).then(Mono.zip(getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid))).flatMap(tuple -> {
             UUID networkUuid = tuple.getT1();
             String provider = tuple.getT2();
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run");
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+                .queryParam("reportId", networkUuid.toString()).queryParam("reportName", "loadflow").queryParam("overwrite", true);
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
@@ -1268,6 +1273,10 @@ public class StudyService {
         this.directoryServerBaseUri = directoryServerBaseUri;
     }
 
+    public void setReportServerBaseUri(String actionsServerBaseUri) {
+        this.reportServerBaseUri = actionsServerBaseUri;
+    }
+
     public Mono<Void> stopSecurityAnalysis(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
 
@@ -1432,5 +1441,16 @@ public class StudyService {
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
+    }
+
+    private Mono<Void> deleteReport(UUID networkUuid) {
+        var path = UriComponentsBuilder.fromPath(DELIMITER + REPORT_API_VERSION + "/report/{networkUuid}")
+            .buildAndExpand(networkUuid)
+            .toUriString();
+        return webClient.delete()
+            .uri(reportServerBaseUri + path)
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore report server do not return anything
+            .bodyToMono(Void.class);
     }
 }
