@@ -467,40 +467,44 @@ public class StudyService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    private Mono<? extends Throwable> handleStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, ClientResponse clientResponse) {
-        return clientResponse.bodyToMono(String.class).flatMap(body -> {
-            try {
-                JsonNode node = new ObjectMapper().readTree(body).path("message");
-                if (!node.isMissingNode()) {
-                    emitStudyCreationError(studyUuid, studyName, userId, isPrivate, node.asText());
+    private Mono<? extends Throwable> handleStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, ClientResponse clientResponse, String serverName) {
+        return clientResponse.bodyToMono(String.class)
+            .switchIfEmpty(Mono.just("{\"message\": \"" + serverName + ": " + clientResponse.statusCode() + "\"}"))
+            .flatMap(body -> {
+                try {
+                    JsonNode node = new ObjectMapper().readTree(body).path("message");
+                    if (!node.isMissingNode()) {
+                        emitStudyCreationError(studyUuid, studyName, userId, isPrivate, node.asText());
+                    } else {
+                        emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
+                    }
+                } catch (JsonProcessingException e) {
+                    if (!body.isEmpty()) {
+                        emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
+                    }
                 }
-            } catch (JsonProcessingException e) {
-                if (!body.isEmpty()) {
-                    emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
-                }
-            }
-            return Mono.error(new StudyException(STUDY_CREATION_FAILED));
-        });
+                return Mono.error(new StudyException(STUDY_CREATION_FAILED));
+            });
     }
 
     Mono<UUID> importCase(Mono<FilePart> multipartFile, UUID studyUuid, String studyName, String userId, boolean isPrivate) {
-
         return multipartFile.flatMap(file -> {
             MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
             multipartBodyBuilder.part("file", file);
 
             return webClient.post()
-                    .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
-                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                            handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse)
-                    )
-                    .bodyToMono(UUID.class)
-                    .publishOn(Schedulers.boundedElastic())
-                    .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-        });
+                .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                    handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "case-server")
+                )
+                .bodyToMono(UUID.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+        })
+            .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
     }
 
     Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
@@ -537,19 +541,20 @@ public class StudyService {
 
     private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String studyName, String userId, boolean isPrivate) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-                .queryParam(CASE_UUID, caseUuid)
-                .buildAndExpand()
-                .toUriString();
+            .queryParam(CASE_UUID, caseUuid)
+            .buildAndExpand()
+            .toUriString();
 
         return webClient.post()
-                .uri(networkConversionServerBaseUri + path)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                        handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse)
-                )
-                .bodyToMono(NetworkInfos.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+            .uri(networkConversionServerBaseUri + path)
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "network-conversion-server")
+            )
+            .bodyToMono(NetworkInfos.class)
+            .publishOn(Schedulers.boundedElastic())
+            .log(ROOT_CATEGORY_REACTOR, Level.FINE)
+            .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
     }
 
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
