@@ -101,6 +101,7 @@ public class StudyTest {
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_WITH_ERRORS = "testCase_with_errors.xiidm";
     private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
+    private static final String TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY = "testCase_import_errors_no_message_in_response_body.xiidm";
     private static final String STUDY_NAME = "studyName";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String DIRECTORY_SERVER_ROOT_UUID = StudyController.TMP_LEGACY_DIRECTORY;
@@ -272,6 +273,10 @@ public class StudyTest {
                             return new MockResponse().setResponseCode(500)
                                     .addHeader("Content-Type", "application/json; charset=utf-8")
                                     .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
+                            return new MockResponse().setResponseCode(500)
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
                         } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
                             return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1325,6 +1330,13 @@ public class StudyTest {
         // Create study with a bad case file -> error when importing in the case server
         createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS, null, "desc", false,
                 "Error during import in the case server");
+    }
+
+    @Test
+    public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
+        // Create study with a bad case file -> error when importing in the case server without message in response body
+        createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, "desc", false,
+            "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
     }
 
     @SneakyThrows
