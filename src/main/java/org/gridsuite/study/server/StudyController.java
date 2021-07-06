@@ -6,10 +6,7 @@
  */
 package org.gridsuite.study.server;
 
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.logging.Level;
-
+import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.loadflow.LoadFlowParameters;
 import io.swagger.annotations.*;
 import org.gridsuite.study.server.dto.*;
@@ -20,6 +17,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.logging.Level;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -32,11 +33,13 @@ import reactor.core.publisher.Mono;
 public class StudyController {
 
     private final StudyService studyService;
+    private final ReportService reportService;
 
     public static final String TMP_LEGACY_DIRECTORY = "11111111-2222-3333-4444-555555555555";
 
-    public StudyController(StudyService studyService) {
+    public StudyController(StudyService studyService, ReportService reportService) {
         this.studyService = studyService;
+        this.reportService = reportService;
     }
 
     @GetMapping(value = "/studies")
@@ -551,4 +554,19 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@ApiParam(value = "Study name") @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid));
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Get study report")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The report for study"), @ApiResponse(code = 404, message = "The study not found")})
+    public ResponseEntity<Mono<ReporterModel>> getReport(@ApiParam(value = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(reportService::getReport));
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/report")
+    @ApiOperation(value = "Delete merge report")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "The report for study deleted"), @ApiResponse(code = 404, message = "The study not found")})
+    public ResponseEntity<Mono<Void>> deleteReport(@ApiParam(value = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(reportService::deleteReport));
+    }
+
 }
