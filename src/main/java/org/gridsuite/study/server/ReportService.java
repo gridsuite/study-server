@@ -11,14 +11,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -28,7 +25,6 @@ import java.util.UUID;
  */
 @Service
 public class ReportService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ReportService.class);
 
     static final String REPORT_API_VERSION = "v1";
     private static final String DELIMITER = "/";
@@ -46,8 +42,14 @@ public class ReportService {
         this.reportServerBaseUri = reportServerBaseUri;
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
-        this.objectMapper.registerModule(new ReporterModelJsonModule());
+        ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
+        reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
+        this.objectMapper.registerModule(reporterModelJsonModule);
         this.objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReporterModelDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
+    }
+
+    public void setReportServerBaseUri(String reportServerBaseUri) {
+        this.reportServerBaseUri = reportServerBaseUri;
     }
 
     private String getReportServerURI() {

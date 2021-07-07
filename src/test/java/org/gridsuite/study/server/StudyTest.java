@@ -140,6 +140,9 @@ public class StudyTest {
     @Autowired
     private StudyService studyService;
 
+    @Autowired
+    private ReportService reportService;
+
     @MockBean
     private NetworkStoreService networkStoreClient;
 
@@ -197,6 +200,7 @@ public class StudyTest {
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
         studyService.setActionsServerBaseUri(baseUrl);
         studyService.setDirectoryServerBaseUri(baseUrl);
+        reportService.setReportServerBaseUri(baseUrl);
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
@@ -207,7 +211,7 @@ public class StudyTest {
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
-            public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
+            public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 Buffer body = request.getBody();
 
@@ -373,7 +377,7 @@ public class StudyTest {
                     case "/v1/loads/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/shunt-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/static-var-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/report/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/reports/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -630,7 +634,7 @@ public class StudyTest {
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/modifications", NETWORK_UUID_STRING)));
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/report/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         webTestClient.get()
@@ -1340,7 +1344,7 @@ public class StudyTest {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false, UUID.fromString(PARENT_DIRECTORY_UUID));
     }
 
-    public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
+    public void testCreationWithErrorNoMessageBadExistingCase() {
         // Create study with a bad case file -> error when importing in the case server without message in response body
         createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, "desc", false,
             "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
@@ -1372,7 +1376,7 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // drop the broker message for directory server insertion
-        message = output.receive(1000);
+        output.receive(1000);
 
         if (parentUuid == null) {
             // assert that the broker message has been sent a study creation message for creation
@@ -1623,7 +1627,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testUpdateLines() throws Exception {
+    public void testUpdateLines() {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
