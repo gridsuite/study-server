@@ -1372,10 +1372,16 @@ public class StudyTest {
         assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        // drop the broker message for directory server insertion
-        message = output.receive(1000);
-
         if (parentUuid == null) {
+            // drop the broker message for directory server insertion
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals(userId, headers.get(HEADER_USER_ID));
+            assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
+            assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+            assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
             // assert that the broker message has been sent a study creation message for creation
             message = output.receive(1000);
             assertEquals("", new String(message.getPayload()));
@@ -1394,14 +1400,16 @@ public class StudyTest {
             assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
             assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
             assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        } else {
+            // we should intercept an error
+            message = output.receive(1000);
         }
 
         // assert that all http requests have been sent to remote services
-        var requests = getRequestsDone(parentUuid != null ? 3 : 4);
+        var requests = getRequestsDone(parentUuid != null ? 2 : 4);
         if (parentUuid != null) {
             assertTrue(requests.contains(String.format("/v1/directories/%s", PARENT_DIRECTORY_UUID)));
             assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
-            assertTrue(requests.contains(String.format("/v1/directories/%s", studyUuid)));
         } else {
             assertTrue(requests.contains(String.format("/v1/directories/%s", DIRECTORY_SERVER_ROOT_UUID)));
             assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
@@ -1447,6 +1455,12 @@ public class StudyTest {
 
         // drop the broker message for directory server insertion
         output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
+        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
