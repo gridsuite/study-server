@@ -116,6 +116,7 @@ public class StudyTest {
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String HEADER_STUDY_NAME = "studyName";
     private static final String HEADER_UPDATE_TYPE = "updateType";
+    private static final String RENAME_FAIL = "renameFail";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
@@ -226,6 +227,10 @@ public class StudyTest {
                             .build(), "sa.stopped");
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/directories/.*/rename/" + RENAME_FAIL) && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(500);
+                } else if (path.matches("/v1/directories/.*/rename/.*") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/directories/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
                 }
@@ -664,6 +669,18 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s/rename/newName", studyNameUserIdUuid)));
+
+        //directory renaming fails
+        webTestClient.post()
+                .uri("/v1/studies/" + studyNameUserIdUuid + "/rename")
+                .header("userId", "userId")
+                .body(BodyInserters.fromValue(new RenameStudyAttributes(RENAME_FAIL)))
+                .exchange()
+                .expectStatus().is5xxServerError()
+                .expectBody(String.class)
+                .isEqualTo("DIRECTORY_REQUEST_FAILED");
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s/rename/renameFail", studyNameUserIdUuid)));
 
         webTestClient.post()
                 .uri("/v1/studies/" + randomUuid + "/rename")
