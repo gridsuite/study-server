@@ -260,6 +260,11 @@ public class StudyService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(directoryElement))
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                        handleStudyCreationError(directoryElement.getElementUuid(), directoryElement.getElementName(),
+                                directoryElement.getOwner(), directoryElement.getAccessRights().isPrivate(), clientResponse,
+                                "directory-server")
+                )
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
@@ -277,8 +282,7 @@ public class StudyService {
                 .doOnError(throwable -> {
                     LOGGER.error(throwable.toString(), throwable);
                     deleteDirectoryElement(studyInfos.getStudyUuid()).subscribe();
-                })
-                .doOnSuccess(ignore -> emitStudiesChanged(studyInfos.getStudyUuid(), studyInfos.getUserId(), studyInfos.isStudyPrivate()));
+                });
     }
 
     private Mono<Void> deleteDirectoryElement(UUID elementUuid) {
@@ -298,41 +302,46 @@ public class StudyService {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(s -> insertDirectoryElement(parentDirectoryUuid, s) // insert study in directory server
-                        .then(
-                                Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
-                                        .flatMap(t -> {
-                                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                                            return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                    description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                                        })
-                                        .subscribeOn(Schedulers.boundedElastic())
-                                        .doOnError(throwable -> {
-                                            LOGGER.error(throwable.toString(), throwable);
-                                            deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
-                                        })
-                                        .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
-                        ).subscribe());
+                        .doOnSuccess(unused -> {
+                            emitStudiesChanged(s.getStudyUuid(), s.getUserId(), s.isStudyPrivate());
+                            Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
+                                    .flatMap(t -> {
+                                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                                        return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                                description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                    })
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .doOnError(throwable -> {
+                                        LOGGER.error(throwable.toString(), throwable);
+                                        deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
+                                    })
+                                    .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                                    .subscribe();
+                        }).subscribe()
+                );
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         return insertStudyCreationRequest(studyName, userId, isPrivate)
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(s -> insertDirectoryElement(parentDirectoryUuid, s)  // insert study in directory server
-                        .then(
-                                importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
-                                        Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
-                                                .flatMap(t -> {
-                                                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                                                    return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                            description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                                                }))
-                                        .subscribeOn(Schedulers.boundedElastic())
-                                        .doOnError(throwable -> {
-                                            LOGGER.error(throwable.toString(), throwable);
-                                            deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
-                                        })
-                                        .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
-                        ).subscribe());
+                        .doOnSuccess(unused -> {
+                            emitStudiesChanged(s.getStudyUuid(), s.getUserId(), s.isStudyPrivate());
+                            importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
+                                    Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
+                                            .flatMap(t -> {
+                                                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                                                return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                                        description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                            }))
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .doOnError(throwable -> {
+                                        LOGGER.error(throwable.toString(), throwable);
+                                        deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
+                                    })
+                                    .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                                    .subscribe();
+                        }).subscribe());
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String headerUserId) {
