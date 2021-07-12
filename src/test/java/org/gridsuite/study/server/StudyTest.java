@@ -6,20 +6,13 @@
  */
 package org.gridsuite.study.server;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
+import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VoltageLevel;
@@ -42,6 +35,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.utils.MatcherJson;
+import org.gridsuite.study.server.utils.MatcherReport;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
@@ -57,6 +51,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -71,6 +66,15 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -127,6 +131,7 @@ public class StudyTest {
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
     public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.5\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\"}";
     public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.5\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\"}";
+    private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
 
     @Autowired
     private OutputDestination output;
@@ -201,6 +206,14 @@ public class StudyTest {
         studyService.setActionsServerBaseUri(baseUrl);
         studyService.setDirectoryServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+
+        // FIXME: remove lines when dicos will be used on the front side
+        mapper.registerModule(new ReporterModelJsonModule() {
+            @Override
+            public Object getTypeId() {
+                return getClass().getName() + "override";
+            }
+        });
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
@@ -281,8 +294,8 @@ public class StudyTest {
                                     .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
                         } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
                             return new MockResponse().setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                                    .addHeader("Content-Type", "application/json; charset=utf-8")
+                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
                         } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
                             return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
                                     .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -377,10 +390,14 @@ public class StudyTest {
                     case "/v1/loads/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/shunt-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/static-var-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/reports/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/reports/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(mapper.writeValueAsString(REPORT_TEST))
+                                .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
 
                     case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
                         return new MockResponse().setResponseCode(200).setBody("byte")
@@ -746,6 +763,32 @@ public class StudyTest {
                 .header("userId", "notAuth")
                 .exchange()
                 .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testLogsReport() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
+        UUID studyId = studyRepository.findAll().get(0).getId();
+
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/report", studyId)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(ReporterModel.class)
+                .value(new MatcherReport(REPORT_TEST));
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
+
+        webTestClient.delete()
+                .uri("/v1/studies/{studyUuid}/report", studyId)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -1347,7 +1390,7 @@ public class StudyTest {
     public void testCreationWithErrorNoMessageBadExistingCase() {
         // Create study with a bad case file -> error when importing in the case server without message in response body
         createStudy("userId", "newStudy", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, "desc", false,
-            "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
     }
 
     @SneakyThrows
