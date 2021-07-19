@@ -255,7 +255,7 @@ public class StudyService {
                 .buildAndExpand(parentDirectoryUuid)
                 .toUriString();
 
-        return webClient.put()
+        return webClient.post()
                 .uri(directoryServerBaseUri + path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(directoryElement))
