@@ -420,10 +420,13 @@ public class StudyService {
             }
             studyEntity.setPrivate(toPrivate);
             updateAccessRightDirectoryElement(studyUuid, toPrivate)
+                    .doOnSuccess(unused -> emitStudiesChanged(studyUuid, headerUserId, toPrivate))
                     .doOnError(throwable -> {
                         LOGGER.error(throwable.toString(), throwable);
                         studyEntity.setPrivate(!toPrivate);
-                    }).subscribe();
+                        emitStudiesChanged(studyUuid, headerUserId, !toPrivate);
+                    })
+                    .subscribe();
         }
         return studyEntity;
     }
