@@ -256,7 +256,7 @@ public class StudyService {
                 .buildAndExpand(parentDirectoryUuid)
                 .toUriString();
 
-        return webClient.put()
+        return webClient.post()
                 .uri(directoryServerBaseUri + path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(directoryElement))
@@ -309,6 +309,22 @@ public class StudyService {
         return webClient.delete()
                 .uri(directoryServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> Mono.error(new StudyException(DIRECTORY_REQUEST_FAILED)))
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    private Mono<Void> updateAccessRightDirectoryElement(UUID elementUuid, boolean toPrivate) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_SERVER_API_VERSION + "/directories/{elementUuid}/rights")
+                .buildAndExpand(elementUuid)
+                .toUriString();
+
+        return webClient.put()
+                .uri(directoryServerBaseUri + path)
+                .body(BodyInserters.fromValue(new AccessRightsAttributes(toPrivate)))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> Mono.error(new StudyException(DIRECTORY_REQUEST_FAILED)))
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
@@ -403,6 +419,11 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             studyEntity.setPrivate(toPrivate);
+            updateAccessRightDirectoryElement(studyUuid, toPrivate)
+                    .doOnError(throwable -> {
+                        LOGGER.error(throwable.toString(), throwable);
+                        studyEntity.setPrivate(!toPrivate);
+                    }).subscribe();
         }
         return studyEntity;
     }
@@ -429,18 +450,16 @@ public class StudyService {
                 if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
                 }
-                studyRepository.deleteById(uuid);
-                emitStudiesChanged(uuid, userId, s.isPrivate());
-                /*deleteDirectoryElement(uuid)
-                        .doOnSuccess(unused -> emitStudiesChanged(uuid, userId, s.isPrivate()))
-                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();*/
+                deleteDirectoryElement(uuid)
+                        .doOnSuccess(unused -> {
+                            studyRepository.deleteById(uuid);
+                            emitStudiesChanged(uuid, userId, s.isPrivate());
+                        })
+                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
             });
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
             emitStudiesChanged(uuid, userId, studyCreationRequestEntity.get().getIsPrivate());
-            /*deleteDirectoryElement(uuid)
-                    .doOnSuccess(unused -> emitStudiesChanged(uuid, userId, studyCreationRequestEntity.get().getIsPrivate()))
-                    .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();*/
         }
         return networkUuid;
     }
