@@ -116,6 +116,7 @@ public class StudyTest {
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String HEADER_STUDY_NAME = "studyName";
     private static final String HEADER_UPDATE_TYPE = "updateType";
+    private static final String RENAME_FAIL = "renameFail";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
@@ -226,6 +227,12 @@ public class StudyTest {
                             .build(), "sa.stopped");
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/directories/.*/rename/" + RENAME_FAIL) && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(500);
+                } else if (path.matches("/v1/directories/.*/rename/.*") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/directories/.*/rights") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/directories/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
                 }
@@ -477,6 +484,7 @@ public class StudyTest {
         }).collect(Collectors.toSet());
     }
 
+    @SneakyThrows
     @Test
     public void test() {
         //empty list
@@ -615,7 +623,7 @@ public class StudyTest {
 
         //delete existing study s2
         webTestClient.delete()
-                .uri("/v1/studies/" + s2Uuid + "/", "s2")
+                .uri("/v1/studies/" + s2Uuid + "/")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
@@ -629,6 +637,9 @@ public class StudyTest {
         assertEquals(Boolean.FALSE, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
+        //TODO the requests are not always done when we reach this line...
+        Thread.sleep(2000);
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s", s2Uuid)));
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/modifications", NETWORK_UUID_STRING)));
         assertTrue(getRequestsDone(1).contains(String.format("/v1/report/%s", NETWORK_UUID_STRING)));
@@ -664,6 +675,18 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s/rename/newName", studyNameUserIdUuid)));
+
+        //directory renaming fails
+        webTestClient.post()
+                .uri("/v1/studies/" + studyNameUserIdUuid + "/rename")
+                .header("userId", "userId")
+                .body(BodyInserters.fromValue(new RenameStudyAttributes(RENAME_FAIL)))
+                .exchange()
+                .expectStatus().is5xxServerError()
+                .expectBody(String.class)
+                .isEqualTo("DIRECTORY_REQUEST_FAILED");
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s/rename/renameFail", studyNameUserIdUuid)));
 
         webTestClient.post()
                 .uri("/v1/studies/" + randomUuid + "/rename")
@@ -698,6 +721,9 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
                 .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true));
+        //TODO the requests are not always done when we reach this line...
+        Thread.sleep(500);
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s/rights", studyNameUserIdUuid)));
 
         // make private study private should work
         webTestClient.post()
@@ -707,6 +733,9 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
                 .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", true));
+        //TODO the requests are not always done when we reach this line...
+        Thread.sleep(500);
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s/rights", studyNameUserIdUuid)));
 
         // make private study public
         webTestClient.post()
@@ -716,6 +745,9 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectBody(StudyInfos.class)
                 .value(createMatcherStudyInfos(studyNameUserIdUuid, "newName", "userId", "UCTE", "description", false));
+        //TODO the requests are not always done when we reach this line...
+        Thread.sleep(500);
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/directories/%s/rights", studyNameUserIdUuid)));
 
         // drop the broker message for study deletion (due to right access change)
         output.receive(1000);

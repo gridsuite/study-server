@@ -24,7 +24,8 @@ class StudyException  extends RuntimeException {
         SECURITY_ANALYSIS_NOT_FOUND,
         NOT_ALLOWED,
         STUDY_CREATION_FAILED,
-        LINE_MODIFICATION_FAILED
+        LINE_MODIFICATION_FAILED,
+        DIRECTORY_REQUEST_FAILED,
     }
 
     private final Type type;

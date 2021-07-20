@@ -40,6 +40,7 @@ public class RestResponseEntityExceptionHandler {
             case NOT_ALLOWED:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case LINE_MODIFICATION_FAILED:
+            case DIRECTORY_REQUEST_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

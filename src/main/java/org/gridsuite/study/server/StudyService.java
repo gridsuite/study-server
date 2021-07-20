@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -285,6 +286,21 @@ public class StudyService {
                 });
     }
 
+    private Mono<Void> renameDirectoryElement(StudyInfos studyInfos, String newName) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_SERVER_API_VERSION + "/directories/{elementUuid}/rename/{elementUuid}")
+                .buildAndExpand(studyInfos.getStudyUuid(), newName)
+                .toUriString();
+
+        return webClient.put()
+                .uri(directoryServerBaseUri + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> Mono.error(new StudyException(DIRECTORY_REQUEST_FAILED)))
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
     private Mono<Void> deleteDirectoryElement(UUID elementUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_SERVER_API_VERSION + "/directories/{elementUuid}")
                 .buildAndExpand(elementUuid)
@@ -293,6 +309,22 @@ public class StudyService {
         return webClient.delete()
                 .uri(directoryServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> Mono.error(new StudyException(DIRECTORY_REQUEST_FAILED)))
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    private Mono<Void> updateAccessRightDirectoryElement(UUID elementUuid, boolean toPrivate) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_SERVER_API_VERSION + "/directories/{elementUuid}/rights")
+                .buildAndExpand(elementUuid)
+                .toUriString();
+
+        return webClient.put()
+                .uri(directoryServerBaseUri + path)
+                .body(BodyInserters.fromValue(new AccessRightsAttributes(toPrivate)))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> Mono.error(new StudyException(DIRECTORY_REQUEST_FAILED)))
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
@@ -387,6 +419,11 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             studyEntity.setPrivate(toPrivate);
+            updateAccessRightDirectoryElement(studyUuid, toPrivate)
+                    .doOnError(throwable -> {
+                        LOGGER.error(throwable.toString(), throwable);
+                        studyEntity.setPrivate(!toPrivate);
+                    }).subscribe();
         }
         return studyEntity;
     }
@@ -413,8 +450,12 @@ public class StudyService {
                 if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
                 }
-                studyRepository.deleteById(uuid);
-                emitStudiesChanged(uuid, userId, s.isPrivate());
+                deleteDirectoryElement(uuid)
+                        .doOnSuccess(unused -> {
+                            studyRepository.deleteById(uuid);
+                            emitStudiesChanged(uuid, userId, s.isPrivate());
+                        })
+                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
             });
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
@@ -778,21 +819,29 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity doRenameStudy(UUID studyUuid, String userId, String newStudyName) {
+    public Pair<StudyEntity, String> doRenameStudy(UUID studyUuid, String userId, String newStudyName) {
         return studyRepository.findById(studyUuid).map(studyEntity -> {
+            String initialStudyName = studyEntity.getStudyName();
             if (!studyEntity.getUserId().equals(userId)) {
                 throw new StudyException(NOT_ALLOWED);
             }
             studyEntity.setStudyName(newStudyName);
-            return studyEntity;
+            return Pair.of(studyEntity, initialStudyName);
         }).orElse(null);
     }
 
     public Mono<CreatedStudyBasicInfos> renameStudy(UUID studyUuid, String userId, String newStudyName) {
         return Mono.fromCallable(() -> self.doRenameStudy(studyUuid, userId, newStudyName))
                 .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-                .map(StudyService::toCreatedStudyBasicInfos)
-                .doOnSuccess(s -> emitStudiesChanged(studyUuid, userId, s.isStudyPrivate()));
+                .flatMap(s -> renameDirectoryElement(toStudyInfos(s.getFirst()), newStudyName)
+                        .doOnSuccess(ss ->
+                                emitStudiesChanged(studyUuid, userId, s.getFirst().isPrivate())
+                        ).doOnError(throwable -> {
+                            LOGGER.error(throwable.toString(), throwable);
+                            //if the name wasn't changed in the directory server we reset the name is the study server
+                            self.doRenameStudy(studyUuid, userId, s.getSecond());
+                        }).then(Mono.just(toCreatedStudyBasicInfos(s.getFirst())))
+                );
     }
 
     private Mono<Void> setLoadFlowRunning(UUID studyUuid) {
@@ -840,7 +889,7 @@ public class StudyService {
                 .map(StudyService::toStudyInfos);
     }
 
-    private Mono<? extends Throwable> handleChangeLineError(UUID studyUuid, ClientResponse clientResponse) {
+    private Mono<? extends Throwable> handleChangeLineError(UUID studyUuid,  ClientResponse clientResponse) {
         return clientResponse.bodyToMono(String.class).flatMap(body -> {
             String message = null;
             try {
