@@ -563,7 +563,7 @@ public class StudyController {
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/report")
-    @ApiOperation(value = "Delete merge report")
+    @ApiOperation(value = "Delete study report")
     @ApiResponses(value = {@ApiResponse(code = 200, message = "The report for study deleted"), @ApiResponse(code = 404, message = "The study not found")})
     public ResponseEntity<Mono<Void>> deleteReport(@ApiParam(value = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(reportService::deleteReport));
