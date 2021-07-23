@@ -45,8 +45,10 @@
 
     <properties>
         <java.version>11</java.version>
-
         <gridsuite-dependencies.version>9</gridsuite-dependencies.version>
+        <elasticsearch.version>6.8.6</elasticsearch.version>
+        <spring-data-elasticsearch.version>4.1.0</spring-data-elasticsearch.version>
+        <log4j2-mock-version>0.0.2</log4j2-mock-version>
     </properties>
 
     <build>
@@ -93,6 +95,16 @@
             </dependency>
 
             <!-- project specific dependencies -->
+            <dependency>
+                <groupId>org.elasticsearch</groupId>
+                <artifactId>elasticsearch</artifactId>
+                <version>${elasticsearch.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.data</groupId>
+                <artifactId>spring-data-elasticsearch</artifactId>
+                <version>${spring-data-elasticsearch.version}</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
@@ -145,6 +157,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- elasticsearch -->
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-elasticsearch</artifactId>
         </dependency>
 
         <!-- Runtime dependencies -->
@@ -229,6 +251,14 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>de.dentrassi.elasticsearch</groupId>
+            <artifactId>log4j2-mock</artifactId>
+            <version>${log4j2-mock-version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
 </project>

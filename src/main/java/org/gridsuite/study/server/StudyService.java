@@ -21,6 +21,7 @@ import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ElementaryModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -106,6 +108,10 @@ public class StudyService {
     @Autowired
     ReportService reportService;
 
+    @Autowired
+    @Lazy
+    private StudyInfosService studyInfosService;
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -137,31 +143,32 @@ public class StudyService {
 
     @Bean
     public Consumer<Flux<Message<String>>> consumeSaResult() {
-        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
-            String receiver = message.getHeaders().get(RECEIVER, String.class);
-            if (receiver != null) {
-                Receiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
+        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
+                .flatMap(message -> {
+                    UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
+                    String receiver = message.getHeaders().get(RECEIVER, String.class);
+                    if (receiver != null) {
+                        Receiver receiverObj;
+                        try {
+                            receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                    LOGGER.info("Security analysis result '{}' available for study '{}'",
-                            resultUuid, receiverObj.getStudyUuid());
+                            LOGGER.info("Security analysis result '{}' available for study '{}'",
+                                    resultUuid, receiverObj.getStudyUuid());
 
-                    // update DB
-                    return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), resultUuid)
-                            .then(Mono.fromCallable(() -> {
-                                // send notifications
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-                                return null;
-                            }));
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-            return Mono.empty();
-        })
+                            // update DB
+                            return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), resultUuid)
+                                    .then(Mono.fromCallable(() -> {
+                                        // send notifications
+                                        emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                        emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+                                        return null;
+                                    }));
+                        } catch (JsonProcessingException e) {
+                            LOGGER.error(e.toString());
+                        }
+                    }
+                    return Mono.empty();
+                })
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                 .subscribe();
     }
@@ -328,12 +335,12 @@ public class StudyService {
                         .doOnSuccess(unused -> {
                             emitStudiesChanged(s.getStudyUuid(), s.getUserId(), s.isStudyPrivate());
                             importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
-                                    Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
-                                            .flatMap(t -> {
-                                                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                                                return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                        description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                                            }))
+                                            Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
+                                                    .flatMap(t -> {
+                                                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                                                        return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                                                description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                                    }))
                                     .subscribeOn(Schedulers.boundedElastic())
                                     .doOnError(throwable -> {
                                         LOGGER.error(throwable.toString(), throwable);
@@ -450,12 +457,16 @@ public class StudyService {
                 .bodyToMono(Void.class);
     }
 
-    private Mono<StudyEntity> insertStudy(UUID uuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
-                                          String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
-                                          LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+    private Mono<CreatedStudyBasicInfos> insertStudy(UUID uuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
+                                                     String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
+                                                     LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         return insertStudyEntity(uuid, studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
                 loadFlowParameters, securityAnalysisUuid)
-                .doOnSuccess(s -> emitStudiesChanged(uuid, userId, isPrivate));
+                .map(StudyService::toCreatedStudyBasicInfos)
+                .doOnSuccess(s -> {
+                    emitStudiesChanged(uuid, userId, isPrivate);
+                    studyInfosService.addStudyInfos(s);
+                });
     }
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
@@ -478,42 +489,43 @@ public class StudyService {
 
     private Mono<? extends Throwable> handleStudyCreationError(UUID studyUuid, String studyName, String userId, boolean isPrivate, ClientResponse clientResponse, String serverName) {
         return clientResponse.bodyToMono(String.class)
-            .switchIfEmpty(Mono.just("{\"message\": \"" + serverName + ": " + clientResponse.statusCode() + "\"}"))
-            .flatMap(body -> {
-                try {
-                    JsonNode node = new ObjectMapper().readTree(body).path("message");
-                    if (!node.isMissingNode()) {
-                        emitStudyCreationError(studyUuid, studyName, userId, isPrivate, node.asText());
-                    } else {
-                        emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
+                .switchIfEmpty(Mono.just("{\"message\": \"" + serverName + ": " + clientResponse.statusCode() + "\"}"))
+                .flatMap(body -> {
+                    try {
+                        JsonNode node = new ObjectMapper().readTree(body).path("message");
+                        if (!node.isMissingNode()) {
+                            emitStudyCreationError(studyUuid, studyName, userId, isPrivate, node.asText());
+                        } else {
+                            emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
+                        }
+                    } catch (JsonProcessingException e) {
+                        if (!body.isEmpty()) {
+                            emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
+                        }
                     }
-                } catch (JsonProcessingException e) {
-                    if (!body.isEmpty()) {
-                        emitStudyCreationError(studyUuid, studyName, userId, isPrivate, body);
-                    }
-                }
-                return Mono.error(new StudyException(STUDY_CREATION_FAILED));
-            });
+                    return Mono.error(new StudyException(STUDY_CREATION_FAILED));
+                });
     }
 
     Mono<UUID> importCase(Mono<FilePart> multipartFile, UUID studyUuid, String studyName, String userId, boolean isPrivate) {
-        return multipartFile.flatMap(file -> {
-            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-            multipartBodyBuilder.part("file", file);
+        return multipartFile
+                .flatMap(file -> {
+                    MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+                    multipartBodyBuilder.part("file", file);
 
-            return webClient.post()
-                .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
-                .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                    handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "case-server")
-                )
-                .bodyToMono(UUID.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-        })
-            .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
+                    return webClient.post()
+                            .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
+                            .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                            .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                            .retrieve()
+                            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                                    handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "case-server")
+                            )
+                            .bodyToMono(UUID.class)
+                            .publishOn(Schedulers.boundedElastic())
+                            .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+                })
+                .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
     }
 
     Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
@@ -550,20 +562,20 @@ public class StudyService {
 
     private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String studyName, String userId, boolean isPrivate) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-            .queryParam(CASE_UUID, caseUuid)
-            .buildAndExpand()
-            .toUriString();
+                .queryParam(CASE_UUID, caseUuid)
+                .buildAndExpand()
+                .toUriString();
 
         return webClient.post()
-            .uri(networkConversionServerBaseUri + path)
-            .retrieve()
-            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "network-conversion-server")
-            )
-            .bodyToMono(NetworkInfos.class)
-            .publishOn(Schedulers.boundedElastic())
-            .log(ROOT_CATEGORY_REACTOR, Level.FINE)
-            .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
+                .uri(networkConversionServerBaseUri + path)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
+                        handleStudyCreationError(studyUuid, studyName, userId, isPrivate, clientResponse, "network-conversion-server")
+                )
+                .bodyToMono(NetworkInfos.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE)
+                .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, studyName, userId, isPrivate, t.getMessage()));
     }
 
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
@@ -756,24 +768,24 @@ public class StudyService {
             UUID networkUuid = tuple.getT1();
             String provider = tuple.getT2();
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                .queryParam("reportId", networkUuid.toString()).queryParam("reportName", "loadflow").queryParam("overwrite", true);
+                    .queryParam("reportId", networkUuid.toString()).queryParam("reportName", "loadflow").queryParam("overwrite", true);
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
             var path = uriComponentsBuilder
-                .buildAndExpand(networkUuid)
-                .toUriString();
+                    .buildAndExpand(networkUuid)
+                    .toUriString();
             return webClient.put()
-                .uri(loadFlowServerBaseUri + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
-                .retrieve()
-                .bodyToMono(LoadFlowResult.class)
-                .flatMap(result -> updateLoadFlowResultAndStatus(studyUuid, toEntity(result), result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
-                .doOnError(e -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe())
-                .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
+                    .uri(loadFlowServerBaseUri + path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
+                    .retrieve()
+                    .bodyToMono(LoadFlowResult.class)
+                    .flatMap(result -> updateLoadFlowResultAndStatus(studyUuid, toEntity(result), result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
+                    .doOnError(e -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe())
+                    .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
         }).doFinally(s ->
-            emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
+                emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
         );
     }
 
@@ -1116,9 +1128,9 @@ public class StudyService {
                     .retrieve()
                     .bodyToMono(UUID.class);
         }).flatMap(result ->
-            updateSecurityAnalysisResultUuid(studyUuid, result)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
-                    .thenReturn(result)
+                updateSecurityAnalysisResultUuid(studyUuid, result)
+                        .doOnSuccess(e -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+                        .thenReturn(result)
         );
     }
 
@@ -1188,7 +1200,7 @@ public class StudyService {
     Mono<String> getSubstationSvgAndMetadata(UUID networkUuid, String substationId, boolean useName, boolean centerLabel,
                                              boolean diagonalLabel, boolean topologicalColoring, String substationLayout) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+                        "/substation-svg-and-metadata/{networkUuid}/{substationId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
@@ -1312,30 +1324,31 @@ public class StudyService {
 
     @Bean
     public Consumer<Flux<Message<String>>> consumeSaStopped() {
-        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
-            String receiver = message.getHeaders().get(RECEIVER, String.class);
-            if (receiver != null) {
-                Receiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
+        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
+                .flatMap(message -> {
+                    UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
+                    String receiver = message.getHeaders().get(RECEIVER, String.class);
+                    if (receiver != null) {
+                        Receiver receiverObj;
+                        try {
+                            receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                    LOGGER.info("Security analysis stopped for study '{}'",
-                            resultUuid, receiverObj.getStudyUuid());
+                            LOGGER.info("Security analysis stopped for study '{}'",
+                                    resultUuid, receiverObj.getStudyUuid());
 
-                    // delete security analysis result in database
-                    return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), null)
-                            .then(Mono.fromCallable(() -> {
-                                // send notification for stopped computation
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                return null;
-                            }));
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-            return Mono.empty();
-        })
+                            // delete security analysis result in database
+                            return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), null)
+                                    .then(Mono.fromCallable(() -> {
+                                        // send notification for stopped computation
+                                        emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                        return null;
+                                    }));
+                        } catch (JsonProcessingException e) {
+                            LOGGER.error(e.toString());
+                        }
+                    }
+                    return Mono.empty();
+                })
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                 .subscribe();
     }

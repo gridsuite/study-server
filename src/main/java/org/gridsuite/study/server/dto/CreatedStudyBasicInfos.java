@@ -12,6 +12,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.TypeAlias;
+import org.springframework.data.elasticsearch.annotations.Document;
 
 
 /**
@@ -23,6 +25,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @ToString(callSuper = true)
 @ApiModel("Basic study attributes after creation succeeded ")
+@Document(indexName = "study-server")
+@TypeAlias(value = "StudyInfos")
 public class CreatedStudyBasicInfos extends BasicStudyInfos {
     String caseFormat;
 
