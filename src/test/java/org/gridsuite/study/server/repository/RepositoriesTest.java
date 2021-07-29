@@ -177,7 +177,7 @@ public class RepositoriesTest {
 
     @Test
     public void testStudyCreationRequest() {
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(null, "foo", "mystudy", LocalDateTime.now(ZoneOffset.UTC), true);
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(UUID.randomUUID(), "foo", "mystudy", LocalDateTime.now(ZoneOffset.UTC), true);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());
