@@ -70,9 +70,10 @@ public class StudyController {
     public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                              @PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam("description") String description,
+                                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestParam("isPrivate") Boolean isPrivate,
                                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(studyService.assertCaseExists(caseUuid).then(createStudy));
     }
@@ -86,9 +87,10 @@ public class StudyController {
     public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@PathVariable("studyName") String studyName,
                                                              @RequestPart("caseFile") FilePart caseFile,
                                                              @RequestParam("description") String description,
+                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestParam("isPrivate") Boolean isPrivate,
                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(createStudy);
     }

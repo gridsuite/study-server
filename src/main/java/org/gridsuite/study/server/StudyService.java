@@ -247,8 +247,8 @@ public class StudyService {
                 .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
-    public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate) {
-        return insertStudyCreationRequest(studyName, userId, isPrivate)
+    public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
                         .flatMap(t -> {
@@ -263,8 +263,8 @@ public class StudyService {
                 );
     }
 
-    public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate) {
-        return insertStudyCreationRequest(studyName, userId, isPrivate)
+    public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
                         Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
@@ -394,8 +394,8 @@ public class StudyService {
                 .doOnSuccess(s -> emitStudiesChanged(uuid, userId, isPrivate));
     }
 
-    private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
-        return insertStudyCreationRequestEntity(studyName, userId, isPrivate)
+    private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate, UUID studyUuid) {
+        return insertStudyCreationRequestEntity(studyName, userId, isPrivate, studyUuid)
                 .doOnSuccess(s -> emitStudiesChanged(s.getId(), userId, isPrivate));
     }
 
@@ -1318,9 +1318,9 @@ public class StudyService {
         return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(studyUuid, loadFlowStatus));
     }
 
-    private Mono<StudyCreationRequestEntity> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate) {
+    private Mono<StudyCreationRequestEntity> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate, UUID studyUuid) {
         return Mono.fromCallable(() -> {
-            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(null, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
+            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid == null ? UUID.randomUUID() : studyUuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
             return studyCreationRequestRepository.save(studyCreationRequestEntity);
         });
     }
