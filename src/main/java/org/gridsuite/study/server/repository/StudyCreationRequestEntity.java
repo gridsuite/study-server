@@ -30,7 +30,6 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
     }
 
     @Id
-    @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 

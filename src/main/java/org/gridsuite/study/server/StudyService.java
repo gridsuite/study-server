@@ -125,7 +125,6 @@ public class StudyService {
     private String networkStoreServerBaseUri;
     private String securityAnalysisServerBaseUri;
     private String actionsServerBaseUri;
-    private String directoryServerBaseUri;
 
     private StudyRepository studyRepository;
     private StudyCreationRequestRepository studyCreationRequestRepository;
@@ -178,7 +177,6 @@ public class StudyService {
             @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
             @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
             @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
-            @Value("${backing-services.directory-server.base-uri:http://directory-server/}") String directoryServerBaseUri,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             WebClient.Builder webClientBuilder,
@@ -193,7 +191,6 @@ public class StudyService {
         this.networkStoreServerBaseUri = networkStoreServerBaseUri;
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
         this.actionsServerBaseUri = actionsServerBaseUri;
-        this.directoryServerBaseUri = directoryServerBaseUri;
 
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
@@ -250,98 +247,37 @@ public class StudyService {
                 .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
 
-    private Mono<Void> insertDirectoryElement(UUID parentDirectoryUuid, DirectoryElement directoryElement) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_SERVER_API_VERSION + "/directories/{parentUuid}")
-                .buildAndExpand(parentDirectoryUuid)
-                .toUriString();
-
-        return webClient.post()
-                .uri(directoryServerBaseUri + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(directoryElement))
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                        handleStudyCreationError(directoryElement.getElementUuid(), directoryElement.getElementName(),
-                                directoryElement.getOwner(), directoryElement.getAccessRights().isPrivate(), clientResponse,
-                                "directory-server")
-                )
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    private Mono<Void> insertDirectoryElement(UUID parentDirectoryUuid, BasicStudyInfos studyInfos) {
-        DirectoryElement directoryElement = DirectoryElement.builder().elementUuid(studyInfos.getStudyUuid())
-                .elementName(studyInfos.getStudyName())
-                .type(STUDY)
-                .owner(studyInfos.getUserId())
-                .accessRights(new AccessRightsAttributes(studyInfos.isStudyPrivate()))
-                .build();
-
-        return insertDirectoryElement(parentDirectoryUuid, directoryElement)
-                .doOnError(throwable -> {
-                    LOGGER.error(throwable.toString(), throwable);
-                    deleteDirectoryElement(studyInfos.getStudyUuid()).subscribe();
-                });
-    }
-
-    private Mono<Void> deleteDirectoryElement(UUID elementUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_SERVER_API_VERSION + "/directories/{elementUuid}")
-                .buildAndExpand(elementUuid)
-                .toUriString();
-
-        return webClient.delete()
-                .uri(directoryServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
-        return insertStudyCreationRequest(studyName, userId, isPrivate)
+    public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> insertDirectoryElement(parentDirectoryUuid, s) // insert study in directory server
-                        .doOnSuccess(unused -> {
-                            emitStudiesChanged(s.getStudyUuid(), s.getUserId(), s.isStudyPrivate());
-                            Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
-                                    .flatMap(t -> {
-                                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                                        return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                                    })
-                                    .subscribeOn(Schedulers.boundedElastic())
-                                    .doOnError(throwable -> {
-                                        LOGGER.error(throwable.toString(), throwable);
-                                        deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
-                                    })
-                                    .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
-                                    .subscribe();
-                        }).subscribe()
+                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
+                        .flatMap(t -> {
+                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                            return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                    description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                        })
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                        .subscribe()
                 );
     }
 
-    public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
-        return insertStudyCreationRequest(studyName, userId, isPrivate)
+    public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> insertDirectoryElement(parentDirectoryUuid, s)  // insert study in directory server
-                        .doOnSuccess(unused -> {
-                            emitStudiesChanged(s.getStudyUuid(), s.getUserId(), s.isStudyPrivate());
-                            importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
-                                    Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
-                                            .flatMap(t -> {
-                                                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                                                return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                        description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
-                                            }))
-                                    .subscribeOn(Schedulers.boundedElastic())
-                                    .doOnError(throwable -> {
-                                        LOGGER.error(throwable.toString(), throwable);
-                                        deleteDirectoryElement(s.getStudyUuid()).then(deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId)).subscribe();
-                                    })
-                                    .doOnSuccess(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
-                                    .subscribe();
-                        }).subscribe());
+                .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
+                        Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
+                                .flatMap(t -> {
+                                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                                    return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                            description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                }))
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())  // delete the study if the creation has been canceled
+                        .subscribe()
+                );
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String headerUserId) {
@@ -458,8 +394,8 @@ public class StudyService {
                 .doOnSuccess(s -> emitStudiesChanged(uuid, userId, isPrivate));
     }
 
-    private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate) {
-        return insertStudyCreationRequestEntity(studyName, userId, isPrivate)
+    private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate, UUID studyUuid) {
+        return insertStudyCreationRequestEntity(studyName, userId, isPrivate, studyUuid)
                 .doOnSuccess(s -> emitStudiesChanged(s.getId(), userId, isPrivate));
     }
 
@@ -1280,10 +1216,6 @@ public class StudyService {
         this.actionsServerBaseUri = actionsServerBaseUri;
     }
 
-    public void setDirectoryServerBaseUri(String directoryServerBaseUri) {
-        this.directoryServerBaseUri = directoryServerBaseUri;
-    }
-
     public Mono<Void> stopSecurityAnalysis(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
 
@@ -1386,9 +1318,9 @@ public class StudyService {
         return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(studyUuid, loadFlowStatus));
     }
 
-    private Mono<StudyCreationRequestEntity> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate) {
+    private Mono<StudyCreationRequestEntity> insertStudyCreationRequestEntity(String studyName, String userId, boolean isPrivate, UUID studyUuid) {
         return Mono.fromCallable(() -> {
-            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(null, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
+            StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid == null ? UUID.randomUUID() : studyUuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), isPrivate);
             return studyCreationRequestRepository.save(studyCreationRequestEntity);
         });
     }
