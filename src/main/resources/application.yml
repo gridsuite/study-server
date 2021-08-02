@@ -81,8 +81,6 @@ backing-services:
     base-uri: http://localhost:5022
   security-analysis-server:
     base-uri: http://localhost:5023
-  directory-server:
-    base-uri: http://localhost:5026
   report-server:
     base-uri: http://localhost:5028
 
