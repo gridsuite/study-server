@@ -39,8 +39,6 @@ public class StudyController {
     private final StudyService studyService;
     private final ReportService reportService;
 
-    public static final String TMP_LEGACY_DIRECTORY = "11111111-2222-3333-4444-555555555555";
-
     public StudyController(StudyService studyService, ReportService reportService) {
         this.studyService = studyService;
         this.reportService = reportService;
@@ -76,10 +74,10 @@ public class StudyController {
     public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                              @PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam("description") String description,
-                                                                             @RequestParam(required = false, value = "parentDirectoryUuid", defaultValue = TMP_LEGACY_DIRECTORY) UUID parentDirectoryUuid,
+                                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestParam("isPrivate") Boolean isPrivate,
                                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, parentDirectoryUuid)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(studyService.assertCaseExists(caseUuid).then(createStudy));
     }
@@ -93,10 +91,10 @@ public class StudyController {
     public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@PathVariable("studyName") String studyName,
                                                              @RequestPart("caseFile") FilePart caseFile,
                                                              @RequestParam("description") String description,
-                                                             @RequestParam(required = false, value = "parentDirectoryUuid", defaultValue = TMP_LEGACY_DIRECTORY) UUID parentDirectoryUuid,
+                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestParam("isPrivate") Boolean isPrivate,
                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, parentDirectoryUuid)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(createStudy);
     }
