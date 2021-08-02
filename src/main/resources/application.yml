@@ -54,6 +54,10 @@ spring:
           create-target: src/main/resources/study.sql
           create-source: metadata
 
+springdoc:
+  swagger-ui:
+    path: swagger-ui.html
+
 backing-services:
   case:
     base-uri: http://localhost:5000

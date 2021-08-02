@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.dto;
 
 import com.powsybl.loadflow.LoadFlowResult;
-import io.swagger.annotations.ApiModel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -20,7 +20,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString(callSuper = true)
-@ApiModel("Study attributes")
+@Schema(description = "Study attributes")
 public class StudyInfos extends CreatedStudyBasicInfos {
     LoadFlowStatus loadFlowStatus;
 

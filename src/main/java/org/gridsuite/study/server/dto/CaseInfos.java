@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
-import io.swagger.annotations.ApiModel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @NoArgsConstructor
-@ApiModel("Case infos")
+@Schema(description = "Case infos")
 public class CaseInfos {
 
     private String name;
