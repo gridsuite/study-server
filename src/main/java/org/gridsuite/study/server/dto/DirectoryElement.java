@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
-import io.swagger.annotations.ApiModel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import java.util.UUID;
 
@@ -16,7 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Builder
-@ApiModel("Basic study attributes")
+@Schema(description = "Basic study attributes")
 public class DirectoryElement {
     UUID elementUuid;
     String elementName;

@@ -7,8 +7,7 @@
 package org.gridsuite.study.server.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -21,18 +20,18 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString
-@ApiModel("Voltage level attributes")
+@Schema(description = "Voltage level attributes")
 public class VoltageLevelInfos {
 
-    @ApiModelProperty("Voltage level ID")
+    @Schema(description = "Voltage level ID")
     private String id;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @ApiModelProperty("Voltage level name")
+    @Schema(description = "Voltage level name")
     private String name;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @ApiModelProperty("Substation ID")
+    @Schema(description = "Substation ID")
     private String substationId;
 
 }
