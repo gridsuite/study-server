@@ -16,8 +16,6 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
 import java.util.UUID;
 
 /**
- * A class to launch an embedded DB elasticsearch
- *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")

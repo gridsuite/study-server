@@ -12,7 +12,6 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.lang.NonNull;
@@ -26,7 +25,6 @@ import java.util.UUID;
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@ComponentScan(basePackageClasses = {StudyInfosRepository.class})
 public class StudyInfosServiceImpl implements StudyInfosService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyInfosServiceImpl.class);
@@ -35,39 +33,34 @@ public class StudyInfosServiceImpl implements StudyInfosService {
     private StudyInfosRepository studyInfosRepository;
 
     @Override
-    public CreatedStudyBasicInfos addStudyInfos(@NonNull final CreatedStudyBasicInfos ci) {
+    public CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos ci) {
         studyInfosRepository.save(ci);
         return ci;
     }
 
     @Override
-    public Optional<CreatedStudyBasicInfos> getStudyInfosByUuid(@NonNull final UUID uuid) {
+    public Optional<CreatedStudyBasicInfos> getByUuid(@NonNull final UUID uuid) {
         Page<CreatedStudyBasicInfos> res = studyInfosRepository.findByStudyUuid(uuid, PageRequest.of(0, 1));
         return res.get().findFirst();
     }
 
     @Override
-    public List<CreatedStudyBasicInfos> getAllStudyInfos() {
+    public List<CreatedStudyBasicInfos> getAll() {
         return Lists.newArrayList(studyInfosRepository.findAll());
     }
 
     @Override
-    public List<CreatedStudyBasicInfos> searchStudyInfos(@NonNull final String query) {
+    public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
         return Lists.newArrayList(studyInfosRepository.search(QueryBuilders.queryStringQuery(query)));
     }
 
     @Override
-    public void deleteStudyInfos(@NonNull final CreatedStudyBasicInfos ci) {
-        studyInfosRepository.delete(ci);
-    }
-
-    @Override
-    public void deleteStudyInfosByUuid(@NonNull UUID uuid) {
+    public void deleteByUuid(@NonNull UUID uuid) {
         studyInfosRepository.deleteById(uuid);
     }
 
     @Override
-    public void deleteAllStudyInfos() {
-        studyInfosRepository.deleteAll(getAllStudyInfos());
+    public void deleteAll() {
+        studyInfosRepository.deleteAll(getAll());
     }
 }

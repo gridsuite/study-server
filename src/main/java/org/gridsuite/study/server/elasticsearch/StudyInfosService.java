@@ -23,19 +23,17 @@ import java.util.stream.Collectors;
  */
 public interface StudyInfosService {
 
-    CreatedStudyBasicInfos addStudyInfos(@NonNull final CreatedStudyBasicInfos ci);
+    CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos ci);
 
-    List<CreatedStudyBasicInfos> getAllStudyInfos();
+    List<CreatedStudyBasicInfos> getAll();
 
-    Optional<CreatedStudyBasicInfos> getStudyInfosByUuid(@NonNull final UUID uuid);
+    Optional<CreatedStudyBasicInfos> getByUuid(@NonNull final UUID uuid);
 
-    List<CreatedStudyBasicInfos> searchStudyInfos(@NonNull final String query);
+    List<CreatedStudyBasicInfos> search(@NonNull final String query);
 
-    void deleteStudyInfos(@NonNull final CreatedStudyBasicInfos ci);
+    void deleteByUuid(@NonNull final UUID uuid);
 
-    void deleteStudyInfosByUuid(@NonNull final UUID uuid);
-
-    void deleteAllStudyInfos();
+    void deleteAll();
 
     static String getDateSearchTerm(@NonNull final DateTime... dates) {
         return Arrays.stream(dates).map(date -> "\"" + date.toDateTimeISO() + "\"").collect(Collectors.joining(" OR ", "date:", "")).toString();

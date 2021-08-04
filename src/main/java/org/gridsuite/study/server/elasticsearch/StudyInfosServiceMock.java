@@ -15,41 +15,37 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * An interface to define an api for metadatas transfer in the DB elasticsearch
+ * A class to mock metadatas transfer in the DB elasticsearch
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public class StudyInfosServiceMock implements StudyInfosService {
 
     @Override
-    public CreatedStudyBasicInfos addStudyInfos(@NonNull final CreatedStudyBasicInfos si) {
+    public CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos si) {
         return si;
     }
 
     @Override
-    public List<CreatedStudyBasicInfos> getAllStudyInfos() {
+    public List<CreatedStudyBasicInfos> getAll() {
         return Collections.emptyList();
     }
 
     @Override
-    public Optional<CreatedStudyBasicInfos> getStudyInfosByUuid(@NonNull final UUID uuid) {
+    public Optional<CreatedStudyBasicInfos> getByUuid(@NonNull final UUID uuid) {
         return Optional.empty();
     }
 
     @Override
-    public List<CreatedStudyBasicInfos> searchStudyInfos(@NonNull final String query) {
+    public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
         return Collections.emptyList();
     }
 
     @Override
-    public void deleteStudyInfos(@NonNull final CreatedStudyBasicInfos si) {
+    public void deleteByUuid(@NonNull final UUID uuid) {
     }
 
     @Override
-    public void deleteStudyInfosByUuid(@NonNull final UUID uuid) {
-    }
-
-    @Override
-    public void deleteAllStudyInfos() {
+    public void deleteAll() {
     }
 }

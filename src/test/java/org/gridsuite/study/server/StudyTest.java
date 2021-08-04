@@ -18,7 +18,6 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.model.Resource;
 import com.powsybl.network.store.model.ResourceType;
@@ -47,7 +46,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -83,7 +81,6 @@ import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatc
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.junit.Assert.*;
-import static org.mockito.BDDMockito.given;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -144,10 +141,13 @@ public class StudyTest {
     private StudyService studyService;
 
     @Autowired
-    private ReportService reportService;
+    private NetworkStoreService networkStoreService;
 
-    @MockBean
-    private NetworkStoreService networkStoreClient;
+    @Autowired
+    private NetworkModificationService networkModificationService;
+
+    @Autowired
+    private ReportService reportService;
 
     @Autowired
     private ObjectMapper mapper;
@@ -175,7 +175,6 @@ public class StudyTest {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
                 new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
-        given(networkStoreClient.getNetwork(NETWORK_UUID)).willReturn(network);
 
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
@@ -194,14 +193,14 @@ public class StudyTest {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         studyService.setCaseServerBaseUri(baseUrl);
         studyService.setNetworkConversionServerBaseUri(baseUrl);
-        studyService.setNetworkModificationServerBaseUri(baseUrl);
         studyService.setSingleLineDiagramServerBaseUri(baseUrl);
         studyService.setGeoDataServerBaseUri(baseUrl);
         studyService.setNetworkMapServerBaseUri(baseUrl);
         studyService.setLoadFlowServerBaseUri(baseUrl);
-        studyService.setNetworkStoreServerBaseUri(baseUrl);
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
         studyService.setActionsServerBaseUri(baseUrl);
+        networkStoreService.setNetworkStoreServerBaseUri(baseUrl);
+        networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
         // FIXME: remove lines when dicos will be used on the front side

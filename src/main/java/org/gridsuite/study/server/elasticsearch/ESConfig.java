@@ -48,13 +48,13 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
 
     @Bean
     @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
-    public StudyInfosService caseInfosServiceImpl() {
+    public StudyInfosService studyInfosServiceImpl() {
         return new StudyInfosServiceImpl();
     }
 
     @Bean
     @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'false'")
-    public StudyInfosService caseInfosServiceMock() {
+    public StudyInfosService studyInfosServiceMock() {
         return new StudyInfosServiceMock();
     }
 
