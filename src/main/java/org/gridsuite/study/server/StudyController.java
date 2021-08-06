@@ -136,9 +136,10 @@ public class StudyController {
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
+            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvg(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvg(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
@@ -150,9 +151,10 @@ public class StudyController {
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring) {
+            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvgAndMetadata(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvgAndMetadata(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels")
@@ -377,7 +379,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> changeLineStatus(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("lineId") String lineId,
-            @RequestBody(required = true) String status) {
+            @RequestBody String status) {
         return ResponseEntity.ok().body(studyService.changeLineStatus(studyUuid, lineId, status));
     }
 
@@ -518,10 +520,11 @@ public class StudyController {
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout) {
+            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid ->
-                studyService.getSubstationSvg(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout)));
+                studyService.getSubstationSvg(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout, componentLibrary)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata")
@@ -534,10 +537,11 @@ public class StudyController {
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout) {
+            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(uuid ->
-                studyService.getSubstationSvgAndMetadata(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout)));
+                studyService.getSubstationSvgAndMetadata(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout, componentLibrary)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/status")
@@ -571,4 +575,11 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkUuid(studyUuid).flatMap(reportService::deleteReport));
     }
 
+    @GetMapping(value = "/svg-component-libraries")
+    @Operation(summary = "Get a list of the available svg component libraries")
+    @ApiResponse(responseCode = "200", description = "The list of the available svg component libraries")
+    public ResponseEntity<Mono<List<String>>> getAvailableSvgComponentLibraries() {
+        Mono<List<String>> libraries = studyService.getAvailableSvgComponentLibraries();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
+    }
 }
