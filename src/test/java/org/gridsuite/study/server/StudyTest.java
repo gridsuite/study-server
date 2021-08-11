@@ -180,7 +180,7 @@ public class StudyTest {
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
         Iterable<VoltageLevel> vls = network.getVoltageLevels();
-        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
+        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), Resource.INITIAL_VARIANT_NUM, VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
 
         topLevelDocument = new TopLevelDocument<>(data, null);
 
