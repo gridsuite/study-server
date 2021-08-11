@@ -406,6 +406,10 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/svg-component-libraries":
+                        return new MockResponse().setResponseCode(200).setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1235,6 +1239,15 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/all/%s", NETWORK_UUID_STRING)));
+
+        // get the svg component libraries
+        webTestClient.get()
+            .uri("/v1/svg-component-libraries")
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg-component-libraries")));
     }
 
     @Test
