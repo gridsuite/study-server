@@ -130,7 +130,7 @@ public class StudyTest {
     public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.5\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":false,\"readSlackBus\":false,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\"}";
     public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.5\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"simulShunt\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\"}";
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
-    public static final int TIMEOUT = 100000;
+    public static final int TIMEOUT = 1000;
 
     @Autowired
     private OutputDestination output;
@@ -181,7 +181,7 @@ public class StudyTest {
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
         Iterable<VoltageLevel> vls = network.getVoltageLevels();
-        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
+        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), 0, VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
 
         topLevelDocument = new TopLevelDocument<>(data, null);
 
@@ -1747,7 +1747,7 @@ public class StudyTest {
             // Ignoring
         }
 
-        assertNull("Should not be any messages", output.receive(1000));
+        assertNull("Should not be any messages", output.receive(100000));
         assertNull("Should not be any http requests", httpRequest);
     }
 }
