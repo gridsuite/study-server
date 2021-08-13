@@ -59,6 +59,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -93,6 +94,7 @@ import static org.mockito.BDDMockito.given;
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
 @EnableWebFlux
+@DirtiesContext
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class StudyTest {
@@ -1763,6 +1765,5 @@ public class StudyTest {
 
         assertNull("Should not be any messages", output.receive(TIMEOUT));
         assertNull("Should not be any http requests", httpRequest);
-        output.clear();
     }
 }
