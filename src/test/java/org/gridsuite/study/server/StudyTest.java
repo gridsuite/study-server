@@ -881,9 +881,9 @@ public class StudyTest {
         headersLF = messageLf.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-        assertTrue(null != output.receive(TIMEOUT));
-        assertTrue(null != output.receive(TIMEOUT));
-        assertTrue(null != output.receive(TIMEOUT));
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run?reportId=%s&reportName=loadflow&overwrite=true", NETWORK_UUID_STRING, NETWORK_UUID_STRING)));
 
