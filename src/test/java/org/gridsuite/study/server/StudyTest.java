@@ -1763,5 +1763,6 @@ public class StudyTest {
 
         assertNull("Should not be any messages", output.receive(TIMEOUT));
         assertNull("Should not be any http requests", httpRequest);
+        output.clear();
     }
 }
