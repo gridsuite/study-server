@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
-import io.swagger.annotations.ApiModel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -23,7 +23,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @ToString
-@ApiModel("Basic study attributes")
+@Schema(description = "Basic study attributes")
 public class BasicStudyInfos {
     @Id
     UUID studyUuid;

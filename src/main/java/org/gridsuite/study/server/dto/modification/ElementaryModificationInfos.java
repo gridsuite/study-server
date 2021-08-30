@@ -8,8 +8,7 @@ package org.gridsuite.study.server.dto.modification;
 
 import java.util.Set;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,19 +22,19 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString(callSuper = true)
-@ApiModel("Elementary modification attributes")
+@Schema(description = "Elementary modification attributes")
 public class ElementaryModificationInfos extends ModificationInfos {
 
-    @ApiModelProperty("Equipment ID")
+    @Schema(description = "Equipment ID")
     private String equipmentId;
 
-    @ApiModelProperty("Substations ID")
+    @Schema(description = "Substations ID")
     @Builder.Default
     private Set<String> substationIds = Set.of();
 
-    @ApiModelProperty("Equipment attribute name")
+    @Schema(description = "Equipment attribute name")
     private String equipmentAttributeName;
 
-    @ApiModelProperty("Equipment attribute value")
+    @Schema(description = "Equipment attribute value")
     private Object equipmentAttributeValue;
 }

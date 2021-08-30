@@ -179,7 +179,7 @@ public class StudyTest {
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
         Iterable<VoltageLevel> vls = network.getVoltageLevels();
-        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
+        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), Resource.INITIAL_VARIANT_NUM, VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
 
         topLevelDocument = new TopLevelDocument<>(data, null);
 
@@ -404,6 +404,10 @@ public class StudyTest {
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
                         return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/svg-component-libraries":
+                        return new MockResponse().setResponseCode(200).setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
@@ -1234,6 +1238,15 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/all/%s", NETWORK_UUID_STRING)));
+
+        // get the svg component libraries
+        webTestClient.get()
+            .uri("/v1/svg-component-libraries")
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg-component-libraries")));
     }
 
     @Test

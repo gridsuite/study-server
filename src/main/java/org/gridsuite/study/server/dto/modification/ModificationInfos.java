@@ -9,8 +9,7 @@ package org.gridsuite.study.server.dto.modification;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -23,14 +22,14 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString
-@ApiModel("Modification attributes")
+@Schema(description = "Modification attributes")
 public class ModificationInfos {
-    @ApiModelProperty("Modification id")
+    @Schema(description = "Modification id")
     private UUID uuid;
 
-    @ApiModelProperty("Modification date")
+    @Schema(description = "Modification date")
     ZonedDateTime date;
 
-    @ApiModelProperty("Modification type")
+    @Schema(description = "Modification type")
     ModificationType type;
 }

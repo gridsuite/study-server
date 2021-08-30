@@ -450,12 +450,13 @@ public class StudyService {
     }
 
     Mono<byte[]> getVoltageLevelSvg(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
-                                    boolean topologicalColoring) {
+                                    boolean topologicalColoring, String componentLibrary) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
                 .queryParam("topologicalColoring", topologicalColoring)
+                .queryParamIfPresent("componentLibrary", Optional.ofNullable(componentLibrary))
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
@@ -466,12 +467,13 @@ public class StudyService {
     }
 
     Mono<String> getVoltageLevelSvgAndMetadata(UUID networkUuid, String voltageLevelId, boolean useName, boolean centerLabel, boolean diagonalLabel,
-                                               boolean topologicalColoring) {
+                                               boolean topologicalColoring, String componentLibrary) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
                 .queryParam("topologicalColoring", topologicalColoring)
+                .queryParamIfPresent("componentLibrary", Optional.ofNullable(componentLibrary))
                 .buildAndExpand(networkUuid, voltageLevelId)
                 .toUriString();
 
@@ -1012,13 +1014,14 @@ public class StudyService {
     }
 
     Mono<byte[]> getSubstationSvg(UUID networkUuid, String substationId, boolean useName, boolean centerLabel, boolean diagonalLabel,
-                                  boolean topologicalColoring, String substationLayout) {
+                                  boolean topologicalColoring, String substationLayout, String componentLibrary) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
                 .queryParam("useName", useName)
                 .queryParam("centerLabel", centerLabel)
                 .queryParam("diagonalLabel", diagonalLabel)
                 .queryParam("topologicalColoring", topologicalColoring)
                 .queryParam("substationLayout", substationLayout)
+                .queryParamIfPresent("componentLibrary", Optional.ofNullable(componentLibrary))
                 .buildAndExpand(networkUuid, substationId)
                 .toUriString();
 
@@ -1029,7 +1032,7 @@ public class StudyService {
     }
 
     Mono<String> getSubstationSvgAndMetadata(UUID networkUuid, String substationId, boolean useName, boolean centerLabel,
-                                             boolean diagonalLabel, boolean topologicalColoring, String substationLayout) {
+                                             boolean diagonalLabel, boolean topologicalColoring, String substationLayout, String componentLibrary) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                         "/substation-svg-and-metadata/{networkUuid}/{substationId}")
                 .queryParam("useName", useName)
@@ -1037,6 +1040,7 @@ public class StudyService {
                 .queryParam("diagonalLabel", diagonalLabel)
                 .queryParam("topologicalColoring", topologicalColoring)
                 .queryParam("substationLayout", substationLayout)
+                .queryParamIfPresent("componentLibrary", Optional.ofNullable(componentLibrary))
                 .buildAndExpand(networkUuid, substationId)
                 .toUriString();
 
@@ -1254,5 +1258,16 @@ public class StudyService {
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
+    }
+
+    Mono<List<String>> getAvailableSvgComponentLibraries() {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries")
+            .toUriString();
+
+        return webClient.get()
+            .uri(singleLineDiagramServerBaseUri + path)
+            .retrieve()
+            .bodyToMono(new ParameterizedTypeReference<>() {
+            });
     }
 }
