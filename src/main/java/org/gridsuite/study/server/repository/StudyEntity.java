@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
+import org.gridsuite.study.server.dto.IndexingStatus;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 
 import javax.persistence.*;
@@ -61,6 +62,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @Column(name = "isPrivate", nullable = false)
     private boolean isPrivate;
+
+    @Column(name = "indexingStatus")
+    @Enumerated(EnumType.STRING)
+    private IndexingStatus indexingStatus;
 
     @Column(name = "loadFlowStatus")
     @Enumerated(EnumType.STRING)

@@ -61,6 +61,16 @@ public class NetworkModificationService {
         return this.networkModificationServerBaseUri + DELIMITER + NETWORK_MODIFICATION_API_VERSION + DELIMITER + "networks" + DELIMITER;
     }
 
+    void insertEquipmentsIndexes(UUID networkUuid) {
+        Objects.requireNonNull(networkUuid);
+
+    }
+
+    Mono<Void> deleteEquipmentsIndexes(UUID networkUuid) {
+        Objects.requireNonNull(networkUuid);
+        return Mono.empty();
+    }
+
     public Flux<ModificationInfos> getModifications(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
         return networkStoreService.getNetworkUuid(studyUuid)
