@@ -90,8 +90,8 @@ import static org.junit.Assert.*;
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
 @EnableWebFlux
-@SpringBootTest
-@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+@SpringBootTest(properties = {"spring.data.elasticsearch.enabled=true"})
+@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, EmbeddedElasticsearch.class, TestChannelBinderConfiguration.class})})
 public class StudyTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
@@ -407,7 +407,7 @@ public class StudyTest {
 
                     case "/v1/svg-component-libraries":
                         return new MockResponse().setResponseCode(200).setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
@@ -1241,10 +1241,10 @@ public class StudyTest {
 
         // get the svg component libraries
         webTestClient.get()
-            .uri("/v1/svg-component-libraries")
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON);
+                .uri("/v1/svg-component-libraries")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/svg-component-libraries")));
     }

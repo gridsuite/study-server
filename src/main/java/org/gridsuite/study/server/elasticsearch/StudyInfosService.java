@@ -36,7 +36,7 @@ public interface StudyInfosService {
     void deleteAll();
 
     static String getDateSearchTerm(@NonNull final DateTime... dates) {
-        return Arrays.stream(dates).map(date -> "\"" + date.toDateTimeISO() + "\"").collect(Collectors.joining(" OR ", "date:", "")).toString();
+        return Arrays.stream(dates).map(date -> "\"" + date.toDateTimeISO() + "\"").collect(Collectors.joining(" OR ", "date:", ""));
     }
 
 }

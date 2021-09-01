@@ -111,6 +111,12 @@
                 <artifactId>spring-data-elasticsearch</artifactId>
                 <version>${spring-data-elasticsearch.version}</version>
             </dependency>
+            <dependency>
+                <groupId>de.dentrassi.elasticsearch</groupId>
+                <artifactId>log4j2-mock</artifactId>
+                <version>${log4j2-mock-version}</version>
+                <scope>test</scope>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
@@ -257,11 +263,9 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>de.dentrassi.elasticsearch</groupId>
             <artifactId>log4j2-mock</artifactId>
-            <version>${log4j2-mock-version}</version>
             <scope>test</scope>
         </dependency>
 

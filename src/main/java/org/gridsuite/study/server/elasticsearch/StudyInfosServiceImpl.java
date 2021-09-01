@@ -9,16 +9,19 @@ package org.gridsuite.study.server.elasticsearch;
 import com.google.common.collect.Lists;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * A class to implement metadatas transfer in the DB elasticsearch
@@ -27,10 +30,11 @@ import java.util.UUID;
  */
 public class StudyInfosServiceImpl implements StudyInfosService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyInfosServiceImpl.class);
-
     @Autowired
     private StudyInfosRepository studyInfosRepository;
+
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
 
     @Override
     public CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos ci) {
@@ -51,7 +55,8 @@ public class StudyInfosServiceImpl implements StudyInfosService {
 
     @Override
     public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
-        return Lists.newArrayList(studyInfosRepository.search(QueryBuilders.queryStringQuery(query)));
+        SearchHits<CreatedStudyBasicInfos> searchHits = elasticsearchOperations.search(new NativeSearchQuery(QueryBuilders.queryStringQuery(query)), CreatedStudyBasicInfos.class);
+        return searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
     }
 
     @Override

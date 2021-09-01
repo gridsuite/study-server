@@ -61,6 +61,12 @@ public class NetworkModificationService {
         return this.networkModificationServerBaseUri + DELIMITER + NETWORK_MODIFICATION_API_VERSION + DELIMITER + "networks" + DELIMITER;
     }
 
+    private String buildPathFrom(UUID networkUuid) {
+        return UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER)
+                .buildAndExpand(networkUuid)
+                .toUriString();
+    }
+
     void insertEquipmentsIndexes(UUID networkUuid) {
         Objects.requireNonNull(networkUuid);
 
@@ -74,13 +80,8 @@ public class NetworkModificationService {
     public Flux<ModificationInfos> getModifications(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
         return networkStoreService.getNetworkUuid(studyUuid)
-                .flatMapMany(networkUuid -> {
-                    var path = UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER + "modifications")
-                            .buildAndExpand(networkUuid)
-                            .toUriString();
-                    return webClient.get().uri(getNetworkModificationServerURI() + path).retrieve().bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
-                    });
-                });
+                .flatMapMany(networkUuid -> webClient.get().uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "modifications").retrieve().bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
+                }));
     }
 
     public Mono<Void> deleteModifications(UUID studyUuid) {
@@ -90,11 +91,8 @@ public class NetworkModificationService {
 
     Mono<Void> deleteNetworkModifications(UUID networkUuid) {
         Objects.requireNonNull(networkUuid);
-        var path = UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER + "modifications")
-                .buildAndExpand(networkUuid)
-                .toUriString();
         return webClient.delete()
-                .uri(getNetworkModificationServerURI() + path)
+                .uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "modifications")
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
                 .bodyToMono(Void.class);
@@ -104,9 +102,9 @@ public class NetworkModificationService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER + "switches" + DELIMITER + "{switchId}")
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
                     .queryParam("open", open)
-                    .buildAndExpand(networkUuid, switchId)
+                    .buildAndExpand(switchId)
                     .toUriString();
 
             return webClient.put()
@@ -121,26 +119,20 @@ public class NetworkModificationService {
     public Flux<ElementaryModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER + "groovy/")
-                    .buildAndExpand(networkUuid)
-                    .toUriString();
-
-            return webClient.put()
-                    .uri(getNetworkModificationServerURI() + path)
-                    .body(BodyInserters.fromValue(groovyScript))
-                    .retrieve()
-                    .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
-                    });
-        });
+        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> webClient.put()
+                .uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "groovy/")
+                .body(BodyInserters.fromValue(groovyScript))
+                .retrieve()
+                .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
+                }));
     }
 
     Flux<ElementaryModificationInfos> applyLineChanges(UUID studyUuid, String lineId, String status) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(lineId);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
-                    .buildAndExpand(networkUuid, lineId)
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
+                    .buildAndExpand(lineId)
                     .toUriString();
 
             return webClient.put()

@@ -43,9 +43,11 @@ public class StudyInfosServiceMock implements StudyInfosService {
 
     @Override
     public void deleteByUuid(@NonNull final UUID uuid) {
+        return;
     }
 
     @Override
     public void deleteAll() {
+        return;
     }
 }
