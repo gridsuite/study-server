@@ -367,14 +367,14 @@ public class StudyController {
     @Operation(summary = "Get all network modifications")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network modifications")})
     public ResponseEntity<Flux<ModificationInfos>> getModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(networkModificationService.getModifications(studyUuid));
+        return ResponseEntity.ok().body(studyService.getModifications(studyUuid));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/network/modifications")
     @Operation(summary = "Delete all network modifications")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Network modifications deleted")})
     public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(networkModificationService.deleteModifications(studyUuid));
+        return ResponseEntity.ok().body(studyService.deleteModifications(studyUuid));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -585,5 +585,14 @@ public class StudyController {
     public ResponseEntity<Mono<List<String>>> getAvailableSvgComponentLibraries() {
         Mono<List<String>> libraries = studyService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/createLoad")
+    @Operation(summary = "create a load in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been created")})
+    public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestBody String createLoadAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+            .then(studyService.createLoad(studyUuid, createLoadAttributes)));
     }
 }

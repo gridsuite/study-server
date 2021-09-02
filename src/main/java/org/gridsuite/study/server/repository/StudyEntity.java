@@ -93,6 +93,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
 
+    @Column(name = "modificationGroupUuid")
+    private UUID modificationGroupUuid;
+
     @Value
     public static class StudyNetworkUuid {
         UUID networkUuid;

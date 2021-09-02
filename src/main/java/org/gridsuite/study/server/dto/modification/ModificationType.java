@@ -11,4 +11,5 @@ package org.gridsuite.study.server.dto.modification;
  */
 public enum ModificationType {
     ELEMENTARY,
+    LOAD_CREATION
 }

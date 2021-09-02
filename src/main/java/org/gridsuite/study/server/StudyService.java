@@ -18,6 +18,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -340,11 +341,13 @@ public class StudyService {
     }
 
     @Transactional
-    public Optional<UUID> doDeleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
+    public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(uuid);
-        Optional<UUID> networkUuid = Optional.empty();
+        UUID networkUuid = null;
+        UUID groupUuid = null;
         if (studyCreationRequestEntity.isEmpty()) {
-            networkUuid = networkStoreService.doGetNetworkUuid(uuid);
+            networkUuid = networkStoreService.doGetNetworkUuid(uuid).orElse(null);
+            groupUuid = doGetGroupUuid(uuid, false).orElse(null);
             studyRepository.findById(uuid).ifPresent(s -> {
                 if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
@@ -357,20 +360,26 @@ public class StudyService {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
             emitStudiesChanged(uuid, userId, studyCreationRequestEntity.get().getIsPrivate());
         }
-        return networkUuid;
+        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupUuid)) : Optional.empty();
     }
 
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
         var allDeletedInParallel = Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid, userId))
-                .flatMap(Mono::justOrEmpty)
-                .publish(networkUuidMono ->
-                        Mono.when(
-                                networkUuidMono.flatMap(networkModificationService::deleteNetworkModifications),
-                                networkUuidMono.flatMap(networkModificationService::deleteEquipmentIndexes),
-                                networkUuidMono.flatMap(reportService::deleteReport),
-                                networkUuidMono.flatMap(networkStoreService::deleteNetwork)
-                        )
-                );
+            .flatMap(Mono::justOrEmpty)
+            .publish(deleteStudyInfosMono ->
+                Mono.when(
+                    deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid())),
+                    deleteStudyInfosMono.flatMap(infos -> {
+                        if (infos.getGroupUuid() != null) {
+                            return networkModificationService.deleteNetworkModifications(infos.getGroupUuid());
+                        } else {
+                            return Mono.empty();
+                        }
+                    }),
+                    deleteStudyInfosMono.flatMap(infos -> networkModificationService.deleteEquipmentIndexes(infos.getNetworkUuid())),
+                    deleteStudyInfosMono.flatMap(infos -> reportService.deleteReport(infos.getNetworkUuid()))
+                )
+            );
 
         return allDeletedInParallel.doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
     }
@@ -606,14 +615,14 @@ public class StudyService {
     }
 
     Mono<Void> changeSwitchState(UUID studyUuid, String switchId, boolean open) {
-        return networkStoreService.getNetworkUuid(studyUuid).flatMap(uuid -> {
+        return getGroupUuid(studyUuid).flatMap(groupUuid -> {
             Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
                     .then(invalidateSecurityAnalysisStatus(studyUuid)
                             .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SWITCH));
 
-            return networkModificationService.changeSwitchState(studyUuid, switchId, open)
+            return networkModificationService.changeSwitchState(studyUuid, switchId, open, groupUuid)
                     .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                     .collect(Collectors.toSet())
                     .doOnSuccess(substationIds ->
@@ -624,14 +633,13 @@ public class StudyService {
     }
 
     public Mono<Void> applyGroovyScript(UUID studyUuid, String groovyScript) {
-        return networkStoreService.getNetworkUuid(studyUuid).flatMap(uuid -> {
-
+        return getGroupUuid(studyUuid).flatMap(groupUuid -> {
             Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
                     .then(invalidateSecurityAnalysisStatus(studyUuid)
                             .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
 
-            return networkModificationService.applyGroovyScript(studyUuid, groovyScript)
+            return networkModificationService.applyGroovyScript(studyUuid, groovyScript, groupUuid)
                     .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                     .collect(Collectors.toSet())
                     .doOnSuccess(substationIds ->
@@ -731,19 +739,21 @@ public class StudyService {
     }
 
     public Mono<Void> changeLineStatus(UUID studyUuid, String lineId, String status) {
-        Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+        return getGroupUuid(studyUuid).flatMap(groupUuid -> {
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
                 .then(invalidateSecurityAnalysisStatus(studyUuid)
-                        .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
 
-        return networkModificationService.applyLineChanges(studyUuid, lineId, status)
+            return networkModificationService.applyLineChanges(studyUuid, lineId, status, groupUuid)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
-                        emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                    emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
                 .then(monoUpdateLfState);
+        });
     }
 
     private void emitStudiesChanged(UUID studyUuid, String userId, boolean isPrivateStudy) {
@@ -1191,7 +1201,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowStatus);
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
-            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, indexingStatus, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid);
+            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, indexingStatus, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid, null);
             return studyRepository.save(studyEntity);
         });
     }
@@ -1278,5 +1288,68 @@ public class StudyService {
 
     Mono<Void> updateIndexingStatus(UUID studyUuid, IndexingStatus indexingStatus) {
         return Mono.fromRunnable(() -> self.doUpdateIndexingStatus(studyUuid, indexingStatus));
+    }
+
+    public Flux<ModificationInfos> getModifications(UUID studyUuid) {
+        Objects.requireNonNull(studyUuid);
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        if (studyEntity.isPresent()) {
+            if (studyEntity.get().getModificationGroupUuid() != null) {
+                return networkModificationService.getModifications(studyEntity.get().getModificationGroupUuid());
+            } else {
+                return Flux.empty();
+            }
+        } else {
+            return Flux.empty();
+        }
+    }
+
+    public Mono<Void> deleteModifications(UUID studyUuid) {
+        Objects.requireNonNull(studyUuid);
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        if (studyEntity.isPresent()) {
+            if (studyEntity.get().getModificationGroupUuid() != null) {
+                return networkModificationService.deleteModifications(studyEntity.get().getModificationGroupUuid());
+            } else {
+                return Mono.empty();
+            }
+        } else {
+            return Mono.empty();
+        }
+    }
+
+    @Transactional
+    public Optional<UUID> doGetGroupUuid(UUID studyUuid, boolean generateId) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        if (studyEntity.isPresent()) {
+            if (studyEntity.get().getModificationGroupUuid() == null && generateId) {
+                studyEntity.get().setModificationGroupUuid(UUID.randomUUID());
+            }
+            return Optional.ofNullable(studyEntity.get().getModificationGroupUuid());
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    Mono<UUID> getGroupUuid(UUID studyUuid) {
+        return Mono.fromCallable(() -> self.doGetGroupUuid(studyUuid, true).orElse(null))
+            .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
+    }
+
+    public Mono<Void> createLoad(UUID studyUuid, String createLoadAttributes) {
+        return getGroupUuid(studyUuid).flatMap(groupUuid -> {
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(studyUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+
+            return networkModificationService.createLoad(studyUuid, createLoadAttributes, groupUuid)
+                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                .collect(Collectors.toSet())
+                .doOnSuccess(substationIds ->
+                    emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
+                .then(monoUpdateLfState);
+        });
     }
 }
