@@ -124,7 +124,7 @@ public class NetworkModificationTreeService {
                 NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType()));
                 nodeInfo.setId(node.getIdNode());
                 repositories.get(node.getType()).createNodeInfo(nodeInfo);
-                emitNodeInserted(getStudyUuidForNode(node), node.getParentNode().getIdNode(), node.getIdNode());
+                emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode());
                 return nodeInfo;
             }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         });

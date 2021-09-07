@@ -29,5 +29,5 @@ import java.util.UUID;
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column(name = "hypothesis")
-    UUID hypothesisId;
+    UUID networkModificationId;
 }

@@ -22,13 +22,13 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
     @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
-        var hypothesisNodeInfoEntity = new NetworkModificationNodeInfoEntity(((NetworkModificationNode) node).getHypothesis());
+        var hypothesisNodeInfoEntity = new NetworkModificationNodeInfoEntity(((NetworkModificationNode) node).getNetworkModification());
         return completeEntityNodeInfo(node, hypothesisNodeInfoEntity);
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
-        return completeNodeInfo(node, new NetworkModificationNode(node.getHypothesisId()));
+        return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId()));
     }
 
 }

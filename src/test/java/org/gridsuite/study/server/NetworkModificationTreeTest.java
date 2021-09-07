@@ -163,10 +163,10 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildHypothesis("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
-        createNode(root, hypo);
         createNode(root, model);
+        createNode(root, hypo);
         root = getRootNode(root.getStudyId());
 
         List<AbstractNode> children = root.getChildren();
@@ -256,10 +256,10 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildHypothesis("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
         createNode(root, hypo);
         hypo.setName("grunt");
-        hypo.setHypothesis(UUID.randomUUID());
+        hypo.setNetworkModification(UUID.randomUUID());
         root = getRootNode(root.getStudyId());
         hypo.setId(root.getChildren().get(0).getId());
         webTestClient.put().uri("/v1/tree/updateNode").bodyValue(hypo)
@@ -296,8 +296,8 @@ public class NetworkModificationTreeTest {
         return networkModificationTreeService.getStudyTree(study.getId()).block();
     }
 
-    private NetworkModificationNode buildHypothesis(String name, String description, UUID idHypo) {
-        return NetworkModificationNode.builder().name(name).description(description).hypothesis(idHypo).children(Collections.emptyList()).build();
+    private NetworkModificationNode buildNetworkModification(String name, String description, UUID idHypo) {
+        return NetworkModificationNode.builder().name(name).description(description).networkModification(idHypo).children(Collections.emptyList()).build();
     }
 
     private ModelNode buildModel(String name, String description, String model) {
@@ -320,7 +320,7 @@ public class NetworkModificationTreeTest {
     private void assertHypoNodeEquals(NetworkModificationNode expected, AbstractNode current) {
         assertNodeEquals(expected, current);
         NetworkModificationNode node = (NetworkModificationNode) current;
-        assertEquals(expected.getHypothesis(), node.getHypothesis());
+        assertEquals(expected.getNetworkModification(), node.getNetworkModification());
     }
 
 }

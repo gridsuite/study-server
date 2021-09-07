@@ -25,7 +25,7 @@ import java.util.UUID;
 @Setter
 public class NetworkModificationNode extends AbstractNode {
 
-    UUID hypothesis;
+    UUID networkModification;
 
     @Override
     public NodeType getType() {
