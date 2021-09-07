@@ -179,11 +179,10 @@ public class NetworkModificationTreeTest {
 
         List<AbstractNode> children = root.getChildren();
         assertEquals(2, children.size());
-        /*
-        *  expected :
-        *       root
-        *      /    \
-        *  model     hypo
+        /*  expected :
+                root
+               /    \
+           model     hypo
         */
 
         if (children.get(0).getType() == NodeType.NETWORK_MODIFICATION) {
@@ -200,11 +199,11 @@ public class NetworkModificationTreeTest {
         createNode(children.get(1), hypo);
 
         /*  expected
-        *       root
-        *      /    \
-        *  node      node
-        *           /    \
-        *hypo(condriak)   model(niark)
+                root
+               /    \
+           node      node
+                    /    \
+        hypo(condriak)   model(niark)
          */
 
         root = getRootNode(root.getStudyId());
@@ -229,9 +228,9 @@ public class NetworkModificationTreeTest {
             .expectStatus().isOk();
 
         /*  expected
-        *     root
-        *   /  |   \
-        * node node node
+              root
+            /   |   \
+          node node node
         */
 
         root = getRootNode(root.getStudyId());
@@ -244,9 +243,9 @@ public class NetworkModificationTreeTest {
             .expectStatus().isOk();
 
         /* expected
-        *   root
-        *   /   \
-        * node  node
+            root
+            /   \
+          node  node
          */
         root = getRootNode(root.getStudyId());
         assertEquals(2, root.getChildren().size());
