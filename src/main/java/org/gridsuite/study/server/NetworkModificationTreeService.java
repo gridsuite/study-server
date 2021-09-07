@@ -54,6 +54,7 @@ public class NetworkModificationTreeService {
     private static final String HEADER_PARENT_NODE = "PARENT_NODE";
     private static final String HEADER_NEW_NODE = "NEW_NODE";
     private static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
+    private static final String NODE_CREATED = "NODE_CREATED";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -72,12 +73,12 @@ public class NetworkModificationTreeService {
         treeUpdatePublisher.send("publishTreeUpdate-out-0", message);
     }
 
-    private void emitTreeChanged(UUID studyUuid, String updateType) {
+    private void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, updateType)
-            .setHeader(HEADER_PARENT_NODE, updateType)
-            .setHeader(HEADER_NEW_NODE, updateType)
+            .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
+            .setHeader(HEADER_PARENT_NODE, parentNode)
+            .setHeader(HEADER_NEW_NODE, nodeCreated)
             .build()
         );
     }
@@ -123,6 +124,7 @@ public class NetworkModificationTreeService {
                 NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType()));
                 nodeInfo.setId(node.getIdNode());
                 repositories.get(node.getType()).createNodeInfo(nodeInfo);
+                emitNodeInserted(getStudyUuidForNode(node), node.getParentNode().getIdNode(), node.getIdNode());
                 return nodeInfo;
             }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         });
@@ -141,6 +143,7 @@ public class NetworkModificationTreeService {
                 repositories.get(node.getType()).createNodeInfo(nodeInfo);
                 child.setParentNode(node);
                 nodesRepository.save(child);
+                emitNodeInserted(getStudyUuidForNode(node), node.getParentNode().getIdNode(), node.getIdNode());
                 return nodeInfo;
             }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         });

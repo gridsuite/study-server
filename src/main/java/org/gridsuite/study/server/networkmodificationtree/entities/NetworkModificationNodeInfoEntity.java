@@ -25,7 +25,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "ModelInfo")
+@Table(name = "NetworkModifcationNodeInfo  ")
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column(name = "hypothesis")
