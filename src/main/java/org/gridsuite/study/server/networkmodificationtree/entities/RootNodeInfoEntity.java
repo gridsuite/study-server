@@ -10,7 +10,6 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -24,14 +23,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Setter
 @Entity
 @Table(name = "RootNodeInfo", indexes = {@Index(name = "rootNodeInfo_studyId_idx", columnList = "studyId")})
 public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
-    public RootNodeInfoEntity(UUID idNode, NodeEntity node, String name, String description, UUID studyId) {
-        super(idNode, node, name, description);
-        this.studyId = studyId;
-    }
 
     @Column(name = "studyId")
     UUID studyId;

@@ -150,6 +150,10 @@ public class NetworkModificationTreeTest {
         webTestClient.get().uri("/v1/tree/{id}", UUID.randomUUID())
             .exchange()
             .expectStatus().isNotFound();
+
+        webTestClient.delete().uri("/v1/tree/deleteNode/{id}?deleteChildren={delete}", root.getId(), false)
+            .exchange()
+            .expectStatus().is4xxClientError();
     }
 
     private AbstractNode getNode(UUID idNode) throws IOException {
