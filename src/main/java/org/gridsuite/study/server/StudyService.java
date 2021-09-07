@@ -106,6 +106,9 @@ public class StudyService {
     @Autowired
     ReportService reportService;
 
+    @Autowired
+    HypothesisTreeService hypothesisTreeService;
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -350,6 +353,7 @@ public class StudyService {
                     throw new StudyException(NOT_ALLOWED);
                 }
                 studyRepository.deleteById(uuid);
+                hypothesisTreeService.deleteRoot(uuid);
                 emitStudiesChanged(uuid, userId, s.isPrivate());
             });
         } else {

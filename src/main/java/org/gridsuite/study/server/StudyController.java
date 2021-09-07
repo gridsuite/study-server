@@ -14,7 +14,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.hypothesisTree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.hypothesisTree.dto.RootNode;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -38,10 +40,12 @@ public class StudyController {
 
     private final StudyService studyService;
     private final ReportService reportService;
+    private final HypothesisTreeService hypothesisTreeService;
 
-    public StudyController(StudyService studyService, ReportService reportService) {
+    public StudyController(StudyService studyService, ReportService reportService, HypothesisTreeService hypothesisTreeService) {
         this.studyService = studyService;
         this.reportService = reportService;
+        this.hypothesisTreeService = hypothesisTreeService;
     }
 
     @GetMapping(value = "/studies")
@@ -582,4 +586,37 @@ public class StudyController {
         Mono<List<String>> libraries = studyService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
+
+    @PutMapping(value = "tree/createNode/{id}")
+    @Operation(summary = "Create a node at the given child")
+    @ApiResponse(responseCode = "200", description = "The create node")
+    public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
+                                                         @Parameter(description = "parent id of the node created") @PathVariable("id") UUID id) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hypothesisTreeService.createNode(id, node));
+    }
+
+    @DeleteMapping(value = "tree/deleteNode/{id}")
+    @Operation(summary = "Delete node with given id")
+    @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted")
+    public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "id of child to remove") @PathVariable UUID id,
+                                                 @Parameter(description = "deleteChildren")  @RequestParam("deleteChildren") Boolean deleteChildren) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hypothesisTreeService.deleteNode(id, deleteChildren));
+    }
+
+    @GetMapping(value = "tree/{id}")
+    @Operation(summary = "get hypothesis tree for the given study")
+    @ApiResponse(responseCode = "200", description = "hypothesis tree")
+    public Mono<ResponseEntity<RootNode>> getHypothesisTree(@Parameter(description = "study uuid") @PathVariable("id") UUID id) {
+        return hypothesisTreeService.getStudyTree(id)
+            .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
+            .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "tree/updateNode")
+    @Operation(summary = "update node")
+    @ApiResponse(responseCode = "200", description = "the node has benn updated")
+    public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node) {
+        return ResponseEntity.ok().body(hypothesisTreeService.updateNode(node));
+    }
+
 }
