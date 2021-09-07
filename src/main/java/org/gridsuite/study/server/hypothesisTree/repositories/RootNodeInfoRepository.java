@@ -12,6 +12,9 @@ import org.gridsuite.study.server.hypothesisTree.entities.RootNodeInfoEntity;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ */
 public interface RootNodeInfoRepository extends NodeInfoRepository<RootNodeInfoEntity> {
     Optional<RootNodeInfoEntity> findFirstByStudyId(UUID studyId);
 }

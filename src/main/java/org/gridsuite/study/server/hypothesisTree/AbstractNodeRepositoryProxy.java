@@ -19,11 +19,10 @@ import java.util.UUID;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends AbstractNodeInfoEntity, NodeInfoEntityRepository extends NodeInfoRepository<NodeInfoEntity>, NodeDto extends AbstractNode> {
-    public static final String WRONG_NODE_TYPE = "Wrong node type, should never happen";
 
     final NodeInfoEntityRepository nodeInfoRepository;
 
-    public AbstractNodeRepositoryProxy(NodeInfoEntityRepository nodeInfoRepository) {
+    protected AbstractNodeRepositoryProxy(NodeInfoEntityRepository nodeInfoRepository) {
         this.nodeInfoRepository = nodeInfoRepository;
     }
 

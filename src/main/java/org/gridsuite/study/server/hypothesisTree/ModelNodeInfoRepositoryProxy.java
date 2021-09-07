@@ -12,6 +12,9 @@ import org.gridsuite.study.server.hypothesisTree.dto.ModelNode;
 import org.gridsuite.study.server.hypothesisTree.entities.ModelNodeInfoEntity;
 import org.gridsuite.study.server.hypothesisTree.repositories.ModelNodeInfoRepository;
 
+/**
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ */
 public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<ModelNodeInfoEntity, ModelNodeInfoRepository, ModelNode> {
     public ModelNodeInfoRepositoryProxy(ModelNodeInfoRepository rootNodeInfoRepository) {
         super(rootNodeInfoRepository);

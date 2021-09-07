@@ -9,5 +9,8 @@ package org.gridsuite.study.server.hypothesisTree.repositories;
 
 import org.gridsuite.study.server.hypothesisTree.entities.HypothesisNodeInfoEntity;
 
+/**
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ */
 public interface HypothesisNodeInfoRepository extends NodeInfoRepository<HypothesisNodeInfoEntity> {
 }

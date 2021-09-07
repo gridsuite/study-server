@@ -29,7 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 import javax.persistence.EntityNotFoundException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +47,13 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
  */
 @Service
 public class HypothesisTreeService {
+
+    private static final String HEADER_NODES = "NODES";
+    private static final String NODES_UPDATED = "NODE_UPDATED";
+    private static final String NODES_DELETED = "NODE_DELETED";
+    private static final String HEADER_PARENT_NODE = "PARENT_NODE";
+    private static final String HEADER_NEW_NODE = "NEW_NODE";
+    private static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -65,6 +76,27 @@ public class HypothesisTreeService {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_UPDATE_TYPE, updateType)
+            .setHeader(HEADER_PARENT_NODE, updateType)
+            .setHeader(HEADER_NEW_NODE, updateType)
+            .build()
+        );
+    }
+
+    private void emitNodesChanged(UUID studyUuid, Collection<UUID> nodes) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, NODES_UPDATED)
+            .setHeader(HEADER_NODES, nodes)
+            .build()
+        );
+    }
+
+    private void emitNodesDeleted(UUID studyUuid, Collection<UUID> nodes, boolean deleteChildren) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, NODES_DELETED)
+            .setHeader(HEADER_NODES, nodes)
+            .setHeader(HEADER_REMOVE_CHILDREN, deleteChildren)
             .build()
         );
     }
@@ -99,11 +131,17 @@ public class HypothesisTreeService {
     @Transactional
     public Mono<Void> deleteNode(UUID id, Boolean deleteChildren) {
         return Mono.fromRunnable(() -> {
-            deleteNodes(id, deleteChildren, false);
+            List<UUID> removedNodes = new ArrayList<>();
+            deleteNodes(id, deleteChildren, false, removedNodes);
+            emitNodesDeleted(getStudyUuidForNodeId(id), removedNodes, deleteChildren);
         });
     }
 
-    private void deleteNodes(UUID id, Boolean deleteChildren, boolean allowDeleteRoot) {
+    private UUID getStudyUuidForNodeId(UUID id) {
+        return getStudyUuidForNode(nodesRepository.getOne(id));
+    }
+
+    private void deleteNodes(UUID id, Boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted */
@@ -117,8 +155,9 @@ public class HypothesisTreeService {
                 });
             } else {
                 nodesRepository.findAllByParentNodeIdNode(nodeToDelete.getIdNode())
-                    .forEach(child -> deleteNodes(child.getIdNode(), true, false));
+                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes));
             }
+            removedNodes.add(nodeToDelete.getIdNode());
             repositories.get(nodeToDelete.getType()).deleteByNodeId(id);
             nodesRepository.delete(nodeToDelete);
         });
@@ -126,7 +165,7 @@ public class HypothesisTreeService {
 
     public void deleteRoot(UUID studyId) {
         try {
-            rootNodeInfoRepositoryProxy.getByStudyId(studyId).ifPresent(root -> deleteNodes(root.getId(), true, true));
+            rootNodeInfoRepositoryProxy.getByStudyId(studyId).ifPresent(root -> deleteNodes(root.getId(), true, true, new ArrayList<>()));
         } catch (EntityNotFoundException ignored) {
         }
     }
@@ -165,6 +204,7 @@ public class HypothesisTreeService {
     }
 
     public Mono<Void> updateNode(AbstractNode node) {
-        return Mono.fromRunnable(() -> repositories.get(node.getType()).updateNode(node));
+        return Mono.fromRunnable(() -> repositories.get(node.getType()).updateNode(node))
+            .and(s -> emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singleton(node.getId())));
     }
 }

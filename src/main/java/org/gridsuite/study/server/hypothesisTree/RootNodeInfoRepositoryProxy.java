@@ -15,6 +15,9 @@ import org.gridsuite.study.server.hypothesisTree.repositories.RootNodeInfoReposi
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ */
 public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<RootNodeInfoEntity, RootNodeInfoRepository, RootNode> {
     public RootNodeInfoRepositoryProxy(RootNodeInfoRepository rootNodeInfoRepository) {
         super(rootNodeInfoRepository);
@@ -26,7 +29,6 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
-        //return new RootNodeInfoEntity(nodeEntity.getIdNode(), nodeEntity, "Root", "", ((RootNode) node).getStudyId());
     }
 
     @Override
