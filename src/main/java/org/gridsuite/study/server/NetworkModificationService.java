@@ -67,14 +67,20 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    void insertEquipmentsIndexes(UUID networkUuid) {
+    Mono<Void> insertEquipmentIndexes(UUID networkUuid) {
         Objects.requireNonNull(networkUuid);
-
+        return webClient.put()
+                .uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "indexes")
+                .retrieve()
+                .bodyToMono(Void.class);
     }
 
-    Mono<Void> deleteEquipmentsIndexes(UUID networkUuid) {
+    Mono<Void> deleteEquipmentIndexes(UUID networkUuid) {
         Objects.requireNonNull(networkUuid);
-        return Mono.empty();
+        return webClient.delete()
+                .uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "indexes")
+                .retrieve()
+                .bodyToMono(Void.class);
     }
 
     public Flux<ModificationInfos> getModifications(UUID studyUuid) {

@@ -9,6 +9,7 @@ package org.gridsuite.study.server.elasticsearch;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.joda.time.DateTime;
 import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,19 +22,16 @@ import java.util.stream.Collectors;
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+@Service
 public interface StudyInfosService {
 
     CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos ci);
-
-    List<CreatedStudyBasicInfos> getAll();
 
     Optional<CreatedStudyBasicInfos> getByUuid(@NonNull final UUID uuid);
 
     List<CreatedStudyBasicInfos> search(@NonNull final String query);
 
     void deleteByUuid(@NonNull final UUID uuid);
-
-    void deleteAll();
 
     static String getDateSearchTerm(@NonNull final DateTime... dates) {
         return Arrays.stream(dates).map(date -> "\"" + date.toDateTimeISO() + "\"").collect(Collectors.joining(" OR ", "date:", ""));

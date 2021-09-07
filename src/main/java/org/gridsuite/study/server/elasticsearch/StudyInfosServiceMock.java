@@ -27,11 +27,6 @@ public class StudyInfosServiceMock implements StudyInfosService {
     }
 
     @Override
-    public List<CreatedStudyBasicInfos> getAll() {
-        return Collections.emptyList();
-    }
-
-    @Override
     public Optional<CreatedStudyBasicInfos> getByUuid(@NonNull final UUID uuid) {
         return Optional.empty();
     }
@@ -43,11 +38,6 @@ public class StudyInfosServiceMock implements StudyInfosService {
 
     @Override
     public void deleteByUuid(@NonNull final UUID uuid) {
-        return;
-    }
-
-    @Override
-    public void deleteAll() {
-        return;
+        // Nothing to delete
     }
 }

@@ -18,6 +18,7 @@ import org.springframework.data.convert.WritingConverter;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.RestClients;
 import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.convert.ElasticsearchConverter;
 import org.springframework.data.elasticsearch.core.convert.ElasticsearchCustomConversions;
 import org.springframework.data.elasticsearch.core.convert.MappingElasticsearchConverter;
@@ -30,7 +31,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 /**
- * A class to configure DB elasticsearch client for metadatas transfer
+ * A class to configure DB elasticsearch client for indexation
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
@@ -48,8 +49,8 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
 
     @Bean
     @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
-    public StudyInfosService studyInfosServiceImpl() {
-        return new StudyInfosServiceImpl();
+    public StudyInfosService studyInfosServiceImpl(StudyInfosRepository studyInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+        return new StudyInfosServiceImpl(studyInfosRepository, elasticsearchOperations);
     }
 
     @Bean
@@ -102,5 +103,4 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
             return ZonedDateTime.parse(s, DateTimeFormatter.ISO_DATE_TIME);
         }
     }
-
 }

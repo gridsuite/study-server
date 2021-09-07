@@ -59,6 +59,7 @@ import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static reactor.core.publisher.SignalType.ON_COMPLETE;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -213,7 +214,7 @@ public class StudyService {
 
     private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder().studyName(entity.getStudyName())
-                .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC))
+                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .userId(entity.getUserId())
                 .studyUuid(entity.getId())
                 .studyPrivate(entity.getIsPrivate())
@@ -222,7 +223,7 @@ public class StudyService {
 
     private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder().studyName(entity.getStudyName())
-                .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC))
+                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .userId(entity.getUserId())
                 .studyUuid(entity.getId())
                 .caseFormat(entity.getCaseFormat())
@@ -363,12 +364,12 @@ public class StudyService {
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
         var allDeletedInParallel = Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid, userId))
                 .flatMap(Mono::justOrEmpty)
-                .publish(networkIdMono ->
+                .publish(networkUuidMono ->
                         Mono.when(
-                                networkIdMono.flatMap(networkStoreService::deleteNetwork),
-                                networkIdMono.flatMap(networkModificationService::deleteNetworkModifications),
-                                networkIdMono.flatMap(networkModificationService::deleteEquipmentsIndexes),
-                                networkIdMono.flatMap(reportService::deleteReport)
+                                networkUuidMono.flatMap(networkModificationService::deleteNetworkModifications),
+                                networkUuidMono.flatMap(networkModificationService::deleteEquipmentIndexes),
+                                networkUuidMono.flatMap(reportService::deleteReport),
+                                networkUuidMono.flatMap(networkStoreService::deleteNetwork)
                         )
                 );
 
@@ -381,19 +382,22 @@ public class StudyService {
         return insertStudyEntity(studyUuid, studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, indexingStatus, loadFlowStatus, loadFlowResult,
                 loadFlowParameters, securityAnalysisUuid)
                 .map(StudyService::toCreatedStudyBasicInfos)
-                .doOnSuccess(s -> {
+                .doOnSuccess(infos -> {
                     emitStudiesChanged(studyUuid, userId, isPrivate);
-                    insertStudyIndexes(s, networkUuid)
-                            .subscribeOn(Schedulers.boundedElastic())
-                            .subscribe();
+                    studyInfosService.add(infos);
+                })
+                .doFinally(s -> {
+                    if (s == ON_COMPLETE) {
+                        insertEquipmentIndexes(studyUuid, networkUuid)
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .subscribe();
+                    }
                 });
     }
 
-    private Mono<Void> insertStudyIndexes(CreatedStudyBasicInfos infos, UUID networkUuid) {
-        return Mono.fromRunnable(() -> {
-            networkModificationService.insertEquipmentsIndexes(networkUuid);
-            studyInfosService.add(infos);
-        }).then(updateIndexingStatus(infos.getStudyUuid(), IndexingStatus.DONE));
+    private Mono<Void> insertEquipmentIndexes(UUID studyUuid, UUID networkUuid) {
+        return networkModificationService.insertEquipmentIndexes(networkUuid)
+                .then(updateIndexingStatus(studyUuid, IndexingStatus.DONE));
     }
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate, UUID studyUuid) {
