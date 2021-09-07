@@ -595,6 +595,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hypothesisTreeService.createNode(id, node));
     }
 
+    @PutMapping(value = "tree/insertNode/{id}")
+    @Operation(summary = "Create a node at the given child")
+    @ApiResponse(responseCode = "200", description = "The create node")
+    public ResponseEntity<Mono<AbstractNode>> insertNode(@RequestBody AbstractNode node,
+                                                         @Parameter(description = "child id of the node created") @PathVariable("id") UUID id) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hypothesisTreeService.insertNode(id, node));
+    }
+
     @DeleteMapping(value = "tree/deleteNode/{id}")
     @Operation(summary = "Delete node with given id")
     @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted")
@@ -619,4 +627,12 @@ public class StudyController {
         return ResponseEntity.ok().body(hypothesisTreeService.updateNode(node));
     }
 
+    @GetMapping(value = "tree/node/{id}")
+    @Operation(summary = "get simplified node")
+    @ApiResponse(responseCode = "200", description = "simplified nodes (without children")
+    public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "node uuid") @PathVariable("id") UUID id) {
+        return hypothesisTreeService.getSimpleNode(id)
+            .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
+            .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
 }

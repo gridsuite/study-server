@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -37,8 +38,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyException.Type.CANT_DELETE_ROOT_NODE;
-import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.HEADER_STUDY_UUID;
 import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 
@@ -129,16 +129,39 @@ public class HypothesisTreeService {
     }
 
     @Transactional
-    public Mono<Void> deleteNode(UUID id, Boolean deleteChildren) {
-        return Mono.fromRunnable(() -> {
-            List<UUID> removedNodes = new ArrayList<>();
-            deleteNodes(id, deleteChildren, false, removedNodes);
-            emitNodesDeleted(getStudyUuidForNodeId(id), removedNodes, deleteChildren);
+    public Mono<AbstractNode> insertNode(UUID id, AbstractNode nodeInfo) {
+        return Mono.fromCallable(() -> {
+            Optional<NodeEntity> childOpt = nodesRepository.findById(id);
+            return childOpt.map(child -> {
+                if (child.getType().equals(NodeType.ROOT)) {
+                    throw new StudyException(NOT_ALLOWED);
+                }
+                NodeEntity node = nodesRepository.save(new NodeEntity(null, child.getParentNode(), nodeInfo.getType()));
+                nodeInfo.setId(node.getIdNode());
+                repositories.get(node.getType()).createNodeInfo(nodeInfo);
+                child.setParentNode(node);
+                nodesRepository.save(child);
+                return nodeInfo;
+            }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         });
     }
 
-    private UUID getStudyUuidForNodeId(UUID id) {
-        return getStudyUuidForNode(nodesRepository.getOne(id));
+    public Mono<Void> deleteNode(UUID id, Boolean deleteChildren) {
+        return Mono.fromRunnable(() -> deleteNodeExec(id, deleteChildren));
+    }
+
+    @Transactional
+    @Modifying
+    public void deleteNodeExec(UUID id, Boolean deleteChildren) {
+        List<UUID> removedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(id);
+        deleteNodes(id, deleteChildren, false, removedNodes);
+        emitNodesDeleted(studyId, removedNodes, deleteChildren);
+    }
+
+    public UUID getStudyUuidForNodeId(UUID id) {
+        Optional<NodeEntity> node = nodesRepository.findById(id);
+        return getStudyUuidForNode(node.orElseThrow());
     }
 
     private void deleteNodes(UUID id, Boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
@@ -166,8 +189,7 @@ public class HypothesisTreeService {
     public void deleteRoot(UUID studyId) {
         try {
             rootNodeInfoRepositoryProxy.getByStudyId(studyId).ifPresent(root -> deleteNodes(root.getId(), true, true, new ArrayList<>()));
-        } catch (EntityNotFoundException ignored) {
-        }
+        } catch (EntityNotFoundException ignored) { }
     }
 
     @Transactional
@@ -195,16 +217,27 @@ public class HypothesisTreeService {
         return node;
     }
 
-    private UUID getStudyUuidForNode(NodeEntity node) {
+    @Transactional
+    public UUID getStudyUuidForNode(NodeEntity node) {
         NodeEntity current = node;
-        while (current.getParentNode() != null || current.getType() != NodeType.ROOT) {
-            current = current.getParentNode();
+        while (!current.getType().equals(NodeType.ROOT) && current.getParentNode() != null) {
+            current = nodesRepository.findById(node.getParentNode().getIdNode()).orElseThrow();
         }
-        return rootNodeInfoRepositoryProxy.getNode(current.getIdNode()).getStudyId();
+        return current.getIdNode();
     }
 
     public Mono<Void> updateNode(AbstractNode node) {
-        return Mono.fromRunnable(() -> repositories.get(node.getType()).updateNode(node))
-            .and(s -> emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singleton(node.getId())));
+        return Mono.fromRunnable(() -> {
+            repositories.get(node.getType()).updateNode(node);
+            emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singleton(node.getId()));
+        });
+    }
+
+    public Mono<AbstractNode> getSimpleNode(UUID id) {
+        return Mono.fromCallable(() -> {
+            AbstractNode node = repositories.get(nodesRepository.getOne(id).getType()).getNode(id);
+            nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
+            return node;
+        });
     }
 }
