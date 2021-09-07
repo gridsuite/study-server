@@ -5,9 +5,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesisTree.repositories;
+package org.gridsuite.study.server.hypothesistree.repositories;
 
-import org.gridsuite.study.server.hypothesisTree.entities.NodeEntity;
+import org.gridsuite.study.server.hypothesistree.entities.NodeEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

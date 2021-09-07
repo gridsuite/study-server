@@ -5,12 +5,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesisTree.repositories;
+package org.gridsuite.study.server.hypothesistree.repositories;
 
-import org.gridsuite.study.server.hypothesisTree.entities.HypothesisNodeInfoEntity;
+import org.gridsuite.study.server.hypothesistree.entities.RootNodeInfoEntity;
+
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
-public interface HypothesisNodeInfoRepository extends NodeInfoRepository<HypothesisNodeInfoEntity> {
+public interface RootNodeInfoRepository extends NodeInfoRepository<RootNodeInfoEntity> {
+    Optional<RootNodeInfoEntity> findFirstByStudyId(UUID studyId);
 }

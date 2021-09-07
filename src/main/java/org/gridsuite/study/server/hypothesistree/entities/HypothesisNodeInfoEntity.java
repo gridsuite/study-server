@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesisTree.entities;
+package org.gridsuite.study.server.hypothesistree.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,7 +14,6 @@ import lombok.Setter;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Index;
 import javax.persistence.Table;
 import java.util.UUID;
 
@@ -26,13 +25,9 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "RootNodeInfo", indexes = {@Index(name = "rootNodeInfo_studyId_idx", columnList = "studyId")})
-public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
-    public RootNodeInfoEntity(UUID idNode, NodeEntity node, String name, String description, UUID studyId) {
-        super(idNode, node, name, description);
-        this.studyId = studyId;
-    }
+@Table(name = "ModelInfo")
+public class HypothesisNodeInfoEntity extends AbstractNodeInfoEntity {
 
-    @Column(name = "studyId")
-    UUID studyId;
+    @Column(name = "hypothesis")
+    UUID hypothesisId;
 }

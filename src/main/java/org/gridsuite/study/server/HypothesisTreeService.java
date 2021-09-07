@@ -6,18 +6,18 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.hypothesisTree.RootNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.hypothesisTree.dto.AbstractNode;
-import org.gridsuite.study.server.hypothesisTree.dto.RootNode;
-import org.gridsuite.study.server.hypothesisTree.AbstractNodeRepositoryProxy;
-import org.gridsuite.study.server.hypothesisTree.repositories.HypothesisNodeInfoRepository;
-import org.gridsuite.study.server.hypothesisTree.HypothesisNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.hypothesisTree.repositories.ModelNodeInfoRepository;
-import org.gridsuite.study.server.hypothesisTree.entities.NodeEntity;
-import org.gridsuite.study.server.hypothesisTree.ModelNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.hypothesisTree.repositories.NodeRepository;
-import org.gridsuite.study.server.hypothesisTree.entities.NodeType;
-import org.gridsuite.study.server.hypothesisTree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.hypothesistree.RootNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.hypothesistree.dto.AbstractNode;
+import org.gridsuite.study.server.hypothesistree.dto.RootNode;
+import org.gridsuite.study.server.hypothesistree.AbstractNodeRepositoryProxy;
+import org.gridsuite.study.server.hypothesistree.repositories.HypothesisNodeInfoRepository;
+import org.gridsuite.study.server.hypothesistree.HypothesisNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.hypothesistree.repositories.ModelNodeInfoRepository;
+import org.gridsuite.study.server.hypothesistree.entities.NodeEntity;
+import org.gridsuite.study.server.hypothesistree.ModelNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.hypothesistree.repositories.NodeRepository;
+import org.gridsuite.study.server.hypothesistree.entities.NodeType;
+import org.gridsuite.study.server.hypothesistree.repositories.RootNodeInfoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

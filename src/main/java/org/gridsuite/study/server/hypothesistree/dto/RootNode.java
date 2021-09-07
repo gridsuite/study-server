@@ -4,25 +4,30 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
-package org.gridsuite.study.server.hypothesisTree.entities;
+package org.gridsuite.study.server.hypothesistree.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import javax.persistence.Entity;
-import javax.persistence.Table;
+import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.hypothesistree.entities.NodeType;
+
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
-@NoArgsConstructor
+@SuperBuilder
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
-@Entity
-@Table(name = "ModelInfo")
-public class ModelNodeInfoEntity extends AbstractNodeInfoEntity {
-    String model;
+public class RootNode extends AbstractNode {
+    UUID studyId;
+
+    @Override
+    public NodeType getType() {
+        return NodeType.ROOT;
+    }
 }
