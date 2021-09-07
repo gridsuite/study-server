@@ -261,6 +261,41 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
+    public void testNodeInsertion() throws Exception {
+        RootNode root = createRoot();
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
+        /* trying to insert before root */
+        webTestClient.put().uri("/v1/tree/insertNode/{id}", root.getId()).bodyValue(hypo)
+            .exchange()
+            .expectStatus().is4xxClientError();
+
+        createNode(root, hypo);
+        createNode(root, hypo);
+        root = getRootNode(root.getStudyId());
+        /* root
+            / \
+           n1  n2
+         */
+        AbstractNode unchangedNode = root.getChildren().get(0);
+        AbstractNode willBeMoved = root.getChildren().get(1);
+        insertNode(willBeMoved, hypo);
+        /* root
+            / \
+           n3  n2
+           /
+          n1
+         */
+        root = getRootNode(root.getStudyId());
+        assertEquals(1, root.getChildren().stream().filter(child -> child.getId().equals(unchangedNode.getId())).count());
+        AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
+        assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
+
+        webTestClient.put().uri("/v1/tree/insertNode/{id}", UUID.randomUUID()).bodyValue(hypo)
+            .exchange()
+            .expectStatus().isNotFound();
+    }
+
+    @Test
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
@@ -298,6 +333,13 @@ public class NetworkModificationTreeTest {
     private void createNode(AbstractNode parentNode, AbstractNode newNode) {
         newNode.setId(null);
         webTestClient.put().uri("/v1/tree/createNode/{id}", parentNode.getId()).bodyValue(newNode)
+            .exchange()
+            .expectStatus().isOk();
+    }
+
+    private void insertNode(AbstractNode parentNode, AbstractNode newNode) {
+        newNode.setId(null);
+        webTestClient.put().uri("/v1/tree/insertNode/{id}", parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
     }
