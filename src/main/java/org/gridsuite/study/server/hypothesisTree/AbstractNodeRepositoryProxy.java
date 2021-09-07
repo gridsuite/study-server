@@ -7,15 +7,12 @@
 
 package org.gridsuite.study.server.hypothesisTree;
 
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.hypothesisTree.dto.AbstractNode;
 import org.gridsuite.study.server.hypothesisTree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.hypothesisTree.repositories.NodeInfoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Modifying;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityNotFoundException;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -60,15 +57,14 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return entity;
     }
 
-    @Autowired
-    EntityManager entityManager;
-
     @Modifying
     public void updateNode(AbstractNode node) {
         if (nodeInfoRepository.existsById(node.getId())) {
-            entityManager.persist(toEntity(node));
+            NodeInfoEntity entity = toEntity(node);
+            entity.markNotNew();
+            nodeInfoRepository.save(entity);
         } else {
-            throw new EntityNotFoundException();
+            throw new StudyException(StudyException.Type.ELEMENT_NOT_FOUND);
         }
     }
 }

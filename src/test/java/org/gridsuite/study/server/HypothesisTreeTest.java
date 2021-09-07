@@ -27,7 +27,6 @@ import org.gridsuite.study.server.hypothesisTree.repositories.ModelNodeInfoRepos
 import org.gridsuite.study.server.hypothesisTree.repositories.NodeRepository;
 import org.gridsuite.study.server.hypothesisTree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.jetbrains.annotations.NotNull;
@@ -36,8 +35,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -64,8 +61,6 @@ import static org.junit.Assert.assertEquals;
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class HypothesisTreeTest {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
 
     @Autowired
     private StudyRepository studyRepository;
