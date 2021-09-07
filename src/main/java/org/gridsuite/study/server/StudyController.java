@@ -607,7 +607,7 @@ public class StudyController {
     @Operation(summary = "Delete node with given id")
     @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted")
     public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "id of child to remove") @PathVariable UUID id,
-                                                 @Parameter(description = "deleteChildren")  @RequestParam("deleteChildren") Boolean deleteChildren) {
+                                                 @Parameter(description = "deleteChildren")  @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(id, deleteChildren));
     }
 

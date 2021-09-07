@@ -148,7 +148,7 @@ public class NetworkModificationTreeService {
         });
     }
 
-    public Mono<Void> deleteNode(UUID id, Boolean deleteChildren) {
+    public Mono<Void> deleteNode(UUID id, boolean deleteChildren) {
         return Mono.fromRunnable(() -> {
             List<UUID> removedNodes = new ArrayList<>();
             UUID studyId = getStudyUuidForNodeId(id);
@@ -162,7 +162,7 @@ public class NetworkModificationTreeService {
         return getStudyUuidForNode(node.orElseThrow());
     }
 
-    private void deleteNodes(UUID id, Boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
+    private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted */
@@ -187,7 +187,9 @@ public class NetworkModificationTreeService {
     public void deleteRoot(UUID studyId) {
         try {
             rootNodeInfoRepositoryProxy.getByStudyId(studyId).ifPresent(root -> deleteNodes(root.getId(), true, true, new ArrayList<>()));
-        } catch (EntityNotFoundException ignored) { }
+        } catch (EntityNotFoundException ignored) {
+            // nothing to do
+        }
     }
 
     @Transactional
