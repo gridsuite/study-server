@@ -6,18 +6,18 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.hypothesistree.RootNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.hypothesistree.dto.AbstractNode;
-import org.gridsuite.study.server.hypothesistree.dto.RootNode;
-import org.gridsuite.study.server.hypothesistree.AbstractNodeRepositoryProxy;
-import org.gridsuite.study.server.hypothesistree.repositories.HypothesisNodeInfoRepository;
-import org.gridsuite.study.server.hypothesistree.HypothesisNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.hypothesistree.repositories.ModelNodeInfoRepository;
-import org.gridsuite.study.server.hypothesistree.entities.NodeEntity;
-import org.gridsuite.study.server.hypothesistree.ModelNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.hypothesistree.repositories.NodeRepository;
-import org.gridsuite.study.server.hypothesistree.entities.NodeType;
-import org.gridsuite.study.server.hypothesistree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.ModelNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +46,7 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 @Service
-public class HypothesisTreeService {
+public class NetworkModificationTreeService {
 
     private static final String HEADER_NODES = "NODES";
     private static final String NODES_UPDATED = "NODE_UPDATED";
@@ -60,7 +60,7 @@ public class HypothesisTreeService {
     final NodeRepository nodesRepository;
     private final RootNodeInfoRepositoryProxy rootNodeInfoRepositoryProxy;
 
-    private static final String CATEGORY_BROKER_OUTPUT = HypothesisTreeService.class.getName() + ".output-broker-messages";
+    private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
@@ -102,16 +102,16 @@ public class HypothesisTreeService {
     }
 
     @Autowired
-    public HypothesisTreeService(NodeRepository nodesRepository,
-                                 RootNodeInfoRepository rootNodeInfoRepository,
-                                 ModelNodeInfoRepository modelNodeInfoRepository,
-                                 HypothesisNodeInfoRepository hypothesisNodeInfoRepository
+    public NetworkModificationTreeService(NodeRepository nodesRepository,
+                                          RootNodeInfoRepository rootNodeInfoRepository,
+                                          ModelNodeInfoRepository modelNodeInfoRepository,
+                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
     ) {
         this.nodesRepository = nodesRepository;
         this.rootNodeInfoRepositoryProxy = new RootNodeInfoRepositoryProxy(rootNodeInfoRepository);
         repositories.put(NodeType.ROOT, rootNodeInfoRepositoryProxy);
         repositories.put(NodeType.MODEL, new ModelNodeInfoRepositoryProxy(modelNodeInfoRepository));
-        repositories.put(NodeType.HYPOTHESIS, new HypothesisNodeInfoRepositoryProxy(hypothesisNodeInfoRepository));
+        repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
 
     }
 

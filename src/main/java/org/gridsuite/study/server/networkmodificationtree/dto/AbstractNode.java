@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.hypothesistree.dto;
+package org.gridsuite.study.server.networkmodificationtree.dto;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -14,7 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.hypothesistree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,10 +31,10 @@ import java.util.UUID;
 )
 @JsonSubTypes({//Below, we define the names and the binding classes.
     @JsonSubTypes.Type(value = ModelNode.class, name = "MODEL"),
-    @JsonSubTypes.Type(value = HypothesisNode.class, name = "HYPOTHESIS"),
+    @JsonSubTypes.Type(value = NetworkModificationNode.class, name = "HYPOTHESIS"),
     @JsonSubTypes.Type(value = RootNode.class, name = "ROOT")
 })
-@Schema(description = "Basic class for Filters", subTypes = {ModelNode.class, HypothesisNode.class, RootNode.class}, discriminatorProperty = "type")
+@Schema(description = "Basic class for Filters", subTypes = {ModelNode.class, NetworkModificationNode.class, RootNode.class}, discriminatorProperty = "type")
 @Getter
 @Setter
 @NoArgsConstructor

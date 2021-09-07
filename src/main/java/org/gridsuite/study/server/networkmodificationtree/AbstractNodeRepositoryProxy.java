@@ -5,12 +5,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesistree;
+package org.gridsuite.study.server.networkmodificationtree;
 
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.hypothesistree.dto.AbstractNode;
-import org.gridsuite.study.server.hypothesistree.entities.AbstractNodeInfoEntity;
-import org.gridsuite.study.server.hypothesistree.repositories.NodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
 import org.springframework.data.jpa.repository.Modifying;
 
 import java.util.UUID;

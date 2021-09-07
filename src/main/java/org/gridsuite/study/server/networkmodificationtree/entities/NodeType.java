@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesistree.entities;
+package org.gridsuite.study.server.networkmodificationtree.entities;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -13,5 +13,5 @@ package org.gridsuite.study.server.hypothesistree.entities;
 public enum NodeType {
     ROOT,
     MODEL,
-    HYPOTHESIS
+    NETWORK_MODIFICATION
 }

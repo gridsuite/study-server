@@ -5,9 +5,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesistree.repositories;
+package org.gridsuite.study.server.networkmodificationtree.repositories;
 
-import org.gridsuite.study.server.hypothesistree.entities.ModelNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com

@@ -14,9 +14,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.hypothesistree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
-import org.gridsuite.study.server.hypothesistree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -40,12 +40,12 @@ public class StudyController {
 
     private final StudyService studyService;
     private final ReportService reportService;
-    private final HypothesisTreeService hypothesisTreeService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, ReportService reportService, HypothesisTreeService hypothesisTreeService) {
+    public StudyController(StudyService studyService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.reportService = reportService;
-        this.hypothesisTreeService = hypothesisTreeService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @GetMapping(value = "/studies")
@@ -592,7 +592,7 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "The create node")
     public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "parent id of the node created") @PathVariable("id") UUID id) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hypothesisTreeService.createNode(id, node));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(id, node));
     }
 
     @PutMapping(value = "tree/insertNode/{id}")
@@ -600,7 +600,7 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "The create node")
     public ResponseEntity<Mono<AbstractNode>> insertNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "child id of the node created") @PathVariable("id") UUID id) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hypothesisTreeService.insertNode(id, node));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.insertNode(id, node));
     }
 
     @DeleteMapping(value = "tree/deleteNode/{id}")
@@ -608,14 +608,14 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted")
     public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "id of child to remove") @PathVariable UUID id,
                                                  @Parameter(description = "deleteChildren")  @RequestParam("deleteChildren") Boolean deleteChildren) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(hypothesisTreeService.deleteNode(id, deleteChildren));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(id, deleteChildren));
     }
 
     @GetMapping(value = "tree/{id}")
     @Operation(summary = "get hypothesis tree for the given study")
     @ApiResponse(responseCode = "200", description = "hypothesis tree")
     public Mono<ResponseEntity<RootNode>> getHypothesisTree(@Parameter(description = "study uuid") @PathVariable("id") UUID id) {
-        return hypothesisTreeService.getStudyTree(id)
+        return networkModificationTreeService.getStudyTree(id)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }
@@ -624,14 +624,14 @@ public class StudyController {
     @Operation(summary = "update node")
     @ApiResponse(responseCode = "200", description = "the node has benn updated")
     public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node) {
-        return ResponseEntity.ok().body(hypothesisTreeService.updateNode(node));
+        return ResponseEntity.ok().body(networkModificationTreeService.updateNode(node));
     }
 
     @GetMapping(value = "tree/node/{id}")
     @Operation(summary = "get simplified node")
     @ApiResponse(responseCode = "200", description = "simplified nodes (without children")
     public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "node uuid") @PathVariable("id") UUID id) {
-        return hypothesisTreeService.getSimpleNode(id)
+        return networkModificationTreeService.getSimpleNode(id)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }

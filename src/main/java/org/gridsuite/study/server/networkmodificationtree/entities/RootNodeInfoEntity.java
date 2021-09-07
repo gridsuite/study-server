@@ -5,14 +5,18 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesistree.entities;
+package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.Table;
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -22,7 +26,13 @@ import javax.persistence.Table;
 @Getter
 @Setter
 @Entity
-@Table(name = "ModelInfo")
-public class ModelNodeInfoEntity extends AbstractNodeInfoEntity {
-    String model;
+@Table(name = "RootNodeInfo", indexes = {@Index(name = "rootNodeInfo_studyId_idx", columnList = "studyId")})
+public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
+    public RootNodeInfoEntity(UUID idNode, NodeEntity node, String name, String description, UUID studyId) {
+        super(idNode, node, name, description);
+        this.studyId = studyId;
+    }
+
+    @Column(name = "studyId")
+    UUID studyId;
 }

@@ -5,17 +5,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesistree.repositories;
+package org.gridsuite.study.server.networkmodificationtree.repositories;
 
-import org.gridsuite.study.server.hypothesistree.entities.AbstractNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.NoRepositoryBean;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
-@NoRepositoryBean
-public interface NodeInfoRepository<T extends AbstractNodeInfoEntity> extends JpaRepository<T, UUID> {
+public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
+    List<NodeEntity> findAllByParentNodeIdNode(UUID id);
 }

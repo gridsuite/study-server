@@ -5,12 +5,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesistree.repositories;
+package org.gridsuite.study.server.networkmodificationtree.repositories;
 
-import org.gridsuite.study.server.hypothesistree.entities.HypothesisNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
-public interface HypothesisNodeInfoRepository extends NodeInfoRepository<HypothesisNodeInfoEntity> {
+public interface NetworkModificationNodeInfoRepository extends NodeInfoRepository<NetworkModificationNodeInfoEntity> {
 }

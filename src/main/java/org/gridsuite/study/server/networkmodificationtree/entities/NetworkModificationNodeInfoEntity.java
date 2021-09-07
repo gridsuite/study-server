@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.hypothesistree.entities;
+package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,7 +26,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "ModelInfo")
-public class HypothesisNodeInfoEntity extends AbstractNodeInfoEntity {
+public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column(name = "hypothesis")
     UUID hypothesisId;

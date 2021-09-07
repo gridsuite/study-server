@@ -17,15 +17,15 @@ import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
 import lombok.SneakyThrows;
-import org.gridsuite.study.server.hypothesistree.dto.AbstractNode;
-import org.gridsuite.study.server.hypothesistree.dto.HypothesisNode;
-import org.gridsuite.study.server.hypothesistree.dto.ModelNode;
-import org.gridsuite.study.server.hypothesistree.dto.RootNode;
-import org.gridsuite.study.server.hypothesistree.entities.NodeType;
-import org.gridsuite.study.server.hypothesistree.repositories.HypothesisNodeInfoRepository;
-import org.gridsuite.study.server.hypothesistree.repositories.ModelNodeInfoRepository;
-import org.gridsuite.study.server.hypothesistree.repositories.NodeRepository;
-import org.gridsuite.study.server.hypothesistree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
+import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -60,7 +60,7 @@ import static org.junit.Assert.assertEquals;
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
-public class HypothesisTreeTest {
+public class NetworkModificationTreeTest {
 
     @Autowired
     private StudyRepository studyRepository;
@@ -72,7 +72,7 @@ public class HypothesisTreeTest {
     private WebTestClient webTestClient;
 
     @Autowired
-    private HypothesisNodeInfoRepository hypothesisNodeInfoRepository;
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @Autowired
     private ModelNodeInfoRepository modelNodeInfoRepository;
@@ -81,7 +81,7 @@ public class HypothesisTreeTest {
     private RootNodeInfoRepository rootNodeInfoRepository;
 
     @Autowired
-    private HypothesisTreeService hypothesisTreeService;
+    private NetworkModificationTreeService networkModificationTreeService;
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -118,7 +118,7 @@ public class HypothesisTreeTest {
 
     @After
     public void cleanDB() {
-        hypothesisNodeInfoRepository.deleteAll();
+        networkModificationNodeInfoRepository.deleteAll();
         modelNodeInfoRepository.deleteAll();
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
@@ -163,7 +163,7 @@ public class HypothesisTreeTest {
     @Test
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
-        final HypothesisNode hypo = buildHypothesis("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildHypothesis("hypo", "potamus", UUID.randomUUID());
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
         createNode(root, hypo);
         createNode(root, model);
@@ -178,7 +178,7 @@ public class HypothesisTreeTest {
         *  model     hypo
         */
 
-        if (children.get(0).getType() == NodeType.HYPOTHESIS) {
+        if (children.get(0).getType() == NodeType.NETWORK_MODIFICATION) {
             assertHypoNodeEquals(hypo, children.get(0));
             assertModelNodeEquals(model, children.get(1));
         } else {
@@ -208,7 +208,7 @@ public class HypothesisTreeTest {
         }
         assertEquals(2, child.getChildren().size());
         children = child.getChildren();
-        if (children.get(0).getType() == NodeType.HYPOTHESIS) {
+        if (children.get(0).getType() == NodeType.NETWORK_MODIFICATION) {
             assertHypoNodeEquals(hypo, children.get(0));
             assertModelNodeEquals(model, children.get(1));
         } else {
@@ -244,7 +244,7 @@ public class HypothesisTreeTest {
         assertEquals(2, root.getChildren().size());
         assertEquals(3, nodeRepository.findAll().size());
 
-        hypothesisTreeService.deleteRoot(root.getStudyId());
+        networkModificationTreeService.deleteRoot(root.getStudyId());
         assertEquals(0, nodeRepository.findAll().size());
 
         webTestClient.put().uri("/v1/tree/createNode/{id}", UUID.randomUUID()).bodyValue(hypo)
@@ -256,7 +256,7 @@ public class HypothesisTreeTest {
     @Test
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
-        final HypothesisNode hypo = buildHypothesis("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildHypothesis("hypo", "potamus", UUID.randomUUID());
         createNode(root, hypo);
         hypo.setName("grunt");
         hypo.setHypothesis(UUID.randomUUID());
@@ -287,17 +287,17 @@ public class HypothesisTreeTest {
     private StudyEntity insertDummyStudy() {
         StudyEntity studyEntity = createDummyStudy();
         var study = studyRepository.save(studyEntity);
-        hypothesisTreeService.createRoot(study.getId());
+        networkModificationTreeService.createRoot(study.getId());
         return study;
     }
 
     private RootNode createRoot() {
         var study = insertDummyStudy();
-        return hypothesisTreeService.getStudyTree(study.getId()).block();
+        return networkModificationTreeService.getStudyTree(study.getId()).block();
     }
 
-    private HypothesisNode buildHypothesis(String name, String description, UUID idHypo) {
-        return HypothesisNode.builder().name(name).description(description).hypothesis(idHypo).children(Collections.emptyList()).build();
+    private NetworkModificationNode buildHypothesis(String name, String description, UUID idHypo) {
+        return NetworkModificationNode.builder().name(name).description(description).hypothesis(idHypo).children(Collections.emptyList()).build();
     }
 
     private ModelNode buildModel(String name, String description, String model) {
@@ -317,9 +317,9 @@ public class HypothesisTreeTest {
         assertEquals(expected.getModel(), node.getModel());
     }
 
-    private void assertHypoNodeEquals(HypothesisNode expected, AbstractNode current) {
+    private void assertHypoNodeEquals(NetworkModificationNode expected, AbstractNode current) {
         assertNodeEquals(expected, current);
-        HypothesisNode node = (HypothesisNode) current;
+        NetworkModificationNode node = (NetworkModificationNode) current;
         assertEquals(expected.getHypothesis(), node.getHypothesis());
     }
 
