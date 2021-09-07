@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -150,16 +149,12 @@ public class NetworkModificationTreeService {
     }
 
     public Mono<Void> deleteNode(UUID id, Boolean deleteChildren) {
-        return Mono.fromRunnable(() -> deleteNodeExec(id, deleteChildren));
-    }
-
-    @Transactional
-    @Modifying
-    public void deleteNodeExec(UUID id, Boolean deleteChildren) {
-        List<UUID> removedNodes = new ArrayList<>();
-        UUID studyId = getStudyUuidForNodeId(id);
-        deleteNodes(id, deleteChildren, false, removedNodes);
-        emitNodesDeleted(studyId, removedNodes, deleteChildren);
+        return Mono.fromRunnable(() -> {
+            List<UUID> removedNodes = new ArrayList<>();
+            UUID studyId = getStudyUuidForNodeId(id);
+            deleteNodes(id, deleteChildren, false, removedNodes);
+            emitNodesDeleted(studyId, removedNodes, deleteChildren);
+        });
     }
 
     public UUID getStudyUuidForNodeId(UUID id) {
@@ -220,7 +215,6 @@ public class NetworkModificationTreeService {
         return node;
     }
 
-    @Transactional
     public UUID getStudyUuidForNode(NodeEntity node) {
         NodeEntity current = node;
         while (!current.getType().equals(NodeType.ROOT) && current.getParentNode() != null) {
