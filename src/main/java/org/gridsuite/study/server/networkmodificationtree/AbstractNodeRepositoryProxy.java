@@ -39,7 +39,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public NodeDto getNode(UUID id) {
-        return toDto(nodeInfoRepository.getOne(id));
+        return toDto(nodeInfoRepository.findById(id).orElseThrow(() -> new StudyException(StudyException.Type.ELEMENT_NOT_FOUND)));
     }
 
     protected NodeDto completeNodeInfo(AbstractNodeInfoEntity nodeEntity, NodeDto node) {

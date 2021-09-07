@@ -587,23 +587,23 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @PutMapping(value = "tree/createNode/{id}")
-    @Operation(summary = "Create a node at the given child")
-    @ApiResponse(responseCode = "200", description = "The create node")
+    @PutMapping(value = "/tree/createNode/{id}")
+    @Operation(summary = "Create a node as child of the given node id")
+    @ApiResponse(responseCode = "200", description = "The node has been added")
     public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "parent id of the node created") @PathVariable("id") UUID id) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(id, node));
     }
 
-    @PutMapping(value = "tree/insertNode/{id}")
-    @Operation(summary = "Create a node at the given child")
-    @ApiResponse(responseCode = "200", description = "The create node")
+    @PutMapping(value = "/tree/insertNode/{id}")
+    @Operation(summary = "Create a node before the given node id")
+    @ApiResponse(responseCode = "200", description = "The node has benn inserted")
     public ResponseEntity<Mono<AbstractNode>> insertNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "child id of the node created") @PathVariable("id") UUID id) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.insertNode(id, node));
     }
 
-    @DeleteMapping(value = "tree/deleteNode/{id}")
+    @DeleteMapping(value = "/tree/deleteNode/{id}")
     @Operation(summary = "Delete node with given id")
     @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted")
     public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "id of child to remove") @PathVariable UUID id,
@@ -611,7 +611,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(id, deleteChildren));
     }
 
-    @GetMapping(value = "tree/{id}")
+    @GetMapping(value = "/tree/{id}")
     @Operation(summary = "get hypothesis tree for the given study")
     @ApiResponse(responseCode = "200", description = "hypothesis tree")
     public Mono<ResponseEntity<RootNode>> getHypothesisTree(@Parameter(description = "study uuid") @PathVariable("id") UUID id) {
@@ -620,14 +620,14 @@ public class StudyController {
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @PutMapping(value = "tree/updateNode")
+    @PutMapping(value = "/tree/updateNode")
     @Operation(summary = "update node")
     @ApiResponse(responseCode = "200", description = "the node has benn updated")
     public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node) {
         return ResponseEntity.ok().body(networkModificationTreeService.updateNode(node));
     }
 
-    @GetMapping(value = "tree/node/{id}")
+    @GetMapping(value = "/tree/node/{id}")
     @Operation(summary = "get simplified node")
     @ApiResponse(responseCode = "200", description = "simplified nodes (without children")
     public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "node uuid") @PathVariable("id") UUID id) {

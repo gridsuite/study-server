@@ -31,7 +31,7 @@ import java.util.UUID;
 )
 @JsonSubTypes({//Below, we define the names and the binding classes.
     @JsonSubTypes.Type(value = ModelNode.class, name = "MODEL"),
-    @JsonSubTypes.Type(value = NetworkModificationNode.class, name = "HYPOTHESIS"),
+    @JsonSubTypes.Type(value = NetworkModificationNode.class, name = "NETWORK_MODIFICATION"),
     @JsonSubTypes.Type(value = RootNode.class, name = "ROOT")
 })
 @Schema(description = "Basic class for Filters", subTypes = {ModelNode.class, NetworkModificationNode.class, RootNode.class}, discriminatorProperty = "type")
