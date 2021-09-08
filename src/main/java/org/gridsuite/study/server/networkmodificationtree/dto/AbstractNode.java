@@ -43,7 +43,7 @@ public abstract class AbstractNode {
     String name;
     List<AbstractNode> children = new ArrayList<>();
     List<UUID> childrenIds = new ArrayList<>();
-    private String description;
+    String description;
 
     NodeType type;
 

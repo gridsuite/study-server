@@ -21,7 +21,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
@@ -38,6 +37,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
@@ -47,13 +47,17 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
+import static org.gridsuite.study.server.NetworkModificationTreeService.*;
+import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
+import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
@@ -62,6 +66,7 @@ import static org.junit.Assert.assertEquals;
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class NetworkModificationTreeTest {
 
+    private static final long TIMEOUT = 1000;
     @Autowired
     private StudyRepository studyRepository;
 
@@ -82,6 +87,9 @@ public class NetworkModificationTreeTest {
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
+
+    @Autowired
+    private OutputDestination output;
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -123,6 +131,7 @@ public class NetworkModificationTreeTest {
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();
+        assertNull(output.receive(TIMEOUT));
     }
 
     StudyEntity createDummyStudy() {
@@ -182,20 +191,12 @@ public class NetworkModificationTreeTest {
         root = getRootNode(root.getStudyId());
 
         List<AbstractNode> children = root.getChildren();
-        assertEquals(2, children.size());
         /*  expected :
                 root
                /    \
            model     hypo
         */
-
-        if (children.get(0).getType() == NodeType.NETWORK_MODIFICATION) {
-            assertHypoNodeEquals(hypo, children.get(0));
-            assertModelNodeEquals(model, children.get(1));
-        } else {
-            assertHypoNodeEquals(hypo, children.get(1));
-            assertModelNodeEquals(model, children.get(0));
-        }
+        assertChildrenEquals(Set.of(hypo, model), root.getChildren());
 
         model.setName("niark");
         hypo.setName("condriak");
@@ -217,19 +218,10 @@ public class NetworkModificationTreeTest {
         } else {
             child = root.getChildren().get(1);
         }
-        assertEquals(2, child.getChildren().size());
         children = child.getChildren();
-        if (children.get(0).getType() == NodeType.NETWORK_MODIFICATION) {
-            assertHypoNodeEquals(hypo, children.get(0));
-            assertModelNodeEquals(model, children.get(1));
-        } else {
-            assertHypoNodeEquals(hypo, children.get(1));
-            assertModelNodeEquals(model, children.get(0));
-        }
+        assertChildrenEquals(Set.of(hypo, model), children);
 
-        webTestClient.delete().uri("/v1/tree/deleteNode/{id}?deleteChildren={delete}", child.getId(), false)
-            .exchange()
-            .expectStatus().isOk();
+        deleteNode(child, false, Set.of(child));
 
         /*  expected
               root
@@ -242,9 +234,7 @@ public class NetworkModificationTreeTest {
         child = root.getChildren().get(0);
         createNode(child, hypo);
 
-        webTestClient.delete().uri("/v1/tree/deleteNode/{id}?deleteChildren={delete}", child.getId(), true)
-            .exchange()
-            .expectStatus().isOk();
+        deleteNode(child, true, Set.of(hypo, child));
 
         /* expected
             root
@@ -262,6 +252,30 @@ public class NetworkModificationTreeTest {
             .exchange()
             .expectStatus().isNotFound();
 
+    }
+
+    private void deleteNode(AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion) {
+        webTestClient.delete().uri("/v1/tree/deleteNode/{id}?deleteChildren={delete}", child.getId(), deleteChildren)
+            .exchange()
+            .expectStatus().isOk();
+        var mess = output.receive(TIMEOUT);
+        if (expectedDeletion != null) {
+            Collection<UUID> deletedId = (Collection<UUID>) mess.getHeaders().get(NetworkModificationTreeService.HEADER_NODES);
+            assertNotNull(deletedId);
+            assertEquals(expectedDeletion.size(), deletedId.size());
+            deletedId.forEach(id ->
+                assertTrue(expectedDeletion.stream().anyMatch(node -> node.getId().equals(id))));
+        }
+    }
+
+    private void assertChildrenEquals(Set<AbstractNode> original, List<AbstractNode> children) {
+        assertEquals(original.size(), children.size());
+        children.forEach(node -> {
+            Optional<AbstractNode> found = original.stream().filter(s -> node.getId().equals(s.getId())).findFirst();
+            assertTrue(found.isPresent());
+            assertNodeEquals(found.get(), node);
+            }
+        );
     }
 
     @Test
@@ -282,7 +296,7 @@ public class NetworkModificationTreeTest {
          */
         AbstractNode unchangedNode = root.getChildren().get(0);
         AbstractNode willBeMoved = root.getChildren().get(1);
-        insertNode(willBeMoved, hypo);
+        insertNode(willBeMoved, hypo, root);
         /* root
             / \
            n3  n2
@@ -315,6 +329,16 @@ public class NetworkModificationTreeTest {
         assertEquals(1, root.getChildren().size());
         assertNodeEquals(hypo, root.getChildren().get(0));
 
+        var mess = output.receive(TIMEOUT);
+        assertNotNull(mess);
+        var header = mess.getHeaders();
+        assertEquals(root.getStudyId(), header.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(NetworkModificationTreeService.NODES_UPDATED, header.get(HEADER_UPDATE_TYPE));
+        Collection<UUID> updated = (Collection<UUID>) header.get(NetworkModificationTreeService.HEADER_NODES);
+        assertNotNull(updated);
+        assertEquals(1, updated.size());
+        updated.forEach(id -> assertEquals(hypo.getId(), id));
+
         hypo.setId(UUID.randomUUID());
         webTestClient.put().uri("/v1/tree/updateNode").bodyValue(hypo)
             .exchange()
@@ -339,13 +363,20 @@ public class NetworkModificationTreeTest {
         webTestClient.put().uri("/v1/tree/createNode/{id}", parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
+        var mess = output.receive(TIMEOUT);
+        assertNotNull(mess);
+        newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
     }
 
-    private void insertNode(AbstractNode parentNode, AbstractNode newNode) {
+    private void insertNode(AbstractNode parentNode, AbstractNode newNode, AbstractNode expectedParent) {
         newNode.setId(null);
         webTestClient.put().uri("/v1/tree/insertNode/{id}", parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
+        var mess = output.receive(TIMEOUT);
+        assertEquals(NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(expectedParent.getId(), mess.getHeaders().get(HEADER_PARENT_NODE));
+        newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
     }
 
     @NotNull
@@ -374,18 +405,25 @@ public class NetworkModificationTreeTest {
         assertEquals(expected.getDescription(), current.getDescription());
         assertEquals(expected.getChildren().size(), current.getChildren().size());
         assertEquals(expected.getType(), current.getType());
+        switch (expected.getType()) {
+            case NETWORK_MODIFICATION: assertHypoNodeEquals(expected, current);
+            break;
+            case MODEL: assertModelNodeEquals(expected, current);
+            break;
+            default:
+        }
     }
 
-    private void assertModelNodeEquals(ModelNode expected, AbstractNode current) {
-        assertNodeEquals(expected, current);
-        ModelNode node = (ModelNode) current;
-        assertEquals(expected.getModel(), node.getModel());
+    private void assertModelNodeEquals(AbstractNode expected, AbstractNode current) {
+        ModelNode currentModel = (ModelNode) current;
+        ModelNode expectedModel = (ModelNode) expected;
+        assertEquals(expectedModel.getModel(), currentModel.getModel());
     }
 
-    private void assertHypoNodeEquals(NetworkModificationNode expected, AbstractNode current) {
-        assertNodeEquals(expected, current);
-        NetworkModificationNode node = (NetworkModificationNode) current;
-        assertEquals(expected.getNetworkModification(), node.getNetworkModification());
+    private void assertHypoNodeEquals(AbstractNode expected, AbstractNode current) {
+        NetworkModificationNode currentModificationNode = (NetworkModificationNode) current;
+        NetworkModificationNode expectedModificationNode = (NetworkModificationNode) expected;
+        assertEquals(expectedModificationNode.getNetworkModification(), currentModificationNode.getNetworkModification());
     }
 
 }

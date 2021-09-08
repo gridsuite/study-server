@@ -47,13 +47,13 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 @Service
 public class NetworkModificationTreeService {
 
-    private static final String HEADER_NODES = "NODES";
-    private static final String NODES_UPDATED = "NODE_UPDATED";
-    private static final String NODES_DELETED = "NODE_DELETED";
-    private static final String HEADER_PARENT_NODE = "PARENT_NODE";
-    private static final String HEADER_NEW_NODE = "NEW_NODE";
-    private static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
-    private static final String NODE_CREATED = "NODE_CREATED";
+    public static final String HEADER_NODES = "NODES";
+    public static final String NODES_UPDATED = "NODE_UPDATED";
+    public static final String NODES_DELETED = "NODE_DELETED";
+    public static final String HEADER_PARENT_NODE = "PARENT_NODE";
+    public static final String HEADER_NEW_NODE = "NEW_NODE";
+    public static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
+    public static final String NODE_CREATED = "NODE_CREATED";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -222,7 +222,7 @@ public class NetworkModificationTreeService {
         while (!current.getType().equals(NodeType.ROOT) && current.getParentNode() != null) {
             current = nodesRepository.findById(node.getParentNode().getIdNode()).orElseThrow();
         }
-        return current.getIdNode();
+        return rootNodeInfoRepositoryProxy.getNode(current.getIdNode()).getStudyId();
     }
 
     public Mono<Void> updateNode(AbstractNode node) {
@@ -237,5 +237,9 @@ public class NetworkModificationTreeService {
         AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
         return node;
+    }
+
+    public Mono<AbstractNode> getSimpleNode(UUID id) {
+        return Mono.fromCallable(() -> getSimpleNodeExe(id));
     }
 }

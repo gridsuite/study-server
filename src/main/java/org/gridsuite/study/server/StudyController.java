@@ -631,7 +631,7 @@ public class StudyController {
     @Operation(summary = "get simplified node")
     @ApiResponse(responseCode = "200", description = "simplified nodes (without children")
     public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "node uuid") @PathVariable("id") UUID id) {
-        return Mono.fromCallable(() -> networkModificationTreeService.getSimpleNodeExe(id))
+        return networkModificationTreeService.getSimpleNode(id)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }
