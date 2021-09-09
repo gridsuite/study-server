@@ -232,7 +232,6 @@ public class NetworkModificationTreeService {
         });
     }
 
-    @Transactional
     public AbstractNode getSimpleNodeExe(UUID id) {
         AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
