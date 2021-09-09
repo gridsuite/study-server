@@ -239,12 +239,12 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/modifications/group/.*") ||
-                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/switches/switchId\\?open=true")) {
+                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true")) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/line12/status")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status\\?group=.*")) {
                         if (Objects.nonNull(body) && body.peek().readUtf8().equals("lockout")) {
                             JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
                             return new MockResponse().setResponseCode(200)
@@ -253,7 +253,7 @@ public class StudyTest {
                         } else {
                             return new MockResponse().setResponseCode(500);
                         }
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/line23/status")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/status\\?group=.*")) {
                     if (Objects.nonNull(body) && body.peek().readUtf8().equals("trip")) {
                             JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
                             return new MockResponse().setResponseCode(200)
@@ -262,7 +262,7 @@ public class StudyTest {
                         } else {
                             return new MockResponse().setResponseCode(500);
                         }
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/line13/status")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status\\?group=.*")) {
                     String bodyStr = Objects.nonNull(body) ? body.peek().readUtf8() : "";
                         if (bodyStr.equals("switchOn") || bodyStr.equals("energiseEndOne")) {
                             JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
@@ -272,14 +272,14 @@ public class StudyTest {
                         } else {
                             return new MockResponse().setResponseCode(500);
                         }
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/lineFailedId/status")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*")) {
                     return new MockResponse().setResponseCode(500).setBody(LINE_MODIFICATION_FAILED.name());
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/groovy")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s4", "s5", "s6", "s7")));
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/createLoad")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/createLoad\\?group=.*")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
@@ -1289,7 +1289,7 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_SWITCH, headers.get(HEADER_UPDATE_TYPE));
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/switches/switchId\\?open=true")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true")));
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -1334,7 +1334,7 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headers.get(HEADER_UPDATE_TYPE));
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/groovy")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")));
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -1698,14 +1698,14 @@ public class StudyTest {
                 .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         var requests = getRequestsWithBodyDone(8);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/line12/status") && r.getBody().equals("lockout")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/line23/status") && r.getBody().equals("trip")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/line13/status") && r.getBody().equals("energiseEndOne")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/line13/status") && r.getBody().equals("switchOn")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/lineFailedId/status") && r.getBody().equals("lockout")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/lineFailedId/status") && r.getBody().equals("trip")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/lineFailedId/status") && r.getBody().equals("energiseEndTwo")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/lines/lineFailedId/status") && r.getBody().equals("switchOn")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status\\?group=.*") && r.getBody().equals("lockout")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/status\\?group=.*") && r.getBody().equals("trip")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status\\?group=.*") && r.getBody().equals("energiseEndOne")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status\\?group=.*") && r.getBody().equals("switchOn")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*") && r.getBody().equals("lockout")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*") && r.getBody().equals("trip")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*") && r.getBody().equals("energiseEndTwo")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*") && r.getBody().equals("switchOn")));
     }
 
     @Test
@@ -1724,7 +1724,7 @@ public class StudyTest {
         checkLoadCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/group/.*/createLoad") && r.getBody().equals(createLoadAttributes)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/createLoad\\?group=.*") && r.getBody().equals(createLoadAttributes)));
     }
 
     private void checkLoadCreationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {

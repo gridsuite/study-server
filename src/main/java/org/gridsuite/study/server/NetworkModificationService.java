@@ -119,9 +119,10 @@ public class NetworkModificationService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "group" + DELIMITER + "{groupUuid}" + DELIMITER + "switches" + DELIMITER + "{switchId}")
-                    .queryParam("open", open)
-                    .buildAndExpand(groupUuid, switchId)
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
+                .queryParam("group", groupUuid)
+                .queryParam("open", open)
+                    .buildAndExpand(switchId)
                     .toUriString();
 
             return webClient.put()
@@ -137,8 +138,9 @@ public class NetworkModificationService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "group" + DELIMITER + "{groupUuid}" + DELIMITER + "groovy")
-                    .buildAndExpand(groupUuid)
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
+                .queryParam("group", groupUuid)
+                .buildAndExpand()
                     .toUriString();
 
             return webClient.put()
@@ -154,8 +156,9 @@ public class NetworkModificationService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(lineId);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "group" + DELIMITER + "{groupUuid}" + DELIMITER + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
-                    .buildAndExpand(groupUuid, lineId)
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
+                .queryParam("group", groupUuid)
+                .buildAndExpand(lineId)
                     .toUriString();
 
             return webClient.put()
@@ -189,8 +192,9 @@ public class NetworkModificationService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createLoadAttributes);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "group" + DELIMITER + "{groupUuid}" + DELIMITER + "createLoad")
-                .buildAndExpand(groupUuid)
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "createLoad")
+                .queryParam("group", groupUuid)
+                .buildAndExpand()
                 .toUriString();
 
             return webClient.put()
