@@ -220,7 +220,7 @@ public class NetworkModificationTreeService {
     public UUID getStudyUuidForNode(NodeEntity node) {
         NodeEntity current = node;
         while (!current.getType().equals(NodeType.ROOT) && current.getParentNode() != null) {
-            current = nodesRepository.findById(node.getParentNode().getIdNode()).orElseThrow();
+            current = nodesRepository.findById(current.getParentNode().getIdNode()).orElseThrow();
         }
         return rootNodeInfoRepositoryProxy.getNode(current.getIdNode()).getStudyId();
     }
