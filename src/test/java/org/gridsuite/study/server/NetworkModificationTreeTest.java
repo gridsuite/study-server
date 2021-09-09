@@ -281,14 +281,14 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeInsertion() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
         /* trying to insert before root */
-        webTestClient.put().uri("/v1/tree/insertNode/{id}", root.getId()).bodyValue(hypo)
+        webTestClient.put().uri("/v1/tree/insertNode/{id}", root.getId()).bodyValue(networkModification)
             .exchange()
             .expectStatus().is4xxClientError();
 
-        createNode(root, hypo);
-        createNode(root, hypo);
+        createNode(root, networkModification);
+        createNode(root, networkModification);
         root = getRootNode(root.getStudyId());
         /* root
             / \
@@ -296,7 +296,7 @@ public class NetworkModificationTreeTest {
          */
         AbstractNode unchangedNode = root.getChildren().get(0);
         AbstractNode willBeMoved = root.getChildren().get(1);
-        insertNode(willBeMoved, hypo, root);
+        insertNode(willBeMoved, networkModification, root);
         /* root
             / \
            n3  n2
@@ -308,7 +308,7 @@ public class NetworkModificationTreeTest {
         AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
 
-        webTestClient.put().uri("/v1/tree/insertNode/{id}", UUID.randomUUID()).bodyValue(hypo)
+        webTestClient.put().uri("/v1/tree/insertNode/{id}", UUID.randomUUID()).bodyValue(networkModification)
             .exchange()
             .expectStatus().isNotFound();
     }

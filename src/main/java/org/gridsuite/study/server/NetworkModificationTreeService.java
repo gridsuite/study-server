@@ -69,7 +69,7 @@ public class NetworkModificationTreeService {
 
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
-        treeUpdatePublisher.send("publishTreeUpdate-out-0", message);
+        treeUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
     private void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated) {
@@ -165,7 +165,7 @@ public class NetworkModificationTreeService {
     private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
-            /* root cannot be deleted */
+            /* root cannot be deleted by accident */
             if (!allowDeleteRoot && nodeToDelete.getType() == NodeType.ROOT) {
                 throw new StudyException(CANT_DELETE_ROOT_NODE);
             }
