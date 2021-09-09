@@ -59,7 +59,6 @@ import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static reactor.core.publisher.SignalType.ON_COMPLETE;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -382,22 +381,13 @@ public class StudyService {
         return insertStudyEntity(studyUuid, studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, indexingStatus, loadFlowStatus, loadFlowResult,
                 loadFlowParameters, securityAnalysisUuid)
                 .map(StudyService::toCreatedStudyBasicInfos)
+                .map(studyInfosService::add)
+                .zipWith(networkModificationService.insertEquipmentIndexes(networkUuid)
+                        .then(updateIndexingStatus(studyUuid, IndexingStatus.DONE)))
+                .map(t -> t.getT1())
                 .doOnSuccess(infos -> {
                     emitStudiesChanged(studyUuid, userId, isPrivate);
-                    studyInfosService.add(infos);
-                })
-                .doFinally(s -> {
-                    if (s == ON_COMPLETE) {
-                        insertEquipmentIndexes(studyUuid, networkUuid)
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .subscribe();
-                    }
                 });
-    }
-
-    private Mono<Void> insertEquipmentIndexes(UUID studyUuid, UUID networkUuid) {
-        return networkModificationService.insertEquipmentIndexes(networkUuid)
-                .then(updateIndexingStatus(studyUuid, IndexingStatus.DONE));
     }
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate, UUID studyUuid) {
