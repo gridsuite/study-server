@@ -238,7 +238,7 @@ public class StudyTest {
                             .build(), "sa.stopped");
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/modifications/group/.*") ||
+                } else if (path.matches("/v1/groups/.*") ||
                            path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true")) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                         return new MockResponse().setResponseCode(200)
@@ -1354,7 +1354,7 @@ public class StudyTest {
             .expectStatus()
             .isOk();
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/modifications/group/.*")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/groups/.*")));
 
         // delete all modifications for the default group of a network
         webTestClient.delete()
@@ -1364,7 +1364,7 @@ public class StudyTest {
             .expectStatus()
             .isOk();
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/modifications/group/.*")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/groups/.*")));
     }
 
     @Test

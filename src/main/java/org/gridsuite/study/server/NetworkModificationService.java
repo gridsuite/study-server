@@ -60,8 +60,8 @@ public class NetworkModificationService {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri + DELIMITER;
     }
 
-    private String getNetworkModificationServerURI() {
-        return this.networkModificationServerBaseUri + DELIMITER + NETWORK_MODIFICATION_API_VERSION + DELIMITER + "networks" + DELIMITER;
+    private String getNetworkModificationServerURI(boolean addNetworksPart) {
+        return this.networkModificationServerBaseUri + DELIMITER + NETWORK_MODIFICATION_API_VERSION + DELIMITER + (addNetworksPart ? "networks" + DELIMITER : "");
     }
 
     private String buildPathFrom(UUID networkUuid) {
@@ -92,10 +92,12 @@ public class NetworkModificationService {
 
     public Flux<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath("modifications/group" + DELIMITER + "{groupUuid}")
+        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}")
             .buildAndExpand(groupUuid)
             .toUriString();
-        return webClient.get().uri(getNetworkModificationServerURI() + path).retrieve().bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() { });
+        return webClient.get().uri(getNetworkModificationServerURI(false) + path)
+            .retrieve()
+            .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() { });
     }
 
     public Mono<Void> deleteModifications(UUID groupUUid) {
@@ -105,11 +107,11 @@ public class NetworkModificationService {
 
     Mono<Void> deleteNetworkModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath("modifications/group" + DELIMITER + "{groupUuid}")
+        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}")
                 .buildAndExpand(groupUuid)
                 .toUriString();
         return webClient.delete()
-                .uri(getNetworkModificationServerURI() + path)
+                .uri(getNetworkModificationServerURI(false) + path)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
                 .bodyToMono(Void.class);
@@ -126,7 +128,7 @@ public class NetworkModificationService {
                     .toUriString();
 
             return webClient.put()
-                    .uri(getNetworkModificationServerURI() + path)
+                    .uri(getNetworkModificationServerURI(true) + path)
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
                     .bodyToFlux(new ParameterizedTypeReference<ElementaryAttributeModificationInfos>() {
@@ -144,7 +146,7 @@ public class NetworkModificationService {
                     .toUriString();
 
             return webClient.put()
-                    .uri(getNetworkModificationServerURI() + path)
+                    .uri(getNetworkModificationServerURI(true) + path)
                     .body(BodyInserters.fromValue(groovyScript))
                     .retrieve()
                     .bodyToFlux(new ParameterizedTypeReference<ElementaryAttributeModificationInfos>() {
@@ -162,7 +164,7 @@ public class NetworkModificationService {
                     .toUriString();
 
             return webClient.put()
-                    .uri(getNetworkModificationServerURI() + path)
+                    .uri(getNetworkModificationServerURI(true) + path)
                     .body(BodyInserters.fromValue(status))
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus != HttpStatus.OK, this::handleChangeLineError)
@@ -198,7 +200,7 @@ public class NetworkModificationService {
                 .toUriString();
 
             return webClient.put()
-                .uri(getNetworkModificationServerURI() + path)
+                .uri(getNetworkModificationServerURI(true) + path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(createLoadAttributes))
                 .retrieve()
