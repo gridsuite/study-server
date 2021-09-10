@@ -352,8 +352,8 @@ public class StudyService {
                 if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
                 }
-                studyRepository.deleteById(uuid);
                 networkModificationTreeService.deleteRoot(uuid);
+                studyRepository.deleteById(uuid);
                 emitStudiesChanged(uuid, userId, s.isPrivate());
             });
         } else {
@@ -1296,9 +1296,9 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
             StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid);
-            networkModificationTreeService.createRoot(uuid);
-            return studyRepository.save(studyEntity);
-        });
+            var study = studyRepository.save(studyEntity);
+            return study;
+        }).doOnNext(studyEntity -> networkModificationTreeService.createRoot(studyEntity));
     }
 
     @Transactional

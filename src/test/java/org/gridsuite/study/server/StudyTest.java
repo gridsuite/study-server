@@ -160,12 +160,16 @@ public class StudyTest {
     private StudyRepository studyRepository;
 
     @Autowired
+    private NetworkModificationTreeService networkModificationTreeService;
+
+    @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
     //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 
     private void cleanDB() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.deleteRoot(s.getId()));
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
     }

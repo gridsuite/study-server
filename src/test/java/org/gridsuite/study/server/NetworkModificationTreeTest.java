@@ -383,7 +383,7 @@ public class NetworkModificationTreeTest {
     private StudyEntity insertDummyStudy() {
         StudyEntity studyEntity = createDummyStudy();
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(study.getId());
+        networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 

@@ -18,6 +18,7 @@ import org.gridsuite.study.server.networkmodificationtree.ModelNodeInfoRepositor
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -206,9 +207,9 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void createRoot(UUID studyId) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, studyRepository.getOne(studyId)));
-        var root = RootNode.builder().studyId(studyId).id(node.getIdNode()).name("Root").build();
+    public void createRoot(StudyEntity study) {
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study));
+        var root = RootNode.builder().studyId(study.getId()).id(node.getIdNode()).name("Root").build();
         repositories.get(node.getType()).createNodeInfo(root);
     }
 
