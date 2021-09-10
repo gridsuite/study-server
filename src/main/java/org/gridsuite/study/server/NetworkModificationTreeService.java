@@ -232,16 +232,6 @@ public class NetworkModificationTreeService {
         return Mono.justOrEmpty(root);
     }
 
-    private void completeChildren(AbstractNode nodeToComplete) {
-        nodesRepository.findAllByParentNodeIdNode(nodeToComplete.getId()).forEach(node -> nodeToComplete.getChildren().add(getNode(node)));
-    }
-
-    private AbstractNode getNode(NodeEntity nodeEntity) {
-        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
-        completeChildren(node);
-        return node;
-    }
-
     public Mono<Void> updateNode(AbstractNode node) {
         return Mono.fromRunnable(() -> {
             repositories.get(node.getType()).updateNode(node);
@@ -249,13 +239,11 @@ public class NetworkModificationTreeService {
         });
     }
 
-    public AbstractNode getSimpleNodeExe(UUID id) {
-        AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
-        return node;
-    }
-
     public Mono<AbstractNode> getSimpleNode(UUID id) {
-        return Mono.fromCallable(() -> getSimpleNodeExe(id));
+        return Mono.fromCallable(() -> {
+            AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+            nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
+            return node;
+        });
     }
 }
