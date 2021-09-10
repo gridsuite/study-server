@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.repository.StudyEntity;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -36,7 +37,11 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "Node", indexes = @Index(name = "nodeEntity_parentNide_idx", columnList = "parentNode"))
+@Table(name = "Node", indexes = {
+    @Index(name = "nodeEntity_parentNide_idx", columnList = "parentNode"),
+    @Index(name = "nodeEntity_studyId_idx", columnList = "study_id")
+    }
+)
 public class NodeEntity implements Serializable {
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
@@ -50,5 +55,9 @@ public class NodeEntity implements Serializable {
     @Column
     @Enumerated(EnumType.STRING)
     NodeType type;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "study_id", foreignKey = @ForeignKey(name = "study_id_fk_constraint"))
+    StudyEntity study;
 
 }

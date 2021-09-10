@@ -11,6 +11,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeI
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
 
+import java.util.Collection;
 import java.util.UUID;
 
 /**
@@ -18,4 +19,6 @@ import java.util.UUID;
  */
 @NoRepositoryBean
 public interface NodeInfoRepository<T extends AbstractNodeInfoEntity> extends JpaRepository<T, UUID> {
+    void deleteByIdNodeIn(Collection<UUID> ids);
+
 }

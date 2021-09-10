@@ -59,6 +59,7 @@
        idNode uuid not null,
         type varchar(255),
         parentNode uuid,
+        study_id uuid,
         primary key (idNode)
     );
 
@@ -66,7 +67,6 @@
        idNode uuid not null,
         description varchar(255),
         name varchar(255),
-        studyId uuid,
         primary key (idNode)
     );
 
@@ -100,7 +100,7 @@
     );
 create index loadFlowResultEntity_componentResults_id_index on LoadFlowResultEntity_componentResults (LoadFlowResultEntity_id);
 create index nodeEntity_parentNide_idx on Node (parentNode);
-create index rootNodeInfo_studyId_idx on RootNodeInfo (studyId);
+create index nodeEntity_studyId_idx on Node (study_id);
 create index studyEntity_isPrivate_index on study (isPrivate);
 create index studyEntity_userId_index on study (userId);
 create index studyCreationRequest_isPrivate_index on studycreationrequest (isPrivate);
@@ -130,6 +130,11 @@ create index studyCreationRequest_userId_index on studycreationrequest (userId);
        add constraint node_id_fk_constraint 
        foreign key (parentNode) 
        references Node;
+
+    alter table if exists Node 
+       add constraint study_id_fk_constraint 
+       foreign key (study_id) 
+       references study;
 
     alter table if exists RootNodeInfo 
        add constraint FK5wmbraw6u13v1ujb15vygr9xi 

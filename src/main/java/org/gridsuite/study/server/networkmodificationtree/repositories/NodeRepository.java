@@ -18,4 +18,7 @@ import java.util.UUID;
  */
 public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     List<NodeEntity> findAllByParentNodeIdNode(UUID id);
+
+    List<NodeEntity> findAllByStudyId(UUID id);
+
 }

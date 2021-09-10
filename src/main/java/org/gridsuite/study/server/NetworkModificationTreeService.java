@@ -18,6 +18,7 @@ import org.gridsuite.study.server.networkmodificationtree.ModelNodeInfoRepositor
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +34,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.HEADER_STUDY_UUID;
@@ -48,17 +52,18 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 public class NetworkModificationTreeService {
 
     public static final String HEADER_NODES = "NODES";
-    public static final String NODES_UPDATED = "NODE_UPDATED";
-    public static final String NODES_DELETED = "NODE_DELETED";
     public static final String HEADER_PARENT_NODE = "PARENT_NODE";
     public static final String HEADER_NEW_NODE = "NEW_NODE";
     public static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
+    public static final String NODES_UPDATED = "NODE_UPDATED";
+    public static final String NODES_DELETED = "NODE_DELETED";
     public static final String NODE_CREATED = "NODE_CREATED";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
     final NodeRepository nodesRepository;
     private final RootNodeInfoRepositoryProxy rootNodeInfoRepositoryProxy;
+    private final StudyRepository studyRepository;
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
@@ -105,10 +110,12 @@ public class NetworkModificationTreeService {
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
                                           ModelNodeInfoRepository modelNodeInfoRepository,
-                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
+                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                                          StudyRepository studyRepository
     ) {
         this.nodesRepository = nodesRepository;
         this.rootNodeInfoRepositoryProxy = new RootNodeInfoRepositoryProxy(rootNodeInfoRepository);
+        this.studyRepository = studyRepository;
         repositories.put(NodeType.ROOT, rootNodeInfoRepositoryProxy);
         repositories.put(NodeType.MODEL, new ModelNodeInfoRepositoryProxy(modelNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
@@ -120,7 +127,7 @@ public class NetworkModificationTreeService {
         return Mono.fromCallable(() -> {
             Optional<NodeEntity> parentOpt = nodesRepository.findById(id);
             return parentOpt.map(parent -> {
-                NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType()));
+                NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), parent.getStudy()));
                 nodeInfo.setId(node.getIdNode());
                 repositories.get(node.getType()).createNodeInfo(nodeInfo);
                 emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode());
@@ -137,12 +144,12 @@ public class NetworkModificationTreeService {
                 if (child.getType().equals(NodeType.ROOT)) {
                     throw new StudyException(NOT_ALLOWED);
                 }
-                NodeEntity node = nodesRepository.save(new NodeEntity(null, child.getParentNode(), nodeInfo.getType()));
+                NodeEntity node = nodesRepository.save(new NodeEntity(null, child.getParentNode(), nodeInfo.getType(), child.getStudy()));
                 nodeInfo.setId(node.getIdNode());
                 repositories.get(node.getType()).createNodeInfo(nodeInfo);
                 child.setParentNode(node);
                 nodesRepository.save(child);
-                emitNodeInserted(getStudyUuidForNode(node), node.getParentNode().getIdNode(), node.getIdNode());
+                emitNodeInserted(node.getStudy().getId(), node.getParentNode().getIdNode(), node.getIdNode());
                 return nodeInfo;
             }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         });
@@ -159,7 +166,7 @@ public class NetworkModificationTreeService {
 
     public UUID getStudyUuidForNodeId(UUID id) {
         Optional<NodeEntity> node = nodesRepository.findById(id);
-        return getStudyUuidForNode(node.orElseThrow());
+        return node.orElseThrow().getStudy().getId();
     }
 
     private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
@@ -184,9 +191,15 @@ public class NetworkModificationTreeService {
         });
     }
 
+    @Transactional
     public void deleteRoot(UUID studyId) {
         try {
-            rootNodeInfoRepositoryProxy.getByStudyId(studyId).ifPresent(root -> deleteNodes(root.getId(), true, true, new ArrayList<>()));
+            List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+            repositories.forEach((key, repository) ->
+                repository.deleteAll(
+                    nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))
+            );
+            nodesRepository.deleteAll(nodes);
         } catch (EntityNotFoundException ignored) {
             // nothing to do
         }
@@ -194,17 +207,29 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void createRoot(UUID studyId) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, studyRepository.getOne(studyId)));
         var root = RootNode.builder().studyId(studyId).id(node.getIdNode()).name("Root").build();
         repositories.get(node.getType()).createNodeInfo(root);
     }
 
     @Transactional
     public Mono<RootNode> getStudyTree(UUID studyId) {
-        return Mono.justOrEmpty(rootNodeInfoRepositoryProxy.getByStudyId(studyId).map(root -> {
-            completeChildren(root);
-            return root;
-        }));
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+        if (nodes.isEmpty()) {
+            return Mono.empty();
+        }
+        Map<UUID, AbstractNode> fullMap = new HashMap<>();
+        repositories.forEach((key, repository) ->
+            fullMap.putAll(repository.getAll(nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
+
+        nodes.stream()
+            .filter(n -> n.getParentNode() != null)
+            .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
+        var root = (RootNode) fullMap.get(nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow().getIdNode());
+        if (root != null) {
+            root.setStudyId(studyId);
+        }
+        return Mono.justOrEmpty(root);
     }
 
     private void completeChildren(AbstractNode nodeToComplete) {
@@ -215,14 +240,6 @@ public class NetworkModificationTreeService {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         completeChildren(node);
         return node;
-    }
-
-    public UUID getStudyUuidForNode(NodeEntity node) {
-        NodeEntity current = node;
-        while (!current.getType().equals(NodeType.ROOT) && current.getParentNode() != null) {
-            current = nodesRepository.findById(current.getParentNode().getIdNode()).orElseThrow();
-        }
-        return rootNodeInfoRepositoryProxy.getNode(current.getIdNode()).getStudyId();
     }
 
     public Mono<Void> updateNode(AbstractNode node) {

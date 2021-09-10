@@ -9,12 +9,8 @@ package org.gridsuite.study.server.networkmodificationtree.repositories;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 
-import java.util.Optional;
-import java.util.UUID;
-
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 public interface RootNodeInfoRepository extends NodeInfoRepository<RootNodeInfoEntity> {
-    Optional<RootNodeInfoEntity> findFirstByStudyId(UUID studyId);
 }

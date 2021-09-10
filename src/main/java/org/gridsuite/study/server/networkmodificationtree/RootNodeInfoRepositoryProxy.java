@@ -12,9 +12,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 
-import java.util.Optional;
-import java.util.UUID;
-
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -25,7 +22,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNodeInfoEntity toEntity(AbstractNode node) {
-        var rootNodeInfoEntity = new RootNodeInfoEntity(((RootNode) node).getStudyId());
+        var rootNodeInfoEntity = new RootNodeInfoEntity();
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
@@ -33,11 +30,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
-        return completeNodeInfo(node, new RootNode(node.getStudyId()));
-    }
-
-    public Optional<RootNode> getByStudyId(UUID studyId) {
-        return nodeInfoRepository.findFirstByStudyId(studyId).map(this::toDto);
+        return completeNodeInfo(node, new RootNode());
     }
 
 }

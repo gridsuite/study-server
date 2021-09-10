@@ -7,26 +7,18 @@
 
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Index;
 import javax.persistence.Table;
-import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Entity
-@Table(name = "RootNodeInfo", indexes = {@Index(name = "rootNodeInfo_studyId_idx", columnList = "studyId")})
+@Table(name = "RootNodeInfo")
 public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
-
-    @Column(name = "studyId")
-    UUID studyId;
 }

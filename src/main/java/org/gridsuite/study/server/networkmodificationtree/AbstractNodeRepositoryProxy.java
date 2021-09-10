@@ -13,7 +13,12 @@ import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeI
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
 import org.springframework.data.jpa.repository.Modifying;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -65,5 +70,13 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         } else {
             throw new StudyException(StudyException.Type.ELEMENT_NOT_FOUND);
         }
+    }
+
+    public Map<UUID, NodeDto> getAll(Collection<UUID> ids) {
+        return nodeInfoRepository.findAllById(ids).stream().map(this::toDto).collect(Collectors.toMap(NodeDto::getId, Function.identity()));
+    }
+
+    public void deleteAll(Set<UUID> collect) {
+        nodeInfoRepository.deleteByIdNodeIn(collect);
     }
 }
