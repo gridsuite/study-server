@@ -31,6 +31,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.LOAD_CREATION_FAILED;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -167,13 +168,15 @@ public class NetworkModificationService {
                     .uri(getNetworkModificationServerURI(true) + path)
                     .body(BodyInserters.fromValue(status))
                     .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, this::handleChangeLineError)
+                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                        handleChangeError(response, LINE_MODIFICATION_FAILED)
+                    )
                     .bodyToFlux(new ParameterizedTypeReference<ElementaryAttributeModificationInfos>() {
                     });
         });
     }
 
-    private Mono<? extends Throwable> handleChangeLineError(ClientResponse clientResponse) {
+    private Mono<? extends Throwable> handleChangeError(ClientResponse clientResponse, StudyException.Type type) {
         return clientResponse.bodyToMono(String.class).flatMap(body -> {
             String message = null;
             try {
@@ -186,7 +189,7 @@ public class NetworkModificationService {
                     message = body;
                 }
             }
-            return Mono.error(new StudyException(LINE_MODIFICATION_FAILED, message));
+            return Mono.error(new StudyException(type, message));
         });
     }
 
@@ -204,6 +207,8 @@ public class NetworkModificationService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(createLoadAttributes))
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                        handleChangeError(response, LOAD_CREATION_FAILED))
                 .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
                 });
         });
