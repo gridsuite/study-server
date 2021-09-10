@@ -26,7 +26,6 @@ import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
-import java.io.Serializable;
 import java.util.UUID;
 
 /**
@@ -42,7 +41,7 @@ import java.util.UUID;
     @Index(name = "nodeEntity_studyId_idx", columnList = "study_id")
     }
 )
-public class NodeEntity implements Serializable {
+public class NodeEntity {
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
     @Column(columnDefinition = "uuid")

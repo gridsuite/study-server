@@ -19,7 +19,6 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepos
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,7 +63,6 @@ public class NetworkModificationTreeService {
 
     final NodeRepository nodesRepository;
     private final RootNodeInfoRepositoryProxy rootNodeInfoRepositoryProxy;
-    private final StudyRepository studyRepository;
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
@@ -111,12 +109,10 @@ public class NetworkModificationTreeService {
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
                                           ModelNodeInfoRepository modelNodeInfoRepository,
-                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-                                          StudyRepository studyRepository
+                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
     ) {
         this.nodesRepository = nodesRepository;
         this.rootNodeInfoRepositoryProxy = new RootNodeInfoRepositoryProxy(rootNodeInfoRepository);
-        this.studyRepository = studyRepository;
         repositories.put(NodeType.ROOT, rootNodeInfoRepositoryProxy);
         repositories.put(NodeType.MODEL, new ModelNodeInfoRepositoryProxy(modelNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
