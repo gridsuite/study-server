@@ -99,7 +99,7 @@
         primary key (id)
     );
 create index loadFlowResultEntity_componentResults_id_index on LoadFlowResultEntity_componentResults (LoadFlowResultEntity_id);
-create index nodeEntity_parentNide_idx on Node (parentNode);
+create index nodeEntity_parentNode_idx on Node (parentNode);
 create index nodeEntity_studyId_idx on Node (study_id);
 create index studyEntity_isPrivate_index on study (isPrivate);
 create index studyEntity_userId_index on study (userId);
