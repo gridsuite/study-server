@@ -119,7 +119,6 @@ public class NetworkModificationTreeService {
 
     }
 
-    @Transactional
     AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo) {
         Optional<NodeEntity> parentOpt = nodesRepository.findById(id);
         return parentOpt.map(parent -> {
@@ -139,8 +138,7 @@ public class NetworkModificationTreeService {
         return Mono.fromCallable(() -> doInsertNode(id, nodeInfo));
     }
 
-    @Transactional
-    public AbstractNode doInsertNode(UUID id, AbstractNode nodeInfo) {
+    AbstractNode doInsertNode(UUID id, AbstractNode nodeInfo) {
         Optional<NodeEntity> childOpt = nodesRepository.findById(id);
         return childOpt.map(child -> {
             if (child.getType().equals(NodeType.ROOT)) {
@@ -213,7 +211,6 @@ public class NetworkModificationTreeService {
         repositories.get(node.getType()).createNodeInfo(root);
     }
 
-    @Transactional
     public RootNode doGetStudyTree(UUID studyId) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
         if (nodes.isEmpty()) {
