@@ -1296,8 +1296,10 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
             StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid);
-            return studyRepository.save(studyEntity);
-        }).doOnNext(studyEntity -> networkModificationTreeService.createRoot(studyEntity));
+            var study = studyRepository.save(studyEntity);
+            networkModificationTreeService.createRoot(studyEntity);
+            return study;
+        });
     }
 
     @Transactional

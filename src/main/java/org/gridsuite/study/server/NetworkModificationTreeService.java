@@ -120,36 +120,40 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo) {
+        Optional<NodeEntity> parentOpt = nodesRepository.findById(id);
+        return parentOpt.map(parent -> {
+            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), parent.getStudy()));
+            nodeInfo.setId(node.getIdNode());
+            repositories.get(node.getType()).createNodeInfo(nodeInfo);
+            emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode());
+            return nodeInfo;
+        }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+    }
+
     public Mono<AbstractNode> createNode(UUID id, AbstractNode nodeInfo) {
-        return Mono.fromCallable(() -> {
-            Optional<NodeEntity> parentOpt = nodesRepository.findById(id);
-            return parentOpt.map(parent -> {
-                NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), parent.getStudy()));
-                nodeInfo.setId(node.getIdNode());
-                repositories.get(node.getType()).createNodeInfo(nodeInfo);
-                emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode());
-                return nodeInfo;
-            }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        });
+        return Mono.fromCallable(() -> doCreateNode(id, nodeInfo));
+    }
+
+    public Mono<AbstractNode> insertNode(UUID id, AbstractNode nodeInfo) {
+        return Mono.fromCallable(() -> doInsertNode(id, nodeInfo));
     }
 
     @Transactional
-    public Mono<AbstractNode> insertNode(UUID id, AbstractNode nodeInfo) {
-        return Mono.fromCallable(() -> {
-            Optional<NodeEntity> childOpt = nodesRepository.findById(id);
-            return childOpt.map(child -> {
-                if (child.getType().equals(NodeType.ROOT)) {
-                    throw new StudyException(NOT_ALLOWED);
-                }
-                NodeEntity node = nodesRepository.save(new NodeEntity(null, child.getParentNode(), nodeInfo.getType(), child.getStudy()));
-                nodeInfo.setId(node.getIdNode());
-                repositories.get(node.getType()).createNodeInfo(nodeInfo);
-                child.setParentNode(node);
-                nodesRepository.save(child);
-                emitNodeInserted(node.getStudy().getId(), node.getParentNode().getIdNode(), node.getIdNode());
-                return nodeInfo;
-            }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        });
+    public AbstractNode doInsertNode(UUID id, AbstractNode nodeInfo) {
+        Optional<NodeEntity> childOpt = nodesRepository.findById(id);
+        return childOpt.map(child -> {
+            if (child.getType().equals(NodeType.ROOT)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            NodeEntity node = nodesRepository.save(new NodeEntity(null, child.getParentNode(), nodeInfo.getType(), child.getStudy()));
+            nodeInfo.setId(node.getIdNode());
+            repositories.get(node.getType()).createNodeInfo(nodeInfo);
+            child.setParentNode(node);
+            nodesRepository.save(child);
+            emitNodeInserted(node.getStudy().getId(), node.getParentNode().getIdNode(), node.getIdNode());
+            return nodeInfo;
+        }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     public Mono<Void> deleteNode(UUID id, boolean deleteChildren) {
@@ -210,10 +214,10 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public Mono<RootNode> getStudyTree(UUID studyId) {
+    public RootNode doGetStudyTree(UUID studyId) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
         if (nodes.isEmpty()) {
-            return Mono.empty();
+            throw new StudyException(ELEMENT_NOT_FOUND);
         }
         Map<UUID, AbstractNode> fullMap = new HashMap<>();
         repositories.forEach((key, repository) ->
@@ -226,7 +230,11 @@ public class NetworkModificationTreeService {
         if (root != null) {
             root.setStudyId(studyId);
         }
-        return Mono.justOrEmpty(root);
+        return root;
+    }
+
+    public Mono<RootNode> getStudyTree(UUID studyId) {
+        return Mono.fromCallable(() -> doGetStudyTree(studyId));
     }
 
     public Mono<Void> updateNode(AbstractNode node) {

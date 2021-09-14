@@ -11,7 +11,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
-import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.Map;
@@ -61,7 +61,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return entity;
     }
 
-    @Modifying
+    @Transactional
     public void updateNode(AbstractNode node) {
         if (nodeInfoRepository.existsById(node.getId())) {
             NodeInfoEntity entity = toEntity(node);

@@ -612,9 +612,9 @@ public class StudyController {
     }
 
     @GetMapping(value = "/tree/{id}")
-    @Operation(summary = "get hypothesis tree for the given study")
-    @ApiResponse(responseCode = "200", description = "hypothesis tree")
-    public Mono<ResponseEntity<RootNode>> getHypothesisTree(@Parameter(description = "study uuid") @PathVariable("id") UUID id) {
+    @Operation(summary = "get network modification tree for the given study")
+    @ApiResponse(responseCode = "200", description = "network modification tree")
+    public Mono<ResponseEntity<RootNode>> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("id") UUID id) {
         return networkModificationTreeService.getStudyTree(id)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
@@ -622,7 +622,7 @@ public class StudyController {
 
     @PutMapping(value = "/tree/updateNode")
     @Operation(summary = "update node")
-    @ApiResponse(responseCode = "200", description = "the node has benn updated")
+    @ApiResponse(responseCode = "200", description = "the node has been updated")
     public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node) {
         return ResponseEntity.ok().body(networkModificationTreeService.updateNode(node));
     }
