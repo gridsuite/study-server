@@ -33,7 +33,7 @@ import java.util.UUID;
     @JsonSubTypes.Type(value = NetworkModificationNode.class, name = "NETWORK_MODIFICATION"),
     @JsonSubTypes.Type(value = RootNode.class, name = "ROOT")
 })
-@Schema(description = "Basic class for Filters", subTypes = {ModelNode.class, NetworkModificationNode.class, RootNode.class}, discriminatorProperty = "type")
+@Schema(description = "Basic class for Nodes", subTypes = {ModelNode.class, NetworkModificationNode.class, RootNode.class}, discriminatorProperty = "type")
 @Getter
 @Setter
 @NoArgsConstructor
