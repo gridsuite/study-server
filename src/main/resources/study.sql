@@ -47,11 +47,11 @@
         primary key (idNode)
     );
 
-    create table NetworkModifcationNodeInfo (
+    create table NetworkModificationNodeInfo (
        idNode uuid not null,
         description varchar(255),
         name varchar(255),
-        hypothesis uuid,
+        networkModificationId uuid,
         primary key (idNode)
     );
 
@@ -121,8 +121,8 @@ create index studyCreationRequest_userId_index on studycreationrequest (userId);
        foreign key (idNode) 
        references Node;
 
-    alter table if exists NetworkModifcationNodeInfo 
-       add constraint FK9wymlxlubrk37uyta55fxa8t 
+    alter table if exists NetworkModificationNodeInfo 
+       add constraint FKnjm62y6yguikmhguw9c4v8ycv 
        foreign key (idNode) 
        references Node;
 

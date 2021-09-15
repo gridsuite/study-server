@@ -23,7 +23,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Entity
-@Table(name = "NetworkModifcationNodeInfo  ")
+@Table(name = "NetworkModificationNodeInfo  ")
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
