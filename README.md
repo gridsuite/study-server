@@ -3,6 +3,29 @@
 [![MPL-2.0 License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 # study-server
 
-   To automatically generate the sql schema file you can use the following command:
-   
-    mvn package -DskipTests && rm -f src/main/resources/study.sql && java  -jar target/gridsuite-study-server-1.0.0-SNAPSHOT-exec.jar --spring.jpa.properties.javax.persistence.schema-generation.scripts.action=create 
+to generate a new changeSet (diff between current schema & new schema ) : 
+mvn liquibase:dropAll@dummyDB && mvn liquibase:update@dummyDB && mvn liquibase:diff@dummyDB
+
+to generate an initial changelog from existing database 
+mvn org.liquibase:liquibase-maven-plugin:generateChangeLog
+
+to use an existing  database without destroying it 
+mvn liquibase:changelogSync
+
+
+to update current data base (withou running application)
+mvn liquibase:update
+
+
+rollback:
+mvn liquibase:rollback -Dliquibase.rollbackCount=1
+
+history:
+mvn liquibase:history
+
+to get more information (and more options)
+mvn liquibase:help
+
+To automatically generate the sql schema file you can use the following command:
+
+    mvn package -DskipTests && rm src/main/resources/study.sql && java  -jar target/gridsuite-study-server-1.0.0-SNAPSHOT-exec.jar --spring.jpa.properties.javax.persistence.schema-generation.scripts.action=create 

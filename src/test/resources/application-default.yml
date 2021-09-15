@@ -7,6 +7,9 @@ spring:
       dialect: org.hibernate.dialect.H2Dialect
       hibernate.format_sql: true
 
+  liquibase:
+    change-log: classpath:db/study-db.xml
+
 logging:
   level:
     org.springframework.orm.jpa: DEBUG

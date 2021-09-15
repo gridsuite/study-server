@@ -25,7 +25,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "loadFlowParameters")
+@Table(name = "loadflowparameters")
 public class LoadFlowParametersEntity {
 
     public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,

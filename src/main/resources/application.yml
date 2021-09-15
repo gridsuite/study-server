@@ -51,8 +51,11 @@ spring:
         schema-generation:
          scripts:
           #action: create
-          create-target: src/main/resources/study.sql
+          #create-target: src/main/resources/study.sql
           create-source: metadata
+
+  liquibase:
+    change-log: classpath:db/study-db.xml
 
 backing-services:
   case:

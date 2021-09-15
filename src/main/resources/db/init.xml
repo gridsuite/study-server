@@ -1,0 +1,169 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-1">
+        <createTable tableName="loadflowparameters">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="loadflowparameterspk"/>
+            </column>
+            <column name="balancetype" type="VARCHAR(255)"/>
+            <column name="dc" type="BOOLEAN"/>
+            <column name="distributedslack" type="BOOLEAN"/>
+            <column name="nogeneratorreactivelimits" type="BOOLEAN"/>
+            <column name="phaseshifterregulationon" type="BOOLEAN"/>
+            <column name="readslackbus" type="BOOLEAN"/>
+            <column name="simulshunt" type="BOOLEAN"/>
+            <column name="transformervoltagecontrolon" type="BOOLEAN"/>
+            <column name="twtsplitshuntadmittance" type="BOOLEAN"/>
+            <column name="voltageinitmode" type="VARCHAR(255)"/>
+            <column name="writeslackbus" type="BOOLEAN"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-2">
+        <createTable tableName="loadflowresult">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="loadflowresultpk"/>
+            </column>
+            <column name="logs" type="CLOB"/>
+            <column name="ok" type="BOOLEAN"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-3">
+        <createTable tableName="loadflowresult_componentresults">
+            <column name="loadflowresultentity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="connectedcomponentnum" type="INT"/>
+            <column name="iterationcount" type="INT"/>
+            <column name="slackbusactivepowermismatch" type="DOUBLE(17)"/>
+            <column name="slackbusid" type="VARCHAR(255)"/>
+            <column name="status" type="INT"/>
+            <column name="synchronouscomponentnum" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-4">
+        <createTable tableName="loadflowresult_metrics">
+            <column name="loadflowresultentity_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_loadflowresult_metrics"/>
+            </column>
+            <column name="metrics" type="VARCHAR(255)"/>
+            <column name="metrics_key" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_loadflowresult_metrics"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-5">
+        <createTable tableName="study">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="studypk"/>
+            </column>
+            <column name="caseformat" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="caseprivate" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="caseuuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creationdate" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="isprivate" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="loadflowprovider" type="VARCHAR(255)"/>
+            <column name="loadflowstatus" type="VARCHAR(255)"/>
+            <column name="networkid" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="networkuuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="securityanalysisresultuuid" type="UUID"/>
+            <column name="studyname" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="userid" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="loadflowparametersentity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="loadflowresultentity_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-6">
+        <createTable tableName="studycreationrequest">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="studycreationrequestpk"/>
+            </column>
+            <column name="creationdate" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="isprivate" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="studyname" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="userid" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-7">
+        <createIndex indexName="loadflowparameters_id_fk_INDEX_6" tableName="study">
+            <column name="loadflowparametersentity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-8">
+        <createIndex indexName="loadflowresult_id_fk_INDEX_6" tableName="study">
+            <column name="loadflowresultentity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-9">
+        <createIndex indexName="loadflowresultentity_componentresults_id_index" tableName="loadflowresult_componentresults">
+            <column name="loadflowresultentity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-10">
+        <createIndex indexName="loadflowresultentity_metrics_fk_INDEX_7" tableName="loadflowresult_metrics">
+            <column name="loadflowresultentity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-11">
+        <createIndex indexName="studycreationrequest_isprivate_index" tableName="studycreationrequest">
+            <column name="isprivate"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-12">
+        <createIndex indexName="studycreationrequest_userid_index" tableName="studycreationrequest">
+            <column name="userid"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-13">
+        <createIndex indexName="studyentity_isprivate_index" tableName="study">
+            <column name="isprivate"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-14">
+        <createIndex indexName="studyentity_userid_index" tableName="study">
+            <column name="userid"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-15">
+        <addForeignKeyConstraint baseColumnNames="loadflowparametersentity_id" baseTableName="study" constraintName="loadflowparameters_id_fk" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="id" referencedTableName="loadflowparameters" validate="true"/>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-16">
+        <addForeignKeyConstraint baseColumnNames="loadflowresultentity_id" baseTableName="study" constraintName="loadflowresult_id_fk" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-17">
+        <addForeignKeyConstraint baseColumnNames="loadflowresultentity_id" baseTableName="loadflowresult_componentresults" constraintName="loadflowresultentity_componentresults_fk" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632298736713-18">
+        <addForeignKeyConstraint baseColumnNames="loadflowresultentity_id" baseTableName="loadflowresult_metrics" constraintName="loadflowresultentity_metrics_fk" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
