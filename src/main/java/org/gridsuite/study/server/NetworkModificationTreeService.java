@@ -237,7 +237,7 @@ public class NetworkModificationTreeService {
     public Mono<Void> updateNode(AbstractNode node) {
         return Mono.fromRunnable(() -> {
             repositories.get(node.getType()).updateNode(node);
-            emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singleton(node.getId()));
+            emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
         });
     }
 
