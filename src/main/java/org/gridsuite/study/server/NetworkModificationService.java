@@ -67,14 +67,6 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    Mono<Void> insertEquipmentIndexes(UUID networkUuid) {
-        Objects.requireNonNull(networkUuid);
-        return webClient.put()
-                .uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "indexes")
-                .retrieve()
-                .bodyToMono(Void.class);
-    }
-
     Mono<Void> deleteEquipmentIndexes(UUID networkUuid) {
         Objects.requireNonNull(networkUuid);
         return webClient.delete()

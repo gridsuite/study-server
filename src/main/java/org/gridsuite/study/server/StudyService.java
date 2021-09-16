@@ -44,6 +44,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuple2;
 
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
@@ -53,6 +54,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -248,7 +251,9 @@ public class StudyService {
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
+                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
                         .flatMap(t -> {
@@ -258,24 +263,33 @@ public class StudyService {
                         })
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                        .doFinally(st -> {
+                            deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();
+                            LOGGER.info("Study '{}' creation : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                        })
                         .subscribe()
                 );
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
+                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
+                .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate)
+                        .flatMap(uuid ->
                                 Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
                                         .flatMap(t -> {
-                                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                                            LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
                                             return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                                     description, t.getT2(), uuid, true, IndexingStatus.NOT_DONE, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                                         }))
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())  // delete the study if the creation has been canceled
+                        .doFinally(r -> {
+                            deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();  // delete the study if the creation has been canceled
+                            LOGGER.info("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                        })
                         .subscribe()
                 );
     }
@@ -360,19 +374,30 @@ public class StudyService {
         return networkUuid;
     }
 
-    public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
-        var allDeletedInParallel = Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid, userId))
+    public Mono<Void> deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        return Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(studyUuid, userId))
                 .flatMap(Mono::justOrEmpty)
+                .map(u -> {
+                    startTime.set(System.nanoTime());
+                    return u;
+                })
                 .publish(networkUuidMono ->
-                        Mono.when(
+                        Mono.when(// in parallel
                                 networkUuidMono.flatMap(networkModificationService::deleteNetworkModifications),
                                 networkUuidMono.flatMap(networkModificationService::deleteEquipmentIndexes),
                                 networkUuidMono.flatMap(reportService::deleteReport),
                                 networkUuidMono.flatMap(networkStoreService::deleteNetwork)
                         )
-                );
+                )
+                .doOnSuccess(r -> {
+                            if (startTime.get() != null) {
+                                LOGGER.info("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                            }
+                        }
 
-        return allDeletedInParallel.doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+                )
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 
     private Mono<CreatedStudyBasicInfos> insertStudy(UUID studyUuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
@@ -382,12 +407,9 @@ public class StudyService {
                 loadFlowParameters, securityAnalysisUuid)
                 .map(StudyService::toCreatedStudyBasicInfos)
                 .map(studyInfosService::add)
-                .zipWith(networkModificationService.insertEquipmentIndexes(networkUuid)
-                        .then(updateIndexingStatus(studyUuid, IndexingStatus.DONE)))
-                .map(t -> t.getT1())
-                .doOnSuccess(infos -> {
-                    emitStudiesChanged(studyUuid, userId, isPrivate);
-                });
+                .zipWith(updateIndexingStatus(studyUuid, IndexingStatus.DONE))
+                .map(Tuple2::getT1)
+                .doOnSuccess(infos -> emitStudiesChanged(studyUuid, userId, isPrivate));
     }
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate, UUID studyUuid) {

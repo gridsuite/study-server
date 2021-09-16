@@ -47,8 +47,6 @@
         <java.version>11</java.version>
         <gridsuite-dependencies.version>10</gridsuite-dependencies.version>
         <commons-lang3.version>3.9</commons-lang3.version>
-        <elasticsearch.version>7.9.3</elasticsearch.version>
-        <spring-data-elasticsearch.version>4.1.0</spring-data-elasticsearch.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
     </properties>
 
@@ -100,16 +98,6 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>${commons-lang3.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.elasticsearch</groupId>
-                <artifactId>elasticsearch</artifactId>
-                <version>${elasticsearch.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.data</groupId>
-                <artifactId>spring-data-elasticsearch</artifactId>
-                <version>${spring-data-elasticsearch.version}</version>
             </dependency>
             <dependency>
                 <groupId>de.dentrassi.elasticsearch</groupId>

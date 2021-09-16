@@ -19,10 +19,7 @@ import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.RestClients;
 import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.convert.ElasticsearchConverter;
 import org.springframework.data.elasticsearch.core.convert.ElasticsearchCustomConversions;
-import org.springframework.data.elasticsearch.core.convert.MappingElasticsearchConverter;
-import org.springframework.data.elasticsearch.core.mapping.SimpleElasticsearchMappingContext;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 import java.net.InetSocketAddress;
@@ -67,16 +64,6 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
                 .build();
 
         return RestClients.create(clientConfiguration).rest();
-    }
-
-    @Bean
-    @Override
-    public ElasticsearchConverter elasticsearchEntityMapper(
-            SimpleElasticsearchMappingContext elasticsearchMappingContext) {
-        MappingElasticsearchConverter elasticsearchConverter = new MappingElasticsearchConverter(
-                elasticsearchMappingContext);
-        elasticsearchConverter.setConversions(elasticsearchCustomConversions());
-        return elasticsearchConverter;
     }
 
     @Override
