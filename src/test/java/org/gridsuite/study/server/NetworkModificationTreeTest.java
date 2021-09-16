@@ -245,7 +245,7 @@ public class NetworkModificationTreeTest {
         assertEquals(2, root.getChildren().size());
         assertEquals(3, nodeRepository.findAll().size());
 
-        networkModificationTreeService.deleteRoot(root.getStudyId());
+        networkModificationTreeService.doDeleteRoot(root.getStudyId());
         assertEquals(0, nodeRepository.findAll().size());
 
         webTestClient.put().uri("/v1/tree/createNode/{id}", UUID.randomUUID()).bodyValue(hypo)

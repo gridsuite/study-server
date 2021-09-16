@@ -169,7 +169,7 @@ public class StudyTest {
     CountDownLatch countDownLatch;
 
     private void cleanDB() {
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.deleteRoot(s.getId()));
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteRoot(s.getId()));
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
     }

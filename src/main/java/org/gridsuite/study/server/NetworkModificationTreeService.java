@@ -71,6 +71,9 @@ public class NetworkModificationTreeService {
     @Autowired
     private StreamBridge treeUpdatePublisher;
 
+    @Autowired
+    private NetworkModificationTreeService self;
+
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         treeUpdatePublisher.send("publishStudyUpdate-out-0", message);
@@ -119,6 +122,7 @@ public class NetworkModificationTreeService {
 
     }
 
+    @Transactional
     AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo) {
         Optional<NodeEntity> parentOpt = nodesRepository.findById(id);
         return parentOpt.map(parent -> {
@@ -131,13 +135,14 @@ public class NetworkModificationTreeService {
     }
 
     public Mono<AbstractNode> createNode(UUID id, AbstractNode nodeInfo) {
-        return Mono.fromCallable(() -> doCreateNode(id, nodeInfo));
+        return Mono.fromCallable(() -> self.doCreateNode(id, nodeInfo));
     }
 
     public Mono<AbstractNode> insertNode(UUID id, AbstractNode nodeInfo) {
-        return Mono.fromCallable(() -> doInsertNode(id, nodeInfo));
+        return Mono.fromCallable(() -> self.doInsertNode(id, nodeInfo));
     }
 
+    @Transactional
     AbstractNode doInsertNode(UUID id, AbstractNode nodeInfo) {
         Optional<NodeEntity> childOpt = nodesRepository.findById(id);
         return childOpt.map(child -> {
@@ -155,12 +160,15 @@ public class NetworkModificationTreeService {
     }
 
     public Mono<Void> deleteNode(UUID id, boolean deleteChildren) {
-        return Mono.fromRunnable(() -> {
-            List<UUID> removedNodes = new ArrayList<>();
-            UUID studyId = getStudyUuidForNodeId(id);
-            deleteNodes(id, deleteChildren, false, removedNodes);
-            emitNodesDeleted(studyId, removedNodes, deleteChildren);
-        });
+        return Mono.fromRunnable(() -> self.doDeleteNode(id, deleteChildren));
+    }
+
+    @Transactional
+    public void doDeleteNode(UUID id, boolean deleteChildren) {
+        List<UUID> removedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(id);
+        deleteNodes(id, deleteChildren, false, removedNodes);
+        emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
     public UUID getStudyUuidForNodeId(UUID id) {
@@ -168,7 +176,8 @@ public class NetworkModificationTreeService {
         return node.orElseThrow().getStudy().getId();
     }
 
-    private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
+    @Transactional
+    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
@@ -191,7 +200,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void deleteRoot(UUID studyId) {
+    public void doDeleteRoot(UUID studyId) {
         try {
             List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
             repositories.forEach((key, repository) ->
@@ -211,6 +220,7 @@ public class NetworkModificationTreeService {
         repositories.get(node.getType()).createNodeInfo(root);
     }
 
+    @Transactional
     public RootNode doGetStudyTree(UUID studyId) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
         if (nodes.isEmpty()) {
@@ -231,7 +241,7 @@ public class NetworkModificationTreeService {
     }
 
     public Mono<RootNode> getStudyTree(UUID studyId) {
-        return Mono.fromCallable(() -> doGetStudyTree(studyId));
+        return Mono.fromCallable(() -> self.doGetStudyTree(studyId));
     }
 
     public Mono<Void> updateNode(AbstractNode node) {
