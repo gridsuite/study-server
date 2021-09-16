@@ -123,7 +123,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo) {
+    public AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo) {
         Optional<NodeEntity> parentOpt = nodesRepository.findById(id);
         return parentOpt.map(parent -> {
             NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), parent.getStudy()));
@@ -143,7 +143,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    AbstractNode doInsertNode(UUID id, AbstractNode nodeInfo) {
+    public AbstractNode doInsertNode(UUID id, AbstractNode nodeInfo) {
         Optional<NodeEntity> childOpt = nodesRepository.findById(id);
         return childOpt.map(child -> {
             if (child.getType().equals(NodeType.ROOT)) {
