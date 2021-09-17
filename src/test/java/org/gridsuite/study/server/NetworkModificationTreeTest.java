@@ -248,7 +248,7 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.doDeleteRoot(root.getStudyId());
         assertEquals(0, nodeRepository.findAll().size());
 
-        webTestClient.put().uri("/v1/tree/createNode/{id}", UUID.randomUUID()).bodyValue(hypo)
+        webTestClient.post().uri("/v1/tree/createNode/{id}", UUID.randomUUID()).bodyValue(hypo)
             .exchange()
             .expectStatus().isNotFound();
 
@@ -283,7 +283,7 @@ public class NetworkModificationTreeTest {
         RootNode root = createRoot();
         final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
         /* trying to insert before root */
-        webTestClient.put().uri("/v1/tree/insertNode/{id}", root.getId()).bodyValue(networkModification)
+        webTestClient.post().uri("/v1/tree/insertNode/{id}", root.getId()).bodyValue(networkModification)
             .exchange()
             .expectStatus().is4xxClientError();
 
@@ -308,7 +308,7 @@ public class NetworkModificationTreeTest {
         AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
 
-        webTestClient.put().uri("/v1/tree/insertNode/{id}", UUID.randomUUID()).bodyValue(networkModification)
+        webTestClient.post().uri("/v1/tree/insertNode/{id}", UUID.randomUUID()).bodyValue(networkModification)
             .exchange()
             .expectStatus().isNotFound();
     }
@@ -360,7 +360,7 @@ public class NetworkModificationTreeTest {
 
     private void createNode(AbstractNode parentNode, AbstractNode newNode) {
         newNode.setId(null);
-        webTestClient.put().uri("/v1/tree/createNode/{id}", parentNode.getId()).bodyValue(newNode)
+        webTestClient.post().uri("/v1/tree/createNode/{id}", parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
@@ -370,7 +370,7 @@ public class NetworkModificationTreeTest {
 
     private void insertNode(AbstractNode parentNode, AbstractNode newNode, AbstractNode expectedParent) {
         newNode.setId(null);
-        webTestClient.put().uri("/v1/tree/insertNode/{id}", parentNode.getId()).bodyValue(newNode)
+        webTestClient.post().uri("/v1/tree/insertNode/{id}", parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);

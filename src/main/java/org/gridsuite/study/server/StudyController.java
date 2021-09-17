@@ -587,7 +587,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @PutMapping(value = "/tree/createNode/{id}")
+    @PostMapping(value = "/tree/createNode/{id}")
     @Operation(summary = "Create a node as child of the given node id")
     @ApiResponse(responseCode = "200", description = "The node has been added")
     public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
@@ -595,7 +595,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(id, node));
     }
 
-    @PutMapping(value = "/tree/insertNode/{id}")
+    @PostMapping(value = "/tree/insertNode/{id}")
     @Operation(summary = "Create a node before the given node id")
     @ApiResponse(responseCode = "200", description = "The node has benn inserted")
     public ResponseEntity<Mono<AbstractNode>> insertNode(@RequestBody AbstractNode node,

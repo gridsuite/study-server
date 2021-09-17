@@ -153,7 +153,6 @@ public class NetworkModificationTreeService {
             nodeInfo.setId(node.getIdNode());
             repositories.get(node.getType()).createNodeInfo(nodeInfo);
             child.setParentNode(node);
-            nodesRepository.save(child);
             emitNodeInserted(node.getStudy().getId(), node.getParentNode().getIdNode(), node.getIdNode());
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
@@ -187,7 +186,6 @@ public class NetworkModificationTreeService {
             if (!deleteChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> {
                     node.setParentNode(nodeToDelete.getParentNode());
-                    nodesRepository.save(node);
                 });
             } else {
                 nodesRepository.findAllByParentNodeIdNode(nodeToDelete.getIdNode())
