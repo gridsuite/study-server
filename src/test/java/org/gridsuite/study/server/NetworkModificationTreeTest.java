@@ -160,13 +160,13 @@ public class NetworkModificationTreeTest {
             .exchange()
             .expectStatus().isNotFound();
 
-        webTestClient.delete().uri("/v1/tree/deleteNode/{id}?deleteChildren={delete}", root.getId(), false)
+        webTestClient.delete().uri("/v1/tree/nodes/{id}?deleteChildren={delete}", root.getId(), false)
             .exchange()
             .expectStatus().is4xxClientError();
     }
 
     private AbstractNode getNode(UUID idNode) throws IOException {
-        return objectMapper.readValue(webTestClient.get().uri("/v1/tree/node/{id}", idNode)
+        return objectMapper.readValue(webTestClient.get().uri("/v1/tree/nodes/{id}", idNode)
             .exchange()
             .expectStatus().isOk()
             .expectBody().returnResult().getResponseBody(), new TypeReference<>() {
@@ -248,14 +248,14 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.doDeleteRoot(root.getStudyId());
         assertEquals(0, nodeRepository.findAll().size());
 
-        webTestClient.post().uri("/v1/tree/createNode/{id}", UUID.randomUUID()).bodyValue(hypo)
+        webTestClient.post().uri("/v1/tree/nodes/{id}", UUID.randomUUID()).bodyValue(hypo)
             .exchange()
             .expectStatus().isNotFound();
 
     }
 
     private void deleteNode(AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion) {
-        webTestClient.delete().uri("/v1/tree/deleteNode/{id}?deleteChildren={delete}", child.getId(), deleteChildren)
+        webTestClient.delete().uri("/v1/tree/nodes/{id}?deleteChildren={delete}", child.getId(), deleteChildren)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
@@ -283,7 +283,7 @@ public class NetworkModificationTreeTest {
         RootNode root = createRoot();
         final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
         /* trying to insert before root */
-        webTestClient.post().uri("/v1/tree/insertNode/{id}", root.getId()).bodyValue(networkModification)
+        webTestClient.post().uri("/v1/tree/nodes/{id}?insertBefore=true", root.getId()).bodyValue(networkModification)
             .exchange()
             .expectStatus().is4xxClientError();
 
@@ -296,7 +296,7 @@ public class NetworkModificationTreeTest {
          */
         AbstractNode unchangedNode = root.getChildren().get(0);
         AbstractNode willBeMoved = root.getChildren().get(1);
-        insertNode(willBeMoved, networkModification, root);
+        insertNode(willBeMoved, networkModification);
         /* root
             / \
            n3  n2
@@ -308,7 +308,7 @@ public class NetworkModificationTreeTest {
         AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
 
-        webTestClient.post().uri("/v1/tree/insertNode/{id}", UUID.randomUUID()).bodyValue(networkModification)
+        webTestClient.post().uri("/v1/tree/nodes/{id}", UUID.randomUUID()).bodyValue(networkModification)
             .exchange()
             .expectStatus().isNotFound();
     }
@@ -322,7 +322,7 @@ public class NetworkModificationTreeTest {
         hypo.setNetworkModification(UUID.randomUUID());
         root = getRootNode(root.getStudyId());
         hypo.setId(root.getChildren().get(0).getId());
-        webTestClient.put().uri("/v1/tree/updateNode").bodyValue(hypo)
+        webTestClient.put().uri("/v1/tree/nodes").bodyValue(hypo)
             .exchange()
             .expectStatus().isOk();
         root = getRootNode(root.getStudyId());
@@ -340,7 +340,7 @@ public class NetworkModificationTreeTest {
         updated.forEach(id -> assertEquals(hypo.getId(), id));
 
         hypo.setId(UUID.randomUUID());
-        webTestClient.put().uri("/v1/tree/updateNode").bodyValue(hypo)
+        webTestClient.put().uri("/v1/tree/nodes").bodyValue(hypo)
             .exchange()
             .expectStatus().isNotFound();
 
@@ -360,22 +360,24 @@ public class NetworkModificationTreeTest {
 
     private void createNode(AbstractNode parentNode, AbstractNode newNode) {
         newNode.setId(null);
-        webTestClient.post().uri("/v1/tree/createNode/{id}", parentNode.getId()).bodyValue(newNode)
+        webTestClient.post().uri("/v1/tree/nodes/{id}", parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
+        assertEquals(false, mess.getHeaders().get(HEADER_INSERT_BEFORE));
     }
 
-    private void insertNode(AbstractNode parentNode, AbstractNode newNode, AbstractNode expectedParent) {
+    private void insertNode(AbstractNode parentNode, AbstractNode newNode) {
         newNode.setId(null);
-        webTestClient.post().uri("/v1/tree/insertNode/{id}", parentNode.getId()).bodyValue(newNode)
+        webTestClient.post().uri("/v1/tree/nodes/{id}?insertBefore=true", parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
         assertEquals(NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(expectedParent.getId(), mess.getHeaders().get(HEADER_PARENT_NODE));
+        assertEquals(parentNode.getId(), mess.getHeaders().get(HEADER_REFERENCE_NODE));
+        assertEquals(true, mess.getHeaders().get(HEADER_INSERT_BEFORE));
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
     }
 

@@ -52,12 +52,13 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 public class NetworkModificationTreeService {
 
     public static final String HEADER_NODES = "NODES";
-    public static final String HEADER_PARENT_NODE = "PARENT_NODE";
+    public static final String HEADER_REFERENCE_NODE = "PARENT_NODE";
     public static final String HEADER_NEW_NODE = "NEW_NODE";
     public static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
     public static final String NODES_UPDATED = "NODE_UPDATED";
     public static final String NODES_DELETED = "NODE_DELETED";
     public static final String NODE_CREATED = "NODE_CREATED";
+    public static final String HEADER_INSERT_BEFORE = "INSERT_BEFORE";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -79,12 +80,13 @@ public class NetworkModificationTreeService {
         treeUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
-    private void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated) {
+    private void emitNodeInserted(UUID studyUuid, UUID referenceNode, UUID nodeCreated, boolean insertBefore) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
-            .setHeader(HEADER_PARENT_NODE, parentNode)
+            .setHeader(HEADER_REFERENCE_NODE, referenceNode)
             .setHeader(HEADER_NEW_NODE, nodeCreated)
+            .setHeader(HEADER_INSERT_BEFORE, insertBefore)
             .build()
         );
     }
@@ -123,39 +125,28 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo) {
-        Optional<NodeEntity> parentOpt = nodesRepository.findById(id);
-        return parentOpt.map(parent -> {
-            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), parent.getStudy()));
-            nodeInfo.setId(node.getIdNode());
-            repositories.get(node.getType()).createNodeInfo(nodeInfo);
-            emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode());
-            return nodeInfo;
-        }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-    }
-
-    public Mono<AbstractNode> createNode(UUID id, AbstractNode nodeInfo) {
-        return Mono.fromCallable(() -> self.doCreateNode(id, nodeInfo));
-    }
-
-    public Mono<AbstractNode> insertNode(UUID id, AbstractNode nodeInfo) {
-        return Mono.fromCallable(() -> self.doInsertNode(id, nodeInfo));
-    }
-
-    @Transactional
-    public AbstractNode doInsertNode(UUID id, AbstractNode nodeInfo) {
-        Optional<NodeEntity> childOpt = nodesRepository.findById(id);
-        return childOpt.map(child -> {
-            if (child.getType().equals(NodeType.ROOT)) {
+    public AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo, boolean insertBefore) {
+        Optional<NodeEntity> referenceNode = nodesRepository.findById(id);
+        return referenceNode.map(reference -> {
+            if (insertBefore && reference.getType().equals(NodeType.ROOT)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            NodeEntity node = nodesRepository.save(new NodeEntity(null, child.getParentNode(), nodeInfo.getType(), child.getStudy()));
+            NodeEntity parent = insertBefore ?  reference.getParentNode() : reference;
+            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), reference.getStudy()));
             nodeInfo.setId(node.getIdNode());
             repositories.get(node.getType()).createNodeInfo(nodeInfo);
-            child.setParentNode(node);
-            emitNodeInserted(node.getStudy().getId(), node.getParentNode().getIdNode(), node.getIdNode());
+            if (insertBefore) {
+                reference.setParentNode(node);
+            } else {
+                nodesRepository.findAllByStudyId(id).forEach(child -> child.setParentNode(node));
+            }
+            emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode(), insertBefore);
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+    }
+
+    public Mono<AbstractNode> createNode(UUID id, AbstractNode nodeInfo, boolean insertBefore) {
+        return Mono.fromCallable(() -> self.doCreateNode(id, nodeInfo, insertBefore));
     }
 
     public Mono<Void> deleteNode(UUID id, boolean deleteChildren) {
@@ -184,9 +175,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(CANT_DELETE_ROOT_NODE);
             }
             if (!deleteChildren) {
-                nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> {
-                    node.setParentNode(nodeToDelete.getParentNode());
-                });
+                nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
                 nodesRepository.findAllByParentNodeIdNode(nodeToDelete.getIdNode())
                     .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes));
