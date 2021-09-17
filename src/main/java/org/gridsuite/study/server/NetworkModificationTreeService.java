@@ -52,7 +52,7 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 public class NetworkModificationTreeService {
 
     public static final String HEADER_NODES = "NODES";
-    public static final String HEADER_REFERENCE_NODE = "PARENT_NODE";
+    public static final String HEADER_NODE = "NODE";
     public static final String HEADER_NEW_NODE = "NEW_NODE";
     public static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
     public static final String NODES_UPDATED = "NODE_UPDATED";
@@ -84,7 +84,7 @@ public class NetworkModificationTreeService {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
-            .setHeader(HEADER_REFERENCE_NODE, referenceNode)
+            .setHeader(HEADER_NODE, referenceNode)
             .setHeader(HEADER_NEW_NODE, nodeCreated)
             .setHeader(HEADER_INSERT_BEFORE, insertBefore)
             .build()

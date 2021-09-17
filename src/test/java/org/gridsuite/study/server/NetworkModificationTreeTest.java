@@ -376,7 +376,7 @@ public class NetworkModificationTreeTest {
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
         assertEquals(NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(parentNode.getId(), mess.getHeaders().get(HEADER_REFERENCE_NODE));
+        assertEquals(parentNode.getId(), mess.getHeaders().get(HEADER_NODE));
         assertEquals(true, mess.getHeaders().get(HEADER_INSERT_BEFORE));
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
     }
