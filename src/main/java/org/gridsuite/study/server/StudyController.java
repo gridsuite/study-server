@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
@@ -592,9 +593,9 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "The node has been added")
     public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
-                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "insertBefore", required = false, defaultValue = "false") Boolean insertBefore
+                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode
                                                          ) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(referenceId, node, insertBefore));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(referenceId, node, insertMode));
     }
 
     @DeleteMapping(value = "/tree/nodes/{id}")
