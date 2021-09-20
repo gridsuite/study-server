@@ -21,13 +21,18 @@ import java.util.UUID;
 public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
-    public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
+    public Iterable<EquipmentInfos> addAll(@NonNull final Iterable<EquipmentInfos> equipmentInfos) {
         return Collections.emptyList();
     }
 
     @Override
     public void deleteAll(@NonNull UUID networkUuid) {
         // Nothing to delete
+    }
+
+    @Override
+    public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
+        return Collections.emptyList();
     }
 
     @Override

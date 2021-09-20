@@ -41,6 +41,11 @@ public class StudyInfosServiceImpl implements StudyInfosService {
     }
 
     @Override
+    public Iterable<CreatedStudyBasicInfos> findAll() {
+        return studyInfosRepository.findAll();
+    }
+
+    @Override
     public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
         SearchHits<CreatedStudyBasicInfos> searchHits = elasticsearchOperations.search(new NativeSearchQuery(QueryBuilders.queryStringQuery(query)), CreatedStudyBasicInfos.class);
         return searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());

@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -23,6 +24,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @ToString
+@EqualsAndHashCode
 @Document(indexName = "network-modification-server")
 @TypeAlias(value = "EquipmentInfos")
 public class EquipmentInfos {

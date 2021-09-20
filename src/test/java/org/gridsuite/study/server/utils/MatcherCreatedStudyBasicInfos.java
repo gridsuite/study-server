@@ -11,6 +11,7 @@ import java.time.ZonedDateTime;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.IndexingStatus;
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
@@ -26,13 +27,18 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
                 .userId(userId)
                 .caseFormat(caseFormat)
                 .studyPrivate(studyPrivate)
+                .indexingStatus(IndexingStatus.DONE)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .description(description)
                 .build());
     }
 
-    protected MatcherCreatedStudyBasicInfos(T val) {
+    public MatcherCreatedStudyBasicInfos(T val) {
         super(val);
+    }
+
+    public T getReference() {
+        return reference;
     }
 
     @Override
@@ -40,6 +46,7 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
         return super.matchesSafely(s)
                 && reference.getCaseFormat().equals(s.getCaseFormat())
                 && reference.getDescription().equals(s.getDescription())
-                && reference.isStudyPrivate() == s.isStudyPrivate();
+                && reference.isStudyPrivate() == s.isStudyPrivate()
+                && reference.getIndexingStatus().equals(s.getIndexingStatus());
     }
 }

@@ -7,10 +7,10 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.joda.time.DateTime;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -28,9 +28,11 @@ public interface StudyInfosService {
 
     void deleteByUuid(@NonNull final UUID uuid);
 
+    Iterable<CreatedStudyBasicInfos> findAll();
+
     List<CreatedStudyBasicInfos> search(@NonNull final String query);
 
-    static String getDateSearchTerm(@NonNull final DateTime... dates) {
-        return Arrays.stream(dates).map(date -> "\"" + date.toDateTimeISO() + "\"").collect(Collectors.joining(" OR ", "date:", ""));
+    static String getDateSearchTerm(@NonNull final ZonedDateTime... dates) {
+        return Arrays.stream(dates).map(date -> "\"" + date.toString() + "\"").collect(Collectors.joining(" OR ", "creationDate:", ""));
     }
 }

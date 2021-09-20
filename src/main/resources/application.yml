@@ -56,11 +56,9 @@ spring:
 
   data:
     elasticsearch:
-      enabled: true
+      enabled: false
       host: localhost
       port: 9200
-      index: study-server
-      type: metadatas
 
 backing-services:
   case:

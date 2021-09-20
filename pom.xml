@@ -48,6 +48,7 @@
         <gridsuite-dependencies.version>10</gridsuite-dependencies.version>
         <commons-lang3.version>3.9</commons-lang3.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
+        <equalsverifier-version>3.7.1</equalsverifier-version>
     </properties>
 
     <build>
@@ -103,6 +104,11 @@
                 <groupId>de.dentrassi.elasticsearch</groupId>
                 <artifactId>log4j2-mock</artifactId>
                 <version>${log4j2-mock-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>nl.jqno.equalsverifier</groupId>
+                <artifactId>equalsverifier</artifactId>
+                <version>${equalsverifier-version}</version>
             </dependency>
 
         </dependencies>
@@ -253,6 +259,11 @@
         <dependency>
             <groupId>de.dentrassi.elasticsearch</groupId>
             <artifactId>log4j2-mock</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
         </dependency>
 

@@ -35,6 +35,11 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     }
 
     @Override
+    public Iterable<EquipmentInfos> addAll(@NonNull final Iterable<EquipmentInfos> equipmentInfos) {
+        return equipmentInfosRepository.saveAll(equipmentInfos);
+    }
+
+    @Override
     public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
         return equipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }

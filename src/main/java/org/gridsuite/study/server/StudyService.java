@@ -215,6 +215,7 @@ public class StudyService {
                 .loadFlowStatus(entity.getLoadFlowStatus())
                 .loadFlowResult(fromEntity(entity.getLoadFlowResult()))
                 .studyPrivate(entity.isPrivate())
+                .indexingStatus(entity.getIndexingStatus())
                 .build();
     }
 
@@ -234,6 +235,7 @@ public class StudyService {
                 .studyUuid(entity.getId())
                 .caseFormat(entity.getCaseFormat())
                 .studyPrivate(entity.isPrivate())
+                .indexingStatus(entity.getIndexingStatus())
                 .description(entity.getDescription())
                 .build();
     }
@@ -269,7 +271,7 @@ public class StudyService {
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                         .doFinally(st -> {
                             deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();
-                            LOGGER.info("Study '{}' creation : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                            LOGGER.trace("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                         })
                         .subscribe()
                 );
@@ -292,7 +294,7 @@ public class StudyService {
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                         .doFinally(r -> {
                             deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();  // delete the study if the creation has been canceled
-                            LOGGER.info("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                            LOGGER.trace("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                         })
                         .subscribe()
                 );
@@ -396,7 +398,7 @@ public class StudyService {
                 )
                 .doOnSuccess(r -> {
                             if (startTime.get() != null) {
-                                LOGGER.info("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                                LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                             }
                         }
 
@@ -409,7 +411,7 @@ public class StudyService {
         return Mono.fromRunnable(() -> equipmentInfosService.deleteAll(networkUuid))
                 .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .then()
-                .doFinally(x -> LOGGER.info("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get())));
+                .doFinally(x -> LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get())));
     }
 
     private Mono<CreatedStudyBasicInfos> insertStudy(UUID studyUuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,

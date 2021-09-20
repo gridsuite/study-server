@@ -31,6 +31,11 @@ public class StudyInfosServiceMock implements StudyInfosService {
     }
 
     @Override
+    public Iterable<CreatedStudyBasicInfos> findAll() {
+        return Collections.emptyList();
+    }
+
+    @Override
     public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
         return Collections.emptyList();
     }

@@ -90,7 +90,7 @@ import static org.junit.Assert.*;
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
 @EnableWebFlux
-@SpringBootTest(properties = {"spring.data.elasticsearch.enabled=true"})
+@SpringBootTest(properties = {"spring.data.elasticsearch.enabled=false"})
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, EmbeddedElasticsearch.class, TestChannelBinderConfiguration.class})})
 public class StudyTest {
 
@@ -1746,8 +1746,10 @@ public class StudyTest {
     @After
     public void tearDown() {
         Set<String> httpRequest = null;
+        Message<byte[]> message = null;
         try {
             httpRequest = getRequestsDone(1);
+            message = output.receive(1000);
         } catch (NullPointerException e) {
             // Ignoring
         }
@@ -1759,7 +1761,9 @@ public class StudyTest {
             // Ignoring
         }
 
-        assertNull("Should not be any messages", output.receive(1000));
-        assertNull("Should not be any http requests", httpRequest);
+        output.clear(); // purge in order to not fail the other tests
+
+        assertNull("Should not be any messages : ", message);
+        assertNull("Should not be any http requests : ", httpRequest);
     }
 }

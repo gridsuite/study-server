@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -23,6 +24,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @ToString
+@EqualsAndHashCode
 @Schema(description = "Basic study attributes")
 public class BasicStudyInfos {
     @Id

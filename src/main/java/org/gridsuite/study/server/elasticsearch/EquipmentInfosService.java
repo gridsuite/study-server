@@ -20,6 +20,7 @@ import java.util.UUID;
  */
 @Service
 public interface EquipmentInfosService {
+    Iterable<EquipmentInfos> addAll(@NonNull final Iterable<EquipmentInfos> equipmentInfos);
 
     Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid);
 
