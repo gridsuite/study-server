@@ -298,7 +298,6 @@ public class StudyTest {
                     case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/modifications":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/indexes":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId?open=true":
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                         return new MockResponse().setResponseCode(200)
@@ -644,10 +643,9 @@ public class StudyTest {
         assertEquals(Boolean.FALSE, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        var httpRequests = getRequestsDone(4);
+        var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
         assertTrue(httpRequests.contains(String.format("/v1/networks/%s/modifications", NETWORK_UUID_STRING)));
-        assertTrue(httpRequests.contains(String.format("/v1/networks/%s/indexes", NETWORK_UUID_STRING)));
         assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
@@ -1639,7 +1637,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testUpdateLines() throws Exception {
+    public void testUpdateLines() {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 

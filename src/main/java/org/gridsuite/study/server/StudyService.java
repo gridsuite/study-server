@@ -18,6 +18,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -127,6 +128,7 @@ public class StudyService {
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
     private final StudyInfosService studyInfosService;
+    private final EquipmentInfosService equipmentInfosService;
 
     private final ObjectMapper objectMapper;
 
@@ -181,6 +183,7 @@ public class StudyService {
             NetworkModificationService networkModificationService,
             ReportService reportService,
             StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
             WebClient.Builder webClientBuilder,
             ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
@@ -197,6 +200,7 @@ public class StudyService {
         this.networkModificationService = networkModificationService;
         this.reportService = reportService;
         this.studyInfosService = studyInfosService;
+        this.equipmentInfosService = equipmentInfosService;
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
@@ -385,7 +389,7 @@ public class StudyService {
                 .publish(networkUuidMono ->
                         Mono.when(// in parallel
                                 networkUuidMono.flatMap(networkModificationService::deleteNetworkModifications),
-                                networkUuidMono.flatMap(networkModificationService::deleteEquipmentIndexes),
+                                networkUuidMono.flatMap(this::deleteEquipmentIndexes),
                                 networkUuidMono.flatMap(reportService::deleteReport),
                                 networkUuidMono.flatMap(networkStoreService::deleteNetwork)
                         )
@@ -398,6 +402,14 @@ public class StudyService {
 
                 )
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+    }
+
+    public Mono<Void> deleteEquipmentIndexes(UUID networkUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        return Mono.fromRunnable(() -> equipmentInfosService.deleteAll(networkUuid))
+                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
+                .then()
+                .doFinally(x -> LOGGER.info("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get())));
     }
 
     private Mono<CreatedStudyBasicInfos> insertStudy(UUID studyUuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,

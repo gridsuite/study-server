@@ -6,15 +6,12 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.joda.time.DateTime;
+import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * An interface to define an api for metadatas transfer in the DB elasticsearch
@@ -22,15 +19,11 @@ import java.util.stream.Collectors;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Service
-public interface StudyInfosService {
+public interface EquipmentInfosService {
 
-    CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos ci);
+    Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid);
 
-    void deleteByUuid(@NonNull final UUID uuid);
+    void deleteAll(@NonNull UUID networkUuid);
 
-    List<CreatedStudyBasicInfos> search(@NonNull final String query);
-
-    static String getDateSearchTerm(@NonNull final DateTime... dates) {
-        return Arrays.stream(dates).map(date -> "\"" + date.toDateTimeISO() + "\"").collect(Collectors.joining(" OR ", "date:", ""));
-    }
+    List<EquipmentInfos> search(@NonNull final String query);
 }

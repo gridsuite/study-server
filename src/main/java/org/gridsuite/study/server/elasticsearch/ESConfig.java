@@ -1,8 +1,8 @@
-/**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+/*
+  Copyright (c) 2021, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server.elasticsearch;
 
@@ -57,7 +57,20 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
     }
 
     @Bean
+    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
+    public EquipmentInfosService equipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+        return new EquipmentInfosServiceImpl(equipmentInfosRepository, elasticsearchOperations);
+    }
+
+    @Bean
+    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'false'")
+    public EquipmentInfosService equipmentInfosServiceMock() {
+        return new EquipmentInfosServiceMock();
+    }
+
+    @Bean
     @Override
+    @SuppressWarnings("squid:S2095")
     public RestHighLevelClient elasticsearchClient() {
         ClientConfiguration clientConfiguration = ClientConfiguration.builder()
                 .connectedTo(InetSocketAddress.createUnresolved(esHost, esPort))
