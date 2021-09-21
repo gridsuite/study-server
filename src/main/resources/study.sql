@@ -127,7 +127,7 @@ create index studyCreationRequest_userId_index on studycreationrequest (userId);
        references Node;
 
     alter table if exists Node 
-       add constraint node_id_fk_constraint 
+       add constraint parent_node_id_fk_constraint 
        foreign key (parentNode) 
        references Node;
 

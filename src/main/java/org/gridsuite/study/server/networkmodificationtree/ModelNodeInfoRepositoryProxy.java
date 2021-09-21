@@ -16,8 +16,8 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNode
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<ModelNodeInfoEntity, ModelNodeInfoRepository, ModelNode> {
-    public ModelNodeInfoRepositoryProxy(ModelNodeInfoRepository rootNodeInfoRepository) {
-        super(rootNodeInfoRepository);
+    public ModelNodeInfoRepositoryProxy(ModelNodeInfoRepository modelNodeInfoRepository) {
+        super(modelNodeInfoRepository);
     }
 
     @Override

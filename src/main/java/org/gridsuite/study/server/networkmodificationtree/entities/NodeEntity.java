@@ -48,7 +48,7 @@ public class NodeEntity {
     UUID idNode;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parentNode", foreignKey = @ForeignKey(name = "node_id_fk_constraint"))
+    @JoinColumn(name = "parentNode", foreignKey = @ForeignKey(name = "parent_node_id_fk_constraint"))
     NodeEntity parentNode;
 
     @Column

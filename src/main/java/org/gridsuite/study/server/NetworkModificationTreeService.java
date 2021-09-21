@@ -181,17 +181,17 @@ public class NetworkModificationTreeService {
             if (!deleteChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
-                nodesRepository.findAllByParentNodeIdNode(nodeToDelete.getIdNode())
+                nodesRepository.findAllByParentNodeIdNode(id)
                     .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes));
             }
-            removedNodes.add(nodeToDelete.getIdNode());
+            removedNodes.add(id);
             repositories.get(nodeToDelete.getType()).deleteByNodeId(id);
             nodesRepository.delete(nodeToDelete);
         });
     }
 
     @Transactional
-    public void doDeleteRoot(UUID studyId) {
+    public void doDeleteTree(UUID studyId) {
         try {
             List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
             repositories.forEach((key, repository) ->

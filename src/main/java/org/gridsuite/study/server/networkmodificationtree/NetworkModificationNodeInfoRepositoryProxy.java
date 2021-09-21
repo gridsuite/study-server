@@ -22,8 +22,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
     @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
-        var hypothesisNodeInfoEntity = new NetworkModificationNodeInfoEntity(((NetworkModificationNode) node).getNetworkModification());
-        return completeEntityNodeInfo(node, hypothesisNodeInfoEntity);
+        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(((NetworkModificationNode) node).getNetworkModification());
+        return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
     @Override

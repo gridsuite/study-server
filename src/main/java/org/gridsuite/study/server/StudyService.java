@@ -352,7 +352,7 @@ public class StudyService {
                 if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
                 }
-                networkModificationTreeService.doDeleteRoot(uuid);
+                networkModificationTreeService.doDeleteTree(uuid);
                 studyRepository.deleteById(uuid);
                 emitStudiesChanged(uuid, userId, s.isPrivate());
             });
