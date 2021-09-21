@@ -351,7 +351,7 @@ public class NetworkModificationTreeTest {
         assertNotNull(mess);
         var header = mess.getHeaders();
         assertEquals(root.getStudyId(), header.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(NetworkModificationTreeService.NODES_UPDATED, header.get(HEADER_UPDATE_TYPE));
+        assertEquals(NetworkModificationTreeService.NODE_UPDATED, header.get(HEADER_UPDATE_TYPE));
         Collection<UUID> updated = (Collection<UUID>) header.get(NetworkModificationTreeService.HEADER_NODES);
         assertNotNull(updated);
         assertEquals(1, updated.size());

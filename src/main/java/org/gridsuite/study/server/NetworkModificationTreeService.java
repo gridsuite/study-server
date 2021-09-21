@@ -56,8 +56,8 @@ public class NetworkModificationTreeService {
     public static final String HEADER_NODE = "node";
     public static final String HEADER_NEW_NODE = "newNode";
     public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
-    public static final String NODES_UPDATED = "nodeUpdated";
-    public static final String NODES_DELETED = "nodeDeleted";
+    public static final String NODE_UPDATED = "nodeUpdated";
+    public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
     public static final String HEADER_INSERT_BEFORE = "insertBefore";
 
@@ -95,7 +95,7 @@ public class NetworkModificationTreeService {
     private void emitNodesChanged(UUID studyUuid, Collection<UUID> nodes) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, NODES_UPDATED)
+            .setHeader(HEADER_UPDATE_TYPE, NODE_UPDATED)
             .setHeader(HEADER_NODES, nodes)
             .build()
         );
@@ -104,7 +104,7 @@ public class NetworkModificationTreeService {
     private void emitNodesDeleted(UUID studyUuid, Collection<UUID> nodes, boolean deleteChildren) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, NODES_DELETED)
+            .setHeader(HEADER_UPDATE_TYPE, NODE_DELETED)
             .setHeader(HEADER_NODES, nodes)
             .setHeader(HEADER_REMOVE_CHILDREN, deleteChildren)
             .build()
