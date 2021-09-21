@@ -52,14 +52,14 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 @Service
 public class NetworkModificationTreeService {
 
-    public static final String HEADER_NODES = "NODES";
-    public static final String HEADER_NODE = "NODE";
-    public static final String HEADER_NEW_NODE = "NEW_NODE";
-    public static final String HEADER_REMOVE_CHILDREN = "REMOVE_CHILDREN";
-    public static final String NODES_UPDATED = "NODE_UPDATED";
-    public static final String NODES_DELETED = "NODE_DELETED";
-    public static final String NODE_CREATED = "NODE_CREATED";
-    public static final String HEADER_INSERT_BEFORE = "INSERT_BEFORE";
+    public static final String HEADER_NODES = "nodes";
+    public static final String HEADER_NODE = "node";
+    public static final String HEADER_NEW_NODE = "newNode";
+    public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
+    public static final String NODES_UPDATED = "nodeUpdated";
+    public static final String NODES_DELETED = "nodeDeleted";
+    public static final String NODE_CREATED = "nodeCreated";
+    public static final String HEADER_INSERT_BEFORE = "insertBefore";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
