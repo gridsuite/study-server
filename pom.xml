@@ -104,7 +104,7 @@
                         <id>dummyDB</id>
                         <configuration>
                             <!-- add database_to_lower to generate lowercase instructions -->
-                            <url>jdbc:h2:./traget/dummyDB;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;</url>
+                            <url>jdbc:h2:./target/dummyDB;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;</url>
                             <username>sa</username>
                             <password></password>
                             <driver>org.h2.Driver</driver>
