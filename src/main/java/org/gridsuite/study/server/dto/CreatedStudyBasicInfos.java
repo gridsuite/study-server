@@ -9,7 +9,6 @@ package org.gridsuite.study.server.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
 
@@ -31,7 +30,4 @@ public class CreatedStudyBasicInfos extends BasicStudyInfos {
     String caseFormat;
 
     String description;
-
-    @Transient
-    IndexingStatus indexingStatus;
 }

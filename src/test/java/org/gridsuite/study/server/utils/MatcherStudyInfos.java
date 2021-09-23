@@ -10,7 +10,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
-import org.gridsuite.study.server.dto.IndexingStatus;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.StudyInfos;
 
@@ -34,7 +33,6 @@ public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos>
                 .caseFormat(caseFormat)
                 .description(description)
                 .studyPrivate(studyPrivate)
-                .indexingStatus(IndexingStatus.DONE)
                 .loadFlowStatus(loadFlowStatus)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .build());

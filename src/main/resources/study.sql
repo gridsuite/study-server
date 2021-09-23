@@ -47,7 +47,6 @@
         creationDate timestamp not null,
         description varchar(255) not null,
         isPrivate boolean not null,
-        indexingStatus varchar(255),
         loadFlowStatus varchar(255),
         networkId varchar(255) not null,
         networkUuid uuid not null,
