@@ -15,17 +15,20 @@ import org.hamcrest.TypeSafeMatcher;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public class MatcherJson<T> extends TypeSafeMatcher<T> {
+
+    ObjectMapper mapper;
+
     T reference;
 
-    public MatcherJson(T val) {
+    public MatcherJson(ObjectMapper mapper, T val) {
+        this.mapper = mapper;
         this.reference = val;
     }
 
     @SneakyThrows
     @Override
     public boolean matchesSafely(T s) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.writeValueAsString(reference).equals(objectMapper.writeValueAsString(s));
+        return mapper.writeValueAsString(reference).equals(mapper.writeValueAsString(s));
     }
 
     @Override

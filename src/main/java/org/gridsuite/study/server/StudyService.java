@@ -35,6 +35,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.support.MessageBuilder;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -354,6 +355,16 @@ public class StudyService {
 
     private Mono<BasicStudyEntity> getStudyCreationRequestByNameAndUserId(String studyName, String userId) {
         return Mono.fromCallable(() -> studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).orElse(null));
+    }
+
+    Flux<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
+        return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
+    }
+
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
+        return networkStoreService
+                .getNetworkUuid(studyUuid)
+                .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid:(%s) AND %s", networkUuid, query)));
     }
 
     @Transactional

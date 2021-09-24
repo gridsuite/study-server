@@ -586,4 +586,21 @@ public class StudyController {
         Mono<List<String>> libraries = studyService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
+
+    @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search studies in elasticsearch")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of studies found")})
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> searchStudies(@Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchStudies(query));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search equipments in elasticsearch")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of equipments found"),
+            @ApiResponse(responseCode = "404", description = "The study not found")})
+    public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                 @Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, query));
+    }
 }

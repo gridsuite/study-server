@@ -15,8 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 
@@ -34,12 +34,12 @@ public class EquipmentInfosServiceMockTests {
 
     @Test
     public void testAddDeleteEquipmentInfos() {
-        List<EquipmentInfos> equipmentsInfos = List.of(
+        Stream<EquipmentInfos> equipmentsInfos = Stream.of(
                 EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id1").equipmentName("name1").equipmentType("LOAD").build(),
                 EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id1").equipmentName("name1").equipmentType("GENERATOR").build()
         );
 
-        equipmentInfosService.addAll(equipmentsInfos);
+        equipmentsInfos.forEach(equipmentInfosService::add);
         assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
 
         equipmentInfosService.deleteAll(NETWORK_UUID);

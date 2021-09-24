@@ -14,6 +14,7 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VoltageLevel;
 import com.powsybl.iidm.xml.XMLImporter;
@@ -31,6 +32,8 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.utils.MatcherJson;
@@ -41,11 +44,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -68,6 +73,8 @@ import org.springframework.web.reactive.function.BodyInserters;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -81,6 +88,8 @@ import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatc
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -149,10 +158,20 @@ public class StudyTest {
     @Autowired
     private ReportService reportService;
 
+    @MockBean
+    private EquipmentInfosService equipmentInfosService;
+
+    @MockBean
+    private StudyInfosService studyInfosService;
+
     @Autowired
     private ObjectMapper mapper;
 
     private TopLevelDocument<VoltageLevelAttributes> topLevelDocument;
+
+    private List<EquipmentInfos> linesInfos;
+
+    private List<CreatedStudyBasicInfos> studiesInfos;
 
     private MockWebServer server;
 
@@ -165,6 +184,31 @@ public class StudyTest {
     //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 
+    private static EquipmentInfos toEquipmentInfos(Line i) {
+        return EquipmentInfos.builder()
+                .networkUuid(NETWORK_UUID)
+                .equipmentId(i.getId())
+                .equipmentName(i.getNameOrId())
+                .equipmentType("LINE")
+                .build();
+    }
+
+    private void initMockBeans(Network network) {
+        linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
+
+        studiesInfos = List.of(
+                CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111111")).studyName("s11").userId("userId1").caseFormat("XIIDM").description("description").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
+                CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111112")).studyName("s12").userId("userId1").caseFormat("UCTE").description("description").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build()
+        );
+
+        when(studyInfosService.add(any(CreatedStudyBasicInfos.class))).thenReturn(studiesInfos.get(0));
+        when(studyInfosService.search(String.format("studyName:%s AND userId:userId", STUDY_NAME)))
+                .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
+
+        when(equipmentInfosService.search(String.format("networkUuid:(%s) AND equipmentType:(LINE)", NETWORK_UUID_STRING)))
+                .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+    }
+
     private void cleanDB() {
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
@@ -175,6 +219,8 @@ public class StudyTest {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
                 new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
+
+        initMockBeans(network);
 
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
@@ -489,6 +535,30 @@ public class StudyTest {
             }
             return null;
         }).collect(Collectors.toSet());
+    }
+
+    @Test
+    public void testSearch() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, false);
+        UUID studyUuid = studyRepository.findByUserIdAndStudyName("userId", STUDY_NAME).get().getId();
+
+        webTestClient.get()
+                .uri("/v1/studies/search?q={request}", String.format("studyName:%s AND userId:userId", STUDY_NAME))
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(new MatcherJson<>(mapper, studiesInfos));
+
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/search?q={request}", studyUuid, "equipmentType:(LINE)")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(EquipmentInfos.class)
+                .value(new MatcherJson<>(mapper, linesInfos));
     }
 
     @Test
@@ -1081,7 +1151,7 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(VoltageLevelInfos.class)
-                .value(new MatcherJson<>(List.of(
+                .value(new MatcherJson<>(mapper, List.of(
                         VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
                         VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
                         VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),

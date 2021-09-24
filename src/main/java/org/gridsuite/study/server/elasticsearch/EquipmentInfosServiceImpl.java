@@ -8,10 +8,12 @@ package org.gridsuite.study.server.elasticsearch;
 
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
@@ -25,6 +27,8 @@ import java.util.stream.Collectors;
  */
 public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
+    private static final int PAGE_MAX_SIZE = 10000;
+
     private final EquipmentInfosRepository equipmentInfosRepository;
 
     private final ElasticsearchOperations elasticsearchOperations;
@@ -35,8 +39,8 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     }
 
     @Override
-    public Iterable<EquipmentInfos> addAll(@NonNull final Iterable<EquipmentInfos> equipmentInfos) {
-        return equipmentInfosRepository.saveAll(equipmentInfos);
+    public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
+        return equipmentInfosRepository.save(equipmentInfos);
     }
 
     @Override
@@ -51,7 +55,11 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
     @Override
     public List<EquipmentInfos> search(@NonNull final String query) {
-        SearchHits<EquipmentInfos> searchHits = elasticsearchOperations.search(new NativeSearchQuery(QueryBuilders.queryStringQuery(query)), EquipmentInfos.class);
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                .withQuery(QueryBuilders.queryStringQuery(query))
+                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
+                .build();
+        SearchHits<EquipmentInfos> searchHits = elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class);
         return searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
     }
 }

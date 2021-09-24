@@ -21,8 +21,8 @@ import java.util.UUID;
 public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
-    public Iterable<EquipmentInfos> addAll(@NonNull final Iterable<EquipmentInfos> equipmentInfos) {
-        return Collections.emptyList();
+    public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
+        return equipmentInfos;
     }
 
     @Override

@@ -19,9 +19,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -46,21 +46,15 @@ public class EquipmentInfosServiceTests {
 
     @Test
     public void testAddDeleteEquipmentInfos() {
-        List<EquipmentInfos> equipmentsInfos = List.of(
-                EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id").equipmentName("name").equipmentType("LOAD").build()
-        );
-        assertThat(equipmentInfosService.addAll(equipmentsInfos).iterator().next(), new MatcherEquipmentInfos<>(equipmentsInfos.get(0)));
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id").equipmentName("name").equipmentType("LOAD").build();
+        assertThat(equipmentInfosService.add(loadInfos), new MatcherEquipmentInfos<>(loadInfos));
         assertEquals(1, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
         assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
 
-        List<EquipmentInfos> infos = List.of(
-                EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id1").equipmentName("name1").equipmentType("LOAD").build(),
-                EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id2").equipmentName("name2").equipmentType("GENERATOR").build()
-        );
-
-        equipmentInfosService.addAll(infos);
+        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id1").equipmentName("name1").equipmentType("LOAD").build());
+        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id2").equipmentName("name2").equipmentType("GENERATOR").build());
         assertEquals(2, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
@@ -78,7 +72,7 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos tw1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id_tw1").equipmentName("name_tw1").equipmentType("TWO_WINDINGS_TRANSFORMER").build();
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id_tw2").equipmentName("name_tw2").equipmentType("TWO_WINDINGS_TRANSFORMER").build();
 
-        equipmentInfosService.addAll(List.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos));
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos).forEach(equipmentInfosService::add);
 
         Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.search("equipmentType:(LOAD)"));
         assertEquals(0, hits.size());
@@ -108,7 +102,7 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos tw1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id_tw1").equipmentName("name_tw1").equipmentType("TWO_WINDINGS_TRANSFORMER").build();
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).equipmentId("id_tw2").equipmentName("name_tw2").equipmentType("TWO_WINDINGS_TRANSFORMER").build();
 
-        equipmentInfosService.addAll(List.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos));
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos).forEach(equipmentInfosService::add);
 
         assertEquals(6, equipmentInfosService.search("*").size());
 
