@@ -18,7 +18,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -35,6 +35,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.support.MessageBuilder;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +55,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -125,6 +128,7 @@ public class StudyService {
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
     private final StudyInfosService studyInfosService;
+    private final EquipmentInfosService equipmentInfosService;
 
     private final ObjectMapper objectMapper;
 
@@ -179,6 +183,7 @@ public class StudyService {
             NetworkModificationService networkModificationService,
             ReportService reportService,
             StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
             WebClient.Builder webClientBuilder,
             ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
@@ -195,6 +200,7 @@ public class StudyService {
         this.networkModificationService = networkModificationService;
         this.reportService = reportService;
         this.studyInfosService = studyInfosService;
+        this.equipmentInfosService = equipmentInfosService;
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
@@ -249,34 +255,45 @@ public class StudyService {
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
+                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(caseUuid))
                         .flatMap(t -> {
                             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                             return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                    description, t.getT2(), caseUuid, false, IndexingStatus.NOT_DONE, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                    description, t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                         })
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())
+                        .doFinally(st -> {
+                            deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();
+                            LOGGER.trace("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                        })
                         .subscribe()
                 );
     }
 
     public Mono<BasicStudyInfos> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(studyName, userId, isPrivate, studyUuid)
+                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate).flatMap(uuid ->
+                .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), studyName, userId, isPrivate)
+                        .flatMap(uuid ->
                                 Mono.zip(persistentStore(uuid, s.getStudyUuid(), studyName, userId, isPrivate), getCaseFormat(uuid))
                                         .flatMap(t -> {
-                                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                                            LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
                                             return insertStudy(s.getStudyUuid(), studyName, userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                    description, t.getT2(), uuid, true, IndexingStatus.NOT_DONE, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                                    description, t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                                         }))
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(r -> deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe())  // delete the study if the creation has been canceled
+                        .doFinally(r -> {
+                            deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();  // delete the study if the creation has been canceled
+                            LOGGER.trace("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                        })
                         .subscribe()
                 );
     }
@@ -340,6 +357,16 @@ public class StudyService {
         return Mono.fromCallable(() -> studyCreationRequestRepository.findByUserIdAndStudyName(userId, studyName).orElse(null));
     }
 
+    Flux<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
+        return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
+    }
+
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
+        return networkStoreService
+                .getNetworkUuid(studyUuid)
+                .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid:(%s) AND %s", networkUuid, query)));
+    }
+
     @Transactional
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(uuid);
@@ -363,36 +390,49 @@ public class StudyService {
         return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupUuid)) : Optional.empty();
     }
 
-    public Mono<Void> deleteStudyIfNotCreationInProgress(UUID uuid, String userId) {
-        var allDeletedInParallel = Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(uuid, userId))
-            .flatMap(Mono::justOrEmpty)
-            .publish(deleteStudyInfosMono ->
-                Mono.when(
-                    deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid())),
-                    deleteStudyInfosMono.flatMap(infos -> infos.getGroupUuid() != null
-                        ? Mono.just(infos.getGroupUuid())
-                        : Mono.empty()).flatMap(groupUuid -> networkModificationService.deleteNetworkModifications(groupUuid)),
-                    deleteStudyInfosMono.flatMap(infos -> networkModificationService.deleteEquipmentIndexes(infos.getNetworkUuid())),
-                    deleteStudyInfosMono.flatMap(infos -> reportService.deleteReport(infos.getNetworkUuid()))
+    public Mono<Void> deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        return Mono.fromCallable(() -> self.doDeleteStudyIfNotCreationInProgress(studyUuid, userId))
+                .flatMap(Mono::justOrEmpty)
+                .map(u -> {
+                    startTime.set(System.nanoTime());
+                    return u;
+                })
+                .publish(deleteStudyInfosMono ->
+                        Mono.when(// in parallel
+                            deleteStudyInfosMono.flatMap(infos -> infos.getGroupUuid() != null
+                                ? Mono.just(infos.getGroupUuid())
+                                : Mono.empty()).flatMap(networkModificationService::deleteNetworkModifications),
+                            deleteStudyInfosMono.flatMap(infos -> deleteEquipmentIndexes(infos.getNetworkUuid())),
+                                deleteStudyInfosMono.flatMap(infos -> reportService.deleteReport(infos.getNetworkUuid())),
+                                deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid()))
+                        )
                 )
-            );
+                .doOnSuccess(r -> {
+                            if (startTime.get() != null) {
+                                LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                            }
+                        }
+                )
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+    }
 
-        return allDeletedInParallel.doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
+    public Mono<Void> deleteEquipmentIndexes(UUID networkUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        return Mono.fromRunnable(() -> equipmentInfosService.deleteAll(networkUuid))
+                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
+                .then()
+                .doFinally(x -> LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get())));
     }
 
     private Mono<CreatedStudyBasicInfos> insertStudy(UUID studyUuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
-                                                     String description, String caseFormat, UUID caseUuid, boolean casePrivate, IndexingStatus indexingStatus, LoadFlowStatus loadFlowStatus,
+                                                     String description, String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
                                                      LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
-        return insertStudyEntity(studyUuid, studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, indexingStatus, loadFlowStatus, loadFlowResult,
+        return insertStudyEntity(studyUuid, studyName, userId, isPrivate, networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
                 loadFlowParameters, securityAnalysisUuid)
                 .map(StudyService::toCreatedStudyBasicInfos)
                 .map(studyInfosService::add)
-                .zipWith(networkModificationService.insertEquipmentIndexes(networkUuid)
-                        .then(updateIndexingStatus(studyUuid, IndexingStatus.DONE)))
-                .map(t -> t.getT1())
-                .doOnSuccess(infos -> {
-                    emitStudiesChanged(studyUuid, userId, isPrivate);
-                });
+                .doOnSuccess(infos -> emitStudiesChanged(studyUuid, userId, isPrivate));
     }
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequest(String studyName, String userId, boolean isPrivate, UUID studyUuid) {
@@ -1185,7 +1225,7 @@ public class StudyService {
     // wrappers to Mono/Flux for repositories
 
     private Mono<StudyEntity> insertStudyEntity(UUID uuid, String studyName, String userId, boolean isPrivate, UUID networkUuid, String networkId,
-                                                String description, String caseFormat, UUID caseUuid, boolean casePrivate, IndexingStatus indexingStatus,
+                                                String description, String caseFormat, UUID caseUuid, boolean casePrivate,
                                                 LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(studyName);
@@ -1197,7 +1237,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowStatus);
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
-            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, indexingStatus, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid, null);
+            StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid, null);
             return studyRepository.save(studyEntity);
         });
     }
@@ -1209,14 +1249,6 @@ public class StudyService {
 
     Mono<Void> updateSecurityAnalysisResultUuid(UUID studyUuid, UUID securityAnalysisResultUuid) {
         return Mono.fromRunnable(() -> self.doUpdateSecurityAnalysisResultUuid(studyUuid, securityAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void doUpdateLoadFlowParameters(String studyName, String userId, LoadFlowParametersEntity parameters) {
-        studyRepository.findByUserIdAndStudyName(userId, studyName).ifPresent(studyEntity -> {
-            studyEntity.setLoadFlowParameters(parameters);
-            studyEntity.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
-        });
     }
 
     @Transactional
@@ -1275,25 +1307,6 @@ public class StudyService {
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<>() {
                 });
-    }
-
-    @Transactional
-    public void doUpdateIndexingStatus(UUID studyUuid, IndexingStatus indexingStatus) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setIndexingStatus(indexingStatus));
-    }
-
-    Mono<Void> updateIndexingStatus(UUID studyUuid, IndexingStatus indexingStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateIndexingStatus(studyUuid, indexingStatus));
-    }
-
-    public Flux<ModificationInfos> getModifications(UUID studyUuid) {
-        Objects.requireNonNull(studyUuid);
-        return getGroupUuid(studyUuid, false).flatMapMany(groupUuid -> networkModificationService.getModifications(groupUuid));
-    }
-
-    public Mono<Void> deleteModifications(UUID studyUuid) {
-        Objects.requireNonNull(studyUuid);
-        return getGroupUuid(studyUuid, false).flatMap(groupUuid -> networkModificationService.deleteModifications(groupUuid));
     }
 
     @Transactional

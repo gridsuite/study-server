@@ -1,8 +1,8 @@
-/**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+/*
+  Copyright (c) 2021, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server;
 
@@ -69,26 +69,6 @@ public class NetworkModificationService {
         return UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER)
                 .buildAndExpand(networkUuid)
                 .toUriString();
-    }
-
-    Mono<Void> insertEquipmentIndexes(UUID networkUuid) {
-        Objects.requireNonNull(networkUuid);
-        // TODO : code temporary commented to successfully run the tests
-//        return webClient.put()
-//                .uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "indexes")
-//                .retrieve()
-//                .bodyToMono(Void.class);
-        return Mono.empty();
-    }
-
-    Mono<Void> deleteEquipmentIndexes(UUID networkUuid) {
-        Objects.requireNonNull(networkUuid);
-        // TODO : code temporary commented to successfully run the tests
-//        return webClient.delete()
-//                .uri(getNetworkModificationServerURI() + buildPathFrom(networkUuid) + "indexes")
-//                .retrieve()
-//                .bodyToMono(Void.class);
-        return Mono.empty();
     }
 
     public Flux<ModificationInfos> getModifications(UUID groupUuid) {

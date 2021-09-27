@@ -1,8 +1,8 @@
-/**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+/*
+  Copyright (c) 2021, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server.elasticsearch;
 
@@ -19,10 +19,7 @@ import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.RestClients;
 import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.convert.ElasticsearchConverter;
 import org.springframework.data.elasticsearch.core.convert.ElasticsearchCustomConversions;
-import org.springframework.data.elasticsearch.core.convert.MappingElasticsearchConverter;
-import org.springframework.data.elasticsearch.core.mapping.SimpleElasticsearchMappingContext;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 import java.net.InetSocketAddress;
@@ -60,23 +57,26 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
     }
 
     @Bean
+    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
+    public EquipmentInfosService equipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+        return new EquipmentInfosServiceImpl(equipmentInfosRepository, elasticsearchOperations);
+    }
+
+    @Bean
+    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'false'")
+    public EquipmentInfosService equipmentInfosServiceMock() {
+        return new EquipmentInfosServiceMock();
+    }
+
+    @Bean
     @Override
+    @SuppressWarnings("squid:S2095")
     public RestHighLevelClient elasticsearchClient() {
         ClientConfiguration clientConfiguration = ClientConfiguration.builder()
                 .connectedTo(InetSocketAddress.createUnresolved(esHost, esPort))
                 .build();
 
         return RestClients.create(clientConfiguration).rest();
-    }
-
-    @Bean
-    @Override
-    public ElasticsearchConverter elasticsearchEntityMapper(
-            SimpleElasticsearchMappingContext elasticsearchMappingContext) {
-        MappingElasticsearchConverter elasticsearchConverter = new MappingElasticsearchConverter(
-                elasticsearchMappingContext);
-        elasticsearchConverter.setConversions(elasticsearchCustomConversions());
-        return elasticsearchConverter;
     }
 
     @Override

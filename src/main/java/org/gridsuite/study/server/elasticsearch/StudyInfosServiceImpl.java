@@ -1,15 +1,13 @@
-/**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+/*
+  Copyright (c) 2021, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server.elasticsearch;
 
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -17,7 +15,6 @@ import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -44,9 +41,8 @@ public class StudyInfosServiceImpl implements StudyInfosService {
     }
 
     @Override
-    public Optional<CreatedStudyBasicInfos> getByUuid(@NonNull final UUID uuid) {
-        Page<CreatedStudyBasicInfos> res = studyInfosRepository.findByStudyUuid(uuid, PageRequest.of(0, 1));
-        return res.get().findFirst();
+    public Iterable<CreatedStudyBasicInfos> findAll() {
+        return studyInfosRepository.findAll();
     }
 
     @Override

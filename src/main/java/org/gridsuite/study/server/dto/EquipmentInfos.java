@@ -6,28 +6,36 @@
  */
 package org.gridsuite.study.server.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
 
+import java.util.UUID;
 
 /**
- * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @SuperBuilder
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-@Schema(description = "Basic study attributes after creation succeeded ")
-@Document(indexName = "study-server")
-@TypeAlias(value = "StudyInfos")
-public class CreatedStudyBasicInfos extends BasicStudyInfos {
-    String caseFormat;
+@ToString
+@EqualsAndHashCode
+@Document(indexName = "network-modification-server")
+@TypeAlias(value = "EquipmentInfos")
+public class EquipmentInfos {
+    @Id
+    String id;
 
-    String description;
+    String equipmentId;
+
+    String equipmentName;
+
+    String equipmentType;
+
+    UUID networkUuid;
 }

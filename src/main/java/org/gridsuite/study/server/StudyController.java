@@ -367,14 +367,14 @@ public class StudyController {
     @Operation(summary = "Get all network modifications")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network modifications")})
     public ResponseEntity<Flux<ModificationInfos>> getModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getModifications(studyUuid));
+        return ResponseEntity.ok().body(networkModificationService.getModifications(studyUuid));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/network/modifications")
     @Operation(summary = "Delete all network modifications")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Network modifications deleted")})
     public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.deleteModifications(studyUuid));
+        return ResponseEntity.ok().body(networkModificationService.deleteModifications(studyUuid));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -594,5 +594,22 @@ public class StudyController {
                                                  @RequestBody String createLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
             .then(studyService.createLoad(studyUuid, createLoadAttributes)));
+    }
+
+    @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search studies in elasticsearch")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of studies found")})
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> searchStudies(@Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchStudies(query));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search equipments in elasticsearch")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of equipments found"),
+            @ApiResponse(responseCode = "404", description = "The study not found")})
+    public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                 @Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, query));
     }
 }

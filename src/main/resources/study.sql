@@ -47,7 +47,6 @@
         creationDate timestamp not null,
         description varchar(255) not null,
         modificationGroupUuid uuid,
-        indexingStatus varchar(255),
         isPrivate boolean not null,
         loadFlowProvider varchar(255),
         loadFlowStatus varchar(255),
@@ -75,22 +74,22 @@ create index studyEntity_userId_index on study (userId);
 create index studyCreationRequest_isPrivate_index on studycreationrequest (isPrivate);
 create index studyCreationRequest_userId_index on studycreationrequest (userId);
 
-    alter table if exists LoadFlowResultEntity_componentResults 
-       add constraint loadFlowResultEntity_componentResults_fk 
-       foreign key (LoadFlowResultEntity_id) 
+    alter table if exists LoadFlowResultEntity_componentResults
+       add constraint loadFlowResultEntity_componentResults_fk
+       foreign key (LoadFlowResultEntity_id)
        references loadFlowResult;
 
-    alter table if exists LoadFlowResultEntity_metrics 
-       add constraint loadFlowResultEntity_metrics_fk 
-       foreign key (LoadFlowResultEntity_id) 
+    alter table if exists LoadFlowResultEntity_metrics
+       add constraint loadFlowResultEntity_metrics_fk
+       foreign key (LoadFlowResultEntity_id)
        references loadFlowResult;
 
-    alter table if exists study 
-       add constraint loadFlowParameters_id_fk 
-       foreign key (loadFlowParametersEntity_id) 
+    alter table if exists study
+       add constraint loadFlowParameters_id_fk
+       foreign key (loadFlowParametersEntity_id)
        references loadFlowParameters;
 
-    alter table if exists study 
-       add constraint loadFlowResult_id_fk 
-       foreign key (loadFlowResultEntity_id) 
+    alter table if exists study
+       add constraint loadFlowResult_id_fk
+       foreign key (loadFlowResultEntity_id)
        references loadFlowResult;

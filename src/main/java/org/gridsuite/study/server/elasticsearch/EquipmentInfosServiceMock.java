@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.springframework.lang.NonNull;
 
 import java.util.Collections;
@@ -18,25 +18,25 @@ import java.util.UUID;
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-public class StudyInfosServiceMock implements StudyInfosService {
+public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
-    public CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos si) {
-        return si;
+    public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
+        return equipmentInfos;
     }
 
     @Override
-    public void deleteByUuid(@NonNull final UUID uuid) {
+    public void deleteAll(@NonNull UUID networkUuid) {
         // Nothing to delete
     }
 
     @Override
-    public Iterable<CreatedStudyBasicInfos> findAll() {
+    public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
         return Collections.emptyList();
     }
 
     @Override
-    public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
+    public List<EquipmentInfos> search(@NonNull final String query) {
         return Collections.emptyList();
     }
 }
