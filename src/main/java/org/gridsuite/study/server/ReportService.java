@@ -20,20 +20,19 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.REPORT_API_VERSION;
+
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
  */
 @Service
 public class ReportService {
 
-    static final String REPORT_API_VERSION = "v1";
     private static final String DELIMITER = "/";
 
     private String reportServerBaseUri;
 
-    private WebClient webClient;
-
-    private ObjectMapper objectMapper;
+    private final WebClient webClient;
 
     @Autowired
     public ReportService(WebClient.Builder webClientBuilder,
@@ -41,11 +40,10 @@ public class ReportService {
                          @Value("${backing-services.report-server.base-uri:http://report-server/}") String reportServerBaseUri) {
         this.reportServerBaseUri = reportServerBaseUri;
         this.webClient = webClientBuilder.build();
-        this.objectMapper = objectMapper;
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
-        this.objectMapper.registerModule(reporterModelJsonModule);
-        this.objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReporterModelDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
+        objectMapper.registerModule(reporterModelJsonModule);
+        objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReporterModelDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
     }
 
     public void setReportServerBaseUri(String reportServerBaseUri) {
