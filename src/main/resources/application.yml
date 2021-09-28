@@ -1,5 +1,5 @@
-server :
-  port : 5001
+server:
+  port: 5001
   forward-headers-strategy: framework
 
 spring:
@@ -47,12 +47,18 @@ spring:
           delimiter: ;
       # Uncomment action to automatically generate the database sql schema file
       javax:
-       persistence:
-        schema-generation:
-         scripts:
-          #action: create
-          #create-target: src/main/resources/study.sql
-          create-source: metadata
+        persistence:
+          schema-generation:
+            scripts:
+              #action: create
+              #create-target: src/main/resources/study.sql
+              create-source: metadata
+
+  data:
+    elasticsearch:
+      enabled: false
+      host: localhost
+      port: 9200
 
   liquibase:
     change-log: classpath:db/study-db.xml
