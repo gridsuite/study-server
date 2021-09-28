@@ -242,7 +242,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    private void doUpdateNode(AbstractNode node) {
+    public void doUpdateNode(AbstractNode node) {
         repositories.get(node.getType()).updateNode(node);
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
