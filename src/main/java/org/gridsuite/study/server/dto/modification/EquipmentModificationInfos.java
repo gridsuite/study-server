@@ -7,10 +7,13 @@
 package org.gridsuite.study.server.dto.modification;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+
+import java.util.Set;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -20,11 +23,13 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString(callSuper = true)
-@Schema(description = "Elementary attribute modification")
-public class ElementaryAttributeModificationInfos extends ElementaryModificationInfos {
-    @Schema(description = "Equipment attribute name")
-    private String equipmentAttributeName;
+@Schema(description = "Equipment modification")
+public class EquipmentModificationInfos extends ModificationInfos {
 
-    @Schema(description = "Equipment attribute value")
-    private Object equipmentAttributeValue;
+    @Schema(description = "Equipment ID")
+    private String equipmentId;
+
+    @Schema(description = "Substations ID")
+    @Builder.Default
+    private Set<String> substationIds = Set.of();
 }

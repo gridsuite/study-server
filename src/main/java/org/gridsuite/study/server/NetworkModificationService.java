@@ -9,8 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.gridsuite.study.server.dto.modification.ElementaryAttributeModificationInfos;
-import org.gridsuite.study.server.dto.modification.ElementaryModificationInfos;
+import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -98,7 +97,7 @@ public class NetworkModificationService {
                 .bodyToMono(Void.class);
     }
 
-    Flux<ElementaryAttributeModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid) {
+    Flux<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
@@ -112,12 +111,12 @@ public class NetworkModificationService {
                     .uri(getNetworkModificationServerURI(true) + path)
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
-                    .bodyToFlux(new ParameterizedTypeReference<ElementaryAttributeModificationInfos>() {
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                     });
         });
     }
 
-    public Flux<ElementaryAttributeModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid) {
+    public Flux<EquipmentModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
@@ -130,12 +129,12 @@ public class NetworkModificationService {
                     .uri(getNetworkModificationServerURI(true) + path)
                     .body(BodyInserters.fromValue(groovyScript))
                     .retrieve()
-                    .bodyToFlux(new ParameterizedTypeReference<ElementaryAttributeModificationInfos>() {
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                     });
         });
     }
 
-    Flux<ElementaryAttributeModificationInfos> applyLineChanges(UUID studyUuid, String lineId, String status, UUID groupUuid) {
+    Flux<EquipmentModificationInfos> applyLineChanges(UUID studyUuid, String lineId, String status, UUID groupUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(lineId);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
@@ -151,7 +150,7 @@ public class NetworkModificationService {
                     .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
                         handleChangeError(response, LINE_MODIFICATION_FAILED)
                     )
-                    .bodyToFlux(new ParameterizedTypeReference<ElementaryAttributeModificationInfos>() {
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                     });
         });
     }
@@ -173,7 +172,7 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<ElementaryModificationInfos> createLoad(UUID studyUuid, String createLoadAttributes, UUID groupUuid) {
+    public Flux<EquipmentModificationInfos> createLoad(UUID studyUuid, String createLoadAttributes, UUID groupUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createLoadAttributes);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
@@ -189,7 +188,7 @@ public class NetworkModificationService {
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
                         handleChangeError(response, LOAD_CREATION_FAILED))
-                .bodyToFlux(new ParameterizedTypeReference<ElementaryModificationInfos>() {
+                .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                 });
         });
     }
