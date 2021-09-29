@@ -38,6 +38,7 @@ public class RestResponseEntityExceptionHandler {
             case SECURITY_ANALYSIS_RUNNING:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(SECURITY_ANALYSIS_RUNNING);
             case NOT_ALLOWED:
+            case CANT_DELETE_ROOT_NODE:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case LINE_MODIFICATION_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
