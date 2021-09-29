@@ -106,47 +106,47 @@ create index studyEntity_userId_index on study (userId);
 create index studyCreationRequest_isPrivate_index on studycreationrequest (isPrivate);
 create index studyCreationRequest_userId_index on studycreationrequest (userId);
 
-    alter table if exists LoadFlowResultEntity_componentResults 
-       add constraint loadFlowResultEntity_componentResults_fk 
-       foreign key (LoadFlowResultEntity_id) 
+    alter table if exists LoadFlowResultEntity_componentResults
+       add constraint loadFlowResultEntity_componentResults_fk
+       foreign key (LoadFlowResultEntity_id)
        references loadFlowResult;
 
-    alter table if exists LoadFlowResultEntity_metrics 
-       add constraint loadFlowResultEntity_metrics_fk 
-       foreign key (LoadFlowResultEntity_id) 
+    alter table if exists LoadFlowResultEntity_metrics
+       add constraint loadFlowResultEntity_metrics_fk
+       foreign key (LoadFlowResultEntity_id)
        references loadFlowResult;
 
-    alter table if exists ModelInfo 
-       add constraint FK2ppp9cps0tclhqfi7qf90ctgi 
-       foreign key (idNode) 
+    alter table if exists ModelInfo
+       add constraint FK2ppp9cps0tclhqfi7qf90ctgi
+       foreign key (idNode)
        references Node;
 
-    alter table if exists NetworkModificationNodeInfo 
-       add constraint FKnjm62y6yguikmhguw9c4v8ycv 
-       foreign key (idNode) 
+    alter table if exists NetworkModificationNodeInfo
+       add constraint FKnjm62y6yguikmhguw9c4v8ycv
+       foreign key (idNode)
        references Node;
 
-    alter table if exists Node 
-       add constraint parent_node_id_fk_constraint 
-       foreign key (parentNode) 
+    alter table if exists Node
+       add constraint parent_node_id_fk_constraint
+       foreign key (parentNode)
        references Node;
 
-    alter table if exists Node 
-       add constraint study_id_fk_constraint 
-       foreign key (study_id) 
+    alter table if exists Node
+       add constraint study_id_fk_constraint
+       foreign key (study_id)
        references study;
 
-    alter table if exists RootNodeInfo 
-       add constraint FK5wmbraw6u13v1ujb15vygr9xi 
-       foreign key (idNode) 
+    alter table if exists RootNodeInfo
+       add constraint FK5wmbraw6u13v1ujb15vygr9xi
+       foreign key (idNode)
        references Node;
 
-    alter table if exists study 
-       add constraint loadFlowParameters_id_fk 
-       foreign key (loadFlowParametersEntity_id) 
+    alter table if exists study
+       add constraint loadFlowParameters_id_fk
+       foreign key (loadFlowParametersEntity_id)
        references loadFlowParameters;
 
-    alter table if exists study 
-       add constraint loadFlowResult_id_fk 
-       foreign key (loadFlowResultEntity_id) 
+    alter table if exists study
+       add constraint loadFlowResult_id_fk
+       foreign key (loadFlowResultEntity_id)
        references loadFlowResult;

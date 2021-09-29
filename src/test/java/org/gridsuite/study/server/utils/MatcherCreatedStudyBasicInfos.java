@@ -31,8 +31,12 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
                 .build());
     }
 
-    protected MatcherCreatedStudyBasicInfos(T val) {
+    public MatcherCreatedStudyBasicInfos(T val) {
         super(val);
+    }
+
+    public T getReference() {
+        return reference;
     }
 
     @Override

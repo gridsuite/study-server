@@ -19,12 +19,13 @@ final class StudyConstants {
     static final String SINGLE_LINE_DIAGRAM_API_VERSION = "v1";
     static final String NETWORK_CONVERSION_API_VERSION = "v1";
     static final String GEO_DATA_API_VERSION = "v1";
+    static final String NETWORK_STORE_API_VERSION = "v1";
     static final String NETWORK_MODIFICATION_API_VERSION = "v1";
     static final String LOADFLOW_API_VERSION = "v1";
     static final String SECURITY_ANALYSIS_API_VERSION = "v1";
     static final String ACTIONS_API_VERSION = "v1";
     static final String NETWORK_MAP_API_VERSION = "v1";
-    static final String DIRECTORY_SERVER_API_VERSION = "v1";
+    static final String REPORT_API_VERSION = "v1";
 
     static final String NETWORK_UUID = "networkUuid";
     static final String CASE_UUID = "caseUuid";
