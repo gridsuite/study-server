@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-class StudyException  extends RuntimeException {
+public class StudyException  extends RuntimeException {
 
     public enum Type {
         STUDY_ALREADY_EXISTS,
@@ -25,12 +25,13 @@ class StudyException  extends RuntimeException {
         NOT_ALLOWED,
         STUDY_CREATION_FAILED,
         LINE_MODIFICATION_FAILED,
-        LOAD_CREATION_FAILED
+        LOAD_CREATION_FAILED,
+        CANT_DELETE_ROOT_NODE
     }
 
     private final Type type;
 
-    StudyException(Type type) {
+    public StudyException(Type type) {
         super(Objects.requireNonNull(type.name()));
         this.type = type;
     }

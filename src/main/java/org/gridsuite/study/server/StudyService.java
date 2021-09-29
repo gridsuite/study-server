@@ -104,6 +104,8 @@ public class StudyService {
     @Autowired
     StudyService self;
 
+    NetworkModificationTreeService networkModificationTreeService;
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -185,6 +187,7 @@ public class StudyService {
             StudyInfosService studyInfosService,
             EquipmentInfosService equipmentInfosService,
             WebClient.Builder webClientBuilder,
+            NetworkModificationTreeService networkModificationTreeService,
             ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
@@ -201,6 +204,7 @@ public class StudyService {
         this.reportService = reportService;
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
+        this.networkModificationTreeService = networkModificationTreeService;
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
@@ -379,6 +383,7 @@ public class StudyService {
                 if (!s.getUserId().equals(userId)) {
                     throw new StudyException(NOT_ALLOWED);
                 }
+                networkModificationTreeService.doDeleteTree(uuid);
                 studyRepository.deleteById(uuid);
                 studyInfosService.deleteByUuid(uuid);
                 emitStudiesChanged(uuid, userId, s.isPrivate());
@@ -1238,8 +1243,15 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
             StudyEntity studyEntity = new StudyEntity(uuid, userId, studyName, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, description, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid, null);
-            return studyRepository.save(studyEntity);
+            return insertStudy(studyEntity);
         });
+    }
+
+    @Transactional
+    public StudyEntity insertStudy(StudyEntity studyEntity) {
+        var study = studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity);
+        return study;
     }
 
     @Transactional

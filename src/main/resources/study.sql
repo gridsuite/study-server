@@ -39,6 +39,37 @@
         primary key (LoadFlowResultEntity_id, metrics_KEY)
     );
 
+    create table ModelInfo (
+       idNode uuid not null,
+        description varchar(255),
+        name varchar(255),
+        model varchar(255),
+        primary key (idNode)
+    );
+
+    create table NetworkModificationNodeInfo (
+       idNode uuid not null,
+        description varchar(255),
+        name varchar(255),
+        networkModificationId uuid,
+        primary key (idNode)
+    );
+
+    create table Node (
+       idNode uuid not null,
+        type varchar(255),
+        parentNode uuid,
+        study_id uuid,
+        primary key (idNode)
+    );
+
+    create table RootNodeInfo (
+       idNode uuid not null,
+        description varchar(255),
+        name varchar(255),
+        primary key (idNode)
+    );
+
     create table study (
        id uuid not null,
         caseFormat varchar(255) not null,
@@ -69,6 +100,8 @@
         primary key (id)
     );
 create index loadFlowResultEntity_componentResults_id_index on LoadFlowResultEntity_componentResults (LoadFlowResultEntity_id);
+create index nodeEntity_parentNode_idx on Node (parentNode);
+create index nodeEntity_studyId_idx on Node (study_id);
 create index studyEntity_isPrivate_index on study (isPrivate);
 create index studyEntity_userId_index on study (userId);
 create index studyCreationRequest_isPrivate_index on studycreationrequest (isPrivate);
@@ -83,6 +116,31 @@ create index studyCreationRequest_userId_index on studycreationrequest (userId);
        add constraint loadFlowResultEntity_metrics_fk
        foreign key (LoadFlowResultEntity_id)
        references loadFlowResult;
+
+    alter table if exists ModelInfo
+       add constraint FK2ppp9cps0tclhqfi7qf90ctgi
+       foreign key (idNode)
+       references Node;
+
+    alter table if exists NetworkModificationNodeInfo
+       add constraint FKnjm62y6yguikmhguw9c4v8ycv
+       foreign key (idNode)
+       references Node;
+
+    alter table if exists Node
+       add constraint parent_node_id_fk_constraint
+       foreign key (parentNode)
+       references Node;
+
+    alter table if exists Node
+       add constraint study_id_fk_constraint
+       foreign key (study_id)
+       references study;
+
+    alter table if exists RootNodeInfo
+       add constraint FK5wmbraw6u13v1ujb15vygr9xi
+       foreign key (idNode)
+       references Node;
 
     alter table if exists study
        add constraint loadFlowParameters_id_fk

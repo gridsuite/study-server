@@ -14,7 +14,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
@@ -40,10 +43,12 @@ public class StudyController {
     private final ReportService reportService;
     private final NetworkStoreService networkStoreService;
     private final NetworkModificationService networkModificationService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkStoreService networkStoreService, NetworkModificationService networkModificationService, ReportService reportService) {
+    public StudyController(StudyService studyService, NetworkStoreService networkStoreService, NetworkModificationService networkModificationService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.reportService = reportService;
+        this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
     }
@@ -611,5 +616,48 @@ public class StudyController {
     public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, query));
+    }
+
+    @PostMapping(value = "/tree/nodes/{id}")
+    @Operation(summary = "Create a node as before / after the given node ID")
+    @ApiResponse(responseCode = "200", description = "The node has been added")
+    public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
+                                                         @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
+                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode
+                                                         ) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(referenceId, node, insertMode));
+    }
+
+    @DeleteMapping(value = "/tree/nodes/{id}")
+    @Operation(summary = "Delete node with given id")
+    @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted")
+    public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "id of child to remove") @PathVariable UUID id,
+                                                 @Parameter(description = "deleteChildren")  @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(id, deleteChildren));
+    }
+
+    @GetMapping(value = "/tree/{id}")
+    @Operation(summary = "get network modification tree for the given study")
+    @ApiResponse(responseCode = "200", description = "network modification tree")
+    public Mono<ResponseEntity<RootNode>> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("id") UUID id) {
+        return networkModificationTreeService.getStudyTree(id)
+            .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
+            .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/tree/nodes")
+    @Operation(summary = "update node")
+    @ApiResponse(responseCode = "200", description = "the node has been updated")
+    public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node) {
+        return ResponseEntity.ok().body(networkModificationTreeService.updateNode(node));
+    }
+
+    @GetMapping(value = "/tree/nodes/{id}")
+    @Operation(summary = "get simplified node")
+    @ApiResponse(responseCode = "200", description = "simplified nodes (without children")
+    public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "node uuid") @PathVariable("id") UUID id) {
+        return networkModificationTreeService.getSimpleNode(id)
+            .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
+            .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 }
