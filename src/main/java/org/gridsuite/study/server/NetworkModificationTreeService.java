@@ -236,9 +236,7 @@ public class NetworkModificationTreeService {
     }
 
     public Mono<Void> updateNode(AbstractNode node) {
-        return Mono.fromRunnable(() -> {
-            self.doUpdateNode(node);
-        });
+        return Mono.fromRunnable(() -> self.doUpdateNode(node));
     }
 
     @Transactional
