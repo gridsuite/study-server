@@ -151,4 +151,68 @@
     <changeSet author="borsenbergerjac (generated)" id="1632821586389-15">
         <addForeignKeyConstraint baseColumnNames="LoadFlowResultEntity_id" baseTableName="loadflowresult_componentresults" constraintName="loadflowresultentity_componentresults_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
     </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-1">
+        <createTable tableName="modelinfo">
+            <column name="idNode" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="modelinfoPK"/>
+            </column>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="model" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-2">
+        <createTable tableName="networkmodificationnodeinfo">
+            <column name="idNode" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="networkmodificationnodeinfoPK"/>
+            </column>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="networkModificationId" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-3">
+        <createTable tableName="node">
+            <column name="idNode" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="nodePK"/>
+            </column>
+            <column name="type" type="VARCHAR(255)"/>
+            <column name="parentNode" type="UUID"/>
+            <column name="study_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-4">
+        <createTable tableName="rootnodeinfo">
+            <column name="idNode" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="rootnodeinfoPK"/>
+            </column>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-5">
+        <createIndex indexName="nodeEntity_parentNode_idx" tableName="node">
+            <column name="parentNode"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-6">
+        <createIndex indexName="nodeEntity_studyId_idx" tableName="node">
+            <column name="study_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-7">
+        <addForeignKeyConstraint baseColumnNames="idNode" baseTableName="modelinfo" constraintName="FKbde4clrweu4esjsf611ium1nk" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-8">
+        <addForeignKeyConstraint baseColumnNames="idNode" baseTableName="networkmodificationnodeinfo" constraintName="FKdyjntohhonaoe5ngonrgrn4h9" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-9">
+        <addForeignKeyConstraint baseColumnNames="idNode" baseTableName="rootnodeinfo" constraintName="FKe139bjcrqd9576sydb9i1s0lh" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-10">
+        <addForeignKeyConstraint baseColumnNames="parentNode" baseTableName="node" constraintName="parent_node_id_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1632985791712-11">
+        <addForeignKeyConstraint baseColumnNames="study_id" baseTableName="node" constraintName="study_id_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
+    </changeSet>
 </databaseChangeLog>
