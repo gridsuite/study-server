@@ -98,5 +98,6 @@ network-store-server:
   preloading-strategy: COLLECTION
   base-uri: http://localhost:8080/
 
-dbName: study
+dbName: gridsuite
+query: ?currentSchema=study
 dbApi: jdbc
