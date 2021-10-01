@@ -61,6 +61,18 @@ spring:
       port: 9200
       client:
         timeout: 60  # Seconds
+  # disable reactive client autoconfiguration because we don't use it and it is
+  # not configured so it tries to connect to localhost which fails. This means
+  # we get an ugly error message at startup, and more importantly that the
+  # health probes fail, so things like k8s think the server is not working and
+  # don't route traffic to it and keep the previous deployment. We have to do
+  # this because the reactiveclient is automatically used by springboot when
+  # starter-webflux is used.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.elasticsearch.ElasticSearchReactiveHealthContributorAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration
 
 backing-services:
   case:
