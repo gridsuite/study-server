@@ -333,6 +333,11 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/.*/id/.*\\?group=.*")) {
+                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -1799,6 +1804,24 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/createLoad\\?group=.*") && r.getBody().equals(createLoadAttributes)));
+    }
+
+    @Test
+    public void testDeleteEquipment() throws Exception {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        // delete equipment
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
+                studyNameUserIdUuid, "LOAD", "idLoadToDelete")
+            .exchange()
+            .expectStatus().isOk();
+
+        checkLoadCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/.*/id/.*\\?group=.*")));
     }
 
     private void checkLoadCreationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {

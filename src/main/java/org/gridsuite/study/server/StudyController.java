@@ -660,4 +660,13 @@ public class StudyController {
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
+    @Operation(summary = "Delete equipment in study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment was deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
+    public ResponseEntity<Mono<Void>> deleteEquipment(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
+                                                      @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
+        return ResponseEntity.ok().body(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId));
+    }
 }

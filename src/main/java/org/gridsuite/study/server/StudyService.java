@@ -1355,4 +1355,21 @@ public class StudyService {
                 .then(monoUpdateLfState);
         });
     }
+
+    Mono<Void> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId) {
+        return getGroupUuid(studyUuid, true).flatMap(groupUuid -> {
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(studyUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+
+            return networkModificationService.deleteEquipment(studyUuid, equipmentType, equipmentId, groupUuid)
+                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                .collect(Collectors.toSet())
+                .doOnSuccess(substationIds ->
+                    emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
+                .then(monoUpdateLfState);
+        });
+    }
 }
