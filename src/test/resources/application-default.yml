@@ -16,7 +16,7 @@ logging:
 
 dbVendor: h2:mem
 query: ;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-hostPort:
+hostPort: ":"
 
 
 
