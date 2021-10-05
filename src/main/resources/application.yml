@@ -59,6 +59,8 @@ spring:
       enabled: false
       host: localhost
       port: 9200
+      client:
+        timeout: 60  # Seconds
   # disable reactive client autoconfiguration because we don't use it and it is
   # not configured so it tries to connect to localhost which fails. This means
   # we get an ugly error message at startup, and more importantly that the
