@@ -333,8 +333,9 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/.*/id/.*\\?group=.*")) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/LOAD/id/idLoadToDelete\\?group=.*")) {
+                    JSONObject jsonObject = new JSONObject(Map.of("equipmentId", "idLoadToDelete",
+                        "equipmentType", "LOAD", "substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1800,7 +1801,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkLoadCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/createLoad\\?group=.*") && r.getBody().equals(createLoadAttributes)));
@@ -1818,20 +1819,48 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkLoadCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete",
+            HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/.*/id/.*\\?group=.*")));
     }
 
-    private void checkLoadCreationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
+    private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, String headerUpdateTypeEquipmentType, String equipmentType,
+        String headerUpdateTypeEquipmentId, String equipmentId, String headerUpdateTypeSubstationsIds, Set<String> modifiedSubstationsIdsSet) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(1000);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(modifiedSubstationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+        assertEquals(equipmentType, headersStudyUpdate.get(headerUpdateTypeEquipmentType));
+        assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
+        assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
+
+        // assert that the broker message has been sent for updating load flow status
+        Message<byte[]> messageLFStatus = output.receive(1000);
+        assertEquals("", new String(messageLFStatus.getPayload()));
+        MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent for updating security analysis status
+        Message<byte[]> messageSAStatus = output.receive(1000);
+        assertEquals("", new String(messageSAStatus.getPayload()));
+        MessageHeaders headersSAStatus = messageSAStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersSAStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSAStatus.get(StudyService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, String headerUpdateTypeId, Set<String> modifiedIdsSet) {
+        // assert that the broker message has been sent for updating study type
+        Message<byte[]> messageStudyUpdate = output.receive(1000);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
         // assert that the broker message has been sent for updating load flow status
         Message<byte[]> messageLFStatus = output.receive(1000);
@@ -1849,32 +1878,12 @@ public class StudyTest {
     }
 
     private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
-        // assert that the broker message has been sent
-        Message<byte[]> messageStudyUpdate = output.receive(1000);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
-        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(modifiedSubstationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
-
-        // assert that the broker message has been sent
-        Message<byte[]> messageLFStatus = output.receive(1000);
-        assertEquals("", new String(messageLFStatus.getPayload()));
-        MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals("loadflow_status", headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedSubstationsSet);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent
-        messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        headersSwitch = messageSwitch.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_LINE, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }

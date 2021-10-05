@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -194,7 +195,7 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<EquipmentModificationInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid) {
+    public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);
         Objects.requireNonNull(equipmentId);
@@ -210,7 +211,7 @@ public class NetworkModificationService {
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
                     handleChangeError(response, DELETE_EQUIPMENT_FAILED))
-                .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                .bodyToFlux(new ParameterizedTypeReference<EquipmentDeletionInfos>() {
                 });
         });
     }
