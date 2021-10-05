@@ -592,7 +592,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/createLoad")
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/loads")
     @Operation(summary = "create a load in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been created")})
     public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,

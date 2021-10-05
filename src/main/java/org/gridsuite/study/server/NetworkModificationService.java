@@ -176,7 +176,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createLoadAttributes);
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "createLoad")
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "loads")
                 .queryParam("group", groupUuid)
                 .buildAndExpand()
                 .toUriString();

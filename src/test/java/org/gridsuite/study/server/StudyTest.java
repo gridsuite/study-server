@@ -328,7 +328,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/createLoad\\?group=.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
@@ -1790,7 +1790,7 @@ public class StudyTest {
         // create load
         String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/network-modification/createLoad", studyNameUserIdUuid)
+            .uri("/v1/studies/{studyUuid}/network-modification/loads", studyNameUserIdUuid)
             .bodyValue(createLoadAttributes)
             .exchange()
             .expectStatus().isOk();
@@ -1798,7 +1798,7 @@ public class StudyTest {
         checkLoadCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/createLoad\\?group=.*") && r.getBody().equals(createLoadAttributes)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
     }
 
     private void checkLoadCreationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
