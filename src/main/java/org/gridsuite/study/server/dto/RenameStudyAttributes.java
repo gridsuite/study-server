@@ -20,5 +20,5 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RenameStudyAttributes {
-    private String newStudyName;
+    private String newElementName;
 }
