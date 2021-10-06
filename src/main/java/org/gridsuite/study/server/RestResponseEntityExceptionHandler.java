@@ -41,6 +41,7 @@ public class RestResponseEntityExceptionHandler {
             case CANT_DELETE_ROOT_NODE:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case LINE_MODIFICATION_FAILED:
+            case LOAD_CREATION_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
