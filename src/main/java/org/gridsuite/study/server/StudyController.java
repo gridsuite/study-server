@@ -591,6 +591,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/loads")
+    @Operation(summary = "create a load in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been created")})
+    public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestBody String createLoadAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+            .then(studyService.createLoad(studyUuid, createLoadAttributes)));
+    }
+
     @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search studies in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of studies found")})

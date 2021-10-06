@@ -25,7 +25,8 @@ public class StudyException  extends RuntimeException {
         NOT_ALLOWED,
         STUDY_CREATION_FAILED,
         LINE_MODIFICATION_FAILED,
-        CANT_DELETE_ROOT_NODE,
+        LOAD_CREATION_FAILED,
+        CANT_DELETE_ROOT_NODE
     }
 
     private final Type type;

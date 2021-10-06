@@ -110,7 +110,6 @@
                 <artifactId>equalsverifier</artifactId>
                 <version>${equalsverifier-version}</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
@@ -266,7 +265,6 @@
             <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
 </project>

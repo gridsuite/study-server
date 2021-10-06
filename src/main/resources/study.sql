@@ -77,6 +77,7 @@
         caseUuid uuid not null,
         creationDate timestamp not null,
         description varchar(255) not null,
+        modificationGroupUuid uuid,
         isPrivate boolean not null,
         loadFlowProvider varchar(255),
         loadFlowStatus varchar(255),
