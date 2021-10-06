@@ -408,8 +408,7 @@ public class StudyController {
     public ResponseEntity<Mono<CreatedStudyBasicInfos>> renameStudy(@RequestHeader("userId") String headerUserId,
                                                                     @PathVariable("studyUuid") UUID studyUuid,
                                                                     @RequestBody RenameStudyAttributes renameStudyAttributes) {
-
-        Mono<CreatedStudyBasicInfos> studyMono = studyService.renameStudy(studyUuid, headerUserId, renameStudyAttributes.getNewStudyName());
+        Mono<CreatedStudyBasicInfos> studyMono = studyService.renameStudy(studyUuid, headerUserId, renameStudyAttributes.getNewElementName());
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
     }
 
@@ -592,7 +591,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/createLoad")
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/loads")
     @Operation(summary = "create a load in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been created")})
     public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
