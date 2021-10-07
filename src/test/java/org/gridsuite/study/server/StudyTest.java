@@ -1885,7 +1885,7 @@ public class StudyTest {
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         webTestClient.get()
-                .uri("/v1//studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/buses", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
+                .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/buses", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(BusInfos.class)
@@ -1898,7 +1898,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/0/voltage-levels/" + VOLTAGE_LEVEL_ID + "/configured-buses")));
 
         webTestClient.get()
-                .uri("/v1//studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/busbar-sections", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
+                .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/busbar-sections", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(BusbarSectionInfos.class)

@@ -176,26 +176,28 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(networkStoreService::getNetworkVoltageLevels));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/buses")
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/buses")
     @Operation(summary = "get buses the for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The voltage level list of the network")
     public ResponseEntity<Mono<List<BusInfos>>> getVoltageLevelBuses(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
             @PathVariable("voltageLevelId") String voltageLevelId) {
 
         Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBuses(uuid, voltageLevelId, 0)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBuses(uuid, voltageLevelId, variantNum)));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/busbar-sections")
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
     @Operation(summary = "get the busbar sections for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The voltage level list of the network")
     public ResponseEntity<Mono<List<BusbarSectionInfos>>> getVoltageLevelBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
             @PathVariable("voltageLevelId") String voltageLevelId) {
 
         Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBusbarSections(uuid, voltageLevelId, 0)));    }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBusbarSections(uuid, voltageLevelId, variantNum)));    }
 
     @GetMapping(value = "/studies/{studyUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
