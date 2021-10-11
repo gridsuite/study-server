@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>5</version>
+        <version>6-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -49,16 +49,6 @@
         <commons-lang3.version>3.9</commons-lang3.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
         <equalsverifier-version>3.7.1</equalsverifier-version>
-        <liquibase-maven-plugin.version>4.0.0</liquibase-maven-plugin.version>
-        <liquibase-hibernate5.version>3.10.1</liquibase-hibernate5.version>
-        <validation-api.version>2.0.1.Final</validation-api.version>
-        <spring-boot.version>2.3.1.RELEASE</spring-boot.version>
-        <jaxb-api.version>2.4.0-b180830.0359</jaxb-api.version>
-        <liquibase-core.version>4.4.3</liquibase-core.version>
-        <spring-boot-starter-data-jpa.version>2.4.7</spring-boot-starter-data-jpa.version>
-        <h2.version>1.4.200</h2.version>
-        <spring-beans.version>5.3.8</spring-beans.version>
-        <spring-data-jpa.version>2.4.9</spring-data-jpa.version>
     </properties>
 
     <build>
@@ -87,75 +77,6 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.liquibase</groupId>
-                <artifactId>liquibase-maven-plugin</artifactId>
-                <version>${liquibase-core.version}</version>
-                <configuration>
-                    <propertyFile>src/main/resources/liquibase.properties</propertyFile>
-                    <outputChangeLogFile>src/main/resources/db/init.xml</outputChangeLogFile>
-                    <changeLogFile>src/main/resources/db/study-db.xml</changeLogFile>
-                    <diffChangeLogFile>src/main/resources/db/changelogs/${maven.build.timestamp}_changelog.xml</diffChangeLogFile>
-                    <logging>info</logging>
-                    <includeArtifact>true</includeArtifact>
-                </configuration>
-                <executions>
-                    <!-- configuration to generate changeset from existing configuration -->
-                    <execution>
-                        <id>dummyDB</id>
-                        <configuration>
-                            <!-- add database_to_lower to generate lowercase instructions -->
-                            <url>jdbc:h2:./target/dummyDB;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;</url>
-                            <username>sa</username>
-                            <password></password>
-                            <driver>org.h2.Driver</driver>
-                        </configuration>
-                    </execution>
-                </executions>
-                <!-- Liquibase dependencies-->
-                <dependencies>
-                    <dependency>
-                        <groupId>org.liquibase</groupId>
-                        <artifactId>liquibase-core</artifactId>
-                        <version>${liquibase-core.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.liquibase.ext</groupId>
-                        <artifactId>liquibase-hibernate5</artifactId>
-                        <version>${liquibase-core.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.springframework.boot</groupId>
-                        <artifactId>spring-boot-starter-data-jpa</artifactId>
-                        <version>${spring-boot-starter-data-jpa.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>javax.validation</groupId>
-                        <artifactId>validation-api</artifactId>
-                        <version>${validation-api.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>javax.xml.bind</groupId>
-                        <artifactId>jaxb-api</artifactId>
-                        <version>${jaxb-api.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>com.h2database</groupId>
-                        <artifactId>h2</artifactId>
-                        <version>${h2.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.springframework</groupId>
-                        <artifactId>spring-beans</artifactId>
-                        <version>${spring-beans.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.springframework.data</groupId>
-                        <artifactId>spring-data-jpa</artifactId>
-                        <version>${spring-data-jpa.version}</version>
-                    </dependency>
-                </dependencies>
             </plugin>
         </plugins>
     </build>

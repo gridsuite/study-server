@@ -40,19 +40,6 @@ spring:
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
-      hibernate:
-        format_sql: true
-        # Used when action: create is uncommented
-        hbm2ddl:
-          delimiter: ;
-      # Uncomment action to automatically generate the database sql schema file
-      javax:
-        persistence:
-          schema-generation:
-            scripts:
-              #action: create
-              #create-target: src/main/resources/study.sql
-              create-source: metadata
 
   data:
     elasticsearch:
@@ -61,7 +48,7 @@ spring:
       port: 9200
 
   liquibase:
-    change-log: classpath:db/study-db.xml
+    change-log: classpath:db/init-db.xml
 
 backing-services:
   case:

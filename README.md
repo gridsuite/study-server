@@ -25,7 +25,3 @@ mvn liquibase:history
 
 to get more information (and more options)
 mvn liquibase:help
-
-To automatically generate the sql schema file you can use the following command:
-
-    mvn package -DskipTests && rm src/main/resources/study.sql && java  -jar target/gridsuite-study-server-1.0.0-SNAPSHOT-exec.jar --spring.jpa.properties.javax.persistence.schema-generation.scripts.action=create 
