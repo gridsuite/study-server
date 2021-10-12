@@ -18,6 +18,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.*;
@@ -1352,14 +1353,14 @@ public class StudyService {
             .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
     }
 
-    public Mono<Void> createLoad(UUID studyUuid, String createLoadAttributes) {
+    public Mono<Void> createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType) {
         return getGroupUuid(studyUuid, true).flatMap(groupUuid -> {
             Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
                 .then(invalidateSecurityAnalysisStatus(studyUuid)
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
 
-            return networkModificationService.createLoad(studyUuid, createLoadAttributes, groupUuid)
+            return networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
