@@ -8,7 +8,7 @@ spring:
       hibernate.format_sql: true
 
   liquibase:
-    change-log: classpath:db/init-db.xml
+    enabled: false
 
 logging:
   level:
