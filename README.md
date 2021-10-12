@@ -4,7 +4,7 @@
 # study-server
 
 to generate a new changeSet (diff between current schema & new schema ) : 
-mvn liquibase:dropAll@dummyDB && mvn liquibase:update@dummyDB && mvn liquibase:diff@dummyDB
+mvn compile && mvn liquibase:dropAll@dummyDB && mvn liquibase:update@dummyDB && mvn liquibase:diff@dummyDB
 
 to generate an initial changelog from existing database 
 mvn org.liquibase:liquibase-maven-plugin:generateChangeLog
