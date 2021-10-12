@@ -8,7 +8,7 @@ spring:
       hibernate.format_sql: true
 
   liquibase:
-    change-log: classpath:db/study-db.xml
+    change-log: classpath:db/init-db.xml
 
 logging:
   level:
@@ -19,7 +19,7 @@ logging:
 
 dbVendor: h2:mem
 query: ;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-hostPort:
+hostPort: ":"
 
 
 

@@ -1,8 +1,10 @@
 server:
-  port: 5001
   forward-headers-strategy: framework
 
 spring:
+  profiles:
+    active: default,local
+
   servlet:
     multipart:
       max-file-size: 100MB
@@ -11,7 +13,7 @@ spring:
     max-in-memory-size: 100MB
 
   rabbitmq:
-    addresses: localhost
+    addresses: rabbitmq
     port: 5672
 
   cloud:
@@ -27,7 +29,7 @@ spring:
           destination: sa.stopped
       source: publishStudyUpdate
   datasource:
-    url: ${dbApi}:${dbVendor}://${hostPort}/${dbName}${query}
+    url: ${dbUrl}
     username: ${login}
     password: ${password}
 
@@ -44,37 +46,42 @@ spring:
   data:
     elasticsearch:
       enabled: false
-      host: localhost
+      host: elasticsearch
       port: 9200
+      client:
+        timeout: 60  # Seconds
+    liquibase:
+      change-log: classpath:db/init-db.xml
 
-  liquibase:
-    change-log: classpath:db/init-db.xml
-
-backing-services:
-  case:
-    base-uri: http://localhost:5000
-  single-line-diagram:
-    base-uri: http://localhost:5005
-  network-conversion:
-    base-uri: http://localhost:5003
-  geo-data:
-    base-uri: http://localhost:8087
-  network-map:
-    base-uri: http://localhost:5006
-  network-modification:
-    base-uri: http://localhost:5007
-  loadflow:
-    base-uri: http://localhost:5008
-  actions-server:
-    base-uri: http://localhost:5022
-  security-analysis-server:
-    base-uri: http://localhost:5023
-  report-server:
-    base-uri: http://localhost:5028
+  # disable reactive client autoconfiguration because we don't use it and it is
+  # not configured so it tries to connect to localhost which fails. This means
+  # we get an ugly error message at startup, and more importantly that the
+  # health probes fail, so things like k8s think the server is not working and
+  # don't route traffic to it and keep the previous deployment. We have to do
+  # this because the reactiveclient is automatically used by springboot when
+  # starter-webflux is used.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.elasticsearch.ElasticSearchReactiveHealthContributorAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration
 
 network-store-server:
   preloading-strategy: COLLECTION
-  base-uri: http://localhost:8080/
 
+# this structure is shared among all microservices, if you change it, change it everywhere.
+# customQuery allows a microservice to set query parameters specific to itself.
+# if customQuery is empty, set queryBegin to "?", otherwise set it to "&".
+# this allow the user to add additional query elements common to all microservices
+# and to use the appropriate leading character depending on whether the microsevice
+# uses custom query parameters or not. customQueryBegin in this file must always be '?',
+# it is present only to be able to be overriden by deployments in the
+# manyschemas mode. It is used only for microservices that have predefined
+# query parameters, and it must be used if customQuery is not empty, otherwise
+# the manyschema mode doesn't work, so define it everywhere because it doesn't
+# hurt.
+queryBegin: '?'
+customQueryBegin: '?'
+customQuery:
 dbName: study
 dbApi: jdbc
