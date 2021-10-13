@@ -220,5 +220,10 @@
     <changeSet author="borsenbergerjac (generated)" id="1632985791712-11">
         <addForeignKeyConstraint baseColumnNames="study_id" baseTableName="node" constraintName="study_id_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
     </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1634128768831-1">
+        <addColumn tableName="study">
+            <column name="modificationGroupUuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
 
