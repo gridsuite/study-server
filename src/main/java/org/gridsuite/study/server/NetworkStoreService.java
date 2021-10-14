@@ -7,8 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.network.store.model.*;
-import org.gridsuite.study.server.dto.BusInfos;
-import org.gridsuite.study.server.dto.BusbarSectionInfos;
+import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -71,7 +70,7 @@ public class NetworkStoreService {
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
     // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
     Mono<Void> deleteNetwork(UUID networkUuid) {
-        var path = UriComponentsBuilder.fromPath("{networkId}")
+        var path = UriComponentsBuilder.fromPath("{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -84,7 +83,7 @@ public class NetworkStoreService {
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
     // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
     Mono<List<VoltageLevelInfos>> getNetworkVoltageLevels(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("{networkId}/voltage-levels")
+        String path = UriComponentsBuilder.fromPath("{networkUuid}/voltage-levels")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -101,8 +100,8 @@ public class NetworkStoreService {
 
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
     // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
-    Mono<List<BusInfos>> getVoltageLevelBuses(UUID networkUuid, String voltageLevelId, int variantNum) {
-        String path = UriComponentsBuilder.fromPath("{networkId}/{variantNum}/voltage-levels/{voltageLevelId}/configured-buses")
+    Mono<List<IdentifiableInfos>> getVoltageLevelBuses(UUID networkUuid, String voltageLevelId, int variantNum) {
+        String path = UriComponentsBuilder.fromPath("{networkUuid}/{variantNum}/voltage-levels/{voltageLevelId}/configured-buses")
                 .buildAndExpand(networkUuid, variantNum, voltageLevelId)
                 .toUriString();
 
@@ -113,14 +112,14 @@ public class NetworkStoreService {
                 });
 
         return mono.map(t -> t.getData().stream()
-                .map(e -> BusInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
+                .map(e -> IdentifiableInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
                 .collect(Collectors.toList()));
     }
 
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
     // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
-    Mono<List<BusbarSectionInfos>> getVoltageLevelBusbarSections(UUID networkUuid, String voltageLevelId, int variantNum) {
-        String path = UriComponentsBuilder.fromPath("{networkId}/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
+    Mono<List<IdentifiableInfos>> getVoltageLevelBusbarSections(UUID networkUuid, String voltageLevelId, int variantNum) {
+        String path = UriComponentsBuilder.fromPath("{networkUuid}/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
                 .buildAndExpand(networkUuid, variantNum, voltageLevelId)
                 .toUriString();
 
@@ -131,7 +130,7 @@ public class NetworkStoreService {
                 });
 
         return mono.map(t -> t.getData().stream()
-                .map(e -> BusbarSectionInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
+                .map(e -> IdentifiableInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
                 .collect(Collectors.toList()));
     }
 }

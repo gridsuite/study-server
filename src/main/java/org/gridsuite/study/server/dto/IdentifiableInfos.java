@@ -20,14 +20,14 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString
-@Schema(description = "Busbar section attributes")
-public class BusbarSectionInfos {
+@Schema(description = "Identifiable attributes")
+public class IdentifiableInfos {
 
-    @Schema(description = "Busbar section ID")
+    @Schema(description = "Identifiable ID")
     private String id;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @Schema(description = "Busbar section name")
+    @Schema(description = "Identifiable name")
     private String name;
 
 }

@@ -178,8 +178,8 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/buses")
     @Operation(summary = "get buses the for a given network and a given voltage level")
-    @ApiResponse(responseCode = "200", description = "The voltage level list of the network")
-    public ResponseEntity<Mono<List<BusInfos>>> getVoltageLevelBuses(
+    @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBuses(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("variantNum") int variantNum,
             @PathVariable("voltageLevelId") String voltageLevelId) {
@@ -190,8 +190,8 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
     @Operation(summary = "get the busbar sections for a given network and a given voltage level")
-    @ApiResponse(responseCode = "200", description = "The voltage level list of the network")
-    public ResponseEntity<Mono<List<BusbarSectionInfos>>> getVoltageLevelBusbarSections(
+    @ApiResponse(responseCode = "200", description = "The busbar sections list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("variantNum") int variantNum,
             @PathVariable("voltageLevelId") String voltageLevelId) {

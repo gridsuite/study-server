@@ -1888,10 +1888,10 @@ public class StudyTest {
                 .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/buses", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBodyList(BusInfos.class)
+                .expectBodyList(IdentifiableInfos.class)
                 .value(new MatcherJson<>(mapper, List.of(
-                        BusInfos.builder().id("BUS_1").name("BUS_1").build(),
-                        BusInfos.builder().id("BUS_2").name("BUS_2").build()
+                        IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
+                        IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build()
                 )));
 
         var requests = getRequestsDone(1);
@@ -1901,10 +1901,10 @@ public class StudyTest {
                 .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/busbar-sections", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBodyList(BusbarSectionInfos.class)
+                .expectBodyList(IdentifiableInfos.class)
                 .value(new MatcherJson<>(mapper, List.of(
-                        BusInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
-                        BusInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()
+                        IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
+                        IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()
                 )));
 
         requests = getRequestsDone(1);
