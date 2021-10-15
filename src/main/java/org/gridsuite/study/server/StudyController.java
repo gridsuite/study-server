@@ -176,6 +176,29 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(networkStoreService::getNetworkVoltageLevels));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/buses")
+    @Operation(summary = "get buses the for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBuses(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
+            @PathVariable("voltageLevelId") String voltageLevelId) {
+
+        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBuses(uuid, voltageLevelId, variantNum)));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
+    @Operation(summary = "get the busbar sections for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The busbar sections list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBusbarSections(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
+            @PathVariable("voltageLevelId") String voltageLevelId) {
+
+        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBusbarSections(uuid, voltageLevelId, variantNum)));    }
+
     @GetMapping(value = "/studies/{studyUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines graphics")})
