@@ -25,6 +25,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -203,7 +205,7 @@ public class NetworkModificationService {
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
                 .queryParam("group", groupUuid)
-                .buildAndExpand(equipmentType, equipmentId)
+                .buildAndExpand(equipmentType, URLEncoder.encode(equipmentId, StandardCharsets.UTF_8))
                 .toUriString();
 
             return webClient.delete()
