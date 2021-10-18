@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-public class StudyException  extends RuntimeException {
+public class StudyException extends RuntimeException {
 
     public enum Type {
         STUDY_ALREADY_EXISTS,
@@ -26,10 +26,16 @@ public class StudyException  extends RuntimeException {
         STUDY_CREATION_FAILED,
         LINE_MODIFICATION_FAILED,
         LOAD_CREATION_FAILED,
-        CANT_DELETE_ROOT_NODE
+        CANT_DELETE_ROOT_NODE,
+        UNKNOWN_EQUIPMENT_TYPE
     }
 
     private final Type type;
+
+    public static StudyException createEquipmentTypeUnknown(String type) {
+        Objects.requireNonNull(type);
+        return new StudyException(Type.UNKNOWN_EQUIPMENT_TYPE, "The equipment type : " + type + " is unknown");
+    }
 
     public StudyException(Type type) {
         super(Objects.requireNonNull(type.name()));
