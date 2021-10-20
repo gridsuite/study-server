@@ -176,6 +176,29 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(networkStoreService::getNetworkVoltageLevels));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/buses")
+    @Operation(summary = "get buses the for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBuses(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
+            @PathVariable("voltageLevelId") String voltageLevelId) {
+
+        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBuses(uuid, voltageLevelId, variantNum)));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
+    @Operation(summary = "get the busbar sections for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The busbar sections list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBusbarSections(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
+            @PathVariable("voltageLevelId") String voltageLevelId) {
+
+        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBusbarSections(uuid, voltageLevelId, variantNum)));    }
+
     @GetMapping(value = "/studies/{studyUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines graphics")})
@@ -658,5 +681,14 @@ public class StudyController {
         return networkModificationTreeService.getSimpleNode(id)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
+    @Operation(summary = "Delete equipment in study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment was deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
+    public ResponseEntity<Mono<Void>> deleteEquipment(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
+                                                      @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
+        return ResponseEntity.ok().body(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId));
     }
 }
