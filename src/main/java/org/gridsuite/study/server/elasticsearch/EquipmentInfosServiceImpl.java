@@ -12,14 +12,11 @@ import org.gridsuite.study.server.dto.EquipmentType;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.lang.NonNull;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -63,24 +60,33 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
             .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
             .build();
 
-        SearchHits<EquipmentInfos> searchHits = elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class);
-
-        List<EquipmentInfos> infos = searchHits
+        Map<String, List<EquipmentInfos>> infos = elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
             .stream()
             .map(SearchHit::getContent)
-            .collect(Collectors.toList());
+            .collect(Collectors.groupingBy(EquipmentInfos::getType));
 
+        // Sorted by equipment type
         return Stream.of(
-                infos.stream().filter(e -> e.getType().equals(EquipmentType.SUBSTATION.name())).sorted(Comparator.comparing(EquipmentInfos::getId)),
-                infos.stream().filter(e -> e.getType().equals(EquipmentType.VOLTAGE_LEVEL.name())).sorted(Comparator.comparing(EquipmentInfos::getId)),
-                infos.stream().filter(e -> e.getType().equals(EquipmentType.LINE.name())).sorted(Comparator.comparing(EquipmentInfos::getId)),
-                infos.stream().filter(e -> e.getType().equals(EquipmentType.TWO_WINDINGS_TRANSFORMER.name())).sorted(Comparator.comparing(EquipmentInfos::getId)),
-                infos.stream().filter(e -> e.getType().equals(EquipmentType.THREE_WINDINGS_TRANSFORMER.name())).sorted(Comparator.comparing(EquipmentInfos::getId)),
-                infos.stream().filter(e -> e.getType().equals(EquipmentType.HVDC.name())).sorted(Comparator.comparing(EquipmentInfos::getId)),
-                infos.stream().filter(e -> EquipmentType.isInjectionType(e.getType())).sorted(Comparator.comparing(EquipmentInfos::getId)),
-                infos.stream().filter(e -> EquipmentType.isSwitchType(e.getType())).sorted(Comparator.comparing(EquipmentInfos::getId))
+                infos.getOrDefault(EquipmentType.SUBSTATION.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.VOLTAGE_LEVEL.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.LINE.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.TWO_WINDINGS_TRANSFORMER.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.THREE_WINDINGS_TRANSFORMER.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.HVDC.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.GENERATOR.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.BATTERY.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.LOAD.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.SHUNT_COMPENSATOR.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.DANGLING_LINE.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.STATIC_VAR_COMPENSATOR.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.HVDC_CONVERTER_STATION.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.BUSBAR_SECTION.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.BREAKER.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.DISCONNECTOR.name(), Collections.emptyList()),
+                infos.getOrDefault(EquipmentType.LOAD_BREAK_SWITCH.name(), Collections.emptyList())
             )
-            .flatMap(e -> e)
+            .flatMap(Collection::stream)
+            .sorted(Comparator.comparing(EquipmentInfos::getId))
             .collect(Collectors.toList());
     }
 }

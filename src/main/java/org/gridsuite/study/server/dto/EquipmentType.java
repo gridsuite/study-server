@@ -10,9 +10,6 @@ import com.powsybl.iidm.network.*;
 import org.gridsuite.study.server.StudyException;
 import org.springframework.lang.NonNull;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
@@ -58,26 +55,5 @@ public enum EquipmentType {
         }
 
         throw StudyException.createEquipmentTypeUnknown(identifiable.getClass().getSimpleName());
-    }
-
-    public static boolean isInjectionType(@NonNull String type) {
-        return Stream.of(GENERATOR,
-                BATTERY,
-                LOAD,
-                SHUNT_COMPENSATOR,
-                DANGLING_LINE,
-                STATIC_VAR_COMPENSATOR,
-                HVDC_CONVERTER_STATION, BUSBAR_SECTION
-            )
-            .map(EquipmentType::name)
-            .collect(Collectors.toSet())
-            .contains(type);
-    }
-
-    public static boolean isSwitchType(@NonNull String type) {
-        return Stream.of(BREAKER, DISCONNECTOR, LOAD_BREAK_SWITCH)
-            .map(EquipmentType::name)
-            .collect(Collectors.toSet())
-            .contains(type);
     }
 }
