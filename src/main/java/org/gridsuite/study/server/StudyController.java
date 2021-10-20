@@ -388,7 +388,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> applyGroovyScript(@PathVariable("studyUuid") UUID studyUuid,
                                                         @RequestBody String groovyScript) {
 
-        return ResponseEntity.ok().body(studyService.applyGroovyScript(studyUuid, groovyScript).then());
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript).then()));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/modifications")
@@ -412,7 +412,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("lineId") String lineId,
             @RequestBody String status) {
-        return ResponseEntity.ok().body(studyService.changeLineStatus(studyUuid, lineId, status));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.changeLineStatus(studyUuid, lineId, status)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
@@ -689,6 +689,6 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteEquipment(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
-        return ResponseEntity.ok().body(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId)));
     }
 }
