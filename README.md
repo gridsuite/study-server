@@ -9,13 +9,13 @@ mvn package -DskipTests && rm -f src/main/resources/study.sql && java  -jar targ
 
 to generate a new changeSet (diff between current schema & new schema):
 ```
-mvn compile && mvn liquibase:dropAll && mvn liquibase:update && mvn liquibase:diff
+mvn compile liquibase:dropAll liquibase:update liquibase:diff
 ```
 and add the generated file in in src/resource/db/changelog/db.changelog-master.yml
 
 to generate a plain sql file from hibernate annotations (for easy inspecting, should be equivalent to generating with hibernate)
 ```
-mvn liquibase:dropAll && mvn liquibase:diff -Dliquibase-diff.outputFile=out.postgresql.sql
+mvn compile liquibase:dropAll liquibase:diff -Dliquibase-diff.outputFile=out.postgresql.sql
 ```
 
 to get more command on liquibase
