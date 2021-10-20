@@ -11,5 +11,6 @@ package org.gridsuite.study.server.dto.modification;
  */
 public enum ModificationType {
     EQUIPMENT_ATTRIBUTE_MODIFICATION,
-    LOAD_CREATION
+    LOAD_CREATION,
+    EQUIPMENT_DELETION
 }

@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
+import static org.gridsuite.study.server.StudyException.Type.DELETE_EQUIPMENT_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.LOAD_CREATION_FAILED;
@@ -189,6 +191,27 @@ public class NetworkModificationService {
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
                         handleChangeError(response, LOAD_CREATION_FAILED))
                 .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                });
+        });
+    }
+
+    public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(equipmentType);
+        Objects.requireNonNull(equipmentId);
+
+        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
+            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
+                .queryParam("group", groupUuid)
+                .buildAndExpand(equipmentType, equipmentId)
+                .toUriString();
+
+            return webClient.delete()
+                .uri(getNetworkModificationServerURI(true) + path)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                    handleChangeError(response, DELETE_EQUIPMENT_FAILED))
+                .bodyToFlux(new ParameterizedTypeReference<EquipmentDeletionInfos>() {
                 });
         });
     }
