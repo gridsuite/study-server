@@ -9,7 +9,7 @@ mvn compile && mvn liquibase:dropAll@dummyDB && mvn liquibase:update@dummyDB && 
 ```
 and add the generated file in in src/resource/db/changelog/db.changelog-master.yml
 
-to generate an initial changelog from hibernate at sql format
+to generate a plain sql file from the hibernate annotations (for easy inspecting, should be equivalent to generating with hibernate)
 ```
 mvn liquibase:generateChangeLog -Dliquibase.outputFile=generated.postgresql.sql
 ```
