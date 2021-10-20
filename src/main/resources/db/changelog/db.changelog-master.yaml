@@ -1,7 +1,5 @@
 databaseChangeLog:
 
-  #- includeAll:
-  #    path: /db/changelog/changesets
   - include:
       file: changesets/2021-10-19T14:07:51Z_changelog.xml
       relativeToChangelogFile: true
