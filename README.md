@@ -3,13 +3,21 @@
 [![MPL-2.0 License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 # study-server
 
-to generate a new changeSet (diff between current schema & new schema ) :
+to generate a new changeSet (diff between current schema & new schema):
 ```
 mvn compile && mvn liquibase:dropAll@dummyDB && mvn liquibase:update@dummyDB && mvn liquibase:diff@dummyDB
 ```
-to generate an initial changelog from existing database
+and add the generated file in in src/resource/db/changelog/db.changelog-master.yml
+
+Next commands use local postgres sql (as defined in liquibase.properties)
+to generate an initial changelog from existing database 
 ```
 mvn liquibase:generateChangeLog
+```
+
+to generate sql file corresponding to the current schema 
+```
+mvn liquibase:generateChangeLog -Dliquibase.outputFile=generated.postgresql.sql
 ```
 to use an existing  database without destroying it
 ```

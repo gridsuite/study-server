@@ -50,8 +50,6 @@ spring:
       port: 9200
       client:
         timeout: 60  # Seconds
-  liquibase:
-    change-log: classpath:db/init-db.xml
 
   # disable reactive client autoconfiguration because we don't use it and it is
   # not configured so it tries to connect to localhost which fails. This means
