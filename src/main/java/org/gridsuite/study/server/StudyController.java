@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -620,7 +621,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @RequestBody String createLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-            .then(studyService.createLoad(studyUuid, createLoadAttributes)));
+            .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION)));
     }
 
     @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -690,5 +691,14 @@ public class StudyController {
                                                       @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/generators")
+    @Operation(summary = "create a generator in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator has been created")})
+    public ResponseEntity<Mono<Void>> createGenerator(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestBody String createGeneratorAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+            .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION)));
     }
 }
