@@ -28,6 +28,7 @@ public class StudyException extends RuntimeException {
         LOAD_CREATION_FAILED,
         CANT_DELETE_ROOT_NODE,
         DELETE_EQUIPMENT_FAILED,
+        GENERATOR_CREATION_FAILED,
         UNKNOWN_EQUIPMENT_TYPE
     }
 
