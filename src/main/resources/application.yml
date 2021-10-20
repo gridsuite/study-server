@@ -42,6 +42,19 @@ spring:
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate:
+        format_sql: true
+        # Used when action: create is uncommented
+        hbm2ddl:
+          delimiter: ;
+      # Uncomment action to automatically generate the database sql schema file
+      javax:
+        persistence:
+          schema-generation:
+            scripts:
+              #action: create
+              create-target: src/main/resources/study.sql
+              create-source: metadata
 
   data:
     elasticsearch:
@@ -50,7 +63,6 @@ spring:
       port: 9200
       client:
         timeout: 60  # Seconds
-
   # disable reactive client autoconfiguration because we don't use it and it is
   # not configured so it tries to connect to localhost which fails. This means
   # we get an ugly error message at startup, and more importantly that the

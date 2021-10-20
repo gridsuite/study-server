@@ -50,7 +50,7 @@
         <commons-lang3.version>3.9</commons-lang3.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
         <equalsverifier-version>3.7.1</equalsverifier-version>
-        <liquibase.dbUrl>hibernate:spring:org.gridsuite.study.server?dialect=org.hibernate.dialect.PostgreSQLDialect&amp;hibernate.physical_naming_strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl&amp;hibernate.implicit_naming_strategy=org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl</liquibase.dbUrl>
+        <liquibase-hibernate-path>org.gridsuite.study.server</liquibase-hibernate-path>
     </properties>
 
     <build>
