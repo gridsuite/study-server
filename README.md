@@ -9,35 +9,11 @@ mvn compile && mvn liquibase:dropAll@dummyDB && mvn liquibase:update@dummyDB && 
 ```
 and add the generated file in in src/resource/db/changelog/db.changelog-master.yml
 
-Next commands use local postgres sql (as defined in liquibase.properties)
-to generate an initial changelog from existing database 
-```
-mvn liquibase:generateChangeLog
-```
-
-to generate sql file corresponding to the current schema 
+to generate an initial changelog from hibernate at sql format
 ```
 mvn liquibase:generateChangeLog -Dliquibase.outputFile=generated.postgresql.sql
 ```
-to use an existing  database without destroying it
-```
-mvn liquibase:changelogSync
-```
 
-to update current data base (withou running application)
-```
-mvn liquibase:update
-```
-
-rollback:
-```
-mvn liquibase:rollback -Dliquibase.rollbackCount=1
-```
-history:
-```
-mvn liquibase:history
-```
-to get more information (and more options)
 ```
 mvn liquibase:help
 ```
