@@ -7,8 +7,13 @@
 package org.gridsuite.study.server;
 
 import com.google.common.collect.Iterables;
+import com.powsybl.iidm.network.Identifiable;
+import com.powsybl.iidm.network.Network;
+import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import com.powsybl.network.store.iidm.impl.NetworkImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.EquipmentType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,8 +27,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -135,5 +139,12 @@ public class EquipmentInfosServiceTests {
         hits = new HashSet<>(equipmentInfosService.search("equipmentType:(LINE) AND equipmentId:(*other*)"));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(otherLineInfos));
+    }
+
+    @Test
+    public void testBadEquipmentType() {
+        Identifiable<Network> network = new NetworkFactoryImpl().createNetwork("test", "test");
+        String errorMessage = assertThrows(StudyException.class, () -> EquipmentType.getType(network)).getMessage();
+        assertTrue(errorMessage.contains(String.format("The equipment type : %s is unknown", NetworkImpl.class.getSimpleName())));
     }
 }
