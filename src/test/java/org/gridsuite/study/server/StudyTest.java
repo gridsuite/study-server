@@ -1992,7 +1992,7 @@ public class StudyTest {
                 "\"shuntConductance2\":\"200.0\"," +
                 "\"shuntSusceptance2\":\"200.0\"," +
                 "\"voltageLevelId1\":\"idVL1\"," +
-                "\"busOrBusbarSectionId1\":\"idBus1\"}" +
+                "\"busOrBusbarSectionId1\":\"idBus1\"," +
                 "\"voltageLevelId2\":\"idVL2\"," +
                 "\"busOrBusbarSectionId2\":\"idBus2\"}";
         webTestClient.put()
@@ -2005,26 +2005,6 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
-
-        String createLineAttributesNoShunts = "{" +
-                "\"lineId\":\"lineId1\"," +
-                "\"lineName\":\"lineName1\"," +
-                "\"seriesResistance\":\"50.0\"," +
-                "\"seriesReactance\":\"50.0\"," +
-                "\"voltageLevelId1\":\"idVL1\"," +
-                "\"busOrBusbarSectionId1\":\"idBus1\"}" +
-                "\"voltageLevelId2\":\"idVL2\"," +
-                "\"busOrBusbarSectionId2\":\"idBus2\"}";
-        webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/network-modification/lines", studyNameUserIdUuid)
-            .bodyValue(createLineAttributesNoShunts)
-            .exchange()
-            .expectStatus().isOk();
-
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributesNoShunts)));
     }
 
     @After
