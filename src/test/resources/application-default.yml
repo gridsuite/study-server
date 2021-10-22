@@ -2,14 +2,9 @@ spring:
   jpa:
     database: H2
     hibernate:
-      ddl-auto: create-drop
-      naming:
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
-        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
 
     properties:
       dialect: org.hibernate.dialect.H2Dialect
-      hibernate.format_sql: true
 
   liquibase:
     enabled: true
@@ -21,7 +16,7 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
-dbVendor: h2:mem:MODE=PostGreSQL
+dbVendor: h2:mem
 query: ;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
 hostPort: ":"
 

@@ -1,24 +1,48 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
-<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-3.9.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-1">
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-3.10.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.10.xsd">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-1">
+        <createTable tableName="load_flow_result_entity_component_results">
+            <column name="load_flow_result_entity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="connected_component_num" type="INT"/>
+            <column name="iteration_count" type="INT"/>
+            <column name="slack_bus_active_power_mismatch" type="FLOAT8"/>
+            <column name="slack_bus_id" type="VARCHAR(255)"/>
+            <column name="status" type="INT"/>
+            <column name="synchronous_component_num" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-2">
+        <createTable tableName="load_flow_result_entity_metrics">
+            <column name="load_flow_result_entity_id" type="UUID">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="metrics" type="VARCHAR(255)"/>
+            <column name="metrics_key" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-3">
         <createTable tableName="loadflowparameters">
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="loadflowparametersPK"/>
             </column>
-            <column name="balanceType" type="VARCHAR(255)"/>
+            <column name="balance_type" type="VARCHAR(255)"/>
             <column name="dc" type="BOOLEAN"/>
-            <column name="distributedSlack" type="BOOLEAN"/>
-            <column name="noGeneratorReactiveLimits" type="BOOLEAN"/>
-            <column name="phaseShifterRegulationOn" type="BOOLEAN"/>
-            <column name="readSlackBus" type="BOOLEAN"/>
-            <column name="simulShunt" type="BOOLEAN"/>
-            <column name="transformerVoltageControlOn" type="BOOLEAN"/>
-            <column name="twtSplitShuntAdmittance" type="BOOLEAN"/>
-            <column name="voltageInitMode" type="VARCHAR(255)"/>
-            <column name="writeSlackBus" type="BOOLEAN"/>
+            <column name="distributed_slack" type="BOOLEAN"/>
+            <column name="no_generator_reactive_limits" type="BOOLEAN"/>
+            <column name="phase_shifter_regulation_on" type="BOOLEAN"/>
+            <column name="read_slack_bus" type="BOOLEAN"/>
+            <column name="simul_shunt" type="BOOLEAN"/>
+            <column name="transformer_voltage_control_on" type="BOOLEAN"/>
+            <column name="twt_split_shunt_admittance" type="BOOLEAN"/>
+            <column name="voltage_init_mode" type="VARCHAR(255)"/>
+            <column name="write_slack_bus" type="BOOLEAN"/>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-2">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-4">
         <createTable tableName="loadflowresult">
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="loadflowresultPK"/>
@@ -27,33 +51,9 @@
             <column name="ok" type="BOOLEAN"/>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-3">
-        <createTable tableName="loadflowresult_componentresults">
-            <column name="LoadFlowResultEntity_id" type="UUID">
-                <constraints nullable="false"/>
-            </column>
-            <column name="connectedComponentNum" type="INT"/>
-            <column name="iterationCount" type="INT"/>
-            <column name="slackBusActivePowerMismatch" type="FLOAT8"/>
-            <column name="slackBusId" type="VARCHAR(255)"/>
-            <column name="status" type="INT"/>
-            <column name="synchronousComponentNum" type="INT"/>
-        </createTable>
-    </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-4">
-        <createTable tableName="loadflowresult_metrics">
-            <column name="LoadFlowResultEntity_id" type="UUID">
-                <constraints nullable="false" primaryKey="true"/>
-            </column>
-            <column name="metrics" type="VARCHAR(255)"/>
-            <column name="metrics_KEY" type="VARCHAR(255)">
-                <constraints nullable="false" primaryKey="true"/>
-            </column>
-        </createTable>
-    </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-5">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-5">
         <createTable tableName="modelinfo">
-            <column name="idNode" type="UUID">
+            <column name="id_node" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="modelinfoPK"/>
             </column>
             <column name="description" type="VARCHAR(255)"/>
@@ -61,159 +61,159 @@
             <column name="model" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-6">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-6">
         <createTable tableName="networkmodificationnodeinfo">
-            <column name="idNode" type="UUID">
+            <column name="id_node" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="networkmodificationnodeinfoPK"/>
             </column>
             <column name="description" type="VARCHAR(255)"/>
             <column name="name" type="VARCHAR(255)"/>
-            <column name="networkModificationId" type="UUID"/>
+            <column name="network_modification_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-7">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-7">
         <createTable tableName="node">
-            <column name="idNode" type="UUID">
+            <column name="id_node" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="nodePK"/>
             </column>
             <column name="type" type="VARCHAR(255)"/>
-            <column name="parentNode" type="UUID"/>
+            <column name="parent_node" type="UUID"/>
             <column name="study_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-8">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-8">
         <createTable tableName="rootnodeinfo">
-            <column name="idNode" type="UUID">
+            <column name="id_node" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="rootnodeinfoPK"/>
             </column>
             <column name="description" type="VARCHAR(255)"/>
             <column name="name" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-9">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-9">
         <createTable tableName="study">
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="studyPK"/>
             </column>
-            <column name="caseFormat" type="VARCHAR(255)">
+            <column name="case_format" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="casePrivate" type="BOOLEAN">
+            <column name="case_private" type="BOOLEAN">
                 <constraints nullable="false"/>
             </column>
-            <column name="caseUuid" type="UUID">
+            <column name="case_uuid" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="creationDate" type="TIMESTAMP">
+            <column name="creation_date" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="isPrivate" type="BOOLEAN">
+            <column name="is_private" type="BOOLEAN">
                 <constraints nullable="false"/>
             </column>
-            <column name="loadFlowProvider" type="VARCHAR(255)"/>
-            <column name="loadFlowStatus" type="VARCHAR(255)"/>
-            <column name="modificationGroupUuid" type="UUID"/>
-            <column name="networkId" type="VARCHAR(255)">
+            <column name="load_flow_provider" type="VARCHAR(255)"/>
+            <column name="load_flow_status" type="VARCHAR(255)"/>
+            <column name="modification_group_uuid" type="UUID"/>
+            <column name="network_id" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="networkUuid" type="UUID">
+            <column name="network_uuid" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="securityAnalysisResultUuid" type="UUID"/>
-            <column name="studyName" type="VARCHAR(255)">
+            <column name="security_analysis_result_uuid" type="UUID"/>
+            <column name="study_name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="userId" type="VARCHAR(255)">
+            <column name="user_id" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="loadFlowParametersEntity_id" type="UUID">
+            <column name="load_flow_parameters_entity_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="loadFlowResultEntity_id" type="UUID"/>
+            <column name="load_flow_result_entity_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-10">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-10">
         <createTable tableName="studycreationrequest">
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="studycreationrequestPK"/>
             </column>
-            <column name="creationDate" type="TIMESTAMP">
+            <column name="creation_date" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="isPrivate" type="BOOLEAN">
+            <column name="is_private" type="BOOLEAN">
                 <constraints nullable="false"/>
             </column>
-            <column name="studyName" type="VARCHAR(255)">
+            <column name="study_name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="userId" type="VARCHAR(255)">
+            <column name="user_id" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-11">
-        <createIndex indexName="loadflowResultentity_componentresults_id_index" tableName="loadflowresult_componentresults">
-            <column name="LoadFlowResultEntity_id"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-11">
+        <createIndex indexName="loadFlowResultEntity_componentResults_id_index" tableName="load_flow_result_entity_component_results">
+            <column name="load_flow_result_entity_id"/>
         </createIndex>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-12">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-12">
         <createIndex indexName="nodeEntity_parentNode_idx" tableName="node">
-            <column name="parentNode"/>
+            <column name="parent_node"/>
         </createIndex>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-13">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-13">
         <createIndex indexName="nodeEntity_studyId_idx" tableName="node">
             <column name="study_id"/>
         </createIndex>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-14">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-14">
         <createIndex indexName="studyCreationRequest_isPrivate_index" tableName="studycreationrequest">
-            <column name="isPrivate"/>
+            <column name="is_private"/>
         </createIndex>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-15">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-15">
         <createIndex indexName="studyCreationRequest_userId_index" tableName="studycreationrequest">
-            <column name="userId"/>
+            <column name="user_id"/>
         </createIndex>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-16">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-16">
         <createIndex indexName="studyEntity_isPrivate_index" tableName="study">
-            <column name="isPrivate"/>
+            <column name="is_private"/>
         </createIndex>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-17">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-17">
         <createIndex indexName="studyEntity_userId_index" tableName="study">
-            <column name="userId"/>
+            <column name="user_id"/>
         </createIndex>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-18">
-        <addForeignKeyConstraint baseColumnNames="idNode" baseTableName="modelinfo" constraintName="FKbde4clrweu4esjsf611ium1nk" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-18">
+        <addForeignKeyConstraint baseColumnNames="id_node" baseTableName="networkmodificationnodeinfo" constraintName="FK2ad8ldqy54jvnuqc8him4vwev" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-19">
-        <addForeignKeyConstraint baseColumnNames="idNode" baseTableName="networkmodificationnodeinfo" constraintName="FKdyjntohhonaoe5ngonrgrn4h9" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-19">
+        <addForeignKeyConstraint baseColumnNames="id_node" baseTableName="rootnodeinfo" constraintName="FKai65sofct5krbq0vno370rf3s" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-20">
-        <addForeignKeyConstraint baseColumnNames="idNode" baseTableName="rootnodeinfo" constraintName="FKe139bjcrqd9576sydb9i1s0lh" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-20">
+        <addForeignKeyConstraint baseColumnNames="id_node" baseTableName="modelinfo" constraintName="FKxa1qkjd16om15h1nt9mcn19n" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-21">
-        <addForeignKeyConstraint baseColumnNames="loadFlowParametersEntity_id" baseTableName="study" constraintName="loadFlowParameters_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowparameters" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-21">
+        <addForeignKeyConstraint baseColumnNames="load_flow_parameters_entity_id" baseTableName="study" constraintName="loadFlowParameters_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowparameters" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-22">
-        <addForeignKeyConstraint baseColumnNames="LoadFlowResultEntity_id" baseTableName="loadflowresult_metrics" constraintName="loadFlowResultEntity_metrics_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-22">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="load_flow_result_entity_component_results" constraintName="loadFlowResultEntity_componentResults_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-23">
-        <addForeignKeyConstraint baseColumnNames="loadFlowResultEntity_id" baseTableName="study" constraintName="loadFlowResult_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-23">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="load_flow_result_entity_metrics" constraintName="loadFlowResultEntity_metrics_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-24">
-        <addForeignKeyConstraint baseColumnNames="LoadFlowResultEntity_id" baseTableName="loadflowresult_componentresults" constraintName="loadflowresultentity_componentresults_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-24">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="study" constraintName="loadFlowResult_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="loadflowresult" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-25">
-        <addForeignKeyConstraint baseColumnNames="parentNode" baseTableName="node" constraintName="parent_node_id_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="idNode" referencedTableName="node" validate="true"/>
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-25">
+        <addForeignKeyConstraint baseColumnNames="parent_node" baseTableName="node" constraintName="parent_node_id_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
     </changeSet>
-    <changeSet author="borsenbergerjac (generated)" id="1634652477444-26">
+    <changeSet author="borsenbergerjac (generated)" id="1634895880424-26">
         <addForeignKeyConstraint baseColumnNames="study_id" baseTableName="node" constraintName="study_id_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
     </changeSet>
 </databaseChangeLog>
