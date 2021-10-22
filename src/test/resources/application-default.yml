@@ -1,13 +1,9 @@
 spring:
   jpa:
     database: H2
-    hibernate:
 
     properties:
       dialect: org.hibernate.dialect.H2Dialect
-
-  liquibase:
-    enabled: true
 
 logging:
   level:
