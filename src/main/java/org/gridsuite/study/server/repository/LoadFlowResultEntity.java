@@ -42,7 +42,6 @@ public class LoadFlowResultEntity {
     @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_metrics_fk"))
     private Map<String, String> metrics;
 
-    @Lob
     @Column(name = "logs", columnDefinition = "TEXT")
     private String logs;
 
