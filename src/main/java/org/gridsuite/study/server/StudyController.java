@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -175,6 +176,29 @@ public class StudyController {
         Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(networkStoreService::getNetworkVoltageLevels));
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/buses")
+    @Operation(summary = "get buses the for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBuses(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
+            @PathVariable("voltageLevelId") String voltageLevelId) {
+
+        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBuses(uuid, voltageLevelId, variantNum)));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
+    @Operation(summary = "get the busbar sections for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The busbar sections list of the network for given voltage level")
+    public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBusbarSections(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("variantNum") int variantNum,
+            @PathVariable("voltageLevelId") String voltageLevelId) {
+
+        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBusbarSections(uuid, voltageLevelId, variantNum)));    }
 
     @GetMapping(value = "/studies/{studyUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
@@ -365,7 +389,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> applyGroovyScript(@PathVariable("studyUuid") UUID studyUuid,
                                                         @RequestBody String groovyScript) {
 
-        return ResponseEntity.ok().body(studyService.applyGroovyScript(studyUuid, groovyScript).then());
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript).then()));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/network/modifications")
@@ -389,7 +413,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("lineId") String lineId,
             @RequestBody String status) {
-        return ResponseEntity.ok().body(studyService.changeLineStatus(studyUuid, lineId, status));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.changeLineStatus(studyUuid, lineId, status)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
@@ -597,7 +621,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @RequestBody String createLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-            .then(studyService.createLoad(studyUuid, createLoadAttributes)));
+            .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION)));
     }
 
     @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -658,5 +682,23 @@ public class StudyController {
         return networkModificationTreeService.getSimpleNode(id)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
+    @Operation(summary = "Delete equipment in study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment was deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
+    public ResponseEntity<Mono<Void>> deleteEquipment(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
+                                                      @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/generators")
+    @Operation(summary = "create a generator in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator has been created")})
+    public ResponseEntity<Mono<Void>> createGenerator(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestBody String createGeneratorAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+            .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION)));
     }
 }

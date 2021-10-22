@@ -6,8 +6,8 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.network.store.model.TopLevelDocument;
-import com.powsybl.network.store.model.VoltageLevelAttributes;
+import com.powsybl.network.store.model.*;
+import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -70,7 +70,7 @@ public class NetworkStoreService {
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
     // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
     Mono<Void> deleteNetwork(UUID networkUuid) {
-        var path = UriComponentsBuilder.fromPath("{networkId}")
+        var path = UriComponentsBuilder.fromPath("{networkUuid}")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -83,7 +83,7 @@ public class NetworkStoreService {
     // This function call directly the network store server without using the dedicated client because it's a blocking client.
     // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
     Mono<List<VoltageLevelInfos>> getNetworkVoltageLevels(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("{networkId}/voltage-levels")
+        String path = UriComponentsBuilder.fromPath("{networkUuid}/voltage-levels")
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -95,6 +95,42 @@ public class NetworkStoreService {
 
         return mono.map(t -> t.getData().stream()
                 .map(e -> VoltageLevelInfos.builder().id(e.getId()).name(e.getAttributes().getName()).substationId(e.getAttributes().getSubstationId()).build())
+                .collect(Collectors.toList()));
+    }
+
+    // This function call directly the network store server without using the dedicated client because it's a blocking client.
+    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
+    Mono<List<IdentifiableInfos>> getVoltageLevelBuses(UUID networkUuid, String voltageLevelId, int variantNum) {
+        String path = UriComponentsBuilder.fromPath("{networkUuid}/{variantNum}/voltage-levels/{voltageLevelId}/configured-buses")
+                .buildAndExpand(networkUuid, variantNum, voltageLevelId)
+                .toUriString();
+
+        Mono<TopLevelDocument<ConfiguredBusAttributes>> mono = webClient.get()
+                .uri(getNetworkStoreServerServerURI() + path)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.ConfiguredBusAttributes>>() {
+                });
+
+        return mono.map(t -> t.getData().stream()
+                .map(e -> IdentifiableInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
+                .collect(Collectors.toList()));
+    }
+
+    // This function call directly the network store server without using the dedicated client because it's a blocking client.
+    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
+    Mono<List<IdentifiableInfos>> getVoltageLevelBusbarSections(UUID networkUuid, String voltageLevelId, int variantNum) {
+        String path = UriComponentsBuilder.fromPath("{networkUuid}/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
+                .buildAndExpand(networkUuid, variantNum, voltageLevelId)
+                .toUriString();
+
+        Mono<TopLevelDocument<BusbarSectionAttributes>> mono = webClient.get()
+                .uri(getNetworkStoreServerServerURI() + path)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.BusbarSectionAttributes>>() {
+                });
+
+        return mono.map(t -> t.getData().stream()
+                .map(e -> IdentifiableInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
                 .collect(Collectors.toList()));
     }
 }

@@ -6,10 +6,37 @@
  */
 package org.gridsuite.study.server.dto.modification;
 
+import com.powsybl.commons.PowsyblException;
+import org.gridsuite.study.server.StudyException;
+
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public enum ModificationType {
     EQUIPMENT_ATTRIBUTE_MODIFICATION,
-    LOAD_CREATION
+    LOAD_CREATION,
+    EQUIPMENT_DELETION,
+    GENERATOR_CREATION;
+
+    public static String getUriFromType(ModificationType modificationType) {
+        switch (modificationType) {
+            case LOAD_CREATION:
+                return "loads";
+            case GENERATOR_CREATION:
+                return "generators";
+            default:
+                throw new PowsyblException("Argument " + modificationType + " not expected !!");
+        }
+    }
+
+    public static StudyException.Type getExceptionFromType(ModificationType modificationType) {
+        switch (modificationType) {
+            case LOAD_CREATION:
+                return StudyException.Type.LOAD_CREATION_FAILED;
+            case GENERATOR_CREATION:
+                return StudyException.Type.GENERATOR_CREATION_FAILED;
+            default:
+                throw new PowsyblException("Argument " + modificationType + " not expected !!");
+        }
+    }
 }
