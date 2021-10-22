@@ -18,6 +18,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.*;
@@ -97,6 +98,8 @@ public class StudyService {
     static final String HEADER_ERROR = "error";
     static final String UPDATE_TYPE_STUDY = "study";
     static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
+    static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
+    static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
     static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     static final String RECEIVER = "receiver";
 
@@ -835,6 +838,17 @@ public class StudyService {
         );
     }
 
+    private void emitStudyEquipmentDeleted(UUID studyUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, updateType)
+            .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
+            .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, equipmentType)
+            .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, equipmentId)
+            .build()
+        );
+    }
+
     Mono<Boolean> studyExists(String studyName, String userId) {
         return getStudyByNameAndUserId(studyName, userId).cast(BasicStudyEntity.class).switchIfEmpty(getStudyCreationRequestByNameAndUserId(studyName, userId)).hasElement();
     }
@@ -1339,18 +1353,37 @@ public class StudyService {
             .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
     }
 
-    public Mono<Void> createLoad(UUID studyUuid, String createLoadAttributes) {
+    public Mono<Void> createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType) {
         return getGroupUuid(studyUuid, true).flatMap(groupUuid -> {
             Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
                 .then(invalidateSecurityAnalysisStatus(studyUuid)
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
 
-            return networkModificationService.createLoad(studyUuid, createLoadAttributes, groupUuid)
+            return networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
                     emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
+                .then(monoUpdateLfState);
+        });
+    }
+
+    Mono<Void> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId) {
+        return getGroupUuid(studyUuid, true).flatMap(groupUuid -> {
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(studyUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+
+            return networkModificationService.deleteEquipment(studyUuid, equipmentType, equipmentId, groupUuid)
+                .flatMap(modification -> Flux.fromIterable(Arrays.asList(modification)))
+                .collect(Collectors.toList())
+                .doOnSuccess(deletionInfos -> deletionInfos.forEach(deletionInfo ->
+                        emitStudyEquipmentDeleted(studyUuid, UPDATE_TYPE_STUDY,
+                            deletionInfo.getSubstationIds(), deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
+                    )
                 )
                 .then(monoUpdateLfState);
         });

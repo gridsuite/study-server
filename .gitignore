@@ -1,3 +1,10 @@
+# VSCode
+/.vscode
+/.settings
+.classpath
+.factorypath
+.project
+
 target/
 
 # IntelliJ
