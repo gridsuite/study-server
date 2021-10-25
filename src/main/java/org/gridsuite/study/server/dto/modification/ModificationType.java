@@ -16,7 +16,8 @@ public enum ModificationType {
     EQUIPMENT_ATTRIBUTE_MODIFICATION,
     LOAD_CREATION,
     EQUIPMENT_DELETION,
-    GENERATOR_CREATION;
+    GENERATOR_CREATION,
+    LINE_CREATION;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
@@ -24,6 +25,8 @@ public enum ModificationType {
                 return "loads";
             case GENERATOR_CREATION:
                 return "generators";
+            case LINE_CREATION:
+                return "lines";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
@@ -35,6 +38,8 @@ public enum ModificationType {
                 return StudyException.Type.LOAD_CREATION_FAILED;
             case GENERATOR_CREATION:
                 return StudyException.Type.GENERATOR_CREATION_FAILED;
+            case LINE_CREATION:
+                return StudyException.Type.LINE_CREATION_FAILED;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }

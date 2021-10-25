@@ -22,10 +22,12 @@ public class ModificationTypeTest {
     public void test() {
         assertEquals("loads", ModificationType.getUriFromType(ModificationType.LOAD_CREATION));
         assertEquals("generators", ModificationType.getUriFromType(ModificationType.GENERATOR_CREATION));
+        assertEquals("lines", ModificationType.getUriFromType(ModificationType.LINE_CREATION));
         assertThrows(PowsyblException.class, () -> ModificationType.getUriFromType(ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION));
 
         assertEquals(StudyException.Type.LOAD_CREATION_FAILED, ModificationType.getExceptionFromType(ModificationType.LOAD_CREATION));
         assertEquals(StudyException.Type.GENERATOR_CREATION_FAILED, ModificationType.getExceptionFromType(ModificationType.GENERATOR_CREATION));
+        assertEquals(StudyException.Type.LINE_CREATION_FAILED, ModificationType.getExceptionFromType(ModificationType.LINE_CREATION));
         assertThrows(PowsyblException.class, () -> ModificationType.getExceptionFromType(ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION));
     }
 }

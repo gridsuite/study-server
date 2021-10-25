@@ -701,4 +701,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
             .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION)));
     }
+
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines")
+    @Operation(summary = "create a line in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line has been created")})
+    public ResponseEntity<Mono<Void>> createLine(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestBody String createLineAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+            .then(studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION)));
+    }
 }
