@@ -13,10 +13,7 @@ import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
-import com.powsybl.iidm.network.Country;
-import com.powsybl.iidm.network.Line;
-import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.VoltageLevel;
+import com.powsybl.iidm.network.*;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
@@ -231,7 +228,11 @@ public class StudyTest {
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
         Iterable<VoltageLevel> vls = network.getVoltageLevels();
-        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), Resource.INITIAL_VARIANT_NUM, VoltageLevelAttributes.builder().name(vl.getName()).substationId(vl.getSubstation().getId()).build())));
+        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), Resource.INITIAL_VARIANT_NUM,
+                VoltageLevelAttributes.builder()
+                        .name(vl.getName())
+                        .substationId(vl.getSubstation().map(Identifiable::getId).orElse(null))
+                        .build())));
 
         topLevelDocument = new TopLevelDocument<>(data, null);
 
@@ -348,6 +349,17 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(new JSONArray(List.of(jsonObject)).toString())
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/LOAD/id/idLoadToDelete\\?group=.*")) {
+                    JSONObject jsonObject = new JSONObject(Map.of("equipmentId", "idLoadToDelete",
+                        "equipmentType", "LOAD", "substationIds", List.of("s2")));
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*")) {
+                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -1181,14 +1193,14 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectBodyList(VoltageLevelInfos.class)
                 .value(new MatcherJson<>(mapper, List.of(
-                        VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
-                        VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
-                        VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
-                        VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
-                        VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
-                        VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
                         VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
                         VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
+                        VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
+                        VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
+                        VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
+                        VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
+                        VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
+                        VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
                         VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
                         VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build()
                 )));
@@ -1806,7 +1818,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testCreateLoad() throws Exception {
+    public void testCreateLoad() {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
@@ -1818,20 +1830,42 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkLoadCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
     }
 
-    private void checkLoadCreationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
+    @Test
+    public void testDeleteEquipment() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        // delete equipment
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
+                studyNameUserIdUuid, "LOAD", "idLoadToDelete")
+            .exchange()
+            .expectStatus().isOk();
+
+        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete",
+            HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/.*/id/.*\\?group=.*")));
+    }
+
+    private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, String headerUpdateTypeEquipmentType, String equipmentType,
+                                                       String headerUpdateTypeEquipmentId, String equipmentId, String headerUpdateTypeSubstationsIds, Set<String> modifiedSubstationsIdsSet) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(1000);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(modifiedSubstationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+        assertEquals(equipmentType, headersStudyUpdate.get(headerUpdateTypeEquipmentType));
+        assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
+        assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
 
         // assert that the broker message has been sent for updating load flow status
         Message<byte[]> messageLFStatus = output.receive(1000);
@@ -1848,67 +1882,94 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSAStatus.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
-        // assert that the broker message has been sent
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, String headerUpdateTypeId, Set<String> modifiedIdsSet) {
+        // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(1000);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals("study", headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
-        assertEquals(modifiedSubstationsSet, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+        assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
-        // assert that the broker message has been sent
+        // assert that the broker message has been sent for updating load flow status
         Message<byte[]> messageLFStatus = output.receive(1000);
         assertEquals("", new String(messageLFStatus.getPayload()));
         MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals("loadflow_status", headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent for updating security analysis status
+        Message<byte[]> messageSAStatus = output.receive(1000);
+        assertEquals("", new String(messageSAStatus.getPayload()));
+        MessageHeaders headersSAStatus = messageSAStatus.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersSAStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSAStatus.get(StudyService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedIdsSet) {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedIdsSet);
+    }
+
+    private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedSubstationsSet);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent
-        messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        headersSwitch = messageSwitch.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(StudyService.UPDATE_TYPE_LINE, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
     @Test
-    public void testGetBusesOrBusbarSections() throws Exception {
+    public void testGetBusesOrBusbarSections() {
         createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         webTestClient.get()
-                .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/buses", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(IdentifiableInfos.class)
-                .value(new MatcherJson<>(mapper, List.of(
-                        IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
-                        IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build()
-                )));
+            .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/buses", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
+            .exchange()
+            .expectStatus().isOk()
+            .expectBodyList(IdentifiableInfos.class)
+            .value(new MatcherJson<>(mapper, List.of(
+                IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
+                IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build()
+            )));
 
         var requests = getRequestsDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/0/voltage-levels/" + VOLTAGE_LEVEL_ID + "/configured-buses")));
 
         webTestClient.get()
-                .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/busbar-sections", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(IdentifiableInfos.class)
-                .value(new MatcherJson<>(mapper, List.of(
-                        IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
-                        IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()
-                )));
+            .uri("/v1//studies/{studyUuid}/network/0/voltage-levels/{voltageLevelId}/busbar-sections", studyNameUserIdUuid, VOLTAGE_LEVEL_ID)
+            .exchange()
+            .expectStatus().isOk()
+            .expectBodyList(IdentifiableInfos.class)
+            .value(new MatcherJson<>(mapper, List.of(
+                IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
+                IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()
+            )));
 
         requests = getRequestsDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/0/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections")));
+    }
+
+    @Test
+    public void testCreateGenerator() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        // create generator
+        String createGeneratorAttributes = "{\"generatorId\":\"generatorId1\",\"generatorName\":\"generatorName1\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"100.0\",\"maxActivePower\":\"200.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/network-modification/generators", studyNameUserIdUuid)
+            .bodyValue(createGeneratorAttributes)
+            .exchange()
+            .expectStatus().isOk();
+
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
     }
 
     @After
