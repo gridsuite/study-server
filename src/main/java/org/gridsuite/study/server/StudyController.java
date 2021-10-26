@@ -76,35 +76,31 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids, userId));
     }
 
-    @PostMapping(value = "/studies/{studyName}/cases/{caseUuid}")
+    @PostMapping(value = "/studies/cases/{caseUuid}")
     @Operation(summary = "create a study from an existing case")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "The id of the network imported"),
             @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
-    public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                                             @PathVariable("caseUuid") UUID caseUuid,
-                                                                             @RequestParam("description") String description,
+    public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestParam("isPrivate") Boolean isPrivate,
                                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, caseUuid, description, userId, isPrivate, studyUuid)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(caseUuid, userId, isPrivate, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(studyService.assertCaseExists(caseUuid).then(createStudy));
     }
 
-    @PostMapping(value = "/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "create a study and import the case")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "The id of the network imported"),
             @ApiResponse(responseCode = "409", description = "The study already exist"),
             @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@PathVariable("studyName") String studyName,
-                                                             @RequestPart("caseFile") FilePart caseFile,
-                                                             @RequestParam("description") String description,
+    public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@RequestPart("caseFile") FilePart caseFile,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestParam("isPrivate") Boolean isPrivate,
                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, studyUuid)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(Mono.just(caseFile), userId, isPrivate, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(createStudy);
     }
@@ -118,14 +114,6 @@ public class StudyController {
                                                      @RequestHeader("userId") String headerUserId) {
         Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyUuid, headerUserId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
-    }
-
-    @GetMapping(value = "/{userId}/studies/{studyName}/exists")
-    @Operation(summary = "Check if the study exists")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the study exists or not.")})
-    public ResponseEntity<Mono<Boolean>> studyExists(@PathVariable("studyName") String studyName,
-                                                     @PathVariable("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.studyExists(studyName, userId));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}")
@@ -424,16 +412,6 @@ public class StudyController {
 
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid)
                 .then(studyService.runLoadFlow(studyUuid)));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/rename")
-    @Operation(summary = "Update the study name")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The updated study")})
-    public ResponseEntity<Mono<CreatedStudyBasicInfos>> renameStudy(@RequestHeader("userId") String headerUserId,
-                                                                    @PathVariable("studyUuid") UUID studyUuid,
-                                                                    @RequestBody RenameStudyAttributes renameStudyAttributes) {
-        Mono<CreatedStudyBasicInfos> studyMono = studyService.renameStudy(studyUuid, headerUserId, renameStudyAttributes.getNewElementName());
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/public")

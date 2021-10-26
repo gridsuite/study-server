@@ -35,9 +35,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "userId", nullable = false)
     private String userId;
 
-    @Column(name = "studyName", nullable = false)
-    private String studyName;
-
     @Column(name = "creationDate",  nullable = false)
     private LocalDateTime date;
 
@@ -46,9 +43,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @Column(name = "networkId", nullable = false)
     private String networkId;
-
-    @Column(name = "description",  nullable = false)
-    private String description;
 
     @Column(name = "caseFormat",  nullable = false)
     private String caseFormat;

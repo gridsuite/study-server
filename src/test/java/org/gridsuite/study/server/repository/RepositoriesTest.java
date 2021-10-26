@@ -87,11 +87,9 @@ public class RepositoriesTest {
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .userId("foo")
-                .studyName("mystudy")
                 .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId")
-                .description("description")
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
@@ -105,11 +103,9 @@ public class RepositoriesTest {
         StudyEntity studyEntity2 = StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .userId("foo2")
-                .studyName("mystudy2")
                 .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId2")
-                .description("description2")
                 .caseFormat("caseFormat2")
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
@@ -123,11 +119,9 @@ public class RepositoriesTest {
         StudyEntity studyEntity3 = StudyEntity.builder()
                 .id(UUID.randomUUID())
                 .userId("foo3")
-                .studyName("mystudy3")
                 .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId3")
-                .description("description3")
                 .caseFormat("caseFormat3")
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
@@ -149,12 +143,9 @@ public class RepositoriesTest {
         StudyEntity savedStudyEntity2 = studyRepository.findAll().get(1);
 
         assertEquals(studyEntity1.getUserId(), savedStudyEntity1.getUserId());
-        assertEquals(studyEntity1.getStudyName(), savedStudyEntity1.getStudyName());
 
         assertEquals(studyEntity2.getUserId(), savedStudyEntity2.getUserId());
-        assertEquals(studyEntity2.getStudyName(), savedStudyEntity2.getStudyName());
 
-        assertTrue(studyRepository.findByUserIdAndStudyName("foo", "mystudy").isPresent());
         assertEquals(1, studyRepository.findAllByUserId("foo").size());
 
         // updates
@@ -162,14 +153,16 @@ public class RepositoriesTest {
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
-        StudyEntity savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").get();
+        //StudyEntity savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").get();
+        StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowResult());
         assertEquals(2, savedStudyEntity1Updated.getLoadFlowResult().getComponentResults().size());
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
 
         savedStudyEntity1Updated.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         studyRepository.save(savedStudyEntity1Updated);
-        savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").orElse(null);
+        //savedStudyEntity1Updated = studyRepository.findByUserIdAndStudyName("foo", "mystudy").orElse(null);
+        savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
         assert savedStudyEntity1Updated != null;
         assertEquals(LoadFlowStatus.CONVERGED, savedStudyEntity1Updated.getLoadFlowStatus());
 
@@ -177,14 +170,14 @@ public class RepositoriesTest {
 
     @Test
     public void testStudyCreationRequest() {
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(UUID.randomUUID(), "foo", "mystudy", LocalDateTime.now(ZoneOffset.UTC), true);
+        UUID studyUuid = UUID.randomUUID();
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid, "foo", LocalDateTime.now(ZoneOffset.UTC), true);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());
         assertEquals(savedStudyCreationRequestEntity.getUserId(), savedStudyCreationRequestEntity.getUserId());
-        assertEquals(savedStudyCreationRequestEntity.getStudyName(), savedStudyCreationRequestEntity.getStudyName());
         assertEquals(savedStudyCreationRequestEntity.getDate(), savedStudyCreationRequestEntity.getDate());
-        assertTrue(studyCreationRequestRepository.findByUserIdAndStudyName("foo", "mystudy").isPresent());
+        assertTrue(studyCreationRequestRepository.findById(studyUuid).isPresent());
     }
 
 }

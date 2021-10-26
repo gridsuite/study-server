@@ -30,8 +30,6 @@ public class BasicStudyInfos {
     @Id
     UUID studyUuid;
 
-    String studyName;
-
     String userId;
 
     ZonedDateTime creationDate;

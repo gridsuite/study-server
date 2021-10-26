@@ -76,15 +76,13 @@
         casePrivate boolean not null,
         caseUuid uuid not null,
         creationDate timestamp not null,
-        description varchar(255) not null,
-        modificationGroupUuid uuid,
         isPrivate boolean not null,
         loadFlowProvider varchar(255),
         loadFlowStatus varchar(255),
+        modificationGroupUuid uuid,
         networkId varchar(255) not null,
         networkUuid uuid not null,
         securityAnalysisResultUuid uuid,
-        studyName varchar(255) not null,
         userId varchar(255) not null,
         loadFlowParametersEntity_id uuid not null,
         loadFlowResultEntity_id uuid,
@@ -95,7 +93,6 @@
        id uuid not null,
         creationDate timestamp not null,
         isPrivate boolean not null,
-        studyName varchar(255) not null,
         userId varchar(255) not null,
         primary key (id)
     );
@@ -107,47 +104,47 @@ create index studyEntity_userId_index on study (userId);
 create index studyCreationRequest_isPrivate_index on studycreationrequest (isPrivate);
 create index studyCreationRequest_userId_index on studycreationrequest (userId);
 
-    alter table if exists LoadFlowResultEntity_componentResults
-       add constraint loadFlowResultEntity_componentResults_fk
-       foreign key (LoadFlowResultEntity_id)
+    alter table if exists LoadFlowResultEntity_componentResults 
+       add constraint loadFlowResultEntity_componentResults_fk 
+       foreign key (LoadFlowResultEntity_id) 
        references loadFlowResult;
 
-    alter table if exists LoadFlowResultEntity_metrics
-       add constraint loadFlowResultEntity_metrics_fk
-       foreign key (LoadFlowResultEntity_id)
+    alter table if exists LoadFlowResultEntity_metrics 
+       add constraint loadFlowResultEntity_metrics_fk 
+       foreign key (LoadFlowResultEntity_id) 
        references loadFlowResult;
 
-    alter table if exists ModelInfo
-       add constraint FK2ppp9cps0tclhqfi7qf90ctgi
-       foreign key (idNode)
+    alter table if exists ModelInfo 
+       add constraint FK2ppp9cps0tclhqfi7qf90ctgi 
+       foreign key (idNode) 
        references Node;
 
-    alter table if exists NetworkModificationNodeInfo
-       add constraint FKnjm62y6yguikmhguw9c4v8ycv
-       foreign key (idNode)
+    alter table if exists NetworkModificationNodeInfo 
+       add constraint FKnjm62y6yguikmhguw9c4v8ycv 
+       foreign key (idNode) 
        references Node;
 
-    alter table if exists Node
-       add constraint parent_node_id_fk_constraint
-       foreign key (parentNode)
+    alter table if exists Node 
+       add constraint parent_node_id_fk_constraint 
+       foreign key (parentNode) 
        references Node;
 
-    alter table if exists Node
-       add constraint study_id_fk_constraint
-       foreign key (study_id)
+    alter table if exists Node 
+       add constraint study_id_fk_constraint 
+       foreign key (study_id) 
        references study;
 
-    alter table if exists RootNodeInfo
-       add constraint FK5wmbraw6u13v1ujb15vygr9xi
-       foreign key (idNode)
+    alter table if exists RootNodeInfo 
+       add constraint FK5wmbraw6u13v1ujb15vygr9xi 
+       foreign key (idNode) 
        references Node;
 
-    alter table if exists study
-       add constraint loadFlowParameters_id_fk
-       foreign key (loadFlowParametersEntity_id)
+    alter table if exists study 
+       add constraint loadFlowParameters_id_fk 
+       foreign key (loadFlowParametersEntity_id) 
        references loadFlowParameters;
 
-    alter table if exists study
-       add constraint loadFlowResult_id_fk
-       foreign key (loadFlowResultEntity_id)
+    alter table if exists study 
+       add constraint loadFlowResult_id_fk 
+       foreign key (loadFlowResultEntity_id) 
        references loadFlowResult;
