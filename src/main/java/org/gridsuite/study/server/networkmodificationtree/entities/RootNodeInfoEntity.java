@@ -19,6 +19,6 @@ import javax.persistence.Table;
 @NoArgsConstructor
 @Getter
 @Entity
-@Table(name = "rootnodeinfo")
+@Table(name = "RootNodeInfo")
 public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
 }

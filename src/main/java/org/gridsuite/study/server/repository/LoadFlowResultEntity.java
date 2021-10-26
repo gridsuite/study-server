@@ -22,7 +22,7 @@ import java.util.*;
 @Getter
 @Setter
 @Entity
-@Table(name = "loadflowresult")
+@Table(name = "loadFlowResult")
 public class LoadFlowResultEntity {
 
     public LoadFlowResultEntity(boolean ok, Map<String, String> metrics, String logs, List<ComponentResultEmbeddable> componentResults) {
@@ -46,7 +46,7 @@ public class LoadFlowResultEntity {
     private String logs;
 
     // we never need to access these without loading the study, and the number of items is small (roughly 10), so we can use ElementCollection
-    @Column(name = "componentresults")
+    @Column(name = "componentResults")
     @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"), indexes = @Index(name = "loadFlowResultEntity_componentResults_id_index", columnList = "load_flow_result_entity_id"))
     @ElementCollection
     private List<ComponentResultEmbeddable> componentResults = new ArrayList<>();

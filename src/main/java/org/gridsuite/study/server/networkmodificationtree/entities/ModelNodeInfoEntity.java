@@ -20,7 +20,7 @@ import javax.persistence.Table;
 @AllArgsConstructor
 @Getter
 @Entity
-@Table(name = "modelinfo")
+@Table(name = "ModelInfo")
 public class ModelNodeInfoEntity extends AbstractNodeInfoEntity {
     String model;
 }

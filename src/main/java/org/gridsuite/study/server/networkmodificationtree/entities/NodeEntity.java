@@ -36,7 +36,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "node", indexes = {
+@Table(name = "Node", indexes = {
     @Index(name = "nodeEntity_parentNode_idx", columnList = "parentNode"),
     @Index(name = "nodeEntity_studyId_idx", columnList = "study_id")
     }
