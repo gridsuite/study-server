@@ -360,6 +360,11 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
+                        JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -1970,6 +1975,37 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
+    }
+
+    @Test
+    public void testCreateLine() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        // create line
+        String createLineAttributes = "{" +
+                "\"lineId\":\"lineId1\"," +
+                "\"lineName\":\"lineName1\"," +
+                "\"seriesResistance\":\"50.0\"," +
+                "\"seriesReactance\":\"50.0\"," +
+                "\"shuntConductance1\":\"100.0\"," +
+                "\"shuntSusceptance1\":\"100.0\"," +
+                "\"shuntConductance2\":\"200.0\"," +
+                "\"shuntSusceptance2\":\"200.0\"," +
+                "\"voltageLevelId1\":\"idVL1\"," +
+                "\"busOrBusbarSectionId1\":\"idBus1\"," +
+                "\"voltageLevelId2\":\"idVL2\"," +
+                "\"busOrBusbarSectionId2\":\"idBus2\"}";
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/network-modification/lines", studyNameUserIdUuid)
+            .bodyValue(createLineAttributes)
+            .exchange()
+            .expectStatus().isOk();
+
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
     }
 
     @After
