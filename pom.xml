@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>5</version>
+        <version>6</version>
         <relativePath/>
     </parent>
 
@@ -50,6 +50,7 @@
         <commons-lang3.version>3.9</commons-lang3.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
         <equalsverifier-version>3.7.1</equalsverifier-version>
+        <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
     </properties>
 
     <build>
@@ -175,6 +176,11 @@
         </dependency>
 
         <!-- Runtime dependencies -->
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- PostgreSQL -->
         <dependency>
