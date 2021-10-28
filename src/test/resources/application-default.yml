@@ -1,8 +1,6 @@
 spring:
   jpa:
     database: H2
-    hibernate:
-      ddl-auto: create-drop
     properties:
       dialect: org.hibernate.dialect.H2Dialect
       hibernate.format_sql: true

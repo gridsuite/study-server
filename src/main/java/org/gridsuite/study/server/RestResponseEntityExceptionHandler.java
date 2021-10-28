@@ -43,6 +43,7 @@ public class RestResponseEntityExceptionHandler {
             case LINE_MODIFICATION_FAILED:
             case LOAD_CREATION_FAILED:
             case GENERATOR_CREATION_FAILED:
+            case LINE_CREATION_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
             case DELETE_EQUIPMENT_FAILED:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());

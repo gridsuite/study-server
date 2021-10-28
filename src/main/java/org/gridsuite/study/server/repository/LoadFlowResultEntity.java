@@ -42,12 +42,12 @@ public class LoadFlowResultEntity {
     @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_metrics_fk"))
     private Map<String, String> metrics;
 
-    @Column(name = "logs", columnDefinition = "TEXT")
+    @Column(name = "logs", columnDefinition = "CLOB")
     private String logs;
 
     // we never need to access these without loading the study, and the number of items is small (roughly 10), so we can use ElementCollection
     @Column(name = "componentResults")
-    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"), indexes = @Index(name = "loadFlowResultEntity_componentResults_id_index", columnList = "loadflowresultentity_id"))
+    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowResultEntity_componentResults_fk"), indexes = @Index(name = "loadFlowResultEntity_componentResults_id_index", columnList = "load_flow_result_entity_id"))
     @ElementCollection
     private List<ComponentResultEmbeddable> componentResults = new ArrayList<>();
 }

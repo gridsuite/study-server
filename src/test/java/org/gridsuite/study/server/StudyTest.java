@@ -13,10 +13,7 @@ import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
-import com.powsybl.iidm.network.Country;
-import com.powsybl.iidm.network.Line;
-import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.VoltageLevel;
+import com.powsybl.iidm.network.*;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
@@ -232,7 +229,11 @@ public class StudyTest {
         List<Resource<VoltageLevelAttributes>> data = new ArrayList<>();
 
         Iterable<VoltageLevel> vls = network.getVoltageLevels();
-        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), Resource.INITIAL_VARIANT_NUM, VoltageLevelAttributes.builder().name(vl.getNameOrId()).substationId(vl.getSubstation().getId()).build())));
+        vls.forEach(vl -> data.add(Resource.create(ResourceType.VOLTAGE_LEVEL, vl.getId(), Resource.INITIAL_VARIANT_NUM,
+                VoltageLevelAttributes.builder()
+                        .name(vl.getNameOrId())
+                        .substationId(vl.getSubstation().map(Identifiable::getId).orElse(null))
+                        .build())));
 
         topLevelDocument = new TopLevelDocument<>(data, null);
 
@@ -360,6 +361,11 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
+                        JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -1193,14 +1199,14 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectBodyList(VoltageLevelInfos.class)
             .value(new MatcherJson<>(mapper, List.of(
-                VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
-                VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
-                VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
-                VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
-                VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
-                VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
                 VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
                 VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
+                VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
+                VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
+                VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
+                VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
+                VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
+                VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
                 VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
                 VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build()
             )));
@@ -1970,6 +1976,37 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
+    }
+
+    @Test
+    public void testCreateLine() {
+        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        // create line
+        String createLineAttributes = "{" +
+                "\"lineId\":\"lineId1\"," +
+                "\"lineName\":\"lineName1\"," +
+                "\"seriesResistance\":\"50.0\"," +
+                "\"seriesReactance\":\"50.0\"," +
+                "\"shuntConductance1\":\"100.0\"," +
+                "\"shuntSusceptance1\":\"100.0\"," +
+                "\"shuntConductance2\":\"200.0\"," +
+                "\"shuntSusceptance2\":\"200.0\"," +
+                "\"voltageLevelId1\":\"idVL1\"," +
+                "\"busOrBusbarSectionId1\":\"idBus1\"," +
+                "\"voltageLevelId2\":\"idVL2\"," +
+                "\"busOrBusbarSectionId2\":\"idBus2\"}";
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/network-modification/lines", studyNameUserIdUuid)
+            .bodyValue(createLineAttributes)
+            .exchange()
+            .expectStatus().isOk();
+
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
     }
 
     @After

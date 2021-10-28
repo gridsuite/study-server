@@ -3,6 +3,11 @@
 [![MPL-2.0 License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 # study-server
 
-   To automatically generate the sql schema file you can use the following command:
-   
-    mvn package -DskipTests && rm -f src/main/resources/study.sql && java  -jar target/gridsuite-study-server-1.0.0-SNAPSHOT-exec.jar --spring.jpa.properties.javax.persistence.schema-generation.scripts.action=create 
+Please read [liquibase usage](https://github.com/powsybl/powsybl-parent/#liquibase-usage) for instructions to automatically generate changesets. 
+After you generated a changeset do not forget to add it to git and in src/resource/db/changelog/db.changelog-master.yml
+
+
+The old way to automatically generate the sql schema file (directly using hibernate) can still be used for debugging. Use the following command:
+```
+mvn package -DskipTests && rm -f src/main/resources/study.sql && java  -jar target/gridsuite-study-server-1.0.0-SNAPSHOT-exec.jar --spring.jpa.properties.javax.persistence.schema-generation.scripts.action=create 
+```
