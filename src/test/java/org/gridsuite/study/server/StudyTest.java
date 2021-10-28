@@ -209,7 +209,7 @@ public class StudyTest {
         when(studyInfosService.search(String.format("studyName:%s AND userId:userId", STUDY_NAME)))
             .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid:(%s) AND equipmentType:(LINE)", NETWORK_UUID_STRING)))
+        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentType:(LINE)", NETWORK_UUID_STRING)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
     }
 
