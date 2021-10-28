@@ -11,7 +11,6 @@ import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.lang.NonNull;
@@ -27,7 +26,7 @@ import java.util.stream.Collectors;
  */
 public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
-    private static final int PAGE_MAX_SIZE = 10000;
+    private static final int PAGE_MAX_SIZE = 1000;
 
     private final EquipmentInfosRepository equipmentInfosRepository;
 
@@ -56,10 +55,13 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     @Override
     public List<EquipmentInfos> search(@NonNull final String query) {
         NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-                .withQuery(QueryBuilders.queryStringQuery(query))
-                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-                .build();
-        SearchHits<EquipmentInfos> searchHits = elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class);
-        return searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
+            .withQuery(QueryBuilders.queryStringQuery(query))
+            .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
+            .build();
+
+        return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
+            .stream()
+            .map(SearchHit::getContent)
+            .collect(Collectors.toList());
     }
 }
