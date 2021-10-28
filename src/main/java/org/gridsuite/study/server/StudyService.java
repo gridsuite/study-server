@@ -371,7 +371,7 @@ public class StudyService {
     Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
         return networkStoreService
                 .getNetworkUuid(studyUuid)
-                .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid:(%s) AND %s", networkUuid, query)));
+                .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND %s", networkUuid, query)));
     }
 
     @Transactional

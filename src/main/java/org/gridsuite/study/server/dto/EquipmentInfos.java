@@ -14,7 +14,9 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,13 +31,18 @@ import java.util.UUID;
 @TypeAlias(value = "EquipmentInfos")
 public class EquipmentInfos {
     @Id
+    String uniqueId;
+
+    @Field("equipmentId")
     String id;
 
-    String equipmentId;
+    @Field("equipmentName")
+    String name;
 
-    String equipmentName;
+    @Field("equipmentType")
+    String type;
 
-    String equipmentType;
+    Set<String> voltageLevelsIds;
 
     UUID networkUuid;
 }
