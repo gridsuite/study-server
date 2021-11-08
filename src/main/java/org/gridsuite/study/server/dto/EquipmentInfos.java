@@ -15,6 +15,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.util.Set;
 import java.util.UUID;
@@ -42,7 +43,8 @@ public class EquipmentInfos {
     @Field("equipmentType")
     String type;
 
-    Set<String> voltageLevelsIds;
+    @Field(type = FieldType.Nested, includeInParent = true)
+    Set<VoltageLevelInfos> voltageLevels;
 
     UUID networkUuid;
 }
