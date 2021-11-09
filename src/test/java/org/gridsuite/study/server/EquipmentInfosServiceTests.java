@@ -73,6 +73,7 @@ public class EquipmentInfosServiceTests {
     @Test
     public void searchEquipmentInfos() {
         EqualsVerifier.simple().forClass(EquipmentInfos.class).verify();
+        EqualsVerifier.simple().forClass(VoltageLevelInfos.class).verify();
 
         EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
