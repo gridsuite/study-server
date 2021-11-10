@@ -1962,7 +1962,7 @@ public class StudyTest {
 
     @Test
     public void testCreateTwoWindingsTransformer() {
-        createStudy("userId", STUDY_NAME, CASE_UUID, DESCRIPTION, true);
+        createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         // create 2WT
