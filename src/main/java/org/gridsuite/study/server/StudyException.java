@@ -30,6 +30,7 @@ public class StudyException extends RuntimeException {
         DELETE_EQUIPMENT_FAILED,
         GENERATOR_CREATION_FAILED,
         LINE_CREATION_FAILED,
+        TWO_WINDINGS_TRANSFORMER_CREATION_FAILED,
         UNKNOWN_EQUIPMENT_TYPE
     }
 

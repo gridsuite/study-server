@@ -688,4 +688,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
             .then(studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION)));
     }
+
+    @PutMapping(value = "/studies/{studyUuid}/network-modification/two-windings-transformer")
+    @Operation(summary = "create a two windings transformer in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The two windings transformer has been created")})
+    public ResponseEntity<Mono<Void>> createTwoWindingsTransformer(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestBody String createTwoWindingsTransformerAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+                .then(studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION)));
+    }
 }
