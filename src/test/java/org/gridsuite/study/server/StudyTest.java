@@ -193,7 +193,7 @@ public class StudyTest {
             .id(line.getId())
             .name(line.getNameOrId())
             .type("LINE")
-            .voltageLevelsIds(Set.of(line.getTerminal1().getVoltageLevel().getId()))
+            .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId()).name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
             .build();
     }
 
