@@ -7,8 +7,8 @@
 package org.gridsuite.study.server.dto;
 
 import com.powsybl.iidm.network.*;
+import lombok.NonNull;
 import org.gridsuite.study.server.StudyException;
-import org.springframework.lang.NonNull;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -33,6 +33,7 @@ public enum EquipmentType {
     HVDC_CONVERTER_STATION,
 
     // Other
+    CONFIGURED_BUS,
     HVDC,
     SUBSTATION,
     VOLTAGE_LEVEL;
@@ -43,6 +44,8 @@ public enum EquipmentType {
                 return EquipmentType.valueOf(((Switch) identifiable).getKind().name());
             } else if (identifiable instanceof Connectable) {
                 return EquipmentType.valueOf(((Connectable<?>) identifiable).getType().name());
+            } else if (identifiable instanceof Bus) {
+                return EquipmentType.CONFIGURED_BUS;
             } else if (identifiable instanceof HvdcLine) {
                 return EquipmentType.HVDC;
             } else if (identifiable instanceof Substation) {

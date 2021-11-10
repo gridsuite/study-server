@@ -79,8 +79,9 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos otherLineInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_other_line").name("name_other_line").type("LINE").voltageLevelsIds(Set.of("vl4")).build();
         EquipmentInfos tw1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw1").name("name_tw1").type("TWO_WINDINGS_TRANSFORMER").voltageLevelsIds(Set.of("vl5")).build();
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw2").name("name_tw2").type("TWO_WINDINGS_TRANSFORMER").voltageLevelsIds(Set.of("vl6")).build();
+        EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevelsIds(Set.of("vl7")).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos).forEach(equipmentInfosService::add);
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::add);
 
         Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.search("equipmentType:(LOAD)"));
         assertEquals(0, hits.size());
@@ -99,6 +100,10 @@ public class EquipmentInfosServiceTests {
         assertEquals(2, hits.size());
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
+
+        hits = new HashSet<>(equipmentInfosService.search("equipmentType:(CONFIGURED_BUS)"));
+        assertEquals(1, hits.size());
+        assertTrue(hits.contains(configuredBus));
     }
 
     @Test
@@ -109,10 +114,11 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos otherLineInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_other_line").name("name_other_line").type("LINE").voltageLevelsIds(Set.of("vl4")).build();
         EquipmentInfos tw1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw1").name("name_tw1").type("TWO_WINDINGS_TRANSFORMER").voltageLevelsIds(Set.of("vl5")).build();
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw2").name("name_tw2").type("TWO_WINDINGS_TRANSFORMER").voltageLevelsIds(Set.of("vl6")).build();
+        EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevelsIds(Set.of("vl7")).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos).forEach(equipmentInfosService::add);
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::add);
 
-        assertEquals(6, equipmentInfosService.search("*").size());
+        assertEquals(7, equipmentInfosService.search("*").size());
 
         Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.search("equipmentId:(id_l*)"));
         assertEquals(2, hits.size());
@@ -157,6 +163,7 @@ public class EquipmentInfosServiceTests {
         assertEquals(EquipmentType.LOAD, EquipmentType.getType(network.getLoad("BBE1AA1 _load")));
         assertEquals(EquipmentType.LINE, EquipmentType.getType(network.getLine("BBE1AA1  BBE2AA1  1")));
         assertEquals(EquipmentType.TWO_WINDINGS_TRANSFORMER, EquipmentType.getType(network.getTwoWindingsTransformer("BBE1AA1  BBE3AA1  2")));
+        assertEquals(EquipmentType.CONFIGURED_BUS, EquipmentType.getType(network.getBusBreakerView().getBus("BBE1AA1 ")));
     }
 
     @Test
