@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>6</version>
+        <version>7</version>
         <relativePath/>
     </parent>
 
@@ -45,8 +45,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <jib.container.environment>SPRING_PROFILES_ACTIVE=default</jib.container.environment>
-        <gridsuite-dependencies.version>11</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>12</gridsuite-dependencies.version>
         <commons-lang3.version>3.9</commons-lang3.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
         <equalsverifier-version>3.7.1</equalsverifier-version>
@@ -132,6 +131,10 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-ws-commons</artifactId>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>
