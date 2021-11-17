@@ -10,7 +10,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.apache.commons.collections4.map.HashedMap;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
@@ -47,8 +46,8 @@ public class RepositoriesTest {
         studyCreationRequestRepository.deleteAll();
     }
 
-    @Before
-    public void setUp() {
+    @After
+    public void tearDown() {
         cleanDB();
     }
 

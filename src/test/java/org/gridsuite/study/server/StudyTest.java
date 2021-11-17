@@ -25,8 +25,8 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
-import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
@@ -541,7 +541,6 @@ public class StudyTest {
             }
         };
         server.setDispatcher(dispatcher);
-        cleanDB();
     }
 
     private Set<String> getRequestsDone(int n) {
@@ -1453,17 +1452,21 @@ public class StudyTest {
 
     @SneakyThrows
     private UUID createStudy(String userId, UUID caseUuid, boolean isPrivate, String... errorMessage) {
-        webTestClient.post()
+        BasicStudyInfos infos = webTestClient.post()
                 .uri("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
                         caseUuid, isPrivate)
                 .header("userId", userId)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectBody(BasicStudyInfos.class)
+                .returnResult()
+                .getResponseBody();
 
-        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
+        UUID studyUuid = infos.getStudyUuid();
 
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(1000);
+
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1981,6 +1984,8 @@ public class StudyTest {
 
     @After
     public void tearDown() {
+        cleanDB();
+
         Set<String> httpRequest = null;
         Message<byte[]> message = null;
         try {
