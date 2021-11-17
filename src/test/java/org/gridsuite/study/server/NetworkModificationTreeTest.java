@@ -139,10 +139,8 @@ public class NetworkModificationTreeTest {
     StudyEntity createDummyStudy() {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("").caseUuid(UUID.randomUUID())
             .date(LocalDateTime.now())
-            .description("")
             .networkId("netId")
             .networkUuid(UUID.randomUUID())
-            .studyName("studyName")
             .userId("userId")
             .loadFlowParameters(new LoadFlowParametersEntity())
             .build();

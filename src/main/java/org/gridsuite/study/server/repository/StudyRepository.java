@@ -10,9 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -27,13 +25,6 @@ public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
     List<StudyEntity> findAllByUuids(List<UUID> uuids, String userId);
 
     List<StudyEntity> findAllByUserId(String userId);
-
-    Optional<StudyEntity> findByUserIdAndStudyName(String userId, String name);
-
-    Optional<StudyEntity.StudyNetworkUuid> findNetworkUuidByUserIdAndStudyName(String userId, String name);
-
-    @Transactional
-    void deleteByUserIdAndStudyName(String userId, String name);
 
     List<StudyEntity> findByUserIdOrIsPrivate(@Param("userId") String userId, @Param("isPrivate") boolean isPrivate);
 }

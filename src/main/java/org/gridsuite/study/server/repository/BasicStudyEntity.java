@@ -17,7 +17,5 @@ public interface BasicStudyEntity {
 
     String getUserId();
 
-    String getStudyName();
-
     LocalDateTime getDate();
 }

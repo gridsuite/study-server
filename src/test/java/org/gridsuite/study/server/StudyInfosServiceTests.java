@@ -42,8 +42,8 @@ public class StudyInfosServiceTests {
 
     @Test
     public void testAddDeleteStudyInfos() {
-        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher1 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_1, "test1", "userId1", "UCTE", "description", false);
-        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher2 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_2, "test2", "userId2", "UCTE", "description", false);
+        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher1 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_1, "userId1", "UCTE", false);
+        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher2 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_2, "userId2", "UCTE", false);
         assertThat(studyInfosService.add(matcher1.getReference()), matcher1);
         assertThat(studyInfosService.add(matcher2.getReference()), matcher2);
         assertEquals(2, Iterables.size(studyInfosService.findAll()));
@@ -60,10 +60,10 @@ public class StudyInfosServiceTests {
         EqualsVerifier.simple().forClass(CreatedStudyBasicInfos.class).verify();
 
         ZonedDateTime dateNow = ZonedDateTime.now(ZoneOffset.UTC);
-        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111111")).studyName("s11").userId("userId1").caseFormat("XIIDM").description("description").studyPrivate(false).creationDate(dateNow).build();
-        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111112")).studyName("s12").userId("userId1").caseFormat("UCTE").description("description").studyPrivate(false).creationDate(dateNow).build();
-        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-22222222221")).studyName("s21").userId("userId2").caseFormat("XIIDM").description("description").studyPrivate(false).creationDate(dateNow).build();
-        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-22222222222")).studyName("s22").userId("userId2").caseFormat("UCTE").description("description").studyPrivate(false).creationDate(dateNow).build();
+        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").studyPrivate(false).creationDate(dateNow).build();
+        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").studyPrivate(false).creationDate(dateNow).build();
+        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").caseFormat("XIIDM").studyPrivate(false).creationDate(dateNow).build();
+        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-22222222222")).userId("userId2").caseFormat("UCTE").studyPrivate(false).creationDate(dateNow).build();
 
         studyInfosService.add(studyInfos11);
         studyInfosService.add(studyInfos12);
