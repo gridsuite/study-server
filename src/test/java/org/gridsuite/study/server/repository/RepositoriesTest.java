@@ -10,6 +10,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.apache.commons.collections4.map.HashedMap;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
@@ -40,6 +40,16 @@ public class RepositoriesTest {
 
     @Autowired
     StudyCreationRequestRepository studyCreationRequestRepository;
+
+    private void cleanDB() {
+        studyRepository.deleteAll();
+        studyCreationRequestRepository.deleteAll();
+    }
+
+    @After
+    public void tearDown() {
+        cleanDB();
+    }
 
     @Test
     @Transactional
@@ -161,7 +171,7 @@ public class RepositoriesTest {
         savedStudyEntity1Updated.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         studyRepository.save(savedStudyEntity1Updated);
         savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
-        assert savedStudyEntity1Updated != null;
+        assertNotNull(savedStudyEntity1Updated);
         assertEquals(LoadFlowStatus.CONVERGED, savedStudyEntity1Updated.getLoadFlowStatus());
 
     }
