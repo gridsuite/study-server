@@ -22,7 +22,9 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNodeInfoEntity toEntity(AbstractNode node) {
+        RootNode rootNode = (RootNode) node;
         var rootNodeInfoEntity = new RootNodeInfoEntity();
+        rootNodeInfoEntity.setNetworkModificationId(rootNode.getNetworkModification());
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
@@ -30,7 +32,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
-        return completeNodeInfo(node, new RootNode());
+        return completeNodeInfo(node, new RootNode(null, node.getNetworkModificationId()));
     }
 
 }

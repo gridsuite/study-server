@@ -27,6 +27,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID networkModification;
 
+    String variantId;
+
     @Override
     public NodeType getType() {
         return NodeType.NETWORK_MODIFICATION;

@@ -6,23 +6,17 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.network.store.model.*;
-import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyConstants.NETWORK_STORE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
@@ -78,59 +72,5 @@ public class NetworkStoreService {
                 .uri(getNetworkStoreServerServerURI() + path)
                 .retrieve()
                 .bodyToMono(Void.class);
-    }
-
-    // This function call directly the network store server without using the dedicated client because it's a blocking client.
-    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
-    Mono<List<VoltageLevelInfos>> getNetworkVoltageLevels(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("{networkUuid}/voltage-levels")
-                .buildAndExpand(networkUuid)
-                .toUriString();
-
-        Mono<TopLevelDocument<VoltageLevelAttributes>> mono = webClient.get()
-                .uri(getNetworkStoreServerServerURI() + path)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.VoltageLevelAttributes>>() {
-                });
-
-        return mono.map(t -> t.getData().stream()
-                .map(e -> VoltageLevelInfos.builder().id(e.getId()).name(e.getAttributes().getName()).substationId(e.getAttributes().getSubstationId()).build())
-                .collect(Collectors.toList()));
-    }
-
-    // This function call directly the network store server without using the dedicated client because it's a blocking client.
-    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
-    Mono<List<IdentifiableInfos>> getVoltageLevelBuses(UUID networkUuid, String voltageLevelId, int variantNum) {
-        String path = UriComponentsBuilder.fromPath("{networkUuid}/{variantNum}/voltage-levels/{voltageLevelId}/configured-buses")
-                .buildAndExpand(networkUuid, variantNum, voltageLevelId)
-                .toUriString();
-
-        Mono<TopLevelDocument<ConfiguredBusAttributes>> mono = webClient.get()
-                .uri(getNetworkStoreServerServerURI() + path)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.ConfiguredBusAttributes>>() {
-                });
-
-        return mono.map(t -> t.getData().stream()
-                .map(e -> IdentifiableInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
-                .collect(Collectors.toList()));
-    }
-
-    // This function call directly the network store server without using the dedicated client because it's a blocking client.
-    // If we'll have new needs to call the network store server, then we'll migrate the network store client to be nonblocking
-    Mono<List<IdentifiableInfos>> getVoltageLevelBusbarSections(UUID networkUuid, String voltageLevelId, int variantNum) {
-        String path = UriComponentsBuilder.fromPath("{networkUuid}/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
-                .buildAndExpand(networkUuid, variantNum, voltageLevelId)
-                .toUriString();
-
-        Mono<TopLevelDocument<BusbarSectionAttributes>> mono = webClient.get()
-                .uri(getNetworkStoreServerServerURI() + path)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<TopLevelDocument<com.powsybl.network.store.model.BusbarSectionAttributes>>() {
-                });
-
-        return mono.map(t -> t.getData().stream()
-                .map(e -> IdentifiableInfos.builder().id(e.getId()).name(e.getAttributes().getName()).build())
-                .collect(Collectors.toList()));
     }
 }

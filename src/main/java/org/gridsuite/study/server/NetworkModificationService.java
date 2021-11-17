@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_EQUIPMENT_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
@@ -99,15 +100,20 @@ public class NetworkModificationService {
                 .bodyToMono(Void.class);
     }
 
-    Flux<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid) {
+    Flux<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
+
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
                 .queryParam("group", groupUuid)
-                .queryParam("open", open)
-                    .buildAndExpand(switchId)
-                    .toUriString();
+                .queryParam("open", open);
+            if (!variantId.equals("")) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
+                .buildAndExpand(switchId)
+                .toUriString();
 
             return webClient.put()
                     .uri(getNetworkModificationServerURI(true) + path)
@@ -118,14 +124,19 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<EquipmentModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid) {
+    public Flux<EquipmentModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
+
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
-                .queryParam("group", groupUuid)
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
+                .queryParam("group", groupUuid);
+            if (!variantId.equals("")) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
                 .buildAndExpand()
-                    .toUriString();
+                .toUriString();
 
             return webClient.put()
                     .uri(getNetworkModificationServerURI(true) + path)
@@ -136,14 +147,19 @@ public class NetworkModificationService {
         });
     }
 
-    Flux<EquipmentModificationInfos> applyLineChanges(UUID studyUuid, String lineId, String status, UUID groupUuid) {
+    Flux<EquipmentModificationInfos> applyLineChanges(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(lineId);
+
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
-                .queryParam("group", groupUuid)
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
+                .queryParam("group", groupUuid);
+            if (!variantId.equals("")) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
                 .buildAndExpand(lineId)
-                    .toUriString();
+                .toUriString();
 
             return webClient.put()
                     .uri(getNetworkModificationServerURI(true) + path)
@@ -175,12 +191,17 @@ public class NetworkModificationService {
     }
 
     public Flux<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes, UUID groupUuid,
-                                                            ModificationType modificationType) {
+                                                            ModificationType modificationType, String variantId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createEquipmentAttributes);
+
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                .queryParam("group", groupUuid)
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+                .queryParam("group", groupUuid);
+            if (!variantId.equals("")) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
 
@@ -196,14 +217,18 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid) {
+    public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);
         Objects.requireNonNull(equipmentId);
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var path = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
-                .queryParam("group", groupUuid)
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
+                .queryParam("group", groupUuid);
+            if (!variantId.equals("")) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
                 .buildAndExpand(equipmentType, equipmentId)
                 .toUriString();
 
