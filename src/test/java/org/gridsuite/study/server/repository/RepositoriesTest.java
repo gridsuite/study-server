@@ -163,14 +163,14 @@ public class RepositoriesTest {
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
-        StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
+        StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).orElseThrow();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowResult());
         assertEquals(2, savedStudyEntity1Updated.getLoadFlowResult().getComponentResults().size());
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
 
         savedStudyEntity1Updated.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         studyRepository.save(savedStudyEntity1Updated);
-        savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
+        savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).orElseThrow();
         assertNotNull(savedStudyEntity1Updated);
         assertEquals(LoadFlowStatus.CONVERGED, savedStudyEntity1Updated.getLoadFlowStatus());
 

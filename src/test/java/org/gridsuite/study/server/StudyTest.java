@@ -71,7 +71,6 @@ import java.io.InputStream;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -79,7 +78,6 @@ import java.util.stream.IntStream;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.*;
-import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.junit.Assert.*;
@@ -179,9 +177,6 @@ public class StudyTest {
 
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
-
-    //used by testGetStudyCreationRequests to control asynchronous case import
-    CountDownLatch countDownLatch;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
@@ -445,7 +440,6 @@ public class StudyTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID:
                     case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING:
-                        countDownLatch.await(2, TimeUnit.SECONDS);
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
@@ -1462,6 +1456,7 @@ public class StudyTest {
                 .returnResult()
                 .getResponseBody();
 
+        assertNotNull(infos);
         UUID studyUuid = infos.getStudyUuid();
 
         // assert that the broker message has been sent a study creation request message
@@ -1514,18 +1509,21 @@ public class StudyTest {
                 .filename(fileName)
                 .contentType(MediaType.TEXT_XML);
 
-            exchange = webTestClient.post()
+            BasicStudyInfos infos = webTestClient.post()
                     .uri(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate)
                     .header("userId", userId)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .exchange();
-
-            studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
-
-            exchange.expectStatus().isOk()
+                    .exchange()
+                    .expectStatus().isOk()
                     .expectBody(BasicStudyInfos.class)
-                    .value(createMatcherStudyBasicInfos(studyUuid, userId, isPrivate));
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(infos);
+            studyUuid = infos.getStudyUuid();
+            assertEquals(isPrivate, infos.isStudyPrivate());
+            assertEquals(userId, infos.getUserId());
         }
 
         // assert that the broker message has been sent a study creation request message
@@ -1569,9 +1567,8 @@ public class StudyTest {
 
     @Test
     public void testGetStudyCreationRequests() throws Exception {
-        countDownLatch = new CountDownLatch(1);
-
         //insert a study with a case (multipartfile)
+        UUID studyUuid;
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
             MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm", "text/xml", is);
 
@@ -1580,7 +1577,7 @@ public class StudyTest {
                 .filename("blockingCaseFile")
                 .contentType(MediaType.TEXT_XML);
 
-            webTestClient.post()
+            BasicStudyInfos infos = webTestClient.post()
                     .uri(STUDIES_URL + "?isPrivate={isPrivate}", "true")
                     .header("userId", "userId")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -1588,34 +1585,38 @@ public class StudyTest {
                     .exchange()
                     .expectStatus().isOk()
                     .expectBody(BasicStudyInfos.class)
-                    .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId", true));
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(infos);
+            studyUuid = infos.getStudyUuid();
+            assertTrue(infos.isStudyPrivate());
+            assertEquals("userId", infos.getUserId());
         }
 
-        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
+        List<BasicStudyInfos> infosList;
+        do {
+            infosList = webTestClient.get()
+                    .uri("/v1/study_creation_requests")
+                    .header("userId", "userId")
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                    .expectBodyList(BasicStudyInfos.class)
+                    .returnResult()
+                    .getResponseBody();
 
-        webTestClient.get()
-                .uri("/v1/study_creation_requests")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(BasicStudyInfos.class)
-                .value(requests -> requests.get(0),
-                        createMatcherStudyBasicInfos(studyUuid, "userId", true));
+            assertNotNull(infosList);
+            if (infosList.size() == 1) {
+                assertEquals(studyUuid, infosList.get(0).getStudyUuid());
+                assertTrue(infosList.get(0).isStudyPrivate());
+                assertEquals("userId", infosList.get(0).getUserId());
+            }
+            System.out.println("PROUT");
+            System.out.println(infosList);
 
-        countDownLatch.countDown();
-
-        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
-        Thread.sleep(1000);
-
-        webTestClient.get()
-            .uri("/v1/study_creation_requests")
-            .header("userId", "userId")
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(BasicStudyInfos.class)
-            .isEqualTo(List.of());
+            Thread.sleep(100);
+        } while (!infosList.isEmpty());
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -1640,33 +1641,41 @@ public class StudyTest {
         assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
         assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s", IMPORTED_BLOCKING_CASE_UUID_STRING)));
 
-        countDownLatch = new CountDownLatch(1);
-
         //insert a study
-        webTestClient.post()
+        BasicStudyInfos infos = webTestClient.post()
                 .uri("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", NEW_STUDY_CASE_UUID, "false")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(BasicStudyInfos.class)
-                .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId", false));
+                .returnResult()
+                .getResponseBody();
 
-        studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
+        assertNotNull(infos);
+        studyUuid = infos.getStudyUuid();
+        assertFalse(infos.isStudyPrivate());
+        assertEquals("userId", infos.getUserId());
 
-        webTestClient.get()
-                .uri("/v1/study_creation_requests")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(BasicStudyInfos.class)
-                .value(requests -> requests.get(0),
-                        createMatcherStudyBasicInfos(studyUuid, "userId", false));
+        do {
+            infosList = webTestClient.get()
+                    .uri("/v1/study_creation_requests")
+                    .header("userId", "userId")
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                    .expectBodyList(BasicStudyInfos.class)
+                    .returnResult()
+                    .getResponseBody();
 
-        countDownLatch.countDown();
+            assertNotNull(infosList);
+            if (infosList.size() == 1) {
+                assertEquals(studyUuid, infosList.get(0).getStudyUuid());
+                assertFalse(infosList.get(0).isStudyPrivate());
+                assertEquals("userId", infosList.get(0).getUserId());
+            }
 
-        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
-        Thread.sleep(1000);
+            Thread.sleep(100);
+        } while (!infosList.isEmpty());
 
         webTestClient.get()
             .uri("/v1/study_creation_requests")
