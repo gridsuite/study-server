@@ -1613,7 +1613,7 @@ public class StudyTest {
                 assertEquals("userId", infosList.get(0).getUserId());
             }
 
-            Thread.sleep(100);
+            TimeUnit.MILLISECONDS.sleep(100);
         } while (!infosList.isEmpty());
 
         webTestClient.get()
@@ -1672,7 +1672,7 @@ public class StudyTest {
                 assertEquals("userId", infosList.get(0).getUserId());
             }
 
-            Thread.sleep(100);
+            TimeUnit.MILLISECONDS.sleep(100);
         } while (!infosList.isEmpty());
 
         webTestClient.get()
@@ -1991,8 +1991,6 @@ public class StudyTest {
 
     @After
     public void tearDown() {
-        cleanDB();
-
         Set<String> httpRequest = null;
         Message<byte[]> message = null;
         try {
@@ -2013,5 +2011,7 @@ public class StudyTest {
 
         assertNull("Should not be any messages : ", message);
         assertNull("Should not be any http requests : ", httpRequest);
+
+        cleanDB();
     }
 }
