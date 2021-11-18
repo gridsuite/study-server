@@ -62,11 +62,9 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.util.ResourceUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.ZoneOffset;
@@ -1502,7 +1500,7 @@ public class StudyTest {
     private UUID createStudy(String userId, String fileName, String caseUuid, boolean isPrivate, String... errorMessage) {
         final WebTestClient.ResponseSpec exchange;
         final UUID studyUuid;
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
+        try (InputStream is = StudyTest.class.getResourceAsStream("fileName")) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
 
             MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
@@ -1570,7 +1568,7 @@ public class StudyTest {
     public void testGetStudyCreationRequests() throws Exception {
         //insert a study with a case (multipartfile)
         UUID studyUuid;
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
+        try (InputStream is = StudyTest.class.getResourceAsStream("testCase.xiidm")) {
             MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm", "text/xml", is);
 
             MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
