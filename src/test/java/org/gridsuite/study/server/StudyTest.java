@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
@@ -1595,6 +1596,7 @@ public class StudyTest {
         }
 
         List<BasicStudyInfos> infosList;
+        int loopCount = 0;
         do {
             infosList = webTestClient.get()
                     .uri("/v1/study_creation_requests")
@@ -1611,6 +1613,10 @@ public class StudyTest {
                 assertEquals(studyUuid, infosList.get(0).getStudyUuid());
                 assertTrue(infosList.get(0).isStudyPrivate());
                 assertEquals("userId", infosList.get(0).getUserId());
+            }
+
+            if (loopCount++ > 100) {
+                throw new PowsyblException("Too many retry");
             }
 
             TimeUnit.MILLISECONDS.sleep(100);
@@ -1654,6 +1660,7 @@ public class StudyTest {
         assertFalse(infos.isStudyPrivate());
         assertEquals("userId", infos.getUserId());
 
+        loopCount = 0;
         do {
             infosList = webTestClient.get()
                     .uri("/v1/study_creation_requests")
@@ -1670,6 +1677,10 @@ public class StudyTest {
                 assertEquals(studyUuid, infosList.get(0).getStudyUuid());
                 assertFalse(infosList.get(0).isStudyPrivate());
                 assertEquals("userId", infosList.get(0).getUserId());
+            }
+
+            if (loopCount++ > 100) {
+                throw new PowsyblException("Too many retry");
             }
 
             TimeUnit.MILLISECONDS.sleep(100);
