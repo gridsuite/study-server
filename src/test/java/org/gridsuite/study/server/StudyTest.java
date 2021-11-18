@@ -1612,8 +1612,6 @@ public class StudyTest {
                 assertTrue(infosList.get(0).isStudyPrivate());
                 assertEquals("userId", infosList.get(0).getUserId());
             }
-            System.out.println("PROUT");
-            System.out.println(infosList);
 
             Thread.sleep(100);
         } while (!infosList.isEmpty());
