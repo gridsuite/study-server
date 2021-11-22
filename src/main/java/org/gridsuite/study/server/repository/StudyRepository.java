@@ -21,8 +21,8 @@ import java.util.UUID;
 @Repository
 public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
-    @Query(value = "SELECT * FROM study u WHERE id in ?1 and (is_private='false' or user_id=?2)", nativeQuery = true)
-    List<StudyEntity> findAllByUuids(List<UUID> uuids, String userId);
+    @Query(value = "SELECT * FROM study u WHERE id in ?1", nativeQuery = true)
+    List<StudyEntity> findAllByUuids(List<UUID> uuids);
 
     List<StudyEntity> findAllByUserId(String userId);
 

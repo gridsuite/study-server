@@ -28,7 +28,7 @@ import java.util.UUID;
 @Schema(description = "Basic study attributes")
 public class BasicStudyInfos {
     @Id
-    UUID studyUuid;
+    UUID id;
 
     String userId;
 

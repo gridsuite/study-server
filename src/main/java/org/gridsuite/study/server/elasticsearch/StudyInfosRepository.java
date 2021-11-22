@@ -22,6 +22,6 @@ import java.util.UUID;
 @Lazy
 public interface StudyInfosRepository extends ElasticsearchRepository<CreatedStudyBasicInfos, UUID> {
 
-    Page<CreatedStudyBasicInfos> findByStudyUuid(UUID id, Pageable pageable);
+    Page<CreatedStudyBasicInfos> findById(UUID id, Pageable pageable);
 
 }
