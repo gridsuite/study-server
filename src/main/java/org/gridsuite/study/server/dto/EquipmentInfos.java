@@ -16,6 +16,9 @@ import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.InnerField;
+import org.springframework.data.elasticsearch.annotations.MultiField;
+import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.util.Set;
 import java.util.UUID;
@@ -29,6 +32,7 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode
 @Document(indexName = "#{@environment.getProperty('index.prefix')}equipments")
+@Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "EquipmentInfos")
 public class EquipmentInfos {
     @Id
@@ -37,7 +41,13 @@ public class EquipmentInfos {
     @Field("equipmentId")
     String id;
 
-    @Field("equipmentName")
+    @MultiField(
+        mainField = @Field(name = "equipmentName", type = FieldType.Text),
+        otherFields = {
+            @InnerField(suffix = "fullascii", type = FieldType.Keyword, normalizer = "fullascii"),
+            @InnerField(suffix = "raw", type = FieldType.Keyword)
+        }
+    )
     String name;
 
     @Field("equipmentType")
