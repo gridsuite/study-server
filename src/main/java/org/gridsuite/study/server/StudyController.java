@@ -620,9 +620,11 @@ public class StudyController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "List of equipments found"),
             @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                                 @Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, query));
+    public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(
+        @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
+        @Parameter(description = "What to match") @RequestParam(value = "what") String what) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, userInput, what));
     }
 
     @PostMapping(value = "/tree/nodes/{id}")

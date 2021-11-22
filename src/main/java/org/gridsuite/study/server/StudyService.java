@@ -352,10 +352,53 @@ public class StudyService {
         return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
+    public static String escapeLucene(String s) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < s.length(); ++i) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '+':
+                case '\\':
+                case '-':
+                case '!':
+                case '(':
+                case ')':
+                case ':':
+                case '^':
+                case '[':
+                case ']':
+                case '"':
+                case '{':
+                case '}':
+                case '~':
+                case '*':
+                case '?':
+                case '|':
+                case '&':
+                case '/':
+
+                case ' ': // white space has to be escaped, too
+                    sb.append('\\');
+                    break;
+            }
+
+            sb.append(c);
+        }
+
+        return sb.toString();
+    }
+
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput, String what) {
         return networkStoreService
-            .getNetworkUuid(studyUuid)
-            .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND %s", networkUuid, query)));
+                .getNetworkUuid(studyUuid)
+                .flatMapIterable(networkUuid -> {
+                    List<EquipmentInfos> ret = equipmentInfosService.search(
+                        String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
+                            what.toLowerCase().contains("name") ? "equipmentName.fullascii" : "equipmentId.keyword",
+                            escapeLucene(userInput))); // TODO LGA escape
+                    return ret;
+                });
     }
 
     @Transactional
