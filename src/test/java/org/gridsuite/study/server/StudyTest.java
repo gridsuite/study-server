@@ -660,19 +660,6 @@ public class StudyTest {
         UUID oldStudyUuid = studyUuid;
         studyUuid = createStudy("userId2", CASE_UUID, true);
 
-        StringJoiner ids = new StringJoiner("&id=", "?id=", "");
-        ids.add(oldStudyUuid.toString());
-        ids.add(studyUuid.toString());
-        webTestClient.get()
-                .uri("/v1/studies/metadata" + ids)
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(CreatedStudyBasicInfos.class)
-                .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(oldStudyUuid, "userId", "UCTE", false));
-
         webTestClient.get()
                 .uri("/v1/studies")
                 .header("userId", "userId2")
@@ -816,6 +803,34 @@ public class StudyTest {
             .header("userId", "notAuth")
             .exchange()
             .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMetadata() {
+        UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID oldStudyUuid = studyUuid;
+
+        studyUuid = createStudy("userId2", CASE_UUID, true);
+
+        StringJoiner ids = new StringJoiner("&id=", "?id=", "");
+        ids.add(oldStudyUuid.toString());
+        ids.add(studyUuid.toString());
+        var res = webTestClient.get()
+                .uri("/v1/studies/metadata" + ids)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+            .returnResult().getResponseBody();
+
+        assertNotNull(res);
+        assertEquals(2, res.size());
+        if (!res.get(0).getId().equals(oldStudyUuid)) {
+            Collections.reverse(res);
+        }
+        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "userId", "UCTE", false).matchesSafely(res.get(0)));
+        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE", true).matchesSafely(res.get(1)));
     }
 
     @Test
