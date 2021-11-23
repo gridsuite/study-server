@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.Field;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
@@ -28,6 +29,9 @@ import java.util.UUID;
 @Schema(description = "Basic study attributes")
 public class BasicStudyInfos {
     @Id
+    String uniqueId;
+
+    @Field("studyUuid")
     UUID id;
 
     String userId;

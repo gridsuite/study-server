@@ -9,8 +9,10 @@ package org.gridsuite.study.server;
 import com.google.common.collect.Iterables;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.elasticsearch.StudyInfosRepository;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,14 @@ public class StudyInfosServiceTests {
 
     @Autowired
     private StudyInfosService studyInfosService;
+
+    @Autowired
+    private StudyInfosRepository studyInfosRepository;
+
+    @Before
+    public void setUp() {
+        studyInfosRepository.deleteAll();
+    }
 
     @Test
     public void testAddDeleteStudyInfos() {
