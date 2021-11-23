@@ -623,8 +623,9 @@ public class StudyController {
     public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
-        @Parameter(description = "What to match") @RequestParam(value = "what") String what) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, userInput, what));
+        @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") String fieldSelector) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(studyService.searchEquipments(studyUuid, userInput, fieldSelector));
     }
 
     @PostMapping(value = "/tree/nodes/{id}")

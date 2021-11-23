@@ -209,7 +209,7 @@ public class StudyTest {
         when(studyInfosService.search(String.format("userId:%s", "userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentType:(LINE)", NETWORK_UUID_STRING)))
+        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
     }
 
@@ -614,7 +614,7 @@ public class StudyTest {
                 .value(new MatcherJson<>(mapper, studiesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?q={request}", studyUuid, "equipmentType:(LINE)")
+            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=name", studyUuid, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()

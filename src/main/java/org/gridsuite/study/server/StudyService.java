@@ -389,14 +389,14 @@ public class StudyService {
         return sb.toString();
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput, String what) {
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput, String fieldSelector) {
         return networkStoreService
                 .getNetworkUuid(studyUuid)
                 .flatMapIterable(networkUuid -> {
-                    List<EquipmentInfos> ret = equipmentInfosService.search(
-                        String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
-                            what.toLowerCase().contains("name") ? "equipmentName.fullascii" : "equipmentId.keyword",
-                            escapeLucene(userInput))); // TODO LGA escape
+                    String query = String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
+                        fieldSelector.toLowerCase().contains("name") ? "equipmentName.fullascii" : "equipmentId.keyword",
+                        escapeLucene(userInput));
+                    List<EquipmentInfos> ret = equipmentInfosService.search(query);
                     return ret;
                 });
     }
