@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.google.common.collect.Iterables;
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,8 +37,8 @@ public class EquipmentInfosServiceMockTests {
     @Test
     public void testAddDeleteEquipmentInfos() {
         Stream<EquipmentInfos> equipmentsInfos = Stream.of(
-                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevelsIds(Set.of("vl1")).build(),
-                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("GENERATOR").voltageLevelsIds(Set.of("vl2")).build()
+                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build(),
+                EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build()
         );
 
         equipmentsInfos.forEach(equipmentInfosService::add);

@@ -8,6 +8,7 @@ package org.gridsuite.study.server.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -20,6 +21,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Getter
 @ToString
+@EqualsAndHashCode
 @Schema(description = "Voltage level attributes")
 public class VoltageLevelInfos {
 

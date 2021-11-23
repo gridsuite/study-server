@@ -19,19 +19,17 @@ import org.gridsuite.study.server.dto.StudyInfos;
  */
 public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos> {
 
-    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String studyName, String userId, String caseFormat,
-                                                            String description, boolean studyPrivate) {
-        return createMatcherStudyInfos(studyUuid, studyName, userId, caseFormat, description, studyPrivate, LoadFlowStatus.NOT_DONE);
+    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat,
+                                                            boolean studyPrivate) {
+        return createMatcherStudyInfos(studyUuid, userId, caseFormat, studyPrivate, LoadFlowStatus.NOT_DONE);
     }
 
-    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String studyName, String userId, String caseFormat,
-                                                            String description, boolean studyPrivate, LoadFlowStatus loadFlowStatus) {
+    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat,
+                                                            boolean studyPrivate, LoadFlowStatus loadFlowStatus) {
         return new MatcherStudyInfos(StudyInfos.builder()
                 .studyUuid(studyUuid)
-                .studyName(studyName)
                 .userId(userId)
                 .caseFormat(caseFormat)
-                .description(description)
                 .studyPrivate(studyPrivate)
                 .loadFlowStatus(loadFlowStatus)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))

@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -21,8 +20,6 @@ import java.util.UUID;
 
 @Repository
 public interface StudyCreationRequestRepository extends JpaRepository<StudyCreationRequestEntity, UUID> {
-
-    Optional<StudyCreationRequestEntity> findByUserIdAndStudyName(String userId, String studyName);
 
     List<StudyCreationRequestEntity> findByUserIdOrIsPrivate(@Param("userId") String userId, @Param("isPrivate") boolean isPrivate);
 }

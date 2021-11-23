@@ -28,6 +28,4 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @TypeAlias(value = "StudyInfos")
 public class CreatedStudyBasicInfos extends BasicStudyInfos {
     String caseFormat;
-
-    String description;
 }
