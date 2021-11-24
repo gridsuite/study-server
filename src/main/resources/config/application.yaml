@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: study-server
+
+  cloud:
+    function:
+      definition: consumeSaResult;consumeSaStopped
+    stream:
+      bindings:
+        publishStudyUpdate-out-0:
+          destination: study.update
+        consumeSaResult-in-0:
+          destination: sa.result
+        consumeSaStopped-in-0:
+          destination: sa.stopped
+      source: publishStudyUpdate
+
+network-store-server:
+  preloading-strategy: COLLECTION
+
+dbName: study
