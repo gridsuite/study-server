@@ -249,7 +249,7 @@ public class StudyService {
     }
 
     public Flux<CreatedStudyBasicInfos> getStudyListMetadata(List<UUID> uuids) {
-        return Flux.fromStream(() -> studyRepository.findAllByUuids(uuids).stream().map(StudyService::toCreatedStudyBasicInfos));
+        return Flux.fromStream(() -> studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos));
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
