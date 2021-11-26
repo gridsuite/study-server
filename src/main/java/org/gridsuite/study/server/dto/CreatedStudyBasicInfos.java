@@ -24,7 +24,7 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 @Schema(description = "Basic study attributes after creation succeeded ")
-@Document(indexName = "study-server")
+@Document(indexName = "#{@environment.getProperty('index.prefix')}studies")
 @TypeAlias(value = "StudyInfos")
 public class CreatedStudyBasicInfos extends BasicStudyInfos {
     String caseFormat;
