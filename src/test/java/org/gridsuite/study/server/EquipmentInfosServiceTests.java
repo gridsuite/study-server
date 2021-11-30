@@ -6,6 +6,25 @@
  */
 package org.gridsuite.study.server;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
+
+import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.EquipmentType;
+import org.gridsuite.study.server.dto.VoltageLevelInfos;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ErrorCollector;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.elasticsearch.NoSuchIndexException;
+import org.springframework.test.context.junit4.SpringRunner;
+
 import com.google.common.collect.Iterables;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
@@ -16,23 +35,10 @@ import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.iidm.impl.NetworkImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.EquipmentType;
-import org.gridsuite.study.server.dto.VoltageLevelInfos;
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
-
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Stream;
-
-import static org.junit.Assert.*;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -50,7 +56,11 @@ public class EquipmentInfosServiceTests {
 
     @Before
     public void setup() {
-        equipmentInfosService.deleteAll(NETWORK_UUID);
+        try {
+            equipmentInfosService.deleteAll(NETWORK_UUID);
+        } catch (NoSuchIndexException ex) {
+            // no need to worry that much
+        }
     }
 
     @Test
@@ -153,6 +163,86 @@ public class EquipmentInfosServiceTests {
         hits = new HashSet<>(equipmentInfosService.search("equipmentType:(LINE) AND equipmentId:(*other*)"));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(otherLineInfos));
+    }
+
+    private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
+        return EquipmentInfos.builder()
+            .networkUuid(EquipmentInfosServiceTests.NETWORK_UUID)
+            .id(i.getId())
+            .name(i.getNameOrId())
+            .type(EquipmentType.getType(i).name())
+            .voltageLevels(Set.of(VoltageLevelInfos.builder().id("vlid").name("vlname").build()))
+            .build();
+    }
+
+    @Rule
+    public ErrorCollector pbsc = new ErrorCollector();
+
+    void testFullAscii(String pat) {
+        Set<EquipmentInfos> hits;
+
+        String prefix = "networkUuid:(" + NETWORK_UUID + ") AND ";
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*" + pat + "*)"));
+        pbsc.checkThat(hits.size(), is(1));
+    }
+
+    @Test
+    public void testSearchSpecialChars() {
+        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
+        Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
+        network.getIdentifiables().forEach(idable -> {
+            equipmentInfosService.add(toEquipmentInfos(idable));
+        });
+
+        Set<EquipmentInfos> hits;
+
+        String prefix = "networkUuid:(" + NETWORK_UUID + ") AND ";
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.raw:(*___*)"));
+        pbsc.checkThat(hits.size(), is(1));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName:(*e E*)"));
+        pbsc.checkThat(hits.size(), is(4));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.keyword:(*e\\ E*)"));
+        pbsc.checkThat(hits.size(), is(0));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.raw:(*e\\ E*)"));
+        pbsc.checkThat(hits.size(), is(1));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.raw:(*e\\ e*)"));
+        pbsc.checkThat(hits.size(), is(0));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*e\\ E*)"));
+        pbsc.checkThat(hits.size(), is(1));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(\\ sp*)"));
+        pbsc.checkThat(hits.size(), is(1));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*PS\\ )"));
+        pbsc.checkThat(hits.size(), is(1));
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*e\\ e*)"));
+        pbsc.checkThat(hits.size(), is(1));
+
+        testFullAscii("s\\+S");
+        testFullAscii("s\\+s");
+        testFullAscii("h\\-h");
+        testFullAscii("t\\.t");
+        testFullAscii("h\\/h");
+        testFullAscii("l\\\\l");
+        testFullAscii("p\\&p");
+        testFullAscii("n\\(n");
+        testFullAscii("n\\)n");
+        testFullAscii("k\\[k");
+        testFullAscii("k\\]k");
+        testFullAscii("e\\{e");
+        testFullAscii("e\\}e");
+        testFullAscii("t\\<t");
+        testFullAscii("t\\>t");
+        testFullAscii("s\\'s");
+        testFullAscii("e\\|e");
     }
 
     @Test
