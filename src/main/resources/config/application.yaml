@@ -8,11 +8,11 @@ spring:
     stream:
       bindings:
         publishStudyUpdate-out-0:
-          destination: study.update
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
         consumeSaResult-in-0:
-          destination: sa.result
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
         consumeSaStopped-in-0:
-          destination: sa.stopped
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.stopped
       source: publishStudyUpdate
 
 network-store-server:
