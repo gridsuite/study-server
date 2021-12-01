@@ -365,7 +365,7 @@ public class StudyController {
                                                         @PathVariable("switchId") String switchId,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @Parameter(description = "Switch open state") @RequestParam("open") boolean open) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
                 .then(studyService.changeSwitchState(studyUuid, switchId, open, nodeUuid)));
     }
 
@@ -376,7 +376,7 @@ public class StudyController {
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @RequestBody String groovyScript) {
 
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid).then()));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid).then()));
     }
 
     @GetMapping(value = "/studies/{groupUuid}/network/modifications")
@@ -401,7 +401,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("lineId") String lineId,
             @RequestBody String status) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid)));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
@@ -410,7 +410,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid)
+        return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(nodeUuid)
                 .then(studyService.runLoadFlow(studyUuid, nodeUuid)));
     }
 
@@ -467,14 +467,15 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/security-analysis/result")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
     @Operation(summary = "Get a security analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
             @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        return studyService.getSecurityAnalysisResult(studyUuid, nonNullLimitTypes)
+        return studyService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes)
                 .map(result -> ResponseEntity.ok().body(result))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
@@ -556,21 +557,23 @@ public class StudyController {
             new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/security-analysis/status")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
             @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
-    public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid) {
-        return studyService.getSecurityAnalysisStatus(studyUuid)
+    public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return studyService.getSecurityAnalysisStatus(nodeUuid)
                 .map(result -> ResponseEntity.ok().body(result))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/security-analysis/stop")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
-    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@Parameter(description = "Study name") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid));
+    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@Parameter(description = "Study name") @PathVariable("studyUuid") UUID studyUuid,
+                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -601,7 +604,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @RequestBody String createLoadAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
             .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
     }
 
@@ -671,7 +674,7 @@ public class StudyController {
                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid)));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators")
@@ -680,7 +683,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createGenerator(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @RequestBody String createGeneratorAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
             .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid)));
     }
 
@@ -690,7 +693,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createLine(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @RequestBody String createLineAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
             .then(studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid)));
     }
 
@@ -700,7 +703,18 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createTwoWindingsTransformer(@PathVariable("studyUuid") UUID studyUuid,
                                                                    @PathVariable("nodeUuid") UUID nodeUuid,
                                                                    @RequestBody String createTwoWindingsTransformerAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
                 .then(studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid)));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
+    @Operation(summary = "get the load flow information (status and result) on study")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The load flow informations"),
+        @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
+    public ResponseEntity<Mono<LoadFlowInfos>> getLoadFlowInfos(@PathVariable("studyUuid") UUID studyUuid,
+                                                                @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadFlowInfos(studyUuid, nodeUuid)
+            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 }

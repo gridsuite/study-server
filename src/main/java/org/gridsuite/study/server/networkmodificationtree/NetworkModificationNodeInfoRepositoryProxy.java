@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
+import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
@@ -24,13 +25,19 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModification(),
-                                                                                      modificationNode.getVariantId());
+                                                                                      modificationNode.getVariantId(),
+                                                                                      modificationNode.getLoadFlowStatus(),
+                                                                                      StudyService.toEntity(modificationNode.getLoadFlowResult()),
+                                                                                      modificationNode.getSecurityAnalysisResultUuid());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
-        return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(), node.getVariantId()));
+        return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(),
+                                                                  node.getVariantId(),
+                                                                  node.getLoadFlowStatus(),
+                                                                  StudyService.fromEntity(node.getLoadFlowResult()),
+                                                                  node.getSecurityAnalysisResultUuid()));
     }
-
 }

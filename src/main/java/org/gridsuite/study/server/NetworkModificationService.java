@@ -44,6 +44,7 @@ import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_F
 public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
+    private static final String GROUP = "group";
 
     private String networkModificationServerBaseUri;
 
@@ -107,7 +108,7 @@ public class NetworkModificationService {
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
-                .queryParam("group", groupUuid)
+                .queryParam(GROUP, groupUuid)
                 .queryParam("open", open);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -131,7 +132,7 @@ public class NetworkModificationService {
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
-                .queryParam("group", groupUuid);
+                .queryParam(GROUP, groupUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -154,7 +155,7 @@ public class NetworkModificationService {
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
-                .queryParam("group", groupUuid);
+                .queryParam(GROUP, groupUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -198,7 +199,7 @@ public class NetworkModificationService {
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                .queryParam("group", groupUuid);
+                .queryParam(GROUP, groupUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -225,7 +226,7 @@ public class NetworkModificationService {
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
-                .queryParam("group", groupUuid);
+                .queryParam(GROUP, groupUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }

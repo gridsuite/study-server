@@ -86,6 +86,7 @@ public class StudyService {
 
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
+    static final String HEADER_NODE = "node";
     static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_STUDIES = "studies";
@@ -107,6 +108,7 @@ public class StudyService {
     static final String QUERY_PARAM_DIAGONAL_LABEL = "diagonalLabel";
     static final String QUERY_PARAM_TOPOLOGICAL_COLORING = "topologicalColoring";
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
+    static final String RESULT_UUID = "resultUuid";
 
     static final String RECEIVER = "receiver";
 
@@ -120,7 +122,7 @@ public class StudyService {
     @AllArgsConstructor
     @NoArgsConstructor
     private static class Receiver {
-        private UUID studyUuid;
+        private UUID nodeUuid;
     }
 
     private final WebClient webClient;
@@ -151,22 +153,23 @@ public class StudyService {
     public Consumer<Flux<Message<String>>> consumeSaResult() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
-                UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
+                UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
                 String receiver = message.getHeaders().get(RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
                         receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                        LOGGER.info("Security analysis result '{}' available for study '{}'",
-                            resultUuid, receiverObj.getStudyUuid());
+                        LOGGER.info("Security analysis result '{}' available for node '{}'",
+                            resultUuid, receiverObj.getNodeUuid());
 
                         // update DB
-                        return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), resultUuid)
+                        return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid)
                             .then(Mono.fromCallable(() -> {
                                 // send notifications
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                                 return null;
                             }));
                     } catch (JsonProcessingException e) {
@@ -225,8 +228,6 @@ public class StudyService {
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC))
                 .userId(entity.getUserId())
                 .caseFormat(entity.getCaseFormat())
-                .loadFlowStatus(entity.getLoadFlowStatus())
-                .loadFlowResult(fromEntity(entity.getLoadFlowResult()))
                 .studyPrivate(entity.isPrivate())
                 .build();
     }
@@ -275,7 +276,7 @@ public class StudyService {
                         .flatMap(t -> {
                             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                             return insertStudy(s.getId(), userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                    t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                    t.getT2(), caseUuid, false, toEntity(loadFlowParameters));
                         })
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -298,7 +299,7 @@ public class StudyService {
                                         .flatMap(t -> {
                                             LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
                                             return insertStudy(s.getId(), userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                    t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
+                                                    t.getT2(), uuid, true, toEntity(loadFlowParameters));
                                         }))
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -311,7 +312,7 @@ public class StudyService {
     }
 
     public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String headerUserId) {
-        Mono<StudyEntity> studyMono = getStudyWithPreFetchedLoadFlowResult(studyUuid);
+        Mono<StudyEntity> studyMono = getStudy(studyUuid);
         return studyMono.flatMap(study -> {
             if (study.isPrivate() && !study.getUserId().equals(headerUserId)) {
                 return Mono.error(new StudyException(NOT_ALLOWED));
@@ -321,28 +322,14 @@ public class StudyService {
         }).map(StudyService::toStudyInfos);
     }
 
-    Mono<StudyEntity> getStudyByUuid(UUID studyUuid) {
-        return Mono.fromCallable(() -> studyRepository.findById(studyUuid).orElse(null));
-    }
-
     @Transactional(readOnly = true)
-    public StudyEntity doGetStudyWithPreFetchedLoadFlowResult(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).map(studyEntity -> {
-            if (studyEntity.getLoadFlowResult() != null) {
-                // This is a workaround to prepare the componentResultEmbeddables which will be used later in the webflux pipeline
-                // The goal is to avoid LazyInitializationException
-                @SuppressWarnings("unused")
-                int ignoreSize = studyEntity.getLoadFlowResult().getComponentResults().size();
-                @SuppressWarnings("unused")
-                int ignoreSize2 = studyEntity.getLoadFlowResult().getMetrics().size();
-            }
-            return studyEntity;
-        }).orElse(null);
+    public StudyEntity doGetStudy(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).orElse(null);
     }
 
     @Transactional
-    public StudyEntity doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        StudyEntity studyEntity = doGetStudyWithPreFetchedLoadFlowResult(studyUuid);
+    public StudyEntity doGetStudyAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
+        StudyEntity studyEntity = doGetStudy(studyUuid);
         if (studyEntity != null) {
             //only the owner of a study can change the access rights
             if (!headerUserId.equals(studyEntity.getUserId())) {
@@ -353,12 +340,12 @@ public class StudyService {
         return studyEntity;
     }
 
-    public Mono<StudyEntity> getStudyWithPreFetchedLoadFlowResult(UUID studyUuid) {
-        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResult(studyUuid));
+    public Mono<StudyEntity> getStudy(UUID studyUuid) {
+        return Mono.fromCallable(() -> self.doGetStudy(studyUuid));
     }
 
-    public Mono<StudyEntity> getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        return Mono.fromCallable(() -> self.doGetStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate));
+    public Mono<StudyEntity> getStudyAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
+        return Mono.fromCallable(() -> self.doGetStudyAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate));
     }
 
     Flux<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -428,10 +415,8 @@ public class StudyService {
     }
 
     private Mono<CreatedStudyBasicInfos> insertStudy(UUID studyUuid, String userId, boolean isPrivate, UUID networkUuid, String networkId,
-                                                     String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowStatus loadFlowStatus,
-                                                     LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
-        return insertStudyEntity(studyUuid, userId, isPrivate, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowStatus, loadFlowResult,
-            loadFlowParameters, securityAnalysisUuid)
+                                                     String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters) {
+        return insertStudyEntity(studyUuid, userId, isPrivate, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters)
             .map(StudyService::toCreatedStudyBasicInfos)
             .map(studyInfosService::add)
             .doOnSuccess(infos -> emitStudiesChanged(studyUuid, userId, isPrivate));
@@ -709,17 +694,17 @@ public class StudyService {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                .then(invalidateSecurityAnalysisStatus(studyUuid)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SWITCH));
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(nodeUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH));
 
             return networkModificationService.changeSwitchState(studyUuid, switchId, open, groupUuid, variantId)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
-                    emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
                 .then(monoUpdateLfState);
         });
@@ -730,23 +715,23 @@ public class StudyService {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                .then(invalidateSecurityAnalysisStatus(studyUuid)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(nodeUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
 
             return networkModificationService.applyGroovyScript(studyUuid, groovyScript, groupUuid, variantId)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
-                    emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
                 .then(monoUpdateLfState);
         });
     }
 
     Mono<Void> runLoadFlow(UUID studyUuid, UUID nodeUuid) {
-        return setLoadFlowRunning(studyUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid))).flatMap(tuple3 -> {
+        return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid))).flatMap(tuple3 -> {
             UUID networkUuid = tuple3.getT1();
             String provider = tuple3.getT2();
             String variantId = tuple3.getT3();
@@ -767,17 +752,17 @@ public class StudyService {
                 .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
                 .retrieve()
                 .bodyToMono(LoadFlowResult.class)
-                .flatMap(result -> updateLoadFlowResultAndStatus(studyUuid, toEntity(result), result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED))
-                .doOnError(e -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe())
-                .doOnCancel(() -> updateLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE).subscribe());
+                .flatMap(result -> updateLoadFlowResultAndStatus(nodeUuid, result, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED, false))
+                .doOnError(e -> updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE).subscribe())
+                .doOnCancel(() -> updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE).subscribe());
         }).doFinally(s ->
-            emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW)
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW)
         );
     }
 
-    private Mono<Void> setLoadFlowRunning(UUID studyUuid) {
-        return updateLoadFlowStatus(studyUuid, LoadFlowStatus.RUNNING)
-            .doOnSuccess(s -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS));
+    private Mono<Void> setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
+        return updateLoadFlowStatus(nodeUuid, LoadFlowStatus.RUNNING)
+            .doOnSuccess(s -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
     public Mono<Collection<String>> getExportFormats() {
@@ -815,7 +800,7 @@ public class StudyService {
     }
 
     public Mono<StudyInfos> changeStudyAccessRights(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        return getStudyWithPreFetchedLoadFlowResultAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate)
+        return getStudyAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate)
             .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
             .map(StudyService::toStudyInfos);
     }
@@ -825,17 +810,17 @@ public class StudyService {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                .then(invalidateSecurityAnalysisStatus(studyUuid)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LINE));
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(nodeUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE));
 
             return networkModificationService.applyLineChanges(studyUuid, lineId, status, groupUuid, variantId)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
-                    emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
                 .then(monoUpdateLfState);
         });
@@ -850,9 +835,10 @@ public class StudyService {
             .build());
     }
 
-    private void emitStudyChanged(UUID studyUuid, String updateType) {
+    private void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_NODE, nodeUuid)
             .setHeader(HEADER_UPDATE_TYPE, updateType)
             .build()
         );
@@ -869,18 +855,20 @@ public class StudyService {
         );
     }
 
-    private void emitStudyChanged(UUID studyUuid, String updateType, Set<String> substationsIds) {
+    private void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_NODE, nodeUuid)
             .setHeader(HEADER_UPDATE_TYPE, updateType)
             .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
             .build()
         );
     }
 
-    private void emitStudyEquipmentDeleted(UUID studyUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
+    private void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_NODE, nodeUuid)
             .setHeader(HEADER_UPDATE_TYPE, updateType)
             .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
             .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, equipmentType)
@@ -894,27 +882,25 @@ public class StudyService {
         return caseExists.flatMap(c -> Boolean.TRUE.equals(c) ? Mono.empty() : Mono.error(new StudyException(CASE_NOT_FOUND)));
     }
 
-    public Mono<Void> assertLoadFlowRunnable(UUID studyUuid) {
-        Mono<StudyEntity> studyMono = getStudyByUuid(studyUuid);
-        return studyMono.map(StudyEntity::getLoadFlowStatus)
-            .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
+    public Mono<Void> assertLoadFlowRunnable(UUID nodeUuid) {
+        return getLoadFlowStatus(nodeUuid)
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
             .flatMap(lfs -> lfs.equals(LoadFlowStatus.NOT_DONE) ? Mono.empty() : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
     }
 
-    private Mono<Void> assertLoadFlowNotRunning(UUID studyUuid) {
-        return getStudyByUuid(studyUuid).map(StudyEntity::getLoadFlowStatus)
-            .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
+    private Mono<Void> assertLoadFlowNotRunning(UUID nodeUuid) {
+        return getLoadFlowStatus(nodeUuid)
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
             .flatMap(lfs -> lfs.equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING)) : Mono.empty());
     }
 
-    private Mono<Void> assertSecurityAnalysisNotRunning(UUID studyUuid) {
-        Mono<String> statusMono = getSecurityAnalysisStatus(studyUuid);
-        return statusMono
-            .flatMap(s -> s.equals(SecurityAnalysisStatus.RUNNING.name()) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
+    private Mono<Void> assertSecurityAnalysisNotRunning(UUID nodeUuid) {
+        return getSecurityAnalysisStatus(nodeUuid)
+            .flatMap(sas -> sas.equals(SecurityAnalysisStatus.RUNNING.name()) ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING)) : Mono.empty());
     }
 
-    public Mono<Void> assertComputationNotRunning(UUID studyUuid) {
-        return assertLoadFlowNotRunning(studyUuid).and(assertSecurityAnalysisNotRunning(studyUuid));
+    public Mono<Void> assertComputationNotRunning(UUID nodeUuid) {
+        return assertLoadFlowNotRunning(nodeUuid).and(assertSecurityAnalysisNotRunning(nodeUuid));
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
@@ -951,18 +937,29 @@ public class StudyService {
     }
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
-        Objects.requireNonNull(result);
-        return new LoadFlowResultEntity(result.isOk(),
-            result.getMetrics(),
-            result.getLogs(),
-            result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList()));
+        return result != null ?
+            new LoadFlowResultEntity(result.isOk(),
+                result.getMetrics(),
+                result.getLogs(),
+                result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList())) : null;
     }
 
     public static LoadFlowResult fromEntity(LoadFlowResultEntity entity) {
-        return entity == null ? null : new LoadFlowResultImpl(entity.isOk(),
-            entity.getMetrics(),
-            entity.getLogs(),
-            entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
+        LoadFlowResult result = null;
+        if (entity != null) {
+            // This is a workaround to prepare the componentResultEmbeddables which will be used later in the webflux pipeline
+            // The goal is to avoid LazyInitializationException
+            @SuppressWarnings("unused")
+            int ignoreSize = entity.getComponentResults().size();
+            @SuppressWarnings("unused")
+            int ignoreSize2 = entity.getMetrics().size();
+
+            return new LoadFlowResultImpl(entity.isOk(),
+                entity.getMetrics(),
+                entity.getLogs(),
+                entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
+        }
+        return result;
     }
 
     public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
@@ -998,10 +995,11 @@ public class StudyService {
     }
 
     Mono<Void> setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
-        return updateLoadFlowParametersAndStatus(studyUuid, toEntity(parameters != null ? parameters : LoadFlowParameters.load()), LoadFlowStatus.NOT_DONE)
-            .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-            .then(invalidateSecurityAnalysisStatus(studyUuid)
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+        return updateLoadFlowParameters(studyUuid, toEntity(parameters != null ? parameters : LoadFlowParameters.load()))
+            .then(networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE))
+            .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS))
+            .then(invalidateSecurityAnalysisStatusOnAllNodes(studyUuid))
+            .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS));
     }
 
     @Transactional
@@ -1018,21 +1016,21 @@ public class StudyService {
     @Transactional
     public void doUpdateLoadFlowProvider(UUID studyUuid, String provider) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> {
-            studyEntity1.setLoadFlowProvider(provider);
-            studyEntity1.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
-        });
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider));
     }
 
     public Mono<Void> updateLoadFlowProvider(UUID studyUuid, String provider) {
         Mono<Void> updateProvider = Mono.fromRunnable(() -> self.doUpdateLoadFlowProvider(studyUuid, provider));
-        return updateProvider.doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS));
+        return updateProvider
+            .then(networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE))
+            .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS));
     }
 
     public Mono<UUID> runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(parameters);
+        Objects.requireNonNull(nodeUuid);
 
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid)).flatMap(tuple3 -> {
             UUID networkUuid = tuple3.getT1();
@@ -1041,7 +1039,7 @@ public class StudyService {
 
             String receiver;
             try {
-                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid)), StandardCharsets.UTF_8);
+                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
             } catch (JsonProcessingException e) {
                 return Mono.error(new UncheckedIOException(e));
             }
@@ -1066,19 +1064,17 @@ public class StudyService {
                 .retrieve()
                 .bodyToMono(UUID.class);
         }).flatMap(result ->
-            updateSecurityAnalysisResultUuid(studyUuid, result)
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
+            updateSecurityAnalysisResultUuid(nodeUuid, result)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS))
                 .thenReturn(result)
         );
     }
 
-    public Mono<String> getSecurityAnalysisResult(UUID studyUuid, List<String> limitTypes) {
-        Objects.requireNonNull(studyUuid);
+    public Mono<String> getSecurityAnalysisResult(UUID nodeUuid, List<String> limitTypes) {
         Objects.requireNonNull(limitTypes);
 
-        return getStudyByUuid(studyUuid).flatMap(entity -> {
-            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
-            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+        return getSecurityAnalysisResultUuid(nodeUuid).flatMap(resultUuid ->
+            Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
                 String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
                     .queryParam("limitType", limitTypes)
                     .buildAndExpand(resultUuid)
@@ -1089,13 +1085,13 @@ public class StudyService {
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
                     .bodyToMono(String.class);
-            });
-        });
+            }));
     }
 
     public Mono<Integer> getContingencyCount(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
+        Objects.requireNonNull(nodeUuid);
 
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID uuid = tuple.getT1();
@@ -1180,12 +1176,9 @@ public class StudyService {
         });
     }
 
-    public Mono<String> getSecurityAnalysisStatus(UUID studyUuid) {
-        Objects.requireNonNull(studyUuid);
-
-        return getStudyByUuid(studyUuid).flatMap(entity -> {
-            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
-            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+    public Mono<String> getSecurityAnalysisStatus(UUID nodeUuid) {
+        return getSecurityAnalysisResultUuid(nodeUuid).flatMap(resultUuid ->
+            Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
                 String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
                     .buildAndExpand(resultUuid)
                     .toUriString();
@@ -1195,26 +1188,31 @@ public class StudyService {
                     .retrieve()
                     .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
                     .bodyToMono(String.class);
-            });
-        });
+            }));
     }
 
-    public Mono<Void> invalidateSecurityAnalysisStatus(UUID studyUuid) {
-        Objects.requireNonNull(studyUuid);
+    private Mono<Void> invalidateSaStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/invalidate-status")
+                .queryParam(RESULT_UUID, uuids)
+                .build()
+                .toUriString();
+            return webClient
+                .put()
+                .uri(securityAnalysisServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(Void.class);
+        } else {
+            return Mono.empty();
+        }
+    }
 
-        return getStudyByUuid(studyUuid).flatMap(entity -> {
-            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
-            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/invalidate-status")
-                    .buildAndExpand(resultUuid)
-                    .toUriString();
-                return webClient
-                    .put()
-                    .uri(securityAnalysisServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(Void.class);
-            });
-        });
+    public Mono<Void> invalidateSecurityAnalysisStatus(UUID nodeUuid) {
+        return networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid).flatMap(this::invalidateSaStatus);
+    }
+
+    public Mono<Void> invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        return networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid).flatMap(this::invalidateSaStatus);
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {
@@ -1249,51 +1247,48 @@ public class StudyService {
         this.actionsServerBaseUri = actionsServerBaseUri;
     }
 
-    public Mono<Void> stopSecurityAnalysis(UUID studyUuid) {
+    public Mono<Void> stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
 
-        return getStudyByUuid(studyUuid).flatMap(entity -> {
-            UUID resultUuid = entity.getSecurityAnalysisResultUuid();
-
-            String receiver;
-            try {
-                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(studyUuid)), StandardCharsets.UTF_8);
-            } catch (JsonProcessingException e) {
-                throw new UncheckedIOException(e);
-            }
-            return Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                    .queryParam(RECEIVER, receiver)
-                    .buildAndExpand(resultUuid)
-                    .toUriString();
-                return webClient
-                    .put()
-                    .uri(securityAnalysisServerBaseUri + path)
-                    .retrieve()
-                    .bodyToMono(Void.class);
-            });
-        });
+        return getSecurityAnalysisResultUuid(nodeUuid).flatMap(resultUuid ->
+           Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
+               String receiver;
+               try {
+                   receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
+               } catch (JsonProcessingException e) {
+                   throw new UncheckedIOException(e);
+               }
+               String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
+                   .queryParam(RECEIVER, receiver)
+                   .buildAndExpand(resultUuid)
+                   .toUriString();
+               return webClient
+                   .put()
+                   .uri(securityAnalysisServerBaseUri + path)
+                   .retrieve()
+                   .bodyToMono(Void.class);
+           }));
     }
 
     @Bean
     public Consumer<Flux<Message<String>>> consumeSaStopped() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
-                UUID resultUuid = UUID.fromString(message.getHeaders().get("resultUuid", String.class));
                 String receiver = message.getHeaders().get(RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
                         receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                        LOGGER.info("Security analysis stopped for study '{}'",
-                            resultUuid, receiverObj.getStudyUuid());
+                        LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
 
                         // delete security analysis result in database
-                        return updateSecurityAnalysisResultUuid(receiverObj.getStudyUuid(), null)
+                        return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null)
                             .then(Mono.fromCallable(() -> {
                                 // send notification for stopped computation
-                                emitStudyChanged(receiverObj.getStudyUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                                 return null;
                             }));
                     } catch (JsonProcessingException e) {
@@ -1310,17 +1305,16 @@ public class StudyService {
 
     private Mono<StudyEntity> insertStudyEntity(UUID uuid, String userId, boolean isPrivate, UUID networkUuid, String networkId,
                                                 String caseFormat, UUID caseUuid, boolean casePrivate,
-                                                LoadFlowStatus loadFlowStatus, LoadFlowResultEntity loadFlowResult, LoadFlowParametersEntity loadFlowParameters, UUID securityAnalysisUuid) {
+                                                LoadFlowParametersEntity loadFlowParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
         Objects.requireNonNull(networkId);
         Objects.requireNonNull(caseFormat);
         Objects.requireNonNull(caseUuid);
-        Objects.requireNonNull(loadFlowStatus);
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
-            StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, isPrivate, loadFlowStatus, loadFlowResult, null, loadFlowParameters, securityAnalysisUuid);
+            StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, isPrivate, null, loadFlowParameters);
             return insertStudy(studyEntity);
         });
     }
@@ -1332,22 +1326,12 @@ public class StudyService {
         return study;
     }
 
-    @Transactional
-    public void doUpdateSecurityAnalysisResultUuid(UUID studyUuid, UUID securityAnalysisResultUuid) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setSecurityAnalysisResultUuid(securityAnalysisResultUuid));
+    Mono<Void> updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+        return networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
-    Mono<Void> updateSecurityAnalysisResultUuid(UUID studyUuid, UUID securityAnalysisResultUuid) {
-        return Mono.fromRunnable(() -> self.doUpdateSecurityAnalysisResultUuid(studyUuid, securityAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void doUpdateLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
-        studyRepository.findById(studyUuid).ifPresent(studyEntity -> studyEntity.setLoadFlowStatus(loadFlowStatus));
-    }
-
-    Mono<Void> updateLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(studyUuid, loadFlowStatus));
+    Mono<Void> updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
+        return networkModificationTreeService.updateLoadFlowStatus(nodeUuid, loadFlowStatus);
     }
 
     private Mono<StudyCreationRequestEntity> insertStudyCreationRequestEntity(String userId, boolean isPrivate, UUID studyUuid) {
@@ -1357,30 +1341,22 @@ public class StudyService {
         });
     }
 
-    private Mono<Void> updateLoadFlowResultAndStatus(UUID studyUuid, LoadFlowResultEntity loadFlowResultEntity, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowResultAndStatus(studyUuid, loadFlowResultEntity, loadFlowStatus));
+    private Mono<Void> updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
+        return updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, true);
+    }
+
+    private Mono<Void> updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
+        return networkModificationTreeService.updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren);
+    }
+
+    private Mono<Void> updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
+        return Mono.fromRunnable(() -> self.doUpdateLoadFlowParameters(studyUuid, loadFlowParametersEntity));
     }
 
     @Transactional
-    public void doUpdateLoadFlowResultAndStatus(UUID studyUuid, LoadFlowResultEntity loadFlowResultEntity, LoadFlowStatus loadFlowStatus) {
+    public void doUpdateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> {
-            studyEntity1.setLoadFlowResult(loadFlowResultEntity);
-            studyEntity1.setLoadFlowStatus(loadFlowStatus);
-        });
-    }
-
-    private Mono<Void> updateLoadFlowParametersAndStatus(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowParametersAndStatus(studyUuid, loadFlowParametersEntity, loadFlowStatus));
-    }
-
-    @Transactional
-    public void doUpdateLoadFlowParametersAndStatus(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity, LoadFlowStatus loadFlowStatus) {
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> {
-            studyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
-            studyEntity1.setLoadFlowStatus(loadFlowStatus);
-        });
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowParameters(loadFlowParametersEntity));
     }
 
     private void sendUpdateMessage(Message<String> message) {
@@ -1412,16 +1388,16 @@ public class StudyService {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                .then(invalidateSecurityAnalysisStatus(studyUuid)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(nodeUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
 
             return networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
-                    emitStudyChanged(studyUuid, UPDATE_TYPE_STUDY, substationIds)
+                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
                 .then(monoUpdateLfState);
         });
@@ -1432,16 +1408,16 @@ public class StudyService {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
-            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(studyUuid, null, LoadFlowStatus.NOT_DONE)
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_LOADFLOW_STATUS))
-                .then(invalidateSecurityAnalysisStatus(studyUuid)
-                    .doOnSuccess(e -> emitStudyChanged(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(nodeUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
 
             return networkModificationService.deleteEquipment(studyUuid, equipmentType, equipmentId, groupUuid, variantId)
                 .flatMap(modification -> Flux.fromIterable(Arrays.asList(modification)))
                 .collect(Collectors.toList())
                 .doOnSuccess(deletionInfos -> deletionInfos.forEach(deletionInfo ->
-                        emitStudyEquipmentDeleted(studyUuid, UPDATE_TYPE_STUDY,
+                        emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
                             deletionInfo.getSubstationIds(), deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
                     )
                 )
@@ -1498,6 +1474,26 @@ public class StudyService {
 
     Mono<List<IdentifiableInfos>> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId) {
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuid, voltageLevelId, "busbar-sections");
+    }
+
+    public Mono<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
+        return networkModificationTreeService.getLoadFlowStatus(nodeUuid);
+    }
+
+    public Mono<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
+        return networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
+    }
+
+    @Transactional
+    public UUID getStudyUuidFromNodeUuid(UUID nodeUuid) {
+        return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+    }
+
+    public Mono<LoadFlowInfos> getLoadFlowInfos(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+
+        return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
     }
 }
 

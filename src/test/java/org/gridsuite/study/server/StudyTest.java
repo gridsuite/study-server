@@ -36,6 +36,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.utils.MatcherJson;
+import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -127,7 +128,7 @@ public class StudyTest {
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_WITH_ERRORS_UUID = UUID.fromString(IMPORTED_CASE_WITH_ERRORS_UUID_STRING);
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
-    private static final String CONTIGENCY_LIST_NAME = "ls";
+    private static final String CONTINGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
@@ -290,14 +291,14 @@ public class StudyTest {
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                        .setHeader("receiver", "%7B%22studyUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build());
                     return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop.*")) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", SECURITY_ANALYSIS_UUID)
-                        .setHeader("receiver", "%7B%22studyName%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), "sa.stopped");
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -516,7 +517,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/contingency-lists/" + CONTIGENCY_LIST_NAME + "/export?networkUuid=" + NETWORK_UUID_STRING:
+                    case "/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export?networkUuid=" + NETWORK_UUID_STRING:
                         return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -524,7 +525,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/invalidate-status":
+                    case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_UUID:
                         return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -891,13 +892,14 @@ public class StudyTest {
 
         // check load flow status
         webTestClient.get()
-                .uri("/v1/studies/{studyUuid}", studyNameUserIdUuid)
-                .header("userId", "userId")
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid, rootNodeUuid)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos(studyNameUserIdUuid, "userId", "UCTE", false, LoadFlowStatus.CONVERGED));
+                .expectBody(LoadFlowInfos.class)
+                .value(new MatcherLoadFlowInfos(LoadFlowInfos.builder()
+                    .loadFlowStatus(LoadFlowStatus.CONVERGED)
+                    .build()));
 
         //try to run a another loadflow
         webTestClient.put()
@@ -1022,7 +1024,7 @@ public class StudyTest {
 
         // run security analysis
         webTestClient.post()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}", studyNameUserIdUuid, rootNodeUuid, CONTIGENCY_LIST_NAME)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}", studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)
             .exchange()
             .expectStatus().isOk()
             .expectBody(UUID.class)
@@ -1036,11 +1038,11 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, securityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, securityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        assertTrue(getRequestsDone(1).contains("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save?contingencyListName=" + CONTIGENCY_LIST_NAME + "&receiver=%257B%2522studyUuid%2522%253A%2522" + studyNameUserIdUuid + "%2522%257D"));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?contingencyListName=" + CONTINGENCY_LIST_NAME + "\\&receiver=.*nodeUuid.*")));
 
         // get security analysis result
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/security-analysis/result", studyNameUserIdUuid)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result", studyNameUserIdUuid, rootNodeUuid)
             .exchange()
             .expectStatus().isOk()
             .expectBody(String.class)
@@ -1050,7 +1052,7 @@ public class StudyTest {
 
         // get security analysis status
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/security-analysis/status", studyNameUserIdUuid)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status", studyNameUserIdUuid, rootNodeUuid)
             .exchange()
             .expectStatus().isOk()
             .expectBody(String.class)
@@ -1060,7 +1062,7 @@ public class StudyTest {
 
         // stop security analysis
         webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/security-analysis/stop", studyNameUserIdUuid)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyNameUserIdUuid, rootNodeUuid)
             .exchange()
             .expectStatus().isOk();
 
@@ -1068,17 +1070,18 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        assertTrue(getRequestsDone(1).contains("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522studyUuid%2522%253A%2522" + studyNameUserIdUuid + "%2522%257D"));
+        //assertTrue(getRequestsDone(1).contains("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop?receiver=%257B%2522nodeUuid%2522%253A%2522" + studyNameUserIdUuid + "%2522%257D"));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
         // get contingency count
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}", studyNameUserIdUuid, rootNodeUuid, CONTIGENCY_LIST_NAME)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}", studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)
             .exchange()
             .expectStatus().isOk()
             .expectBody(Integer.class)
             .isEqualTo(1);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/contingency-lists/%s/export?networkUuid=%s", CONTIGENCY_LIST_NAME, NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/contingency-lists/%s/export?networkUuid=%s", CONTINGENCY_LIST_NAME, NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -1457,6 +1460,7 @@ public class StudyTest {
             .description("description")
             .networkModification(UUID.randomUUID())
             .variantId(VARIANT_ID)
+            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
             .children(Collections.emptyList())
             .build();
         webTestClient.post().uri("/v1/tree/nodes/{id}", parentNodeUuid).bodyValue(modificationNode)
