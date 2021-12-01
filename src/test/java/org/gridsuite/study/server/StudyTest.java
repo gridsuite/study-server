@@ -197,8 +197,8 @@ public class StudyTest {
         linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
 
         studiesInfos = List.of(
-                CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
-                CreatedStudyBasicInfos.builder().studyUuid(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build()
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build()
         );
 
         when(studyInfosService.add(any(CreatedStudyBasicInfos.class))).thenReturn(studiesInfos.get(0));
@@ -622,17 +622,6 @@ public class StudyTest {
 
         //empty list
         webTestClient.get()
-            .uri("/v1/studies/metadata")
-            .header("userId", "userId")
-            .header("uuids", "")
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBody(String.class)
-            .isEqualTo("[]");
-
-        //empty list
-        webTestClient.get()
             .uri("/v1/study_creation_requests")
             .header("userId", "userId")
             .exchange()
@@ -670,17 +659,6 @@ public class StudyTest {
         //even with the same name should work
         UUID oldStudyUuid = studyUuid;
         studyUuid = createStudy("userId2", CASE_UUID, true);
-
-        webTestClient.get()
-                .uri("/v1/studies/metadata")
-                .header("userId", "userId")
-                .header("uuids", oldStudyUuid + "," + studyUuid)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(CreatedStudyBasicInfos.class)
-                .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(oldStudyUuid, "userId", "UCTE", false));
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -825,6 +803,34 @@ public class StudyTest {
             .header("userId", "notAuth")
             .exchange()
             .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMetadata() {
+        UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID oldStudyUuid = studyUuid;
+
+        studyUuid = createStudy("userId2", CASE_UUID, true);
+
+        StringJoiner ids = new StringJoiner("&id=", "?id=", "");
+        ids.add(oldStudyUuid.toString());
+        ids.add(studyUuid.toString());
+        var res = webTestClient.get()
+                .uri("/v1/studies/metadata" + ids)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+            .returnResult().getResponseBody();
+
+        assertNotNull(res);
+        assertEquals(2, res.size());
+        if (!res.get(0).getId().equals(oldStudyUuid)) {
+            Collections.reverse(res);
+        }
+        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "userId", "UCTE", false).matchesSafely(res.get(0)));
+        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE", true).matchesSafely(res.get(1)));
     }
 
     @Test
@@ -1462,7 +1468,7 @@ public class StudyTest {
                 .returnResult()
                 .getResponseBody();
 
-        UUID studyUuid = infos.getStudyUuid();
+        UUID studyUuid = infos.getId();
 
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(1000);

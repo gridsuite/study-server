@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
@@ -21,8 +20,7 @@ import java.util.UUID;
 @Repository
 public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
 
-    @Query(value = "SELECT * FROM study u WHERE id in ?1 and (is_private='false' or user_id=?2)", nativeQuery = true)
-    List<StudyEntity> findAllByUuids(List<UUID> uuids, String userId);
+    List<StudyEntity> findAllByIdIn(List<UUID> uuids);
 
     List<StudyEntity> findAllByUserId(String userId);
 

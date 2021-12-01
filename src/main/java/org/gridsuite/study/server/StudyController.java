@@ -72,8 +72,8 @@ public class StudyController {
     @GetMapping(value = "/studies/metadata")
     @Operation(summary = "Get studies metadata")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies metadata")})
-    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestHeader("userId") String userId, @RequestHeader("uuids") List<UUID> uuids) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids, userId));
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestParam("id") List<UUID> uuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids));
     }
 
     @PostMapping(value = "/studies/cases/{caseUuid}")

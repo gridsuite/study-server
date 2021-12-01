@@ -213,7 +213,7 @@ public class StudyService {
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
         return StudyInfos.builder()
-                .studyUuid(entity.getId())
+                .id(entity.getId())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC))
                 .userId(entity.getUserId())
                 .caseFormat(entity.getCaseFormat())
@@ -227,7 +227,7 @@ public class StudyService {
         return BasicStudyInfos.builder()
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .userId(entity.getUserId())
-                .studyUuid(entity.getId())
+                .id(entity.getId())
                 .studyPrivate(entity.getIsPrivate())
                 .build();
     }
@@ -236,7 +236,7 @@ public class StudyService {
         return CreatedStudyBasicInfos.builder()
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .userId(entity.getUserId())
-                .studyUuid(entity.getId())
+                .id(entity.getId())
                 .caseFormat(entity.getCaseFormat())
                 .studyPrivate(entity.isPrivate())
                 .build();
@@ -248,8 +248,8 @@ public class StudyService {
                 .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
 
-    public Flux<CreatedStudyBasicInfos> getStudyListMetadata(List<UUID> uuids, String userId) {
-        return Flux.fromStream(() -> studyRepository.findAllByUuids(uuids, userId).stream().map(StudyService::toCreatedStudyBasicInfos));
+    public Flux<CreatedStudyBasicInfos> getStudyListMetadata(List<UUID> uuids) {
+        return Flux.fromStream(() -> studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos));
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
@@ -263,17 +263,17 @@ public class StudyService {
         return insertStudyCreationRequest(userId, isPrivate, studyUuid)
                 .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getStudyUuid(), userId, isPrivate), getCaseFormat(caseUuid))
+                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getId(), userId, isPrivate), getCaseFormat(caseUuid))
                         .flatMap(t -> {
                             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                            return insertStudy(s.getStudyUuid(), userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                            return insertStudy(s.getId(), userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                     t.getT2(), caseUuid, false, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                         })
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                         .doFinally(st -> {
-                            deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();
-                            LOGGER.trace("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                            deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();
+                            LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                         })
                         .subscribe()
                 );
@@ -284,19 +284,19 @@ public class StudyService {
         return insertStudyCreationRequest(userId, isPrivate, studyUuid)
                 .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> importCase(caseFile, s.getStudyUuid(), userId, isPrivate)
+                .doOnSuccess(s -> importCase(caseFile, s.getId(), userId, isPrivate)
                         .flatMap(uuid ->
-                                Mono.zip(persistentStore(uuid, s.getStudyUuid(), userId, isPrivate), getCaseFormat(uuid))
+                                Mono.zip(persistentStore(uuid, s.getId(), userId, isPrivate), getCaseFormat(uuid))
                                         .flatMap(t -> {
                                             LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-                                            return insertStudy(s.getStudyUuid(), userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                            return insertStudy(s.getId(), userId, isPrivate, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
                                                     t.getT2(), uuid, true, LoadFlowStatus.NOT_DONE, null, toEntity(loadFlowParameters), null);
                                         }))
                         .subscribeOn(Schedulers.boundedElastic())
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                         .doFinally(r -> {
-                            deleteStudyIfNotCreationInProgress(s.getStudyUuid(), userId).subscribe();  // delete the study if the creation has been canceled
-                            LOGGER.trace("Create study '{}' : {} seconds", s.getStudyUuid(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                            deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();  // delete the study if the creation has been canceled
+                            LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                         })
                         .subscribe()
                 );
