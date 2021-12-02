@@ -290,7 +290,7 @@ public class NetworkModificationTreeService {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
-            .forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuid -> uuids.add(uuid)));
+            .forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuids::add));
         return uuids;
     }
 
