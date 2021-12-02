@@ -28,4 +28,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
     UUID networkModificationId;
+
+    @Column
+    String variantId;
 }

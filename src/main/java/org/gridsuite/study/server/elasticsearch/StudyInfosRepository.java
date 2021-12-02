@@ -20,8 +20,9 @@ import java.util.UUID;
  */
 @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
 @Lazy
-public interface StudyInfosRepository extends ElasticsearchRepository<CreatedStudyBasicInfos, UUID> {
+public interface StudyInfosRepository extends ElasticsearchRepository<CreatedStudyBasicInfos, String> {
 
-    Page<CreatedStudyBasicInfos> findByStudyUuid(UUID id, Pageable pageable);
+    Page<CreatedStudyBasicInfos> findById(UUID id, Pageable pageable);
 
+    void deleteById(UUID uuid);
 }

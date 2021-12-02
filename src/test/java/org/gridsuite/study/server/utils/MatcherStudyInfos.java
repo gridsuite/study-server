@@ -27,7 +27,7 @@ public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos>
     public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat,
                                                             boolean studyPrivate, LoadFlowStatus loadFlowStatus) {
         return new MatcherStudyInfos(StudyInfos.builder()
-                .studyUuid(studyUuid)
+                .id(studyUuid)
                 .userId(userId)
                 .caseFormat(caseFormat)
                 .studyPrivate(studyPrivate)

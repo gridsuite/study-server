@@ -12,6 +12,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
 
+import java.util.Optional;
+import java.util.UUID;
+
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -32,4 +35,13 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
         return completeNodeInfo(node, new ModelNode(node.getModel()));
     }
 
+    @Override
+    public Optional<String> getVariantId(AbstractNode node, boolean generateId) {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
+        return Optional.empty();
+    }
 }

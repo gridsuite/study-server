@@ -21,7 +21,7 @@ public class MatcherCreatedStudyBasicInfos<T extends CreatedStudyBasicInfos> ext
     public static MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> createMatcherCreatedStudyBasicInfos(UUID studyUuid, String userId,
                                                                                                             String caseFormat, boolean studyPrivate) {
         return new MatcherCreatedStudyBasicInfos<>(CreatedStudyBasicInfos.builder()
-                .studyUuid(studyUuid)
+                .id(studyUuid)
                 .userId(userId)
                 .caseFormat(caseFormat)
                 .studyPrivate(studyPrivate)

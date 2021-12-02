@@ -14,6 +14,7 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoR
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -33,6 +34,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public abstract NodeInfoEntity toEntity(AbstractNode node);
 
     public abstract NodeDto toDto(NodeInfoEntity node);
+
+    public abstract Optional<String> getVariantId(AbstractNode node, boolean generateId);
+
+    public abstract Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId);
 
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
@@ -76,5 +81,13 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public void deleteAll(Set<UUID> collect) {
         nodeInfoRepository.deleteByIdNodeIn(collect);
+    }
+
+    public Optional<String> getVariantId(UUID nodeUuid, boolean generateId) {
+        return getVariantId(getNode(nodeUuid), generateId);
+    }
+
+    public Optional<UUID> getModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+        return getModificationGroupUuid(getNode(nodeUuid), generateId);
     }
 }

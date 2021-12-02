@@ -72,8 +72,8 @@ public class StudyController {
     @GetMapping(value = "/studies/metadata")
     @Operation(summary = "Get studies metadata")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies metadata")})
-    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestHeader("userId") String userId, @RequestHeader("uuids") List<UUID> uuids) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids, userId));
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestParam("id") List<UUID> uuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids));
     }
 
     @PostMapping(value = "/studies/cases/{caseUuid}")
@@ -125,68 +125,66 @@ public class StudyController {
                 studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponse(responseCode = "200", description = "The svg")
     public ResponseEntity<Mono<byte[]>> getVoltageLevelDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvg(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponse(responseCode = "200", description = "The svg and metadata")
     public ResponseEntity<Mono<String>> getVoltageLevelDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(uuid -> studyService.getVoltageLevelSvgAndMetadata(uuid, voltageLevelId, useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/voltage-levels")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels")
     @Operation(summary = "get the voltage levels for a given network")
     @ApiResponse(responseCode = "200", description = "The voltage level list of the network")
     public ResponseEntity<Mono<List<VoltageLevelInfos>>> getNetworkVoltageLevels(
-            @PathVariable("studyUuid") UUID studyUuid) {
-
-        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(networkStoreService::getNetworkVoltageLevels));
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevels(studyUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/buses")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses")
     @Operation(summary = "get buses the for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
     public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBuses(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("variantNum") int variantNum,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId) {
-
-        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBuses(uuid, voltageLevelId, variantNum)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBuses(studyUuid, nodeUuid, voltageLevelId));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/{variantNum}/voltage-levels/{voltageLevelId}/busbar-sections")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/busbar-sections")
     @Operation(summary = "get the busbar sections for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The busbar sections list of the network for given voltage level")
     public ResponseEntity<Mono<List<IdentifiableInfos>>> getVoltageLevelBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("variantNum") int variantNum,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId) {
-
-        Mono<UUID> networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkUuid.flatMap(uuid -> networkStoreService.getVoltageLevelBusbarSections(uuid, voltageLevelId, variantNum)));    }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusbarSections(studyUuid, nodeUuid, voltageLevelId));
+    }
 
     @GetMapping(value = "/studies/{studyUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
@@ -206,212 +204,214 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(studyService::getSubstationsGraphics));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/lines")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines")
     @Operation(summary = "Get Network lines description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines data")})
     public ResponseEntity<Mono<String>> getLinesMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getLinesMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/substations")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations")
     @Operation(summary = "Get Network substations description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substations data")})
     public ResponseEntity<Mono<String>> getSubstationsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getSubstationsMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/2-windings-transformers")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers")
     @Operation(summary = "Get Network 2 windings transformers description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of 2 windings transformers data")})
     public ResponseEntity<Mono<String>> getTwoWindingsTransformersMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getTwoWindingsTransformersMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getTwoWindingsTransformersMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/3-windings-transformers")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/3-windings-transformers")
     @Operation(summary = "Get Network 3 windings transformers description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of 3 windings transformers data")})
     public ResponseEntity<Mono<String>> getThreeWindingsTransformersMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getThreeWindingsTransformersMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getThreeWindingsTransformersMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/generators")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators")
     @Operation(summary = "Get Network generators description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of generators data")})
     public ResponseEntity<Mono<String>> getGeneratorsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getGeneratorsMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getGeneratorsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/batteries")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/batteries")
     @Operation(summary = "Get Network batteries description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of batteries data")})
     public ResponseEntity<Mono<String>> getBatteriesMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getBatteriesMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getBatteriesMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/dangling-lines")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/dangling-lines")
     @Operation(summary = "Get Network dangling lines description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of dangling lines data")})
     public ResponseEntity<Mono<String>> getDanglingLinesMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getDanglingLinesMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getDanglingLinesMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/hvdc-lines")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines")
     @Operation(summary = "Get Network hvdc lines description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of hvdc lines data")})
     public ResponseEntity<Mono<String>> getHvdcLinesMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getHvdcLinesMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getHvdcLinesMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/lcc-converter-stations")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lcc-converter-stations")
     @Operation(summary = "Get Network lcc converter stations description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lcc converter stations data")})
     public ResponseEntity<Mono<String>> getLccConverterStationsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getLccConverterStationsMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLccConverterStationsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/vsc-converter-stations")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/vsc-converter-stations")
     @Operation(summary = "Get Network vsc converter stations description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of vsc converter stations data")})
     public ResponseEntity<Mono<String>> getVscConverterStationsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getVscConverterStationsMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVscConverterStationsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/loads")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads")
     @Operation(summary = "Get Network loads description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of loads data")})
     public ResponseEntity<Mono<String>> getLoadsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getLoadsMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/shunt-compensators")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators")
     @Operation(summary = "Get Network shunt compensators description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of shunt compensators data")})
     public ResponseEntity<Mono<String>> getShuntCompensatorsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getShuntCompensatorsMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getShuntCompensatorsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/static-var-compensators")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/static-var-compensators")
     @Operation(summary = "Get Network static var compensators description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of static var compensators data")})
     public ResponseEntity<Mono<String>> getStaticVarCompensatorsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getStaticVarCompensatorsMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStaticVarCompensatorsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network-map/all")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all")
     @Operation(summary = "Get Network equipments description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of equipments data")})
     public ResponseEntity<Mono<String>> getAllMapData(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid)
-                .flatMap(uuid -> studyService.getAllMapData(uuid, substationsIds)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/switches/{switchId}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}")
     @Operation(summary = "update a switch position")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The switch is updated")})
     public ResponseEntity<Mono<Void>> changeSwitchState(@PathVariable("studyUuid") UUID studyUuid,
                                                         @PathVariable("switchId") String switchId,
-                                                        @RequestParam("open") boolean open) {
-
+                                                        @PathVariable("nodeUuid") UUID nodeUuid,
+                                                        @Parameter(description = "Switch open state") @RequestParam("open") boolean open) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-                .then(studyService.changeSwitchState(studyUuid, switchId, open)));
+                .then(studyService.changeSwitchState(studyUuid, switchId, open, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/groovy")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy")
     @Operation(summary = "change an equipment state in the network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment is updated")})
     public ResponseEntity<Mono<Void>> applyGroovyScript(@PathVariable("studyUuid") UUID studyUuid,
+                                                        @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @RequestBody String groovyScript) {
 
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript).then()));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid).then()));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/modifications")
+    @GetMapping(value = "/studies/{groupUuid}/network/modifications")
     @Operation(summary = "Get all network modifications")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network modifications")})
-    public ResponseEntity<Flux<ModificationInfos>> getModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(networkModificationService.getModifications(studyUuid));
+    public ResponseEntity<Flux<ModificationInfos>> getModifications(@PathVariable("groupUuid") UUID groupUuid) {
+        return ResponseEntity.ok().body(networkModificationService.getModifications(groupUuid));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/network/modifications")
+    @DeleteMapping(value = "/studies/{groupUuid}/network/modifications")
     @Operation(summary = "Delete all network modifications")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Network modifications deleted")})
-    public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(networkModificationService.deleteModifications(studyUuid));
+    public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("groupUuid") UUID groupUuid) {
+        return ResponseEntity.ok().body(networkModificationService.deleteModifications(groupUuid));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Change the given line status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Line status changed")})
     public ResponseEntity<Mono<Void>> changeLineStatus(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("lineId") String lineId,
             @RequestBody String status) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.changeLineStatus(studyUuid, lineId, status)));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/loadflow/run")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
     @Operation(summary = "run loadflow on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow has started")})
     public ResponseEntity<Mono<Void>> runLoadFlow(
-            @PathVariable("studyUuid") UUID studyUuid) {
-
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(studyUuid)
-                .then(studyService.runLoadFlow(studyUuid)));
+                .then(studyService.runLoadFlow(studyUuid, nodeUuid)));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/public")
@@ -455,15 +455,16 @@ public class StudyController {
         });
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/security-analysis/run")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run")
     @Operation(summary = "run security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
     public ResponseEntity<Mono<UUID>> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contigencyListNames,
+                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames,
                                                           @RequestBody(required = false) String parameters) {
-        List<String> nonNullcontingencyListNames = contigencyListNames != null ? contigencyListNames : Collections.emptyList();
+        List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         String nonNullParameters = Objects.toString(parameters, "");
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/result")
@@ -478,13 +479,14 @@ public class StudyController {
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/contingency-count")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count")
     @Operation(summary = "Get contingency count for a list of contingency list on a study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The contingency count")})
-    public Mono<ResponseEntity<Integer>> getContingencyCount(@Parameter(description = "Study name") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contigencyListNames) {
-        List<String> nonNullcontigencyListNames = contigencyListNames != null ? contigencyListNames : Collections.emptyList();
-        return studyService.getContingencyCount(studyUuid, nonNullcontigencyListNames)
+    public Mono<ResponseEntity<Integer>> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
+        List<String> nonNullContingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
+        return studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid)
                 .map(count -> ResponseEntity.ok().body(count));
     }
 
@@ -520,11 +522,12 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/substations/{substationId}/svg")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponse(responseCode = "200", description = "The svg")
     public ResponseEntity<Mono<byte[]>> getSubstationDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
@@ -532,16 +535,16 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(uuid ->
-                studyService.getSubstationSvg(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout, componentLibrary)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getSubstationSvg(studyUuid, substationId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/network/substations/{substationId}/svg-and-metadata")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponse(responseCode = "200", description = "The svg and metadata")
     public ResponseEntity<Mono<String>> getSubstationDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
             @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
@@ -549,9 +552,8 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(uuid ->
-                studyService.getSubstationSvgAndMetadata(uuid, substationId, useName, centerLabel, diagonalLabel, topologicalColoring, substationLayout, componentLibrary)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationSvgAndMetadata(studyUuid, substationId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/status")
@@ -593,13 +595,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/loads")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads")
     @Operation(summary = "create a load in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been created")})
     public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @RequestBody String createLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-            .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION)));
+            .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
     }
 
     @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -624,8 +627,7 @@ public class StudyController {
     @ApiResponse(responseCode = "200", description = "The node has been added")
     public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
-                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode
-                                                         ) {
+                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(referenceId, node, insertMode));
     }
 
@@ -662,39 +664,43 @@ public class StudyController {
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
     @Operation(summary = "Delete equipment in study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment was deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
     public ResponseEntity<Mono<Void>> deleteEquipment(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId)));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/generators")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators")
     @Operation(summary = "create a generator in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator has been created")})
     public ResponseEntity<Mono<Void>> createGenerator(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @RequestBody String createGeneratorAttributes) {
+                                                      @PathVariable("nodeUuid") UUID nodeUuid,
+                                                      @RequestBody String createGeneratorAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-            .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION)));
+            .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/lines")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines")
     @Operation(summary = "create a line in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line has been created")})
     public ResponseEntity<Mono<Void>> createLine(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @RequestBody String createLineAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-            .then(studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION)));
+            .then(studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/network-modification/two-windings-transformer")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformer")
     @Operation(summary = "create a two windings transformer in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The two windings transformer has been created")})
     public ResponseEntity<Mono<Void>> createTwoWindingsTransformer(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @RequestBody String createTwoWindingsTransformerAttributes) {
+                                                                   @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                   @RequestBody String createTwoWindingsTransformerAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(studyUuid)
-                .then(studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION)));
+                .then(studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid)));
     }
 }
