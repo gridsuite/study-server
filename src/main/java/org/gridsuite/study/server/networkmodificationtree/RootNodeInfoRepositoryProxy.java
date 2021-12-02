@@ -7,7 +7,10 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
+import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyService;
+import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
@@ -59,5 +62,44 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
             updateNode(rootNode);
         }
         return Optional.ofNullable(rootNode.getNetworkModification());
+    }
+
+    @Override
+    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
+        LoadFlowStatus status = ((RootNode) node).getLoadFlowStatus();
+        return status != null ? status : LoadFlowStatus.NOT_DONE;
+    }
+
+    @Override
+    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
+        RootNode rootNode = (RootNode) node;
+        rootNode.setLoadFlowResult(loadFlowResult);
+        rootNode.setLoadFlowStatus(loadFlowStatus);
+        updateNode(rootNode);
+    }
+
+    @Override
+    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
+        RootNode rootNode = (RootNode) node;
+        rootNode.setLoadFlowStatus(loadFlowStatus);
+        updateNode(rootNode);
+    }
+
+    @Override
+    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
+        RootNode rootNode = (RootNode) node;
+        return LoadFlowInfos.builder().loadFlowStatus(rootNode.getLoadFlowStatus()).loadFlowResult(rootNode.getLoadFlowResult()).build();
+    }
+
+    @Override
+    public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
+        RootNode rootNode = (RootNode) node;
+        rootNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+        updateNode(rootNode);
+    }
+
+    @Override
+    public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
+        return ((RootNode) node).getSecurityAnalysisResultUuid();
     }
 }

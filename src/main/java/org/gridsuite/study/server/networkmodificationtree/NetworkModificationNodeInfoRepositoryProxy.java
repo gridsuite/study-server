@@ -7,7 +7,10 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
+import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyService;
+import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
@@ -62,5 +65,44 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             updateNode(networkModificationNode);
         }
         return Optional.ofNullable(networkModificationNode.getNetworkModification());
+    }
+
+    @Override
+    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
+        LoadFlowStatus status = ((NetworkModificationNode) node).getLoadFlowStatus();
+        return status != null ? status : LoadFlowStatus.NOT_DONE;
+    }
+
+    @Override
+    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        networkModificationNode.setLoadFlowResult(loadFlowResult);
+        networkModificationNode.setLoadFlowStatus(loadFlowStatus);
+        updateNode(networkModificationNode);
+    }
+
+    @Override
+    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        networkModificationNode.setLoadFlowStatus(loadFlowStatus);
+        updateNode(networkModificationNode);
+    }
+
+    @Override
+    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        return LoadFlowInfos.builder().loadFlowStatus(networkModificationNode.getLoadFlowStatus()).loadFlowResult(networkModificationNode.getLoadFlowResult()).build();
+    }
+
+    @Override
+    public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        networkModificationNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+        updateNode(networkModificationNode);
+    }
+
+    @Override
+    public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
     }
 }

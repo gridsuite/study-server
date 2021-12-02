@@ -12,7 +12,6 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -295,31 +294,13 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public Mono<LoadFlowStatus> getLoadFlowStatus(UUID id) {
-        AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        LoadFlowStatus status = LoadFlowStatus.NOT_DONE;
-        if (node.getType() == NodeType.ROOT) {
-            status = ((RootNode) node).getLoadFlowStatus();
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            status = ((NetworkModificationNode) node).getLoadFlowStatus();
-        }
-        return Mono.just(status != null ? status : LoadFlowStatus.NOT_DONE);
+    public Mono<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid)));
     }
 
     @Transactional
     public void doUpdateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
-        AbstractNode node = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNode(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        if (node.getType() == NodeType.ROOT) {
-            RootNode rootNode = (RootNode) node;
-            rootNode.setLoadFlowResult(loadFlowResult);
-            rootNode.setLoadFlowStatus(loadFlowStatus);
-            repositories.get(rootNode.getType()).updateNode(rootNode);
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-            networkModificationNode.setLoadFlowResult(loadFlowResult);
-            networkModificationNode.setLoadFlowStatus(loadFlowStatus);
-            repositories.get(networkModificationNode.getType()).updateNode(networkModificationNode);
-        }
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus));
         if (updateChildren) {
             nodesRepository.findAllByParentNodeIdNode(nodeUuid)
                 .forEach(child -> doUpdateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
@@ -330,22 +311,9 @@ public class NetworkModificationTreeService {
         return Mono.fromRunnable(() -> self.doUpdateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren));
     }
 
-    private void updateNodeLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-        if (node.getType() == NodeType.ROOT) {
-            RootNode rootNode = (RootNode) node;
-            rootNode.setLoadFlowStatus(loadFlowStatus);
-            repositories.get(rootNode.getType()).updateNode(rootNode);
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-            networkModificationNode.setLoadFlowStatus(loadFlowStatus);
-            repositories.get(networkModificationNode.getType()).updateNode(networkModificationNode);
-        }
-    }
-
     @Transactional
     public void doUpdateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        AbstractNode node = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNode(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        updateNodeLoadFlowStatus(node, loadFlowStatus);
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowStatus(nodeUuid, loadFlowStatus));
     }
 
     public Mono<Void> updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
@@ -354,16 +322,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void doUpdateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        AbstractNode node = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNode(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        if (node.getType() == NodeType.ROOT) {
-            RootNode rootNode = (RootNode) node;
-            rootNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-            repositories.get(rootNode.getType()).updateNode(rootNode);
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-            networkModificationNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-            repositories.get(networkModificationNode.getType()).updateNode(networkModificationNode);
-        }
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
     }
 
     public Mono<Void> updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
@@ -374,31 +333,16 @@ public class NetworkModificationTreeService {
     public void doUpdateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
-            .forEach(n -> {
-                AbstractNode node = repositories.get(n.getType()).getNode(n.getIdNode());
-                updateNodeLoadFlowStatus(node, loadFlowStatus);
-            });
+            .forEach(n -> doUpdateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
     }
 
     public Mono<Void> updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
         return Mono.fromRunnable(() -> self.doUpdateStudyLoadFlowStatus(studyUuid, loadFlowStatus));
     }
 
-    private UUID getNodeSecurityAnalysisResultUuid(AbstractNode node) {
-        UUID uuid = null;
-        if (node.getType() == NodeType.ROOT) {
-            uuid = ((RootNode) node).getSecurityAnalysisResultUuid();
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            uuid = ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
-        }
-        return uuid;
-    }
-
     @Transactional
-    public Mono<UUID> getSecurityAnalysisResultUuid(UUID id) {
-        AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        UUID uuid = getNodeSecurityAnalysisResultUuid(node);
-        return Mono.justOrEmpty(uuid);
+    public Mono<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid)));
     }
 
     @Transactional
@@ -407,8 +351,7 @@ public class NetworkModificationTreeService {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
             .forEach(n -> {
-                AbstractNode node = repositories.get(n.getType()).getNode(n.getIdNode());
-                UUID uuid = getNodeSecurityAnalysisResultUuid(node);
+                UUID uuid = repositories.get(n.getType()).getSecurityAnalysisResultUuid(n.getIdNode());
                 if (uuid != null) {
                     uuids.add(uuid);
                 }
@@ -417,11 +360,7 @@ public class NetworkModificationTreeService {
     }
 
     private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
-        AbstractNode node = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNode(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        UUID uuid = getNodeSecurityAnalysisResultUuid(node);
-        if (uuid != null) {
-            uuids.add(uuid);
-        }
+        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid))).ifPresent(uuids::add);
         nodesRepository.findAllByParentNodeIdNode(nodeUuid)
             .forEach(child -> getSecurityAnalysisResultUuids(child.getIdNode(), uuids));
     }
@@ -434,20 +373,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public Mono<LoadFlowInfos> getLoadFlowInfos(UUID id) {
-        AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        LoadFlowStatus loadFlowStatus = LoadFlowStatus.NOT_DONE;
-        LoadFlowResult loadFlowResult = null;
-        if (node.getType() == NodeType.ROOT) {
-            loadFlowStatus = ((RootNode) node).getLoadFlowStatus();
-            loadFlowResult = ((RootNode) node).getLoadFlowResult();
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            loadFlowStatus = ((NetworkModificationNode) node).getLoadFlowStatus();
-            loadFlowResult = ((NetworkModificationNode) node).getLoadFlowResult();
-        }
-        return Mono.just(LoadFlowInfos.builder()
-            .loadFlowStatus(loadFlowStatus)
-            .loadFlowResult(loadFlowResult)
-            .build());
+    public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
     }
 }

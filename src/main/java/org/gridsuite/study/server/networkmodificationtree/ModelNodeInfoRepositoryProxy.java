@@ -7,6 +7,9 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
+import com.powsybl.loadflow.LoadFlowResult;
+import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
@@ -43,5 +46,32 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     @Override
     public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
         return Optional.empty();
+    }
+
+    @Override
+    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
+        return LoadFlowStatus.NOT_DONE;
+    }
+
+    @Override
+    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
+    }
+
+    @Override
+    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
+    }
+
+    @Override
+    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
+        return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
+    }
+
+    @Override
+    public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
+    }
+
+    @Override
+    public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
+        return null;
     }
 }
