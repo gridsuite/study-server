@@ -9,16 +9,22 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 @NoArgsConstructor
 @Getter
+@Setter
 @Entity
 @Table(name = "RootNodeInfo")
 public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
+    @Column
+    UUID networkModificationId;
 }

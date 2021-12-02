@@ -17,6 +17,7 @@ import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -144,6 +145,15 @@ public class NetworkModificationTreeTest {
             .userId("userId")
             .loadFlowParameters(new LoadFlowParametersEntity())
             .build();
+    }
+
+    @Test
+    public void testStudyWithNoNodes() {
+        StudyEntity studyEntity = createDummyStudy();
+        var study = studyRepository.save(studyEntity);
+
+        UUID studyUuid = study.getId();
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
     }
 
     @SneakyThrows
@@ -316,7 +326,7 @@ public class NetworkModificationTreeTest {
     @Test
     public void testInsertAfter() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", null);
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
         createNode(root, model);
         createNode(root, model);
@@ -327,6 +337,21 @@ public class NetworkModificationTreeTest {
         assertEquals(1, root.getChildren().size());
         var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
         assertEquals(originalChildren, grandChildren);
+
+        String variantId = networkModificationTreeService.getVariantId(hypo.getId()).block();
+        assertTrue(!StringUtils.isEmpty(variantId));
+
+        assertEquals(0, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
+        UUID modificationGroupUuid = networkModificationTreeService.getModificationGroupUuid(hypo.getId()).block();
+        assertNotNull(modificationGroupUuid);
+        assertEquals(1, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
+        modificationGroupUuid = networkModificationTreeService.getModificationGroupUuid(root.getId()).block();
+        assertNotNull(modificationGroupUuid);
+        assertEquals(2, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
+
+        UUID modelUuid = model.getId();
+        assertTrue(networkModificationTreeService.doGetModificationGroupUuid(modelUuid, true).isEmpty());
+        assertTrue(networkModificationTreeService.doGetVariantId(modelUuid, true).isEmpty());
     }
 
     @Test

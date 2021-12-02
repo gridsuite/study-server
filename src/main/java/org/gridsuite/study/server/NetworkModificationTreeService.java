@@ -252,4 +252,36 @@ public class NetworkModificationTreeService {
             return node;
         });
     }
+
+    public UUID getStudyRootNodeUuid(UUID studyId) {
+        return nodesRepository.findByStudyIdAndType(studyId, NodeType.ROOT).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode();
+    }
+
+    @Transactional
+    public Optional<String> doGetVariantId(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).flatMap(n -> repositories.get(n.getType()).getVariantId(nodeUuid, generateId));
+    }
+
+    public Mono<String> getVariantId(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetVariantId(nodeUuid, true).orElse(null))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    @Transactional
+    public Optional<UUID> doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).flatMap(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId));
+    }
+
+    public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(nodeUuid, true).orElse(null))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
+            .forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuids::add));
+        return uuids;
+    }
 }

@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,10 +20,13 @@ import java.util.UUID;
  */
 @SuperBuilder
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 public class RootNode extends AbstractNode {
     UUID studyId;
+
+    UUID networkModification;
 
     @Override
     public NodeType getType() {

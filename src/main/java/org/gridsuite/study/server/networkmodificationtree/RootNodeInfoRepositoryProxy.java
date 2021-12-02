@@ -12,6 +12,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 
+import java.util.Optional;
+import java.util.UUID;
+
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -22,7 +25,9 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNodeInfoEntity toEntity(AbstractNode node) {
+        RootNode rootNode = (RootNode) node;
         var rootNodeInfoEntity = new RootNodeInfoEntity();
+        rootNodeInfoEntity.setNetworkModificationId(rootNode.getNetworkModification());
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
@@ -30,7 +35,21 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
-        return completeNodeInfo(node, new RootNode());
+        return completeNodeInfo(node, new RootNode(null, node.getNetworkModificationId()));
     }
 
+    @Override
+    public Optional<String> getVariantId(AbstractNode node, boolean generateId) {
+        return Optional.of("");  // we will use the network initial variant
+    }
+
+    @Override
+    public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
+        RootNode rootNode = (RootNode) node;
+        if (rootNode.getNetworkModification() == null && generateId) {
+            rootNode.setNetworkModification(UUID.randomUUID());
+            updateNode(rootNode);
+        }
+        return Optional.ofNullable(rootNode.getNetworkModification());
+    }
 }
