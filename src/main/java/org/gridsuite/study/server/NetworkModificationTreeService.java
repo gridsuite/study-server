@@ -9,7 +9,6 @@ package org.gridsuite.study.server;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -255,59 +254,26 @@ public class NetworkModificationTreeService {
     }
 
     public UUID getStudyRootNodeUuid(UUID studyId) {
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
-        if (nodes.isEmpty()) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
-        return nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow().getIdNode();
+        return nodesRepository.findByStudyIdAndType(studyId, NodeType.ROOT).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode();
     }
 
     @Transactional
-    public Optional<String> doGetVariantId(UUID id, boolean generateId) {
-        AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        if (node.getType() == NodeType.ROOT) {
-            return Optional.of("");  // we will use the network initial variant
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-            if (networkModificationNode.getVariantId() == null && generateId) {
-                networkModificationNode.setVariantId(UUID.randomUUID().toString());  // variant id generated with UUID format ????
-                repositories.get(networkModificationNode.getType()).updateNode(networkModificationNode);
-            }
-            return Optional.of(networkModificationNode.getVariantId());
-        } else {
-            return Optional.empty();
-        }
+    public Optional<String> doGetVariantId(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).flatMap(n -> repositories.get(n.getType()).getVariantId(nodeUuid, generateId));
     }
 
-    public Mono<String> getVariantId(UUID id) {
-        return Mono.fromCallable(() -> self.doGetVariantId(id, true).orElse(null))
+    public Mono<String> getVariantId(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetVariantId(nodeUuid, true).orElse(null))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
     @Transactional
-    public Optional<UUID> doGetModificationGroupUuid(UUID id, boolean generateId) {
-        AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        if (node.getType() == NodeType.ROOT) {
-            RootNode rootNode = (RootNode) node;
-            if (rootNode.getNetworkModification() == null && generateId) {
-                rootNode.setNetworkModification(UUID.randomUUID());
-                repositories.get(rootNode.getType()).updateNode(rootNode);
-            }
-            return Optional.of(rootNode.getNetworkModification());
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-            if (networkModificationNode.getNetworkModification() == null && generateId) {
-                networkModificationNode.setNetworkModification(UUID.randomUUID());
-                repositories.get(networkModificationNode.getType()).updateNode(networkModificationNode);
-            }
-            return Optional.of(networkModificationNode.getNetworkModification());
-        } else {
-            return Optional.empty();
-        }
+    public Optional<UUID> doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).flatMap(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId));
     }
 
-    public Mono<UUID> getModificationGroupUuid(UUID id) {
-        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(id, true).orElse(null))
+    public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(nodeUuid, true).orElse(null))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
@@ -315,18 +281,7 @@ public class NetworkModificationTreeService {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
-            .forEach(n -> {
-                AbstractNode node = repositories.get(n.getType()).getNode(n.getIdNode());
-                UUID uuid = null;
-                if (node.getType() == NodeType.ROOT) {
-                    uuid = ((RootNode) node).getNetworkModification();
-                } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-                    uuid = ((NetworkModificationNode) node).getNetworkModification();
-                }
-                if (uuid != null) {
-                    uuids.add(uuid);
-                }
-            });
+            .forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuid -> uuids.add(uuid)));
         return uuids;
     }
 }

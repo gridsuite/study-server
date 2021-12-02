@@ -17,6 +17,7 @@ import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -404,10 +405,7 @@ public class StudyService {
             })
             .publish(deleteStudyInfosMono ->
                 Mono.when(// in parallel
-                    deleteStudyInfosMono.flatMap(infos -> {
-                        infos.getGroupsUuids().forEach(networkModificationService::deleteModifications);
-                        return Mono.empty();
-                    }),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getGroupsUuids())).flatMap(networkModificationService::deleteModifications),
                     deleteStudyInfosMono.flatMap(infos -> deleteEquipmentIndexes(infos.getNetworkUuid())),
                     deleteStudyInfosMono.flatMap(infos -> reportService.deleteReport(infos.getNetworkUuid())),
                     deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid()))
@@ -511,7 +509,7 @@ public class StudyService {
             if (diagramParameters.getComponentLibrary() != null) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
             }
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
 
@@ -539,7 +537,7 @@ public class StudyService {
             if (diagramParameters.getComponentLibrary() != null) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
             }
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             var path = uriComponentsBuilder
@@ -611,7 +609,7 @@ public class StudyService {
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
         }
-        if (!variantId.equals("")) {
+        if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid).toUriString();
@@ -757,7 +755,7 @@ public class StudyService {
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             var path = uriComponentsBuilder
@@ -1051,7 +1049,7 @@ public class StudyService {
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             var path = uriComponentsBuilder
@@ -1107,7 +1105,7 @@ public class StudyService {
                 .flatMap(contingencyListName -> {
                     var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
                         .queryParam("networkUuid", uuid);
-                    if (!variantId.equals("")) {
+                    if (!StringUtils.isBlank(variantId)) {
                         uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
                     }
                     var path = uriComponentsBuilder
@@ -1139,7 +1137,7 @@ public class StudyService {
             if (diagramParameters.getComponentLibrary() != null) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
             }
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             var path = uriComponentsBuilder
@@ -1168,7 +1166,7 @@ public class StudyService {
             if (diagramParameters.getComponentLibrary() != null) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
             }
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             var path = uriComponentsBuilder
@@ -1457,7 +1455,7 @@ public class StudyService {
             String variantId = tuple.getT2();
 
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/voltage-levels");
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             String path = builder.buildAndExpand(networkUuid).toUriString();
@@ -1481,7 +1479,7 @@ public class StudyService {
             String variantId = tuple.getT2();
 
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + busPath);
-            if (!variantId.equals("")) {
+            if (!StringUtils.isBlank(variantId)) {
                 builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             String path = builder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
