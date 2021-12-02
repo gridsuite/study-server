@@ -9,10 +9,7 @@ package org.gridsuite.study.server.networkmodificationtree;
 
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
 
 import java.util.Collection;
@@ -37,6 +34,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public abstract NodeInfoEntity toEntity(AbstractNode node);
 
     public abstract NodeDto toDto(NodeInfoEntity node);
+
+    public abstract Optional<String> getVariantId(AbstractNode node, boolean generateId);
+
+    public abstract Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId);
 
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
@@ -83,39 +84,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public Optional<String> getVariantId(UUID nodeUuid, boolean generateId) {
-        AbstractNode node = getNode(nodeUuid);
-        if (node.getType() == NodeType.ROOT) {
-            return Optional.of("");  // we will use the network initial variant
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-            if (networkModificationNode.getVariantId() == null && generateId) {
-                networkModificationNode.setVariantId(UUID.randomUUID().toString());  // variant id generated with UUID format ????
-                updateNode(networkModificationNode);
-            }
-            return Optional.ofNullable(networkModificationNode.getVariantId());
-        } else {
-            return Optional.empty();
-        }
+        return getVariantId(getNode(nodeUuid), generateId);
     }
 
     public Optional<UUID> getModificationGroupUuid(UUID nodeUuid, boolean generateId) {
-        AbstractNode node = getNode(nodeUuid);
-        if (node.getType() == NodeType.ROOT) {
-            RootNode rootNode = (RootNode) node;
-            if (rootNode.getNetworkModification() == null && generateId) {
-                rootNode.setNetworkModification(UUID.randomUUID());
-                updateNode(rootNode);
-            }
-            return Optional.ofNullable(rootNode.getNetworkModification());
-        } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
-            NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-            if (networkModificationNode.getNetworkModification() == null && generateId) {
-                networkModificationNode.setNetworkModification(UUID.randomUUID());
-                updateNode(networkModificationNode);
-            }
-            return Optional.ofNullable(networkModificationNode.getNetworkModification());
-        } else {
-            return Optional.empty();
-        }
+        return getModificationGroupUuid(getNode(nodeUuid), generateId);
     }
 }
