@@ -16,8 +16,11 @@ import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
+import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -53,6 +56,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -94,7 +98,9 @@ public class NetworkModificationTreeTest {
     @Autowired
     private OutputDestination output;
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = WebFluxConfig.createObjectMapper();
+
+    LoadFlowResult loadFlowResult;
 
     @Before
     public void setUp() {
@@ -125,6 +131,10 @@ public class NetworkModificationTreeTest {
                 return EnumSet.noneOf(Option.class);
             }
         });
+
+        loadFlowResult = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
+                                                List.of(new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 10, "bus_1", 5.),
+                                                        new LoadFlowResultImpl.ComponentResultImpl(2, 2, LoadFlowResult.ComponentResult.Status.FAILED, 20, "bus_2", 10.)));
     }
 
     @After
@@ -194,7 +204,8 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
         createNode(root, model);
         createNode(root, hypo);
@@ -291,7 +302,8 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeInsertion() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
+                                                                                     "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
         /* trying to insert before root */
         webTestClient.post().uri("/v1/tree/nodes/{id}?mode=BEFORE", root.getId()).bodyValue(networkModification)
             .exchange()
@@ -326,7 +338,8 @@ public class NetworkModificationTreeTest {
     @Test
     public void testInsertAfter() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", null);
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", null,
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
         createNode(root, model);
         createNode(root, model);
@@ -357,7 +370,8 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
         createNode(root, hypo);
         hypo.setName("grunt");
         hypo.setNetworkModification(UUID.randomUUID());
@@ -391,7 +405,8 @@ public class NetworkModificationTreeTest {
     @Test
     public void testLightNode() {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID());
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
         createNode(root, hypo);
         createNode(root, hypo);
         createNode(root, hypo);
@@ -435,8 +450,18 @@ public class NetworkModificationTreeTest {
         return networkModificationTreeService.getStudyTree(study.getId()).block();
     }
 
-    private NetworkModificationNode buildNetworkModification(String name, String description, UUID idHypo) {
-        return NetworkModificationNode.builder().name(name).description(description).networkModification(idHypo).children(Collections.emptyList()).build();
+    private NetworkModificationNode buildNetworkModification(String name, String description, UUID idHypo, String variantId,
+                                                             LoadFlowStatus loadFlowStatus, LoadFlowResult loadFlowResult,
+                                                             UUID securityAnalysisResultUuid) {
+        return NetworkModificationNode.builder()
+            .name(name)
+            .description(description)
+            .networkModification(idHypo)
+            .variantId(variantId)
+            .loadFlowStatus(loadFlowStatus)
+            .loadFlowResult(loadFlowResult)
+            .securityAnalysisResultUuid(securityAnalysisResultUuid)
+            .children(Collections.emptyList()).build();
     }
 
     private ModelNode buildModel(String name, String description, String model) {
@@ -469,8 +494,29 @@ public class NetworkModificationTreeTest {
         assertEquals(expectedModificationNode.getNetworkModification(), currentModificationNode.getNetworkModification());
         assertEquals(expectedModificationNode.getVariantId(), currentModificationNode.getVariantId());
         assertEquals(expectedModificationNode.getLoadFlowStatus(), currentModificationNode.getLoadFlowStatus());
-        assertEquals(expectedModificationNode.getLoadFlowResult(), currentModificationNode.getLoadFlowResult());
-        assertEquals(expectedModificationNode.getSecurityAnalysisResultUuid(), currentModificationNode.getSecurityAnalysisResultUuid());
+        LoadFlowResult expectedLoadFlowResult = expectedModificationNode.getLoadFlowResult();
+        LoadFlowResult currentLoadFlowResult = currentModificationNode.getLoadFlowResult();
+        assertFalse((expectedLoadFlowResult != null && currentLoadFlowResult == null) || (expectedLoadFlowResult == null && currentLoadFlowResult != null));
+        if (expectedLoadFlowResult != null && currentLoadFlowResult != null) {
+            assertEquals(expectedLoadFlowResult.isOk(), currentLoadFlowResult.isOk());
+            assertEquals(expectedLoadFlowResult.getMetrics(), currentLoadFlowResult.getMetrics());
+            List<LoadFlowResult.ComponentResult> expectedComponentResults = expectedLoadFlowResult.getComponentResults();
+            List<LoadFlowResult.ComponentResult> currentComponentResults = currentLoadFlowResult.getComponentResults();
+            assertFalse((expectedComponentResults != null && currentComponentResults == null) || (expectedComponentResults == null && currentComponentResults != null));
+            if (expectedComponentResults != null && currentComponentResults != null) {
+                for (int i = 0; i < expectedComponentResults.size(); ++i) {
+                    LoadFlowResult.ComponentResult expectedComponentResult = expectedComponentResults.get(i);
+                    LoadFlowResult.ComponentResult currentComponentResult = currentComponentResults.get(i);
+                    assertEquals(expectedComponentResult.getConnectedComponentNum(), currentComponentResult.getConnectedComponentNum());
+                    assertEquals(expectedComponentResult.getIterationCount(), currentComponentResult.getIterationCount());
+                    assertEquals(expectedComponentResult.getSynchronousComponentNum(), currentComponentResult.getSynchronousComponentNum());
+                    assertEquals(expectedComponentResult.getStatus(), currentComponentResult.getStatus());
+                    assertEquals(expectedComponentResult.getSlackBusId(), currentComponentResult.getSlackBusId());
+                    assertEquals(expectedComponentResult.getSlackBusActivePowerMismatch(), currentComponentResult.getSlackBusActivePowerMismatch(), 0.1);
+                }
+            }
+            assertEquals(expectedModificationNode.getSecurityAnalysisResultUuid(), currentModificationNode.getSecurityAnalysisResultUuid());
+        }
     }
-
 }
+

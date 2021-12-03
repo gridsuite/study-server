@@ -983,7 +983,7 @@ public class StudyService {
             entity.getSlackBusActivePowerMismatch());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public LoadFlowParameters doGetLoadFlowParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
@@ -1006,7 +1006,7 @@ public class StudyService {
         return networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public String doGetLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(StudyEntity::getLoadFlowProvider)
@@ -1488,7 +1488,7 @@ public class StudyService {
         return networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public UUID getStudyUuidFromNodeUuid(UUID nodeUuid) {
         return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
     }

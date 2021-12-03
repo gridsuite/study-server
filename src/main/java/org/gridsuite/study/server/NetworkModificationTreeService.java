@@ -285,6 +285,7 @@ public class NetworkModificationTreeService {
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
+    @Transactional(readOnly = true)
     public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
@@ -292,7 +293,7 @@ public class NetworkModificationTreeService {
         return uuids;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Mono<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
         return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid)));
     }
@@ -338,12 +339,12 @@ public class NetworkModificationTreeService {
         return Mono.fromRunnable(() -> self.doUpdateStudyLoadFlowStatus(studyUuid, loadFlowStatus));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Mono<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid)));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Mono<List<UUID>> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
@@ -362,14 +363,14 @@ public class NetworkModificationTreeService {
             .forEach(child -> getSecurityAnalysisResultUuids(child.getIdNode(), uuids));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Mono<List<UUID>> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
         List<UUID> uuids = new ArrayList<>();
         getSecurityAnalysisResultUuids(nodeUuid, uuids);
         return Mono.just(uuids);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
         return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
     }

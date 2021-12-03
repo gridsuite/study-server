@@ -10,7 +10,6 @@ import com.powsybl.loadflow.LoadFlowResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -19,7 +18,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @Getter
-@ToString(callSuper = true)
 @Schema(description = "Load flow infos")
 public class LoadFlowInfos {
     LoadFlowStatus loadFlowStatus;
