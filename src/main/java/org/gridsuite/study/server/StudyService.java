@@ -996,10 +996,14 @@ public class StudyService {
 
     Mono<Void> setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
         return updateLoadFlowParameters(studyUuid, toEntity(parameters != null ? parameters : LoadFlowParameters.load()))
-            .then(networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE))
+            .then(invalidateLoadFlowStatusOnAllNodes(studyUuid))
             .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS))
             .then(invalidateSecurityAnalysisStatusOnAllNodes(studyUuid))
             .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS));
+    }
+
+    public Mono<Void> invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
+        return networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
     }
 
     @Transactional

@@ -467,6 +467,10 @@ public class NetworkModificationTreeTest {
         NetworkModificationNode currentModificationNode = (NetworkModificationNode) current;
         NetworkModificationNode expectedModificationNode = (NetworkModificationNode) expected;
         assertEquals(expectedModificationNode.getNetworkModification(), currentModificationNode.getNetworkModification());
+        assertEquals(expectedModificationNode.getVariantId(), currentModificationNode.getVariantId());
+        assertEquals(expectedModificationNode.getLoadFlowStatus(), currentModificationNode.getLoadFlowStatus());
+        assertEquals(expectedModificationNode.getLoadFlowResult(), currentModificationNode.getLoadFlowResult());
+        assertEquals(expectedModificationNode.getSecurityAnalysisResultUuid(), currentModificationNode.getSecurityAnalysisResultUuid());
     }
 
 }

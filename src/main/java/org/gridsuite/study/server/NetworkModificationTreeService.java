@@ -288,8 +288,7 @@ public class NetworkModificationTreeService {
     public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
-            .forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuids::add));
+        nodes.forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuids::add));
         return uuids;
     }
 
@@ -332,8 +331,7 @@ public class NetworkModificationTreeService {
     @Transactional
     public void doUpdateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
-            .forEach(n -> doUpdateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
+        nodes.forEach(n -> doUpdateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
     }
 
     public Mono<Void> updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
@@ -349,13 +347,12 @@ public class NetworkModificationTreeService {
     public Mono<List<UUID>> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT) || n.getType().equals(NodeType.NETWORK_MODIFICATION))
-            .forEach(n -> {
-                UUID uuid = repositories.get(n.getType()).getSecurityAnalysisResultUuid(n.getIdNode());
-                if (uuid != null) {
-                    uuids.add(uuid);
-                }
-            });
+        nodes.forEach(n -> {
+            UUID uuid = repositories.get(n.getType()).getSecurityAnalysisResultUuid(n.getIdNode());
+            if (uuid != null) {
+                uuids.add(uuid);
+            }
+        });
         return Mono.just(uuids);
     }
 
