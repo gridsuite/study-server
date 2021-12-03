@@ -20,11 +20,15 @@ import java.util.UUID;
  */
 @Service
 public interface EquipmentInfosService {
+    void addAll(@NonNull final List<EquipmentInfos> equipmentsInfos);
+
     EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos); // Just for unit tests
 
     Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid);
 
     void deleteAll(@NonNull UUID networkUuid);
+
+    void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId);
 
     List<EquipmentInfos> search(@NonNull final String query);
 }

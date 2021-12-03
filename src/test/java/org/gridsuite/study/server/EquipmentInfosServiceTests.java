@@ -71,6 +71,18 @@ public class EquipmentInfosServiceTests {
     }
 
     @Test
+    public void testCloneVariant() {
+        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type(EquipmentType.LOAD.name()).variantId("Variant1").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
+        assertEquals(1, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+
+        equipmentInfosService.cloneVariantModifications(NETWORK_UUID, "variant1", "variant2");
+        assertEquals(2, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+
+        equipmentInfosService.deleteAll(NETWORK_UUID);
+        assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+    }
+
+    @Test
     public void searchEquipmentInfos() {
         EqualsVerifier.simple().forClass(EquipmentInfos.class).verify();
         EqualsVerifier.simple().forClass(VoltageLevelInfos.class).verify();
