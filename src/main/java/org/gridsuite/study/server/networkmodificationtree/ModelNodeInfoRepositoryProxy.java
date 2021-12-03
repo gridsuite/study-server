@@ -55,10 +55,12 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
 
     @Override
     public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
+        // Do nothing : no loadflow result and status associated to this node
     }
 
     @Override
     public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
+        // Do nothing : no loadflow status associated to this node
     }
 
     @Override
@@ -68,6 +70,7 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
 
     @Override
     public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
+        // Do nothing : no security analysis result associated to this node
     }
 
     @Override
