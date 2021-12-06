@@ -120,8 +120,8 @@ public class StudyTest {
     private static final String IMPORTED_CASE_WITH_ERRORS_UUID_STRING = "88888888-0000-0000-0000-000000000000";
     private static final String NEW_STUDY_CASE_UUID = "11888888-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
-    private static final String SECURITY_ANALYSIS_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
-    private static final String SECURITY_ANALYSIS_OTHER_NODE_UUID = "11111111-9594-4e55-8ec7-07ea965d24eb";
+    private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11111111-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
@@ -290,16 +290,16 @@ public class StudyTest {
                 Buffer body = request.getBody();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
-                    String resultUuid = path.matches(".*variantId=.*") ? SECURITY_ANALYSIS_OTHER_NODE_UUID : SECURITY_ANALYSIS_UUID;
+                    String resultUuid = path.matches(".*variantId=.*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build());
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_UUID + "/stop.*")
-                           || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_UUID + "/stop.*")) {
-                    String resultUuid = path.matches(".*variantId=.*") ? SECURITY_ANALYSIS_OTHER_NODE_UUID : SECURITY_ANALYSIS_UUID;
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
+                           || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
+                    String resultUuid = path.matches(".*variantId=.*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
@@ -522,18 +522,18 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "?limitType":
-                    case "/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_UUID + "?limitType":
+                    case "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "?limitType":
+                    case "/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "?limitType":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/results/" + SECURITY_ANALYSIS_UUID + "/status":
-                    case "/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_UUID + "/status":
+                    case "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status":
+                    case "/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_UUID:
-                    case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_OTHER_NODE_UUID:
+                    case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_RESULT_UUID:
+                    case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID:
                         return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -892,11 +892,14 @@ public class StudyTest {
         assertEquals("", new String(messageLfStatus.getPayload()));
         MessageHeaders headersLF = messageLfStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(rootNodeUuid, headersLF.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
 
         Message<byte[]> messageLf = output.receive(1000);
+        headersLF = messageLf.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(rootNodeUuid, headersLF.get(HEADER_NODE));
+        assertEquals(UPDATE_TYPE_LOADFLOW, headersLF.get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run?reportId=%s&reportName=loadflow&overwrite=true", NETWORK_UUID_STRING, NETWORK_UUID_STRING)));
 
@@ -951,6 +954,17 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
+        messageLf = output.receive(1000);
+        assertEquals("", new String(messageLf.getPayload()));
+        headersLF = messageLf.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
+        messageLf = output.receive(1000);
+        assertEquals("", new String(messageLf.getPayload()));
+        headersLF = messageLf.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
+
         // getting setted values
         webTestClient.get()
             .uri("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
@@ -969,10 +983,14 @@ public class StudyTest {
         assertEquals("", new String(messageLf.getPayload()));
         headersLF = messageLf.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(rootNodeUuid, headersLF.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
-        output.receive(1000);
-        output.receive(1000);
-        output.receive(1000);
+        messageLf = output.receive(1000);
+        assertEquals("", new String(messageLf.getPayload()));
+        headersLF = messageLf.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(rootNodeUuid, headersLF.get(HEADER_NODE));
+        assertEquals(UPDATE_TYPE_LOADFLOW, headersLF.get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/run?reportId=%s&reportName=loadflow&overwrite=true", NETWORK_UUID_STRING, NETWORK_UUID_STRING)));
 
@@ -1029,10 +1047,12 @@ public class StudyTest {
         assertEquals("", new String(messageLfStatus.getPayload()));
         headersLF = messageLfStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(modificationNodeUuid, headersLF.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLF.get(HEADER_UPDATE_TYPE));
 
         messageLf = output.receive(1000);
         assertEquals(studyNameUserIdUuid, headersLF.get(HEADER_STUDY_UUID));
+        assertEquals(modificationNodeUuid, headersLF.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_LOADFLOW, messageLf.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
@@ -1128,8 +1148,8 @@ public class StudyTest {
         NetworkModificationNode modificationNode = createNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
-        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, rootNodeUuid, UUID.fromString(SECURITY_ANALYSIS_UUID));
-        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNodeUuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_UUID));
+        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, rootNodeUuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
+        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNodeUuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
     }
 
     @Test
@@ -1396,7 +1416,7 @@ public class StudyTest {
             .expectStatus().isOk();
 
         Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, substationsSet);
+        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, substationsSet);
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true")));
 
         webTestClient.get()
@@ -1414,7 +1434,7 @@ public class StudyTest {
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true", studyNameUserIdUuid, modificationNodeUuid, "switchId")
             .exchange()
             .expectStatus().isOk();
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, substationsSet);
+        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, substationsSet);
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID)));
     }
 
@@ -1435,7 +1455,7 @@ public class StudyTest {
             .expectStatus().isOk();
 
         Set<String> substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, rootNodeUuid, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")));
 
         webTestClient.get()
@@ -1477,7 +1497,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*\\&variantId=" + VARIANT_ID)));
     }
 
@@ -1795,7 +1815,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s2"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s1", "s2"));
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, rootNodeUuid, "lineFailedId")
@@ -1810,7 +1830,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2", "s3"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s2", "s3"));
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, rootNodeUuid, "lineFailedId")
@@ -1825,7 +1845,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s1", "s3"));
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, rootNodeUuid, "lineFailedId")
@@ -1840,7 +1860,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s1", "s3"));
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, rootNodeUuid, "lineFailedId")
@@ -1854,7 +1874,7 @@ public class StudyTest {
             .bodyValue("switchOn")
             .exchange()
             .expectStatus().isOk();
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s1", "s3"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s3"));
 
         var requests = getRequestsWithBodyDone(9);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status\\?group=.*") && r.getBody().equals("lockout")));
@@ -1883,7 +1903,7 @@ public class StudyTest {
             .bodyValue(createLoadAttributes)
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s2"));
 
         // create load on modification node child of root node
         webTestClient.put()
@@ -1891,7 +1911,7 @@ public class StudyTest {
             .bodyValue(createLoadAttributes)
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
@@ -1912,7 +1932,7 @@ public class StudyTest {
                 studyNameUserIdUuid, rootNodeUuid, "LOAD", "idLoadToDelete")
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete",
+        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, rootNodeUuid, HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete",
             HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
 
         // delete equipment on modification node child of root node
@@ -1921,7 +1941,7 @@ public class StudyTest {
                 studyNameUserIdUuid, modificationNodeUuid, "LOAD", "idLoadToDelete")
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete",
+        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete",
             HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(2);
@@ -1929,13 +1949,14 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/.*/id/.*\\?group=.*\\&variantId=" + VARIANT_ID)));
     }
 
-    private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, String headerUpdateTypeEquipmentType, String equipmentType,
+    private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeEquipmentType, String equipmentType,
                                                        String headerUpdateTypeEquipmentId, String equipmentId, String headerUpdateTypeSubstationsIds, Set<String> modifiedSubstationsIdsSet) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(1000);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(equipmentType, headersStudyUpdate.get(headerUpdateTypeEquipmentType));
         assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
@@ -1946,6 +1967,7 @@ public class StudyTest {
         assertEquals("", new String(messageLFStatus.getPayload()));
         MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersLFStatus.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent for updating security analysis status
@@ -1953,15 +1975,17 @@ public class StudyTest {
         assertEquals("", new String(messageSAStatus.getPayload()));
         MessageHeaders headersSAStatus = messageSAStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSAStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersSAStatus.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSAStatus.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, String headerUpdateTypeId, Set<String> modifiedIdsSet) {
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId, Set<String> modifiedIdsSet) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(1000);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
@@ -1970,6 +1994,7 @@ public class StudyTest {
         assertEquals("", new String(messageLFStatus.getPayload()));
         MessageHeaders headersLFStatus = messageLFStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersLFStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersLFStatus.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_LOADFLOW_STATUS, headersLFStatus.get(StudyService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent for updating security analysis status
@@ -1977,32 +2002,35 @@ public class StudyTest {
         assertEquals("", new String(messageSAStatus.getPayload()));
         MessageHeaders headersSAStatus = messageSAStatus.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSAStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersSAStatus.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, headersSAStatus.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedIdsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedIdsSet);
+    private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, Set<String> modifiedIdsSet) {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedIdsSet);
     }
 
-    private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedSubstationsSet);
+    private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, Set<String> modifiedSubstationsSet) {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedSubstationsSet);
 
         // assert that the broker message has been sent
-        Message<byte[]> messageSwitch = output.receive(1000);
-        assertEquals("", new String(messageSwitch.getPayload()));
-        MessageHeaders headersSwitch = messageSwitch.getHeaders();
+        Message<byte[]> messageLine = output.receive(1000);
+        assertEquals("", new String(messageLine.getPayload()));
+        MessageHeaders headersSwitch = messageLine.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersSwitch.get(HEADER_NODE));
         assertEquals(StudyService.UPDATE_TYPE_LINE, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkSwitchModificationMessagesReceived(UUID studyNameUserIdUuid, Set<String> modifiedSubstationsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedSubstationsSet);
+    private void checkSwitchModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, Set<String> modifiedSubstationsSet) {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedSubstationsSet);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(1000);
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersSwitch.get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
@@ -2054,7 +2082,7 @@ public class StudyTest {
             .bodyValue(createGeneratorAttributes)
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s2"));
 
         // create generator on modification node child of root node
         webTestClient.put()
@@ -2062,7 +2090,7 @@ public class StudyTest {
             .bodyValue(createGeneratorAttributes)
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
@@ -2096,7 +2124,7 @@ public class StudyTest {
             .bodyValue(createLineAttributes)
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s2"));
 
         // create line on modification node child of root node
         webTestClient.put()
@@ -2104,7 +2132,7 @@ public class StudyTest {
             .bodyValue(createLineAttributes)
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
@@ -2126,7 +2154,7 @@ public class StudyTest {
                 .bodyValue(createTwoWindingsTransformerAttributes)
                 .exchange()
                 .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s2"));
 
         // create 2WT on modification node child of root node
         webTestClient.put()
@@ -2134,7 +2162,7 @@ public class StudyTest {
             .bodyValue(createTwoWindingsTransformerAttributes)
             .exchange()
             .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformer\\?group=.*") && r.getBody().equals(createTwoWindingsTransformerAttributes)));
