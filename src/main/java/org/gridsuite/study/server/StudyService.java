@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -345,10 +346,15 @@ public class StudyService {
         return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
-        return networkStoreService
-            .getNetworkUuid(studyUuid)
-            .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND %s", networkUuid, query)));
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String query) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMapIterable(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+            if (variantId.isEmpty()) {
+                variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
+            }
+            return equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s", networkUuid, variantId, query));
+        });
     }
 
     @Transactional

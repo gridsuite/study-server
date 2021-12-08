@@ -615,14 +615,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchStudies(query));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search equipments in elasticsearch")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "List of equipments found"),
             @ApiResponse(responseCode = "404", description = "The study not found")})
     public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                 @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                  @Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, query));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, nodeUuid, query));
     }
 
     @PostMapping(value = "/tree/nodes/{id}")
