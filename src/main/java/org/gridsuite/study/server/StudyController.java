@@ -571,7 +571,7 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
-    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@Parameter(description = "Study name") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid, nodeUuid));
     }
@@ -717,4 +717,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadFlowInfos(studyUuid, nodeUuid)
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization")
+    @Operation(summary = "realize a study node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been realized")})
+    public ResponseEntity<Mono<Void>> realizeNode(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+            .then(studyService.realizeNode(studyUuid, nodeUuid)));
+    }
+
 }

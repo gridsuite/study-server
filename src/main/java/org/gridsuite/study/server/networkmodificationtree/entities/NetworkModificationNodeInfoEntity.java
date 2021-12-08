@@ -55,4 +55,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column(name = "securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
+
+    @Column(name = "isRealized", nullable = false)
+    private boolean isRealized;
 }

@@ -9,9 +9,11 @@ package org.gridsuite.study.server;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.RealizationInfos;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -215,6 +217,7 @@ public class NetworkModificationTreeService {
             .id(node.getIdNode())
             .name("Root")
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .isRealized(false)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
     }
@@ -374,4 +377,36 @@ public class NetworkModificationTreeService {
     public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
         return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
     }
+
+    private void getRealizationInfos(NodeEntity nodeEntity, RealizationInfos realizationInfos) {
+        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
+        if (node.getType() == NodeType.ROOT) {
+            RootNode rootNode = (RootNode) node;
+            if (!rootNode.isRealized() && rootNode.getNetworkModification() != null) {
+                realizationInfos.insert(rootNode.getNetworkModification());
+            }
+        } else if (node.getType() == NodeType.MODEL) {
+            getRealizationInfos(nodeEntity.getParentNode(), realizationInfos);
+        } else {
+            NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+            if (!modificationNode.isRealized() && modificationNode.getNetworkModification() != null) {
+                realizationInfos.insert(modificationNode.getNetworkModification());
+            }
+            if (modificationNode.isRealized()) {
+                realizationInfos.setOriginVariantId(modificationNode.getVariantId());
+            } else {
+                getRealizationInfos(nodeEntity.getParentNode(), realizationInfos);
+            }
+        }
+    }
+
+    @Transactional
+    public RealizationInfos getRealizationInfos(UUID nodeUuid) {
+        RealizationInfos realizationInfos = new RealizationInfos();
+        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        realizationInfos.setDestinationVariantId(self.doGetVariantId(nodeUuid, true).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)));
+        getRealizationInfos(nodeEntity, realizationInfos);
+        return realizationInfos;
+    }
+
 }

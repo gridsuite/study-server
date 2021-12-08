@@ -461,6 +461,7 @@ public class NetworkModificationTreeTest {
             .loadFlowStatus(loadFlowStatus)
             .loadFlowResult(loadFlowResult)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
+            .isRealized(false)
             .children(Collections.emptyList()).build();
     }
 

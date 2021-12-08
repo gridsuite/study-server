@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.RealizationInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
@@ -240,6 +241,25 @@ public class NetworkModificationService {
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
                     handleChangeError(response, DELETE_EQUIPMENT_FAILED))
                 .bodyToFlux(new ParameterizedTypeReference<EquipmentDeletionInfos>() {
+                });
+        });
+    }
+
+    Flux<EquipmentModificationInfos> realizeNode(UUID studyUuid, RealizationInfos realizationInfos) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(realizationInfos);
+
+        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "realization");
+            var path = uriComponentsBuilder.build().toUriString();
+
+            return webClient.post()
+                .uri(getNetworkModificationServerURI(true) + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(realizationInfos))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
+                .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                 });
         });
     }

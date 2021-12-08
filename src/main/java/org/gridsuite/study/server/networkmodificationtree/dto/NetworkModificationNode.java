@@ -37,6 +37,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID securityAnalysisResultUuid;
 
+    boolean isRealized;
+
     @Override
     public NodeType getType() {
         return NodeType.NETWORK_MODIFICATION;

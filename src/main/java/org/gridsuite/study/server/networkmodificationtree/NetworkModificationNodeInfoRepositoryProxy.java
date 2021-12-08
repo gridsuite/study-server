@@ -34,7 +34,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                                                                                       modificationNode.getVariantId(),
                                                                                       modificationNode.getLoadFlowStatus(),
                                                                                       StudyService.toEntity(modificationNode.getLoadFlowResult()),
-                                                                                      modificationNode.getSecurityAnalysisResultUuid());
+                                                                                      modificationNode.getSecurityAnalysisResultUuid(),
+                                                                                      modificationNode.isRealized());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -44,7 +45,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                                                                   node.getVariantId(),
                                                                   node.getLoadFlowStatus(),
                                                                   StudyService.fromEntity(node.getLoadFlowResult()),
-                                                                  node.getSecurityAnalysisResultUuid()));
+                                                                  node.getSecurityAnalysisResultUuid(),
+                                                                  node.isRealized()));
     }
 
     @Override

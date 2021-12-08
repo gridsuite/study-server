@@ -1499,5 +1499,29 @@ public class StudyService {
 
         return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
     }
+
+    public Mono<Void> realizeNode(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+
+        return getRealizationInfos(nodeUuid).flatMap(infos -> {
+            Mono<Void> monoUpdateLfState = updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
+                .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
+                .then(invalidateSecurityAnalysisStatus(nodeUuid)
+                    .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)));
+
+            return networkModificationService.realizeNode(studyUuid, infos)
+                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                .collect(Collectors.toSet())
+                .doOnSuccess(substationIds ->
+                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
+                .then(monoUpdateLfState);
+        });
+    }
+
+    public Mono<RealizationInfos> getRealizationInfos(UUID nodeUuid) {
+        return Mono.fromCallable(() -> networkModificationTreeService.getRealizationInfos(nodeUuid));
+    }
 }
 
