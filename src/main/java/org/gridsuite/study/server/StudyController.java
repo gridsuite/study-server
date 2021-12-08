@@ -571,7 +571,7 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
-    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@Parameter(description = "Study name") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid, nodeUuid));
     }
