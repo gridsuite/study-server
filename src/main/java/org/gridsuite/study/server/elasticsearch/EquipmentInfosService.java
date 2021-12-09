@@ -28,6 +28,8 @@ public interface EquipmentInfosService {
 
     void deleteAll(@NonNull UUID networkUuid);
 
+    void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds);
+
     void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId);
 
     List<EquipmentInfos> search(@NonNull final String query);

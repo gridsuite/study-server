@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -80,6 +81,23 @@ public class EquipmentInfosServiceTests {
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
         assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+    }
+
+    @Test
+    public void testDeleteVariants() {
+        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type(EquipmentType.LOAD.name()).variantId("Variant1").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
+        assertEquals(1, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+
+        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type(EquipmentType.GENERATOR.name()).variantId("Variant2").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build());
+        assertEquals(2, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+
+        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id3").name("name3").type(EquipmentType.BATTERY.name()).variantId("Variant3").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build());
+        assertEquals(3, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+
+        equipmentInfosService.deleteVariants(NETWORK_UUID, List.of("Variant1", "Variant3"));
+        Iterable<EquipmentInfos> equipments = equipmentInfosService.findAll(NETWORK_UUID);
+        assertEquals(1, Iterables.size(equipments));
+        assertTrue(Iterables.get(equipments, 0).getVariantId().equals("Variant2"));
     }
 
     @Test

@@ -66,6 +66,11 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     }
 
     @Override
+    public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
+        variantIds.forEach(variantId -> equipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId));
+    }
+
+    @Override
     public void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId) {
         addAll(
                 StreamSupport.stream(equipmentInfosRepository.findAllByNetworkUuidAndVariantId(networkUuid, variantToCloneId).spliterator(), false)

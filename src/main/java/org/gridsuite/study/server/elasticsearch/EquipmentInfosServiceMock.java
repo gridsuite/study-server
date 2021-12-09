@@ -36,6 +36,11 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     }
 
     @Override
+    public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
+        // Nothing to delete
+    }
+
+    @Override
     public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
         return Collections.emptyList();
     }

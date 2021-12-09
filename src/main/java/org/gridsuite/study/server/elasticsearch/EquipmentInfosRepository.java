@@ -25,4 +25,6 @@ public interface EquipmentInfosRepository extends ElasticsearchRepository<Equipm
     Iterable<EquipmentInfos> findAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
 
     void deleteAllByNetworkUuid(UUID networkUuid);
+
+    void deleteAllByNetworkUuidAndVariantId(UUID networkUuid, String variantId);
 }
