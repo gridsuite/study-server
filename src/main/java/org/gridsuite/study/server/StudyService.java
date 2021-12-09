@@ -353,7 +353,16 @@ public class StudyService {
             if (variantId.isEmpty()) {
                 variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
             }
-            return equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s", networkUuid, variantId, query));
+            // Get equipments in initial variant matching query
+            List<EquipmentInfos> matchingEquipments = equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s", networkUuid, VariantManagerConstants.INITIAL_VARIANT_ID, query));
+            // Get added and removed equipment from the chosen variant
+            if (!variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) {
+                Set<String> removedEquipmentInVariant = equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND tombstoned: true AND %s", networkUuid, variantId, query)).stream().map(EquipmentInfos::getId).collect(Collectors.toSet());
+                List<EquipmentInfos> addedEquipmentInVariant = equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND NOT tombstoned.keyword: true AND %s", networkUuid, variantId, query));
+                matchingEquipments = matchingEquipments.stream().filter(ei -> !removedEquipmentInVariant.contains(ei.getId())).collect(Collectors.toList());
+                matchingEquipments.addAll(addedEquipmentInVariant);
+            }
+            return matchingEquipments;
         });
     }
 
