@@ -10,9 +10,18 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.ForeignKey;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import java.util.UUID;
 
@@ -27,4 +36,19 @@ import java.util.UUID;
 public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column
     UUID networkModificationId;
+
+    @Column(name = "loadFlowStatus")
+    @Enumerated(EnumType.STRING)
+    private LoadFlowStatus loadFlowStatus;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "loadFlowResultEntity_id",
+        referencedColumnName  =  "id",
+        foreignKey = @ForeignKey(
+            name = "loadFlowResult_id_fk"
+        ))
+    private LoadFlowResultEntity loadFlowResult;
+
+    @Column(name = "securityAnalysisResultUuid")
+    private UUID securityAnalysisResultUuid;
 }

@@ -9,7 +9,6 @@ package org.gridsuite.study.server.repository;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.apache.commons.collections4.map.HashedMap;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -104,10 +103,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .isPrivate(true)
-                .loadFlowStatus(LoadFlowStatus.RUNNING)
-                .loadFlowResult(null)
                 .loadFlowParameters(loadFlowParametersEntity)
-                .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
@@ -120,10 +116,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .isPrivate(false)
-                .loadFlowStatus(LoadFlowStatus.RUNNING)
-                .loadFlowResult(loadFlowResultEntity2)
                 .loadFlowParameters(loadFlowParametersEntity2)
-                .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
 
         StudyEntity studyEntity3 = StudyEntity.builder()
@@ -136,10 +129,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .isPrivate(true)
-                .loadFlowStatus(LoadFlowStatus.RUNNING)
-                .loadFlowResult(loadFlowResultEntity3)
                 .loadFlowParameters(loadFlowParametersEntity3)
-                .securityAnalysisResultUuid(UUID.randomUUID())
                 .build();
 
         studyRepository.save(studyEntity1);
@@ -159,21 +149,15 @@ public class RepositoriesTest {
         assertEquals(1, studyRepository.findAllByUserId("foo").size());
 
         // updates
-        savedStudyEntity1.setLoadFlowResult(loadFlowResultEntity);
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
         StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
-        assertNotNull(savedStudyEntity1Updated.getLoadFlowResult());
-        assertEquals(2, savedStudyEntity1Updated.getLoadFlowResult().getComponentResults().size());
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
 
-        savedStudyEntity1Updated.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         studyRepository.save(savedStudyEntity1Updated);
         savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
         assertNotNull(savedStudyEntity1Updated);
-        assertEquals(LoadFlowStatus.CONVERGED, savedStudyEntity1Updated.getLoadFlowStatus());
-
     }
 
     @Test

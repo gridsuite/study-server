@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 
 import javax.persistence.*;
 
@@ -56,18 +55,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "isPrivate", nullable = false)
     private boolean isPrivate;
 
-    @Column(name = "loadFlowStatus")
-    @Enumerated(EnumType.STRING)
-    private LoadFlowStatus loadFlowStatus;
-
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name  =  "loadFlowResultEntity_id",
-            referencedColumnName  =  "id",
-            foreignKey = @ForeignKey(
-                    name = "loadFlowResult_id_fk"
-            ))
-    private LoadFlowResultEntity loadFlowResult;
-
     @Column(name = "loadFlowProvider")
     private String loadFlowProvider;
 
@@ -78,9 +65,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "loadFlowParameters_id_fk"
             ), nullable = false)
     private LoadFlowParametersEntity loadFlowParameters;
-
-    @Column(name = "securityAnalysisResultUuid")
-    private UUID securityAnalysisResultUuid;
 
     @Value
     public static class StudyNetworkUuid {
