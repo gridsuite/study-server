@@ -10,7 +10,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.StudyInfos;
 
 /**
@@ -19,19 +18,12 @@ import org.gridsuite.study.server.dto.StudyInfos;
  */
 public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos> {
 
-    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat,
-                                                            boolean studyPrivate) {
-        return createMatcherStudyInfos(studyUuid, userId, caseFormat, studyPrivate, LoadFlowStatus.NOT_DONE);
-    }
-
-    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat,
-                                                            boolean studyPrivate, LoadFlowStatus loadFlowStatus) {
+    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat, boolean studyPrivate) {
         return new MatcherStudyInfos(StudyInfos.builder()
                 .id(studyUuid)
                 .userId(userId)
                 .caseFormat(caseFormat)
                 .studyPrivate(studyPrivate)
-                .loadFlowStatus(loadFlowStatus)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .build());
     }
@@ -42,7 +34,6 @@ public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos>
 
     @Override
     public boolean matchesSafely(StudyInfos s) {
-        return super.matchesSafely(s)
-                && reference.getLoadFlowStatus().equals(s.getLoadFlowStatus());
+        return super.matchesSafely(s);
     }
 }
