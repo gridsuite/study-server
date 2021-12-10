@@ -28,7 +28,7 @@ import java.util.UUID;
 @Getter
 @ToString
 @EqualsAndHashCode
-@Document(indexName = "network-modification-server")
+@Document(indexName = "#{@environment.getProperty('index.prefix')}equipments")
 @TypeAlias(value = "EquipmentInfos")
 public class EquipmentInfos {
     @Id
