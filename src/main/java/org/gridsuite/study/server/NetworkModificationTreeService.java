@@ -6,6 +6,9 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.loadflow.LoadFlowResult;
+import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -207,7 +210,12 @@ public class NetworkModificationTreeService {
     @Transactional
     public void createRoot(StudyEntity study) {
         NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study));
-        var root = RootNode.builder().studyId(study.getId()).id(node.getIdNode()).name("Root").build();
+        var root = RootNode.builder()
+            .studyId(study.getId())
+            .id(node.getIdNode())
+            .name("Root")
+            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .build();
         repositories.get(node.getType()).createNodeInfo(root);
     }
 
@@ -251,5 +259,119 @@ public class NetworkModificationTreeService {
             nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
             return node;
         });
+    }
+
+    public UUID getStudyRootNodeUuid(UUID studyId) {
+        return nodesRepository.findByStudyIdAndType(studyId, NodeType.ROOT).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode();
+    }
+
+    @Transactional
+    public Optional<String> doGetVariantId(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).flatMap(n -> repositories.get(n.getType()).getVariantId(nodeUuid, generateId));
+    }
+
+    public Mono<String> getVariantId(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetVariantId(nodeUuid, true).orElse(null))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    @Transactional
+    public Optional<UUID> doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).flatMap(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId));
+    }
+
+    public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(nodeUuid, true).orElse(null))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuids::add));
+        return uuids;
+    }
+
+    @Transactional(readOnly = true)
+    public Mono<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid)));
+    }
+
+    @Transactional
+    public void doUpdateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus));
+        if (updateChildren) {
+            nodesRepository.findAllByParentNodeIdNode(nodeUuid)
+                .forEach(child -> doUpdateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
+        }
+    }
+
+    public Mono<Void> updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
+        return Mono.fromRunnable(() -> self.doUpdateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren));
+    }
+
+    @Transactional
+    public void doUpdateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowStatus(nodeUuid, loadFlowStatus));
+    }
+
+    public Mono<Void> updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
+        return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(nodeUuid, loadFlowStatus));
+    }
+
+    @Transactional
+    public void doUpdateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
+    }
+
+    public Mono<Void> updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+        return Mono.fromRunnable(() -> self.doUpdateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
+    }
+
+    @Transactional
+    public void doUpdateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> doUpdateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
+    }
+
+    public Mono<Void> updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
+        return Mono.fromRunnable(() -> self.doUpdateStudyLoadFlowStatus(studyUuid, loadFlowStatus));
+    }
+
+    @Transactional(readOnly = true)
+    public Mono<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid)));
+    }
+
+    @Transactional(readOnly = true)
+    public Mono<List<UUID>> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            UUID uuid = repositories.get(n.getType()).getSecurityAnalysisResultUuid(n.getIdNode());
+            if (uuid != null) {
+                uuids.add(uuid);
+            }
+        });
+        return Mono.just(uuids);
+    }
+
+    private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
+        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid))).ifPresent(uuids::add);
+        nodesRepository.findAllByParentNodeIdNode(nodeUuid)
+            .forEach(child -> getSecurityAnalysisResultUuids(child.getIdNode(), uuids));
+    }
+
+    @Transactional(readOnly = true)
+    public Mono<List<UUID>> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        getSecurityAnalysisResultUuids(nodeUuid, uuids);
+        return Mono.just(uuids);
+    }
+
+    @Transactional(readOnly = true)
+    public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
     }
 }

@@ -8,9 +8,11 @@
 package org.gridsuite.study.server.networkmodificationtree.repositories;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -21,4 +23,5 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
 
     List<NodeEntity> findAllByStudyId(UUID id);
 
+    Optional<NodeEntity> findByStudyIdAndType(UUID id, NodeType type);
 }
