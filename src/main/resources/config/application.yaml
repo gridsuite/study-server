@@ -4,7 +4,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped
+      definition: consumeSaResult;consumeSaStopped;consumeRealizationResult;consumeRealizationStopped
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -13,6 +13,10 @@ spring:
           destination: sa.result
         consumeSaStopped-in-0:
           destination: sa.stopped
+        consumeRealizationResult-in-0:
+          destination: realize.result
+        consumeRealizationStopped-in-0:
+          destination: realize.stopped
       source: publishStudyUpdate
 
 network-store-server:

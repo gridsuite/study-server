@@ -409,4 +409,12 @@ public class NetworkModificationTreeService {
         return realizationInfos;
     }
 
+    @Transactional
+    public void doUpdateRealizationStatus(UUID nodeUuid, boolean isRealized) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateRealizationStatus(nodeUuid, isRealized));
+    }
+
+    public Mono<Void> updateRealizationStatus(UUID nodeUuid, boolean isRealized) {
+        return Mono.fromRunnable(() -> self.doUpdateRealizationStatus(nodeUuid, isRealized));
+    }
 }

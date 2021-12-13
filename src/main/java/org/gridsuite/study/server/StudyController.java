@@ -728,4 +728,12 @@ public class StudyController {
             .then(studyService.realizeNode(studyUuid, nodeUuid)));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization/stop")
+    @Operation(summary = "stop a node realization")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The realization has been stopped")})
+    public ResponseEntity<Mono<Void>> stopRealization(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().body(studyService.stopRealization(studyUuid, nodeUuid));
+    }
+
 }

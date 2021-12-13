@@ -54,6 +54,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract UUID getSecurityAnalysisResultUuid(AbstractNode node);
 
+    public abstract void updateRealizationStatus(AbstractNode node, boolean isRealized);
+
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
     }
@@ -128,5 +130,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public void updateRealizationStatus(UUID nodeUuid, boolean isRealized) {
+        updateRealizationStatus(getNode(nodeUuid), isRealized);
     }
 }

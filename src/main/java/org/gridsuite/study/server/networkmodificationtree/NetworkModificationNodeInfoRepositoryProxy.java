@@ -107,4 +107,11 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
     }
+
+    @Override
+    public void updateRealizationStatus(AbstractNode node, boolean isRealized) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        networkModificationNode.setRealized(isRealized);
+        updateNode(networkModificationNode);
+    }
 }

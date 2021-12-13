@@ -77,4 +77,9 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return null;
     }
+
+    @Override
+    public void updateRealizationStatus(AbstractNode node, boolean isRealized) {
+        // Do nothing : no realization associated to this node
+    }
 }

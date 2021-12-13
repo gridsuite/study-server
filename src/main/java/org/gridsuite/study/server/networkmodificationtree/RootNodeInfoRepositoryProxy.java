@@ -104,4 +104,11 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return ((RootNode) node).getSecurityAnalysisResultUuid();
     }
+
+    @Override
+    public void updateRealizationStatus(AbstractNode node, boolean isRealized) {
+        RootNode rootNode = (RootNode) node;
+        rootNode.setRealized(isRealized);
+        updateNode(rootNode);
+    }
 }

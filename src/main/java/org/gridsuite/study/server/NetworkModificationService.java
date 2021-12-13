@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.RealizationInfos;
+import org.gridsuite.study.server.dto.Receiver;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
@@ -28,6 +29,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.UncheckedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -36,6 +40,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_EQUIPMENT_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
+import static org.gridsuite.study.server.StudyService.RECEIVER;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -53,13 +58,17 @@ public class NetworkModificationService {
 
     private final WebClient webClient;
 
+    private final ObjectMapper objectMapper;
+
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkStoreService networkStoreService,
-                               WebClient.Builder webClientBuilder) {
+                               WebClient.Builder webClientBuilder,
+                               ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.webClient = webClientBuilder.build();
+        this.objectMapper = objectMapper;
     }
 
     void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -245,22 +254,52 @@ public class NetworkModificationService {
         });
     }
 
-    Flux<EquipmentModificationInfos> realizeNode(UUID studyUuid, RealizationInfos realizationInfos) {
+    Mono<Void> realizeNode(UUID studyUuid, UUID nodeUuid, RealizationInfos realizationInfos) {
         Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(realizationInfos);
 
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
+        return networkStoreService.getNetworkUuid(studyUuid).flatMap(networkUuid -> {
+            String receiver;
+            try {
+                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
+            } catch (JsonProcessingException e) {
+                return Mono.error(new UncheckedIOException(e));
+            }
+
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "realization");
-            var path = uriComponentsBuilder.build().toUriString();
+            var path = uriComponentsBuilder
+                .queryParam(RECEIVER, receiver)
+                .build()
+                .toUriString();
 
             return webClient.post()
                 .uri(getNetworkModificationServerURI(true) + path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(realizationInfos))
                 .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
-                .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
-                });
+                .bodyToMono(Void.class);
         });
+    }
+
+    public Mono<Void> stopRealization(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+        var path = UriComponentsBuilder.fromPath("realization/stop")
+            .queryParam(RECEIVER, receiver)
+            .build()
+            .toUriString();
+
+        return webClient.put()
+            .uri(getNetworkModificationServerURI(false) + path)
+            .retrieve()
+            .bodyToMono(Void.class);
     }
 }
