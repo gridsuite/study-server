@@ -170,7 +170,9 @@ public class StudyTest {
     @Autowired
     private ObjectMapper mapper;
 
-    private List<EquipmentInfos> linesInfos;
+    private List<EquipmentInfos> linesInfosInitialVariant;
+
+    private List<EquipmentInfos> linesInfosDeltaVariant;
 
     private List<CreatedStudyBasicInfos> studiesInfos;
 
@@ -191,6 +193,7 @@ public class StudyTest {
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
             .networkUuid(NETWORK_UUID)
+            .variantId(VariantManagerConstants.INITIAL_VARIANT_ID)
             .id(line.getId())
             .name(line.getNameOrId())
             .type("LINE")
@@ -199,7 +202,14 @@ public class StudyTest {
     }
 
     private void initMockBeans(Network network) {
-        linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
+        linesInfosInitialVariant = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
+
+        List<EquipmentInfos> linesInfosDeltaVariantTombstoned = List.of(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("BBE1AA1  BBE2AA1  1").variantId(VARIANT_ID).tombstoned(true).build());
+        List<EquipmentInfos> linesInfosDeltaVariantAdded = List.of(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("SUB_1 SUB_2").variantId(VARIANT_ID).build());
+
+        linesInfosDeltaVariant = new ArrayList<>();
+        linesInfosDeltaVariant.addAll(linesInfosDeltaVariantTombstoned);
+        linesInfosDeltaVariant.addAll(linesInfosDeltaVariantAdded);
 
         studiesInfos = List.of(
                 CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
@@ -211,7 +221,13 @@ public class StudyTest {
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
         when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentType:(LINE)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
-            .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+                .then((Answer<List<EquipmentInfos>>) invocation -> linesInfosInitialVariant);
+
+        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND tombstoned: true AND equipmentType:(LINE)", NETWORK_UUID_STRING, VARIANT_ID)))
+                .then((Answer<List<EquipmentInfos>>) invocation -> linesInfosDeltaVariantTombstoned);
+
+        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND NOT tombstoned: true AND equipmentType:(LINE)", NETWORK_UUID_STRING, VARIANT_ID)))
+                .then((Answer<List<EquipmentInfos>>) invocation -> linesInfosDeltaVariantAdded);
     }
 
     private void cleanDB() {
@@ -615,9 +631,20 @@ public class StudyTest {
         return networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
     }
 
+    public List<EquipmentInfos> expectedMergedEquipmentsInfos(List<EquipmentInfos> initialVariantList, List<EquipmentInfos> deltaVariantList) {
+        Set<String> removedEquimpentsIdsInDelta = deltaVariantList.stream().filter(e -> e.getTombstoned() == Boolean.TRUE).map(EquipmentInfos::getId).collect(Collectors.toSet());
+        List<EquipmentInfos> addedEquipmentInDelta = deltaVariantList.stream().filter(e -> e.getTombstoned() == null || e.getTombstoned() == Boolean.FALSE).collect(Collectors.toList());
+        List<EquipmentInfos> mergedList = initialVariantList.stream().filter(ei -> !removedEquimpentsIdsInDelta.contains(ei.getId())).collect(Collectors.toList());
+        mergedList.addAll(addedEquipmentInDelta);
+        return mergedList;
+    }
+
     @Test
     public void testSearch() {
-        UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyUuid = createStudy("userId", CASE_UUID, true);
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
 
         webTestClient.get()
                 .uri("/v1/studies/search?q={request}", String.format("userId:%s", "userId"))
@@ -629,13 +656,23 @@ public class StudyTest {
                 .value(new MatcherJson<>(mapper, studiesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?q={request}", studyUuid, getRootNodeUuid(studyUuid), "equipmentType:(LINE)")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?q={request}", studyUuid, rootNodeUuid, "equipmentType:(LINE)")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBodyList(EquipmentInfos.class)
-            .value(new MatcherJson<>(mapper, linesInfos));
+            .value(new MatcherJson<>(mapper, linesInfosInitialVariant));
+
+        List<EquipmentInfos> expectedEquipmentsInfos = expectedMergedEquipmentsInfos(linesInfosInitialVariant, linesInfosDeltaVariant);
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?q={request}", studyUuid, modificationNodeUuid, "equipmentType:(LINE)")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(EquipmentInfos.class)
+                .value(new MatcherJson<>(mapper, expectedEquipmentsInfos));
     }
 
     @Test
