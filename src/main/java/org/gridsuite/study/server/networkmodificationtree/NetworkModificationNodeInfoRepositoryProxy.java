@@ -114,4 +114,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         networkModificationNode.setRealized(isRealized);
         updateNode(networkModificationNode);
     }
+
+    @Override
+    public boolean isRealized(AbstractNode node) {
+        return ((NetworkModificationNode) node).isRealized();
+    }
 }

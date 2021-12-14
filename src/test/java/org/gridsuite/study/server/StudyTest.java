@@ -391,6 +391,20 @@ public class StudyTest {
                            || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "\\&variantId=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/realization.*") && request.getMethod().equals("POST")) {
+                    // variant realization
+                    input.send(MessageBuilder.withPayload("s1,s2")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .build(), "realize.result");
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/realization/stop.*")) {
+                    // stop variant realization
+                    input.send(MessageBuilder.withPayload("")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .build(), "realize.stopped");
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -2168,6 +2182,51 @@ public class StudyTest {
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformer\\?group=.*") && r.getBody().equals(createTwoWindingsTransformerAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformer\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createTwoWindingsTransformerAttributes)));
+    }
+
+    private void testRealizationWithNodeUuid(UUID studyUuid, UUID nodeUuid) {
+        // realize node
+        webTestClient.post()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/realization", studyUuid, nodeUuid)
+            .exchange()
+            .expectStatus().isOk();
+
+        Message<byte[]> realizationStatusMessage = output.receive(1000);
+        assertEquals(studyUuid, realizationStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, realizationStatusMessage.getHeaders().get(HEADER_NODE));
+        assertEquals(UPDATE_TYPE_REALIZATION_COMPLETED, realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(Set.of("s1", "s2"), realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/realization\\?receiver=.*")));
+
+        assertTrue(networkModificationTreeService.isRealized(nodeUuid));  // node is realized
+
+        // stop realization
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/realization/stop", studyUuid, nodeUuid)
+            .exchange()
+            .expectStatus().isOk();
+
+        realizationStatusMessage = output.receive(1000);
+        assertEquals(studyUuid, realizationStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, realizationStatusMessage.getHeaders().get(HEADER_NODE));
+        assertEquals(UPDATE_TYPE_REALIZATION_CANCELLED, realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        assertFalse(networkModificationTreeService.isRealized(nodeUuid));  // node is not realized
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/realization/stop\\?receiver=.*")));
+    }
+
+    @Test
+    public void testRealization() {
+        //insert a study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        testRealizationWithNodeUuid(studyNameUserIdUuid, rootNodeUuid);
+        testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNodeUuid);
     }
 
     @After

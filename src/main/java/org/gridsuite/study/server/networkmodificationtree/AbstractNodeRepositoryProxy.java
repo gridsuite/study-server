@@ -46,6 +46,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract LoadFlowInfos getLoadFlowInfos(AbstractNode node);
 
+    public abstract boolean isRealized(AbstractNode node);
+
     public abstract void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus);
 
     public abstract void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus);
@@ -134,5 +136,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public void updateRealizationStatus(UUID nodeUuid, boolean isRealized) {
         updateRealizationStatus(getNode(nodeUuid), isRealized);
+    }
+
+    public boolean isRealized(UUID nodeUuid) {
+        return isRealized(getNode(nodeUuid));
     }
 }

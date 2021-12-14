@@ -35,7 +35,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         rootNodeInfoEntity.setLoadFlowStatus(rootNode.getLoadFlowStatus());
         rootNodeInfoEntity.setLoadFlowResult(StudyService.toEntity(rootNode.getLoadFlowResult()));
         rootNodeInfoEntity.setSecurityAnalysisResultUuid(rootNode.getSecurityAnalysisResultUuid());
-        rootNodeInfoEntity.setRealized(rootNodeInfoEntity.isRealized());
+        rootNodeInfoEntity.setRealized(rootNode.isRealized());
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
@@ -110,5 +110,10 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         RootNode rootNode = (RootNode) node;
         rootNode.setRealized(isRealized);
         updateNode(rootNode);
+    }
+
+    @Override
+    public boolean isRealized(AbstractNode node) {
+        return ((RootNode) node).isRealized();
     }
 }

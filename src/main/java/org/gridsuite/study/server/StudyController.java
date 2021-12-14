@@ -718,14 +718,12 @@ public class StudyController {
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization")
     @Operation(summary = "realize a study node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been realized")})
-    public ResponseEntity<Mono<Void>> realizeNode(
-        @PathVariable("studyUuid") UUID studyUuid,
-        @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
-            .then(studyService.realizeNode(studyUuid, nodeUuid)));
+    public ResponseEntity<Mono<Void>> realizeNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.realizeNode(studyUuid, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization/stop")

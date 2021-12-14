@@ -417,4 +417,8 @@ public class NetworkModificationTreeService {
     public Mono<Void> updateRealizationStatus(UUID nodeUuid, boolean isRealized) {
         return Mono.fromRunnable(() -> self.doUpdateRealizationStatus(nodeUuid, isRealized));
     }
+
+    public boolean isRealized(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isRealized(nodeUuid)).orElse(false);
+    }
 }

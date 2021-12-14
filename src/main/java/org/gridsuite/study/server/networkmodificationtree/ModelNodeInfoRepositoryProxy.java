@@ -82,4 +82,9 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     public void updateRealizationStatus(AbstractNode node, boolean isRealized) {
         // Do nothing : no realization associated to this node
     }
+
+    @Override
+    public boolean isRealized(AbstractNode node) {
+        return false;
+    }
 }

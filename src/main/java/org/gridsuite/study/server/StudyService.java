@@ -160,7 +160,7 @@ public class StudyService {
                         return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid)
                             .then(Mono.fromCallable(() -> {
                                 // send notifications
-                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                                 return null;
@@ -1284,7 +1284,7 @@ public class StudyService {
                         return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null)
                             .then(Mono.fromCallable(() -> {
                                 // send notification for stopped computation
-                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                                 return null;
                             }));
@@ -1524,7 +1524,7 @@ public class StudyService {
                         return updateRealizationStatus(receiverObj.getNodeUuid(), true)
                             .then(Mono.fromCallable(() -> {
                                 // send notification
-                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_REALIZATION_COMPLETED, substationsIds);
                                 return null;
                             }));
@@ -1553,7 +1553,7 @@ public class StudyService {
                         return updateRealizationStatus(receiverObj.getNodeUuid(), false)
                             .then(Mono.fromCallable(() -> {
                                 // send notification
-                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_REALIZATION_CANCELLED);
                                 return null;
                             }));
