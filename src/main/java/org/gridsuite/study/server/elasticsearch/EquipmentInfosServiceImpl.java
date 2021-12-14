@@ -6,10 +6,8 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import com.google.common.collect.Lists;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -20,7 +18,6 @@ import org.springframework.lang.NonNull;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * A class to implement elasticsearch indexing
@@ -28,9 +25,6 @@ import java.util.stream.StreamSupport;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public class EquipmentInfosServiceImpl implements EquipmentInfosService {
-
-    @Value("${spring.data.elasticsearch.partition-size:10000}")
-    private int partitionSize;
 
     private static final int PAGE_MAX_SIZE = 1000;
 
@@ -41,13 +35,6 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     public EquipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
         this.elasticsearchOperations = elasticsearchOperations;
-    }
-
-    @Override
-    public void addAll(@NonNull final List<EquipmentInfos> equipmentsInfos) {
-        Lists.partition(equipmentsInfos, partitionSize)
-                .parallelStream()
-                .forEach(equipmentInfosRepository::saveAll);
     }
 
     @Override
@@ -63,24 +50,6 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     @Override
     public void deleteAll(@NonNull UUID networkUuid) {
         equipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
-    }
-
-    @Override
-    public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
-        variantIds.forEach(variantId -> equipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId));
-    }
-
-    @Override
-    public void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId) {
-        addAll(
-                StreamSupport.stream(equipmentInfosRepository.findAllByNetworkUuidAndVariantId(networkUuid, variantToCloneId).spliterator(), false)
-                        .map(equipmentInfos -> {
-                            equipmentInfos.setUniqueId(null);
-                            equipmentInfos.setVariantId(variantId);
-                            return equipmentInfos;
-                        })
-                        .collect(Collectors.toList())
-        );
     }
 
     @Override

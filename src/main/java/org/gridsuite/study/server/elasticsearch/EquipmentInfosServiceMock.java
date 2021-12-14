@@ -21,11 +21,6 @@ import java.util.UUID;
 public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
-    public void addAll(@NonNull final List<EquipmentInfos> equipmentInfos) {
-        // Nothing to insert
-    }
-
-    @Override
     public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
         return equipmentInfos;
     }
@@ -36,18 +31,8 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     }
 
     @Override
-    public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
-        // Nothing to delete
-    }
-
-    @Override
     public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
         return Collections.emptyList();
-    }
-
-    @Override
-    public void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId) {
-        // Do nothing
     }
 
     @Override
