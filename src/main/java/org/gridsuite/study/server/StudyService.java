@@ -1570,6 +1570,5 @@ public class StudyService {
     Mono<Void> updateRealizationStatus(UUID nodeUuid, boolean isRealized) {
         return networkModificationTreeService.updateRealizationStatus(nodeUuid, isRealized);
     }
-
 }
 

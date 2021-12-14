@@ -735,5 +735,4 @@ public class StudyController {
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.stopRealization(studyUuid, nodeUuid));
     }
-
 }
