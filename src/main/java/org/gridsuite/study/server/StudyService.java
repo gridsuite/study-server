@@ -1512,7 +1512,7 @@ public class StudyService {
     public Consumer<Flux<Message<String>>> consumeRealizationResult() {
         return f -> f.log(StudyService.CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
-                Set<String> substationsIds = Stream.of(message.getPayload().trim().split("\\s*,\\s*")).collect(Collectors.toSet());
+                Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
                 String receiver = message.getHeaders().get(RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
