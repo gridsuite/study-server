@@ -31,4 +31,5 @@ final class StudyConstants {
     static final String CASE_UUID = "caseUuid";
 
     static final String DELIMITER = "/";
+    static final String QUERY_PARAM_VARIANT_ID = "variantId";
 }
