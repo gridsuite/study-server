@@ -381,6 +381,8 @@ public class StudyService {
                 case ' ': // white space has to be escaped, too
                     sb.append('\\');
                     break;
+                default:
+                    // do nothing but appease sonarlint
             }
 
             sb.append(c);
@@ -389,16 +391,20 @@ public class StudyService {
         return sb.toString();
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput, String fieldSelector) {
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput,
+        EquipmentInfosService.FieldSelector fieldSelector) {
         return networkStoreService
                 .getNetworkUuid(studyUuid)
                 .flatMapIterable(networkUuid -> {
-                    String query = String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
-                        fieldSelector.toLowerCase().contains("name") ? "equipmentName.fullascii" : "equipmentId.keyword",
-                        escapeLucene(userInput));
-                    List<EquipmentInfos> ret = equipmentInfosService.search(query);
-                    return ret;
+                    String query = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid);
+                    return equipmentInfosService.search(query);
                 });
+    }
+
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid) {
+        return String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
+            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.keyword",
+            escapeLucene(userInput));
     }
 
     @Transactional

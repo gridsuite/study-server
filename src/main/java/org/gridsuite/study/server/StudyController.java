@@ -15,17 +15,21 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.beans.PropertyEditor;
+import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
@@ -52,6 +56,18 @@ public class StudyController {
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
+    }
+
+    static class MyEnumConverter extends PropertyEditorSupport {
+        public void setAsText(final String text) throws IllegalArgumentException {
+            EquipmentInfosService.FieldSelector value = EquipmentInfosService.FieldSelector.valueOf(text.toUpperCase());
+            setValue(value);
+        }
+    }
+
+    @InitBinder
+    public void initBinder(WebDataBinder webdataBinder) {
+        webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class, new MyEnumConverter());
     }
 
     @GetMapping(value = "/studies")
@@ -623,7 +639,7 @@ public class StudyController {
     public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
-        @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") String fieldSelector) {
+        @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
             .body(studyService.searchEquipments(studyUuid, userInput, fieldSelector));
     }

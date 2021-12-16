@@ -9,12 +9,14 @@ package org.gridsuite.study.server;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.EquipmentType;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.hamcrest.core.IsNull;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -22,6 +24,7 @@ import org.junit.rules.ErrorCollector;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.NoSuchIndexException;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -36,9 +39,12 @@ import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.iidm.impl.NetworkImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -54,8 +60,16 @@ public class EquipmentInfosServiceTests {
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
+    @MockBean
+    private NetworkStoreService networkStoreService;
+
+    @Autowired
+    private StudyService studyService;
+
     @Before
     public void setup() {
+        when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(Mono.just(NETWORK_UUID));
+
         try {
             equipmentInfosService.deleteAll(NETWORK_UUID);
         } catch (NoSuchIndexException ex) {
@@ -181,19 +195,19 @@ public class EquipmentInfosServiceTests {
     void testFullAscii(String pat) {
         Set<EquipmentInfos> hits;
 
-        String prefix = "networkUuid:(" + NETWORK_UUID + ") AND ";
-
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*" + pat + "*)"));
-        pbsc.checkThat(hits.size(), is(1));
+        hits = studyService.searchEquipments(NETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME)
+            .collect(Collectors.toSet()).block();
+        pbsc.checkThat(hits, not(new IsNull<>()));
+        if (hits != null) {
+            pbsc.checkThat(hits.size(), is(1));
+        }
     }
 
     @Test
     public void testSearchSpecialChars() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
-        network.getIdentifiables().forEach(idable -> {
-            equipmentInfosService.add(toEquipmentInfos(idable));
-        });
+        network.getIdentifiables().forEach(idable -> equipmentInfosService.add(toEquipmentInfos(idable)));
 
         Set<EquipmentInfos> hits;
 
@@ -204,9 +218,6 @@ public class EquipmentInfosServiceTests {
 
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName:(*e E*)"));
         pbsc.checkThat(hits.size(), is(4));
-
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.keyword:(*e\\ E*)"));
-        pbsc.checkThat(hits.size(), is(0));
 
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.raw:(*e\\ E*)"));
         pbsc.checkThat(hits.size(), is(1));
@@ -226,23 +237,23 @@ public class EquipmentInfosServiceTests {
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*e\\ e*)"));
         pbsc.checkThat(hits.size(), is(1));
 
-        testFullAscii("s\\+S");
-        testFullAscii("s\\+s");
-        testFullAscii("h\\-h");
-        testFullAscii("t\\.t");
-        testFullAscii("h\\/h");
-        testFullAscii("l\\\\l");
-        testFullAscii("p\\&p");
-        testFullAscii("n\\(n");
-        testFullAscii("n\\)n");
-        testFullAscii("k\\[k");
-        testFullAscii("k\\]k");
-        testFullAscii("e\\{e");
-        testFullAscii("e\\}e");
-        testFullAscii("t\\<t");
-        testFullAscii("t\\>t");
-        testFullAscii("s\\'s");
-        testFullAscii("e\\|e");
+        testFullAscii("s+S");
+        testFullAscii("s+s");
+        testFullAscii("h-h");
+        testFullAscii("t.t");
+        testFullAscii("h/h");
+        testFullAscii("l\\l");
+        testFullAscii("p&p");
+        testFullAscii("n(n");
+        testFullAscii("n)n");
+        testFullAscii("k[k");
+        testFullAscii("k]k");
+        testFullAscii("e{e");
+        testFullAscii("e}e");
+        testFullAscii("t<t");
+        testFullAscii("t>t");
+        testFullAscii("s's");
+        testFullAscii("e|e");
     }
 
     @Test
