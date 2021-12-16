@@ -31,6 +31,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
@@ -893,7 +894,7 @@ public class StudyTest {
         //insert a study
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         //run a loadflow
@@ -1159,7 +1160,7 @@ public class StudyTest {
         //insert a study
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, rootNodeUuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
@@ -1420,7 +1421,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, false);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         //update switch
@@ -1458,7 +1459,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, false);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         //update equipment
@@ -1536,14 +1537,18 @@ public class StudyTest {
                 "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
     }
 
-    private NetworkModificationNode createNode(UUID parentNodeUuid) {
+    private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid) {
+        return createNetworkModificationNode(parentNodeUuid, false, UUID.randomUUID(), VARIANT_ID);
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid, boolean isRealized, UUID networkModificationUuid, String variantId) {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder()
             .name("hypo")
             .description("description")
-            .networkModification(UUID.randomUUID())
-            .variantId(VARIANT_ID)
+            .networkModification(networkModificationUuid)
+            .variantId(variantId)
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .isRealized(false)
+            .isRealized(isRealized)
             .children(Collections.emptyList())
             .build();
         webTestClient.post().uri("/v1/tree/nodes/{id}", parentNodeUuid).bodyValue(modificationNode)
@@ -1554,6 +1559,23 @@ public class StudyTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_BEFORE));
         return modificationNode;
+    }
+
+    private ModelNode createModelNode(UUID parentNodeUuid) {
+        ModelNode modelNode = ModelNode.builder()
+            .name("model")
+            .model("loadflow")
+            .description("model")
+            .children(Collections.emptyList())
+            .build();
+        webTestClient.post().uri("/v1/tree/nodes/{id}", parentNodeUuid).bodyValue(modelNode)
+            .exchange()
+            .expectStatus().isOk();
+        var mess = output.receive(TIMEOUT);
+        assertNotNull(mess);
+        modelNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_BEFORE));
+        return modelNode;
     }
 
     private RootNode getRootNode(UUID studyUuid) throws IOException {
@@ -1820,7 +1842,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         // lockout line
@@ -1908,7 +1930,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         // create load
@@ -1938,7 +1960,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         // delete equipment
@@ -2087,7 +2109,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         // create generator
@@ -2117,7 +2139,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         // create line
@@ -2159,7 +2181,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         // create 2WT
@@ -2219,14 +2241,35 @@ public class StudyTest {
 
     @Test
     public void testRealization() {
-        //insert a study
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
-        UUID modificationNodeUuid = modificationNode.getId();
+        UUID modificationGroupUuid1 = UUID.randomUUID();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(rootNodeUuid, false, modificationGroupUuid1, "variant_1");
+        UUID modificationGroupUuid2 = UUID.randomUUID();
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(modificationNode1.getId(), false, modificationGroupUuid2, "variant_2");
+        ModelNode modelNode1 = createModelNode(modificationNode2.getId());
+        UUID modificationGroupUuid3 = UUID.randomUUID();
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(modelNode1.getId(), false, modificationGroupUuid3, "variant_3");
+        ModelNode modelNode2 = createModelNode(modificationNode3.getId());
+        UUID modificationGroupUuid4 = UUID.randomUUID();
+        NetworkModificationNode modificationNode4 = createNetworkModificationNode(modelNode2.getId(), false, modificationGroupUuid4, "variant_4");
 
-        testRealizationWithNodeUuid(studyNameUserIdUuid, rootNodeUuid);
-        testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNodeUuid);
+        RealizationInfos realizationInfos = networkModificationTreeService.getRealizationInfos(modificationNode4.getId());
+        assertNull(realizationInfos.getOriginVariantId());  // previous realized node is root node
+        assertEquals("variant_4", realizationInfos.getDestinationVariantId());
+        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModifications());
+
+        modificationNode2.setRealized(true);  // mark node modificationNode2 as realized
+        networkModificationTreeService.doUpdateNode(modificationNode2);
+        output.receive(1000);
+
+        realizationInfos = networkModificationTreeService.getRealizationInfos(modificationNode4.getId());
+        assertEquals("variant_2", realizationInfos.getOriginVariantId());  // variant to clone is variant associated to node modificationNode2
+        assertEquals("variant_4", realizationInfos.getDestinationVariantId());
+        assertEquals(List.of(modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModifications());
+
+        testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId());
+        testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNode4.getId());
     }
 
     @After
