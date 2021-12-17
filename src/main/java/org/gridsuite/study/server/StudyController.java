@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -28,7 +30,6 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.beans.PropertyEditor;
 import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -58,16 +59,28 @@ public class StudyController {
         this.networkModificationService = networkModificationService;
     }
 
-    static class MyEnumConverter extends PropertyEditorSupport {
+    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
+        private final Class<E> enumClass;
+
+        public MyEnumConverter(Class<E> enumClass) {
+            this.enumClass = enumClass;
+        }
+
         public void setAsText(final String text) throws IllegalArgumentException {
-            EquipmentInfosService.FieldSelector value = EquipmentInfosService.FieldSelector.valueOf(text.toUpperCase());
-            setValue(value);
+            try {
+                E value = Enum.valueOf(enumClass, text.toUpperCase());
+                setValue(value);
+            } catch (IllegalArgumentException ex) {
+                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
+                throw new IllegalArgumentException(String.format("Enum nknown entry '%s' should be among %s", text, avail));
+            }
         }
     }
 
     @InitBinder
     public void initBinder(WebDataBinder webdataBinder) {
-        webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class, new MyEnumConverter());
+        webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
+            new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
     }
 
     @GetMapping(value = "/studies")
@@ -634,8 +647,10 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search equipments in elasticsearch")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of equipments found"),
-            @ApiResponse(responseCode = "404", description = "The study not found")})
+        @ApiResponse(responseCode = "200", description = "List of equipments found"),
+        @ApiResponse(responseCode = "404", description = "The study not found"),
+        @ApiResponse(responseCode = "400", description = "The fieLd selector is unknown")
+    })
     public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,

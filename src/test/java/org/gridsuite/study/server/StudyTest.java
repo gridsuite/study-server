@@ -621,6 +621,13 @@ public class StudyTest {
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBodyList(EquipmentInfos.class)
             .value(new MatcherJson<>(mapper, linesInfos));
+
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=bogus", studyUuid, "B")
+            .header("userId", "userId")
+            .exchange()
+            .expectStatus().isBadRequest();
+            //.expectBody().returnResult().getResponseBody().toString().contains("NAME, ID")
     }
 
     @Test
