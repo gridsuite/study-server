@@ -192,7 +192,7 @@ public class EquipmentInfosServiceTests {
     @Rule
     public ErrorCollector pbsc = new ErrorCollector();
 
-    void testFullAscii(String pat) {
+    private void testFullAscii(String pat) {
         Set<EquipmentInfos> hits;
 
         hits = studyService.searchEquipments(NETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME)
