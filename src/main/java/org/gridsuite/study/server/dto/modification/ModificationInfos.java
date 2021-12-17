@@ -7,9 +7,11 @@
 package org.gridsuite.study.server.dto.modification;
 
 import java.time.ZonedDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -32,4 +34,8 @@ public class ModificationInfos {
 
     @Schema(description = "Modification type")
     ModificationType type;
+
+    @Schema(description = "Substations ID")
+    @Builder.Default
+    private Set<String> substationIds = Set.of();
 }

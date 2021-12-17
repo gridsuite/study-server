@@ -137,7 +137,7 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<EquipmentModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId) {
+    public Flux<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
 
@@ -155,7 +155,7 @@ public class NetworkModificationService {
                     .uri(getNetworkModificationServerURI(true) + path)
                     .body(BodyInserters.fromValue(groovyScript))
                     .retrieve()
-                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                    .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
                     });
         });
     }
