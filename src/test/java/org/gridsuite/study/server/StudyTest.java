@@ -643,7 +643,7 @@ public class StudyTest {
     public void testSearch() {
         UUID studyUuid = createStudy("userId", CASE_UUID, true);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         webTestClient.get()
