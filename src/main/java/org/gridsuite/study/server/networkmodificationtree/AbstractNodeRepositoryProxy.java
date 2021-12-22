@@ -70,10 +70,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return toDto(nodeInfoRepository.findById(id).orElseThrow(() -> new StudyException(StudyException.Type.ELEMENT_NOT_FOUND)));
     }
 
-    protected NodeDto completeNodeInfo(AbstractNodeInfoEntity nodeEntity, NodeDto node) {
-        node.setId(nodeEntity.getNode().getIdNode());
-        node.setName(nodeEntity.getName());
-        node.setDescription(nodeEntity.getDescription());
+    protected NodeDto completeNodeInfo(AbstractNodeInfoEntity nodeInfoEntity, NodeDto node) {
+        node.setId(nodeInfoEntity.getId());
+        node.setName(nodeInfoEntity.getName());
+        node.setDescription(nodeInfoEntity.getDescription());
         return node;
     }
 
