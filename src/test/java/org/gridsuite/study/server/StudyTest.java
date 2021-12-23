@@ -1919,6 +1919,36 @@ public class StudyTest {
     }
 
     @Test
+    public void testCreateSubstation() {
+        createStudy("userId", CASE_UUID, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        // create substation
+        String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"loadName1\",\"country\":\"AD\"}";
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createSubstationAttributes)
+                .exchange()
+                .expectStatus().isOk();
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, new HashSet<>());
+
+        // create substation on modification node child of root node
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, modificationNodeUuid)
+                .bodyValue(createSubstationAttributes)
+                .exchange()
+                .expectStatus().isOk();
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, new HashSet<>());
+
+        var requests = getRequestsWithBodyDone(2);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*") && r.getBody().equals(createSubstationAttributes)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createSubstationAttributes)));
+    }
+
+    @Test
     public void testDeleteEquipment() {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
