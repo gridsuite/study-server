@@ -14,6 +14,7 @@ import com.powsybl.iidm.network.Country;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
+import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -35,7 +36,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.support.MessageBuilder;
-import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -849,7 +849,7 @@ public class StudyService {
             .map(StudyService::toStudyInfos);
     }
 
-    public Mono<Void> changeLineStatus(UUID studyUuid, String lineId, String status, UUID nodeUuid) {
+    public Mono<Void> changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull  String status, @NonNull UUID nodeUuid) {
         return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
@@ -860,7 +860,7 @@ public class StudyService {
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE));
 
-            return networkModificationService.applyLineChanges(studyUuid, lineId, status, groupUuid, variantId)
+            return networkModificationService.changeLineStatus(studyUuid, lineId, status, groupUuid, variantId)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
