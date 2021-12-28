@@ -627,7 +627,6 @@ public class StudyTest {
             .header("userId", "userId")
             .exchange()
             .expectStatus().isBadRequest();
-            //.expectBody().returnResult().getResponseBody().toString().contains("NAME, ID")
     }
 
     @Test

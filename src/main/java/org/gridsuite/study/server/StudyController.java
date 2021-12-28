@@ -72,7 +72,7 @@ public class StudyController {
                 setValue(value);
             } catch (IllegalArgumentException ex) {
                 String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
-                throw new IllegalArgumentException(String.format("Enum nknown entry '%s' should be among %s", text, avail));
+                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
             }
         }
     }

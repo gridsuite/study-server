@@ -403,7 +403,7 @@ public class StudyService {
 
     private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid) {
         return String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
-            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.keyword",
+            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
             escapeLucene(userInput));
     }
 

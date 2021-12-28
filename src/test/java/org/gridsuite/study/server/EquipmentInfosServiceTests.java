@@ -9,14 +9,12 @@ package org.gridsuite.study.server;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.EquipmentType;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.hamcrest.core.IsNull;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,7 +37,6 @@ import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.iidm.impl.NetworkImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -193,14 +190,10 @@ public class EquipmentInfosServiceTests {
     public ErrorCollector pbsc = new ErrorCollector();
 
     private void testFullAscii(String pat) {
-        Set<EquipmentInfos> hits;
+        Set<EquipmentInfos> hits = new HashSet<>();
 
-        hits = studyService.searchEquipments(NETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME)
-            .collect(Collectors.toSet()).block();
-        pbsc.checkThat(hits, not(new IsNull<>()));
-        if (hits != null) {
-            pbsc.checkThat(hits.size(), is(1));
-        }
+        studyService.searchEquipments(NETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME).subscribe(hits::add);
+        pbsc.checkThat(hits.size(), is(1));
     }
 
     @Test
