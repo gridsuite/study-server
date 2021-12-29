@@ -211,6 +211,9 @@ public class StudyTest {
 
         when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+
+        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING)))
+            .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
     }
 
     private void cleanDB() {
@@ -624,6 +627,15 @@ public class StudyTest {
 
         webTestClient.get()
             .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=NAME", studyUuid, "B")
+            .header("userId", "userId")
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBodyList(EquipmentInfos.class)
+            .value(new MatcherJson<>(mapper, linesInfos));
+
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=ID", studyUuid, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
