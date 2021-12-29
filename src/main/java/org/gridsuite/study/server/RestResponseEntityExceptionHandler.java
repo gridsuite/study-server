@@ -59,12 +59,6 @@ public class RestResponseEntityExceptionHandler {
                 cause = cause.getCause();
                 return ResponseEntity.status(serverWebInputException.getStatus()).body(cause.getMessage());
             }
-        } else if (exception instanceof TypeMismatchException) {
-            TypeMismatchException typeMismatchException = (TypeMismatchException) exception;
-            Throwable cause = typeMismatchException.getCause();
-            if (cause instanceof IllegalArgumentException) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(cause.getMessage());
-            }
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
