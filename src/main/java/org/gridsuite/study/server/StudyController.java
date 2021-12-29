@@ -66,6 +66,7 @@ public class StudyController {
             this.enumClass = enumClass;
         }
 
+        @Override
         public void setAsText(final String text) throws IllegalArgumentException {
             try {
                 E value = Enum.valueOf(enumClass, text.toUpperCase());

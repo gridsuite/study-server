@@ -189,11 +189,31 @@ public class EquipmentInfosServiceTests {
     @Rule
     public ErrorCollector pbsc = new ErrorCollector();
 
-    private void testFullAscii(String pat) {
+    private void testNameFullAscii(String pat) {
         Set<EquipmentInfos> hits = new HashSet<>();
 
         studyService.searchEquipments(NETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME).subscribe(hits::add);
         pbsc.checkThat(hits.size(), is(1));
+    }
+
+    private void testNameFullAsciis() {
+        testNameFullAscii("s+S");
+        testNameFullAscii("s+s");
+        testNameFullAscii("h-h");
+        testNameFullAscii("t.t");
+        testNameFullAscii("h/h");
+        testNameFullAscii("l\\l");
+        testNameFullAscii("p&p");
+        testNameFullAscii("n(n");
+        testNameFullAscii("n)n");
+        testNameFullAscii("k[k");
+        testNameFullAscii("k]k");
+        testNameFullAscii("e{e");
+        testNameFullAscii("e}e");
+        testNameFullAscii("t<t");
+        testNameFullAscii("t>t");
+        testNameFullAscii("s's");
+        testNameFullAscii("e|e");
     }
 
     @Test
@@ -230,28 +250,14 @@ public class EquipmentInfosServiceTests {
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*e\\ e*)"));
         pbsc.checkThat(hits.size(), is(1));
 
-        testFullAscii("s+S");
-        testFullAscii("s+s");
-        testFullAscii("h-h");
-        testFullAscii("t.t");
-        testFullAscii("h/h");
-        testFullAscii("l\\l");
-        testFullAscii("p&p");
-        testFullAscii("n(n");
-        testFullAscii("n)n");
-        testFullAscii("k[k");
-        testFullAscii("k]k");
-        testFullAscii("e{e");
-        testFullAscii("e}e");
-        testFullAscii("t<t");
-        testFullAscii("t>t");
-        testFullAscii("s's");
-        testFullAscii("e|e");
+        testNameFullAsciis();
 
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.raw:(*FFR1AA1  FFR2AA1  2*)"));
         pbsc.checkThat(hits.size(), is(1));
+
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.raw:(*fFR1AA1  FFR2AA1  2*)"));
         pbsc.checkThat(hits.size(), is(0));
+
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.fullascii:(*fFR1àÀ1  FFR2AA1  2*)"));
         pbsc.checkThat(hits.size(), is(1));
     }
