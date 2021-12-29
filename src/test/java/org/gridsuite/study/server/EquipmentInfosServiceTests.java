@@ -247,6 +247,13 @@ public class EquipmentInfosServiceTests {
         testFullAscii("t>t");
         testFullAscii("s's");
         testFullAscii("e|e");
+
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.raw:(*FFR1AA1  FFR2AA1  2*)"));
+        pbsc.checkThat(hits.size(), is(1));
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.raw:(*fFR1AA1  FFR2AA1  2*)"));
+        pbsc.checkThat(hits.size(), is(0));
+        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.fullascii:(*fFR1àÀ1  FFR2AA1  2*)"));
+        pbsc.checkThat(hits.size(), is(1));
     }
 
     @Test
