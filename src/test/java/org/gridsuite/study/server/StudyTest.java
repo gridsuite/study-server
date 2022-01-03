@@ -1927,7 +1927,7 @@ public class StudyTest {
         UUID modificationNodeUuid = modificationNode.getId();
 
         // create substation
-        String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"loadName1\",\"country\":\"AD\"}";
+        String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
         webTestClient.put()
                 .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, rootNodeUuid)
                 .bodyValue(createSubstationAttributes)
