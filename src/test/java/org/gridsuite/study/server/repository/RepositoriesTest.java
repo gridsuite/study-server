@@ -137,16 +137,12 @@ public class RepositoriesTest {
         studyRepository.save(studyEntity3);
         assertEquals(3, studyRepository.findAll().size());
 
-        assertEquals(2, studyRepository.findByUserIdOrIsPrivate("foo", true).size());
-
         StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
         StudyEntity savedStudyEntity2 = studyRepository.findAll().get(1);
 
         assertEquals(studyEntity1.getUserId(), savedStudyEntity1.getUserId());
 
         assertEquals(studyEntity2.getUserId(), savedStudyEntity2.getUserId());
-
-        assertEquals(1, studyRepository.findAllByUserId("foo").size());
 
         // updates
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);

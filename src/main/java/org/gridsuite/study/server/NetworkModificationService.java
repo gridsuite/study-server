@@ -38,9 +38,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_EQUIPMENT_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 
 /**
@@ -86,31 +84,21 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    public Flux<ModificationInfos> getModifications(UUID groupUuid) {
-        Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}")
-            .buildAndExpand(groupUuid)
-            .toUriString();
-        return webClient.get().uri(getNetworkModificationServerURI(false) + path)
-            .retrieve()
-            .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() { });
-    }
-
     public Mono<Void> deleteModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
         return deleteNetworkModifications(groupUUid);
     }
 
-    Mono<Void> deleteNetworkModifications(UUID groupUuid) {
+    private Mono<Void> deleteNetworkModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}")
-                .buildAndExpand(groupUuid)
-                .toUriString();
+            .buildAndExpand(groupUuid)
+            .toUriString();
         return webClient.delete()
-                .uri(getNetworkModificationServerURI(false) + path)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
-                .bodyToMono(Void.class);
+            .uri(getNetworkModificationServerURI(false) + path)
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
+            .bodyToMono(Void.class);
     }
 
     Flux<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId) {

@@ -132,8 +132,9 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo, InsertMode insertMode) {
-        Optional<NodeEntity> referenceNode = nodesRepository.findById(id);
+    // TODO test if studyUuid exist and have a node <nodeId>
+    public AbstractNode doCreateNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+        Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
             if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
                 throw new StudyException(NOT_ALLOWED);
@@ -146,28 +147,29 @@ public class NetworkModificationTreeService {
             if (insertMode.equals(InsertMode.BEFORE)) {
                 reference.setParentNode(node);
             } else if (insertMode.equals(InsertMode.AFTER)) {
-                nodesRepository.findAllByParentNodeIdNode(id).stream()
+                nodesRepository.findAllByParentNodeIdNode(nodeId).stream()
                     .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                     .forEach(child -> child.setParentNode(node));
             }
-            emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode(), insertMode);
+            emitNodeInserted(getStudyUuidForNodeId(nodeId), nodeId, node.getIdNode(), insertMode);
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    public Mono<AbstractNode> createNode(UUID id, AbstractNode nodeInfo, InsertMode insertMode) {
-        return Mono.fromCallable(() -> self.doCreateNode(id, nodeInfo, insertMode));
+    public Mono<AbstractNode> createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+        return Mono.fromCallable(() -> self.doCreateNode(studyUuid, nodeId, nodeInfo, insertMode));
     }
 
-    public Mono<Void> deleteNode(UUID id, boolean deleteChildren) {
-        return Mono.fromRunnable(() -> self.doDeleteNode(id, deleteChildren));
+    public Mono<Void> deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        return Mono.fromRunnable(() -> self.doDeleteNode(studyUuid, nodeId, deleteChildren));
     }
 
     @Transactional
-    public void doDeleteNode(UUID id, boolean deleteChildren) {
+    // TODO test if studyUuid exist and have a node <nodeId>
+    public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
         List<UUID> removedNodes = new ArrayList<>();
-        UUID studyId = getStudyUuidForNodeId(id);
-        deleteNodes(id, deleteChildren, false, removedNodes);
+        UUID studyId = getStudyUuidForNodeId(nodeId);
+        deleteNodes(nodeId, deleteChildren, false, removedNodes);
         emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
@@ -247,19 +249,21 @@ public class NetworkModificationTreeService {
         return Mono.fromCallable(() -> self.doGetStudyTree(studyId));
     }
 
-    public Mono<Void> updateNode(AbstractNode node) {
-        return Mono.fromRunnable(() -> self.doUpdateNode(node));
+    public Mono<Void> updateNode(UUID studyUuid, AbstractNode node) {
+        return Mono.fromRunnable(() -> self.doUpdateNode(studyUuid, node));
     }
 
     @Transactional
-    public void doUpdateNode(AbstractNode node) {
+    // TODO test if studyUuid exist and have the node
+    public void doUpdateNode(UUID studyUuid, AbstractNode node) {
         repositories.get(node.getType()).updateNode(node);
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
 
-    public Mono<AbstractNode> getSimpleNode(UUID id) {
+    // TODO test if studyUuid exist and have a node <nodeId>
+    public Mono<AbstractNode> getSimpleNode(UUID studyUuid, UUID nodeId) {
         return Mono.fromCallable(() -> {
-            AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+            AbstractNode node = nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
             nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
             return node;
         });
