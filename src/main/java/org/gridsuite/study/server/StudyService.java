@@ -46,7 +46,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import javax.validation.constraints.NotNull;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -1499,11 +1498,11 @@ public class StudyService {
         return Mono.fromCallable(() -> networkModificationTreeService.getRealizationInfos(nodeUuid));
     }
 
-    public Mono<Void> realizeNode(@NotNull UUID studyUuid, @NotNull UUID nodeUuid) {
+    public Mono<Void> realizeNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         return getRealizationInfos(nodeUuid).flatMap(infos -> networkModificationService.realizeNode(studyUuid, nodeUuid, infos));
     }
 
-    public Mono<Void> stopRealization(@NotNull UUID studyUuid, @NotNull UUID nodeUuid) {
+    public Mono<Void> stopRealization(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         return networkModificationService.stopRealization(studyUuid, nodeUuid);
     }
 

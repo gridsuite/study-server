@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.RealizationInfos;
 import org.gridsuite.study.server.dto.Receiver;
@@ -29,7 +30,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import javax.validation.constraints.NotNull;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -255,7 +255,7 @@ public class NetworkModificationService {
         });
     }
 
-    Mono<Void> realizeNode(@NotNull UUID studyUuid, @NotNull UUID nodeUuid, @NotNull RealizationInfos realizationInfos) {
+    Mono<Void> realizeNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull RealizationInfos realizationInfos) {
         return networkStoreService.getNetworkUuid(studyUuid).flatMap(networkUuid -> {
             String receiver;
             try {
@@ -279,7 +279,7 @@ public class NetworkModificationService {
         });
     }
 
-    public Mono<Void> stopRealization(@NotNull UUID studyUuid, @NotNull UUID nodeUuid) {
+    public Mono<Void> stopRealization(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
