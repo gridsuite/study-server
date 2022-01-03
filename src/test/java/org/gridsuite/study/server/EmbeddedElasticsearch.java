@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
@@ -14,6 +15,7 @@ import javax.annotation.PreDestroy;
 
 /**
  * A class to launch an embedded DB elasticsearch
+ *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Component
@@ -24,9 +26,12 @@ public class EmbeddedElasticsearch {
 
     private static ElasticsearchContainer elasticsearchContainer;
 
+    @Value("${spring.data.elasticsearch.enabled:false}")
+    boolean elasticsearchEnabled;
+
     @PostConstruct
     public void postConstruct() {
-        if (elasticsearchContainer != null) {
+        if (elasticsearchContainer != null || !elasticsearchEnabled) {
             return;
         }
 
