@@ -27,9 +27,9 @@ public class RealizationInfos {
 
     private String destinationVariantId;
 
-    private List<UUID> modifications = new ArrayList<>();
+    private List<UUID> modificationGroups = new ArrayList<>();
 
     public void insert(UUID modificationUuid) {
-        modifications.add(0, modificationUuid);
+        modificationGroups.add(0, modificationUuid);
     }
 }

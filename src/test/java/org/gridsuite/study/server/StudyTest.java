@@ -2257,7 +2257,7 @@ public class StudyTest {
         RealizationInfos realizationInfos = networkModificationTreeService.getRealizationInfos(modificationNode4.getId());
         assertNull(realizationInfos.getOriginVariantId());  // previous realized node is root node
         assertEquals("variant_4", realizationInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModifications());
+        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModificationGroups());
 
         modificationNode2.setRealized(true);  // mark node modificationNode2 as realized
         networkModificationTreeService.doUpdateNode(modificationNode2);
@@ -2266,7 +2266,7 @@ public class StudyTest {
         realizationInfos = networkModificationTreeService.getRealizationInfos(modificationNode4.getId());
         assertEquals("variant_2", realizationInfos.getOriginVariantId());  // variant to clone is variant associated to node modificationNode2
         assertEquals("variant_4", realizationInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModifications());
+        assertEquals(List.of(modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModificationGroups());
 
         testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId());
         testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNode4.getId());

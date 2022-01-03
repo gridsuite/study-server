@@ -29,6 +29,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.validation.constraints.NotNull;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +41,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_EQUIPMENT_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
-import static org.gridsuite.study.server.StudyService.RECEIVER;
+import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -254,11 +255,7 @@ public class NetworkModificationService {
         });
     }
 
-    Mono<Void> realizeNode(UUID studyUuid, UUID nodeUuid, RealizationInfos realizationInfos) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        Objects.requireNonNull(realizationInfos);
-
+    Mono<Void> realizeNode(@NotNull UUID studyUuid, @NotNull UUID nodeUuid, @NotNull RealizationInfos realizationInfos) {
         return networkStoreService.getNetworkUuid(studyUuid).flatMap(networkUuid -> {
             String receiver;
             try {
@@ -269,7 +266,7 @@ public class NetworkModificationService {
 
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "realization");
             var path = uriComponentsBuilder
-                .queryParam(RECEIVER, receiver)
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .build()
                 .toUriString();
 
@@ -282,10 +279,7 @@ public class NetworkModificationService {
         });
     }
 
-    public Mono<Void> stopRealization(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-
+    public Mono<Void> stopRealization(@NotNull UUID studyUuid, @NotNull UUID nodeUuid) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -293,7 +287,7 @@ public class NetworkModificationService {
             throw new UncheckedIOException(e);
         }
         var path = UriComponentsBuilder.fromPath("realization/stop")
-            .queryParam(RECEIVER, receiver)
+            .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .build()
             .toUriString();
 

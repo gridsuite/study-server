@@ -720,7 +720,8 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization")
     @Operation(summary = "realize a study node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been realized")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been realized"),
+                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Mono<Void>> realizeNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.realizeNode(studyUuid, nodeUuid)));
@@ -728,7 +729,8 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization/stop")
     @Operation(summary = "stop a node realization")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The realization has been stopped")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The realization has been stopped"),
+                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Mono<Void>> stopRealization(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.stopRealization(studyUuid, nodeUuid));

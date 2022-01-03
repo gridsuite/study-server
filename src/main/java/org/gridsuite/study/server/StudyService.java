@@ -46,6 +46,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import javax.validation.constraints.NotNull;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -110,7 +111,8 @@ public class StudyService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String RESULT_UUID = "resultUuid";
 
-    static final String RECEIVER = "receiver";
+    static final String QUERY_PARAM_RECEIVER = "receiver";
+    static final String HEADER_RECEIVER = "receiver";
 
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
@@ -147,7 +149,7 @@ public class StudyService {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
                 UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-                String receiver = message.getHeaders().get(RECEIVER, String.class);
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
@@ -1049,7 +1051,7 @@ public class StudyService {
             }
             var path = uriComponentsBuilder
                 .queryParam("contingencyListName", contingencyListNames)
-                .queryParam(RECEIVER, receiver)
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -1257,7 +1259,7 @@ public class StudyService {
                    throw new UncheckedIOException(e);
                }
                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                   .queryParam(RECEIVER, receiver)
+                   .queryParam(QUERY_PARAM_RECEIVER, receiver)
                    .buildAndExpand(resultUuid)
                    .toUriString();
                return webClient
@@ -1272,7 +1274,7 @@ public class StudyService {
     public Consumer<Flux<Message<String>>> consumeSaStopped() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
-                String receiver = message.getHeaders().get(RECEIVER, String.class);
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
@@ -1497,14 +1499,11 @@ public class StudyService {
         return Mono.fromCallable(() -> networkModificationTreeService.getRealizationInfos(nodeUuid));
     }
 
-    public Mono<Void> realizeNode(UUID studyUuid, UUID nodeUuid) {
+    public Mono<Void> realizeNode(@NotNull UUID studyUuid, @NotNull UUID nodeUuid) {
         return getRealizationInfos(nodeUuid).flatMap(infos -> networkModificationService.realizeNode(studyUuid, nodeUuid, infos));
     }
 
-    public Mono<Void> stopRealization(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-
+    public Mono<Void> stopRealization(@NotNull UUID studyUuid, @NotNull UUID nodeUuid) {
         return networkModificationService.stopRealization(studyUuid, nodeUuid);
     }
 
@@ -1513,7 +1512,7 @@ public class StudyService {
         return f -> f.log(StudyService.CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
                 Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
-                String receiver = message.getHeaders().get(RECEIVER, String.class);
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
@@ -1522,11 +1521,10 @@ public class StudyService {
                         LOGGER.info("Realization completed for node '{}'", receiverObj.getNodeUuid());
 
                         return updateRealizationStatus(receiverObj.getNodeUuid(), true)
-                            .then(Mono.fromCallable(() -> {
+                            .then(Mono.fromRunnable(() -> {
                                 // send notification
                                 UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_REALIZATION_COMPLETED, substationsIds);
-                                return null;
                             }));
                     } catch (JsonProcessingException e) {
                         LOGGER.error(e.toString());
@@ -1542,7 +1540,7 @@ public class StudyService {
     public Consumer<Flux<Message<String>>> consumeRealizationStopped() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
-                String receiver = message.getHeaders().get(RECEIVER, String.class);
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
@@ -1551,11 +1549,10 @@ public class StudyService {
                         LOGGER.info("Realization stopped for node '{}'", receiverObj.getNodeUuid());
 
                         return updateRealizationStatus(receiverObj.getNodeUuid(), false)
-                            .then(Mono.fromCallable(() -> {
+                            .then(Mono.fromRunnable(() -> {
                                 // send notification
                                 UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_REALIZATION_CANCELLED);
-                                return null;
                             }));
                     } catch (JsonProcessingException e) {
                         LOGGER.error(e.toString());
