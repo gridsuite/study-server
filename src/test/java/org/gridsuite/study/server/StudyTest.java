@@ -102,7 +102,7 @@ import static org.mockito.Mockito.when;
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
 @EnableWebFlux
-@SpringBootTest(properties = {"spring.data.elasticsearch.enabled=false"})
+@SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, EmbeddedElasticsearch.class, TestChannelBinderConfiguration.class})})
 public class StudyTest {
 
