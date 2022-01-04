@@ -33,6 +33,7 @@ import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -84,6 +85,7 @@ import java.util.stream.IntStream;
 
 import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_INSERT_BEFORE;
 import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_NEW_NODE;
+import static org.gridsuite.study.server.NetworkModificationTreeService.NODE_UPDATED;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.*;
@@ -1538,17 +1540,17 @@ public class StudyTest {
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid) {
-        return createNetworkModificationNode(parentNodeUuid, false, UUID.randomUUID(), VARIANT_ID);
+        return createNetworkModificationNode(parentNodeUuid, RealizationStatus.NOT_REALIZED, UUID.randomUUID(), VARIANT_ID);
     }
 
-    private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid, boolean isRealized, UUID networkModificationUuid, String variantId) {
+    private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid, RealizationStatus realizationStatus, UUID networkModificationUuid, String variantId) {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder()
             .name("hypo")
             .description("description")
             .networkModification(networkModificationUuid)
             .variantId(variantId)
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .isRealized(isRealized)
+            .realizationStatus(realizationStatus)
             .children(Collections.emptyList())
             .build();
         webTestClient.post().uri("/v1/tree/nodes/{id}", parentNodeUuid).bodyValue(modificationNode)
@@ -2215,13 +2217,17 @@ public class StudyTest {
 
         Message<byte[]> realizationStatusMessage = output.receive(1000);
         assertEquals(studyUuid, realizationStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(NODE_UPDATED, realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        realizationStatusMessage = output.receive(1000);
+        assertEquals(studyUuid, realizationStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(nodeUuid, realizationStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_REALIZATION_COMPLETED, realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/realization\\?receiver=.*")));
 
-        assertTrue(networkModificationTreeService.isRealized(nodeUuid));  // node is realized
+        assertEquals(RealizationStatus.REALIZED, networkModificationTreeService.getRealizationStatus(nodeUuid));  // node is realized
 
         // stop realization
         webTestClient.put()
@@ -2231,10 +2237,14 @@ public class StudyTest {
 
         realizationStatusMessage = output.receive(1000);
         assertEquals(studyUuid, realizationStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(NODE_UPDATED, realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        realizationStatusMessage = output.receive(1000);
+        assertEquals(studyUuid, realizationStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(nodeUuid, realizationStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_REALIZATION_CANCELLED, realizationStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        assertFalse(networkModificationTreeService.isRealized(nodeUuid));  // node is not realized
+        assertEquals(RealizationStatus.NOT_REALIZED, networkModificationTreeService.getRealizationStatus(nodeUuid));  // node is not realized
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/realization/stop\\?receiver=.*")));
     }
@@ -2244,22 +2254,25 @@ public class StudyTest {
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID modificationGroupUuid1 = UUID.randomUUID();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(rootNodeUuid, false, modificationGroupUuid1, "variant_1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(rootNodeUuid, RealizationStatus.NOT_REALIZED, modificationGroupUuid1, "variant_1");
         UUID modificationGroupUuid2 = UUID.randomUUID();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(modificationNode1.getId(), false, modificationGroupUuid2, "variant_2");
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(modificationNode1.getId(), RealizationStatus.NOT_REALIZED, modificationGroupUuid2, "variant_2");
         ModelNode modelNode1 = createModelNode(modificationNode2.getId());
         UUID modificationGroupUuid3 = UUID.randomUUID();
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(modelNode1.getId(), false, modificationGroupUuid3, "variant_3");
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(modelNode1.getId(), RealizationStatus.NOT_REALIZED, modificationGroupUuid3, "variant_3");
         ModelNode modelNode2 = createModelNode(modificationNode3.getId());
         UUID modificationGroupUuid4 = UUID.randomUUID();
-        NetworkModificationNode modificationNode4 = createNetworkModificationNode(modelNode2.getId(), false, modificationGroupUuid4, "variant_4");
+        NetworkModificationNode modificationNode4 = createNetworkModificationNode(modelNode2.getId(), RealizationStatus.NOT_REALIZED, modificationGroupUuid4, "variant_4");
+        ModelNode modelNode3 = createModelNode(modificationNode4.getId());
+        UUID modificationGroupUuid5 = UUID.randomUUID();
+        NetworkModificationNode modificationNode5 = createNetworkModificationNode(modelNode3.getId(), RealizationStatus.REALIZED, modificationGroupUuid5, "variant_5");
 
         RealizationInfos realizationInfos = networkModificationTreeService.getRealizationInfos(modificationNode4.getId());
         assertNull(realizationInfos.getOriginVariantId());  // previous realized node is root node
         assertEquals("variant_4", realizationInfos.getDestinationVariantId());
         assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModificationGroups());
 
-        modificationNode2.setRealized(true);  // mark node modificationNode2 as realized
+        modificationNode2.setRealizationStatus(RealizationStatus.REALIZED);  // mark node modificationNode2 as realized
         networkModificationTreeService.doUpdateNode(modificationNode2);
         output.receive(1000);
 
@@ -2268,8 +2281,31 @@ public class StudyTest {
         assertEquals("variant_4", realizationInfos.getDestinationVariantId());
         assertEquals(List.of(modificationGroupUuid3, modificationGroupUuid4), realizationInfos.getModificationGroups());
 
+        modificationNode2.setRealizationStatus(RealizationStatus.NOT_REALIZED);  // mark node modificationNode2 as not realized
+        networkModificationTreeService.doUpdateNode(modificationNode2);
+        output.receive(1000);
+        modificationNode3.setRealizationStatus(RealizationStatus.REALIZED_INVALID);  // mark node modificationNode3 as realized invalid
+        networkModificationTreeService.doUpdateNode(modificationNode3);
+        output.receive(1000);
+        modificationNode4.setRealizationStatus(RealizationStatus.REALIZED);  // mark node modificationNode4 as realized
+        networkModificationTreeService.doUpdateNode(modificationNode4);
+        output.receive(1000);
+
+        // realize modificationNode2 and stop realization
         testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId());
+
+        assertEquals(RealizationStatus.REALIZED_INVALID, networkModificationTreeService.getRealizationStatus(modificationNode3.getId()));
+        assertEquals(RealizationStatus.REALIZED_INVALID, networkModificationTreeService.getRealizationStatus(modificationNode4.getId()));
+        assertEquals(RealizationStatus.REALIZED_INVALID, networkModificationTreeService.getRealizationStatus(modificationNode5.getId()));
+
+        modificationNode5.setRealizationStatus(RealizationStatus.REALIZED);  // mark node modificationNode5 as realized
+        networkModificationTreeService.doUpdateNode(modificationNode5);
+        output.receive(1000);
+
+        // realize modificationNode4 and stop realization
         testRealizationWithNodeUuid(studyNameUserIdUuid, modificationNode4.getId());
+
+        assertEquals(RealizationStatus.REALIZED_INVALID, networkModificationTreeService.getRealizationStatus(modificationNode5.getId()));
     }
 
     @After

@@ -12,6 +12,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
 
@@ -46,7 +47,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract LoadFlowInfos getLoadFlowInfos(AbstractNode node);
 
-    public abstract boolean isRealized(AbstractNode node);
+    public abstract RealizationStatus getRealizationStatus(AbstractNode node);
 
     public abstract void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus);
 
@@ -56,7 +57,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract UUID getSecurityAnalysisResultUuid(AbstractNode node);
 
-    public abstract void updateRealizationStatus(AbstractNode node, boolean isRealized);
+    public abstract void updateRealizationStatus(AbstractNode node, RealizationStatus realizationStatus);
+
+    public abstract void invalidateRealizationStatus(AbstractNode node);
 
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
@@ -134,11 +137,15 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
     }
 
-    public void updateRealizationStatus(UUID nodeUuid, boolean isRealized) {
-        updateRealizationStatus(getNode(nodeUuid), isRealized);
+    public void updateRealizationStatus(UUID nodeUuid, RealizationStatus realizationStatus) {
+        updateRealizationStatus(getNode(nodeUuid), realizationStatus);
     }
 
-    public boolean isRealized(UUID nodeUuid) {
-        return isRealized(getNode(nodeUuid));
+    public RealizationStatus getRealizationStatus(UUID nodeUuid) {
+        return getRealizationStatus(getNode(nodeUuid));
+    }
+
+    public void invalidateRealizationStatus(UUID nodeUuid) {
+        invalidateRealizationStatus(getNode(nodeUuid));
     }
 }

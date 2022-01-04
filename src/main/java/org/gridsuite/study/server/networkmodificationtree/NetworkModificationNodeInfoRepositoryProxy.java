@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
@@ -35,7 +36,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                                                                                       modificationNode.getLoadFlowStatus(),
                                                                                       StudyService.toEntity(modificationNode.getLoadFlowResult()),
                                                                                       modificationNode.getSecurityAnalysisResultUuid(),
-                                                                                      modificationNode.isRealized());
+                                                                                      modificationNode.getRealizationStatus());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -46,7 +47,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                                                                   node.getLoadFlowStatus(),
                                                                   StudyService.fromEntity(node.getLoadFlowResult()),
                                                                   node.getSecurityAnalysisResultUuid(),
-                                                                  node.isRealized()));
+                                                                  node.getRealizationStatus()));
     }
 
     @Override
@@ -109,14 +110,23 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateRealizationStatus(AbstractNode node, boolean isRealized) {
+    public void updateRealizationStatus(AbstractNode node, RealizationStatus realizationStatus) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        networkModificationNode.setRealized(isRealized);
+        networkModificationNode.setRealizationStatus(realizationStatus);
         updateNode(networkModificationNode);
     }
 
     @Override
-    public boolean isRealized(AbstractNode node) {
-        return ((NetworkModificationNode) node).isRealized();
+    public RealizationStatus getRealizationStatus(AbstractNode node) {
+        return ((NetworkModificationNode) node).getRealizationStatus();
+    }
+
+    @Override
+    public void invalidateRealizationStatus(AbstractNode node) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        if (networkModificationNode.getRealizationStatus() == RealizationStatus.REALIZED) {
+            networkModificationNode.setRealizationStatus(RealizationStatus.REALIZED_INVALID);
+            updateNode(networkModificationNode);
+        }
     }
 }

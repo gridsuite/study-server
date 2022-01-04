@@ -37,7 +37,7 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID securityAnalysisResultUuid;
 
-    boolean isRealized;
+    RealizationStatus realizationStatus;
 
     @Override
     public NodeType getType() {

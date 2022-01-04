@@ -36,7 +36,7 @@ public class RootNode extends AbstractNode {
 
     UUID securityAnalysisResultUuid;
 
-    boolean isRealized;
+    RealizationStatus realizationStatus;
 
     @Override
     public NodeType getType() {

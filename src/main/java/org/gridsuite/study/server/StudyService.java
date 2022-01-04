@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1519,7 +1520,7 @@ public class StudyService {
 
                         LOGGER.info("Realization completed for node '{}'", receiverObj.getNodeUuid());
 
-                        return updateRealizationStatus(receiverObj.getNodeUuid(), true)
+                        return updateRealizationStatus(receiverObj.getNodeUuid(), RealizationStatus.REALIZED)
                             .then(Mono.fromRunnable(() -> {
                                 // send notification
                                 UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
@@ -1547,7 +1548,7 @@ public class StudyService {
 
                         LOGGER.info("Realization stopped for node '{}'", receiverObj.getNodeUuid());
 
-                        return updateRealizationStatus(receiverObj.getNodeUuid(), false)
+                        return updateRealizationStatus(receiverObj.getNodeUuid(), RealizationStatus.NOT_REALIZED)
                             .then(Mono.fromRunnable(() -> {
                                 // send notification
                                 UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
@@ -1563,8 +1564,8 @@ public class StudyService {
             .subscribe();
     }
 
-    Mono<Void> updateRealizationStatus(UUID nodeUuid, boolean isRealized) {
-        return networkModificationTreeService.updateRealizationStatus(nodeUuid, isRealized);
+    Mono<Void> updateRealizationStatus(UUID nodeUuid, RealizationStatus realizationStatus) {
+        return networkModificationTreeService.updateRealizationStatus(nodeUuid, realizationStatus);
     }
 }
 

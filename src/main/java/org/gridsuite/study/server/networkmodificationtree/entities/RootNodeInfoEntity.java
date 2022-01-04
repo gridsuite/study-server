@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
 import javax.persistence.CascadeType;
@@ -52,6 +53,7 @@ public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
 
-    @Column(name = "isRealized", nullable = false)
-    private boolean isRealized;
+    @Column(name = "realizationStatus", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private RealizationStatus realizationStatus;
 }

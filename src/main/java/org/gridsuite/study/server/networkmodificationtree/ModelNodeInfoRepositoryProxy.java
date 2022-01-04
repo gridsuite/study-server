@@ -12,6 +12,7 @@ import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
 
@@ -79,12 +80,17 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     }
 
     @Override
-    public void updateRealizationStatus(AbstractNode node, boolean isRealized) {
+    public void updateRealizationStatus(AbstractNode node, RealizationStatus realizationStatus) {
         // Do nothing : no realization associated to this node
     }
 
     @Override
-    public boolean isRealized(AbstractNode node) {
-        return false;
+    public RealizationStatus getRealizationStatus(AbstractNode node) {
+        return RealizationStatus.NOT_REALIZED;
+    }
+
+    @Override
+    public void invalidateRealizationStatus(AbstractNode node) {
+        // Do nothing : no realization associated to this node
     }
 }
