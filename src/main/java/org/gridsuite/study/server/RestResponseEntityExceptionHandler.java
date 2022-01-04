@@ -1,8 +1,6 @@
 /**
- * Copyright (c) 2020, RTE (http://www.rte-france.com)
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * Copyright (c) 2020, RTE (http://www.rte-france.com) This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server;
 
@@ -21,7 +19,7 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 @ControllerAdvice
 public class RestResponseEntityExceptionHandler {
 
-    @ExceptionHandler(value = {StudyException.class, TypeMismatchException.class})
+    @ExceptionHandler(value = { StudyException.class, TypeMismatchException.class })
     protected ResponseEntity<Object> handleException(RuntimeException exception) {
         if (exception instanceof StudyException) {
             StudyException studyException = (StudyException) exception;
@@ -47,6 +45,8 @@ public class RestResponseEntityExceptionHandler {
                 case LOAD_CREATION_FAILED:
                 case GENERATOR_CREATION_FAILED:
                 case LINE_CREATION_FAILED:
+                case TWO_WINDINGS_TRANSFORMER_CREATION_FAILED:
+                case SUBSTATION_CREATION_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case DELETE_EQUIPMENT_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
