@@ -1962,7 +1962,7 @@ public class StudyTest {
         createStudy("userId", CASE_UUID, true);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNode(rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
         // create substation
