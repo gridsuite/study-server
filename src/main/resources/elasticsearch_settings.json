@@ -1,0 +1,15 @@
+{
+  "index": {
+    "analysis": {
+      "normalizer": {
+        "fullascii": {
+          "type": "custom",
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ]
+        }
+      }
+    }
+  }
+}

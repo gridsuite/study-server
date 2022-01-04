@@ -347,10 +347,59 @@ public class StudyService {
         return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
+    public static String escapeLucene(String s) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < s.length(); ++i) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '+':
+                case '\\':
+                case '-':
+                case '!':
+                case '(':
+                case ')':
+                case ':':
+                case '^':
+                case '[':
+                case ']':
+                case '"':
+                case '{':
+                case '}':
+                case '~':
+                case '*':
+                case '?':
+                case '|':
+                case '&':
+                case '/':
+
+                case ' ': // white space has to be escaped, too
+                    sb.append('\\');
+                    break;
+                default:
+                    // do nothing but appease sonarlint
+            }
+
+            sb.append(c);
+        }
+
+        return sb.toString();
+    }
+
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput,
+        EquipmentInfosService.FieldSelector fieldSelector) {
         return networkStoreService
-            .getNetworkUuid(studyUuid)
-            .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND %s", networkUuid, query)));
+                .getNetworkUuid(studyUuid)
+                .flatMapIterable(networkUuid -> {
+                    String query = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid);
+                    return equipmentInfosService.search(query);
+                });
+    }
+
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid) {
+        return String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
+            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
+            escapeLucene(userInput));
     }
 
     @Transactional
