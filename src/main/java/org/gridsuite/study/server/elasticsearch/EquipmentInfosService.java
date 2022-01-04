@@ -20,6 +20,10 @@ import java.util.UUID;
  */
 @Service
 public interface EquipmentInfosService {
+    enum FieldSelector {
+        NAME, ID
+    }
+
     EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos); // Just for unit tests
 
     Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid);
