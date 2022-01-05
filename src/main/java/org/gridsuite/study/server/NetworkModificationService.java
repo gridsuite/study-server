@@ -296,4 +296,17 @@ public class NetworkModificationService {
             .retrieve()
             .bodyToMono(Void.class);
     }
+
+    public Mono<Void> deleteModification(UUID groupUuid, UUID modificationUuid) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}"
+                + DELIMITER + "modifications" + DELIMITER + "{modificationUuid}")
+            .buildAndExpand(groupUuid, modificationUuid)
+            .toUriString();
+        return webClient.delete()
+            .uri(getNetworkModificationServerURI(false) + path)
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
+            .bodyToMono(Void.class);
+    }
 }

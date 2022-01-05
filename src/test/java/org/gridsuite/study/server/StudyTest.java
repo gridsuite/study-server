@@ -411,6 +411,8 @@ public class StudyTest {
                         .build(), "build.stopped");
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/.*/modifications/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200);
                 }
 
                 switch (path) {
@@ -2368,6 +2370,32 @@ public class StudyTest {
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode4.getId());
 
         assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
+    }
+
+    @Test
+    public void deleteModificationRequest() {
+        createStudy("userId", CASE_UUID, false);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
+        UUID modificationUuid = UUID.randomUUID();
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modifcationUuid}", studyNameUserIdUuid, modificationNode.getId(), modificationUuid)
+            .exchange()
+            .expectStatus().isOk();
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(
+            r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification() + "/modifications/" + modificationUuid))
+        );
+
+        var res = output.receive(1000);
+        assertEquals(studyNameUserIdUuid, res.getHeaders().get("studyUuid"));
+        var nodesList = res.getHeaders().get("nodes", List.class);
+        assertNotNull(nodesList);
+        assertEquals(1, nodesList.size());
+        assertEquals(modificationNode.getId(), nodesList.get(0));
+        assertEquals("nodeUpdated", res.getHeaders().get("updateType"));
+
     }
 
     @After

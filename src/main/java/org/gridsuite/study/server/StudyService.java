@@ -1616,5 +1616,14 @@ public class StudyService {
     Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
+
+    public Mono<Void> deleteModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid) {
+        return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupId ->
+                networkModificationService.deleteModification(groupId, modificationUuid)
+            )
+            .doOnSuccess(
+                e -> updateRealizationStatus(nodeUuid, RealizationStatus.NOT_REALIZED).subscribe()
+            );
+    }
 }
 
