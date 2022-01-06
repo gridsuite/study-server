@@ -763,21 +763,21 @@ public class StudyController {
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization")
-    @Operation(summary = "realize a study node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been realized"),
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")
+    @Operation(summary = "build a study node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<Mono<Void>> realizeNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Mono<Void>> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.realizeNode(studyUuid, nodeUuid)));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.buildNode(studyUuid, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization/stop")
-    @Operation(summary = "stop a node realization")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The realization has been stopped"),
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build/stop")
+    @Operation(summary = "stop a node build")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The build has been stopped"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<Mono<Void>> stopRealization(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Mono<Void>> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.stopRealization(studyUuid, nodeUuid));
+        return ResponseEntity.ok().body(studyService.stopBuild(studyUuid, nodeUuid));
     }
 }

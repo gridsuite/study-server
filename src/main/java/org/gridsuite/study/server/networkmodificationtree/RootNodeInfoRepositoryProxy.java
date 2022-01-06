@@ -12,7 +12,7 @@ import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
@@ -36,7 +36,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         rootNodeInfoEntity.setLoadFlowStatus(rootNode.getLoadFlowStatus());
         rootNodeInfoEntity.setLoadFlowResult(StudyService.toEntity(rootNode.getLoadFlowResult()));
         rootNodeInfoEntity.setSecurityAnalysisResultUuid(rootNode.getSecurityAnalysisResultUuid());
-        rootNodeInfoEntity.setRealizationStatus(rootNode.getRealizationStatus());
+        rootNodeInfoEntity.setBuildStatus(rootNode.getBuildStatus());
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
@@ -49,7 +49,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
                                                    node.getLoadFlowStatus(),
                                                    StudyService.fromEntity(node.getLoadFlowResult()),
                                                    node.getSecurityAnalysisResultUuid(),
-                                                   node.getRealizationStatus()));
+                                                   node.getBuildStatus()));
     }
 
     @Override
@@ -107,22 +107,22 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
-    public void updateRealizationStatus(AbstractNode node, RealizationStatus realizationStatus) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
         RootNode rootNode = (RootNode) node;
-        rootNode.setRealizationStatus(realizationStatus);
+        rootNode.setBuildStatus(buildStatus);
         updateNode(rootNode);
     }
 
     @Override
-    public RealizationStatus getRealizationStatus(AbstractNode node) {
-        return ((RootNode) node).getRealizationStatus();
+    public BuildStatus getBuildStatus(AbstractNode node) {
+        return ((RootNode) node).getBuildStatus();
     }
 
     @Override
-    public void invalidateRealizationStatus(AbstractNode node) {
+    public void invalidateBuildStatus(AbstractNode node) {
         RootNode rootNode = (RootNode) node;
-        if (rootNode.getRealizationStatus() == RealizationStatus.REALIZED) {
-            rootNode.setRealizationStatus(RealizationStatus.REALIZED_INVALID);
+        if (rootNode.getBuildStatus() == BuildStatus.BUILT) {
+            rootNode.setBuildStatus(BuildStatus.BUILT_INVALID);
             updateNode(rootNode);
         }
     }

@@ -21,8 +21,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @Setter
-@Schema(description = "Realizations infos")
-public class RealizationInfos {
+@Schema(description = "Build infos")
+public class BuildInfos {
     private String originVariantId;
 
     private String destinationVariantId;

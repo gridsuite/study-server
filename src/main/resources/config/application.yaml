@@ -4,7 +4,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeRealizationResult;consumeRealizationStopped
+      definition: consumeSaResult;consumeSaStopped;consumeBuildResult;consumeBuildStopped
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -13,10 +13,10 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
         consumeSaStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.stopped
-        consumeRealizationResult-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}realize.result
-        consumeRealizationStopped-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}realize.stopped
+        consumeBuildResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.result
+        consumeBuildStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.stopped
       source: publishStudyUpdate
 
 network-store-server:
