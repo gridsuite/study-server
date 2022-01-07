@@ -29,6 +29,13 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public void createNodeInfo(AbstractNode nodeInfo) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
+        networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        super.createNodeInfo(networkModificationNode);
+    }
+
+    @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModification(),

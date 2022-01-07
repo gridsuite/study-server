@@ -1572,17 +1572,16 @@ public class StudyTest {
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid) {
-        return createNetworkModificationNode(parentNodeUuid, BuildStatus.NOT_BUILT, UUID.randomUUID(), VARIANT_ID);
+        return createNetworkModificationNode(parentNodeUuid, UUID.randomUUID(), VARIANT_ID);
     }
 
-    private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid, BuildStatus buildStatus, UUID networkModificationUuid, String variantId) {
+    private NetworkModificationNode createNetworkModificationNode(UUID parentNodeUuid, UUID networkModificationUuid, String variantId) {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder()
             .name("hypo")
             .description("description")
             .networkModification(networkModificationUuid)
             .variantId(variantId)
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .buildStatus(buildStatus)
             .children(Collections.emptyList())
             .build();
         webTestClient.post().uri("/v1/tree/nodes/{id}", parentNodeUuid).bodyValue(modificationNode)
@@ -2316,18 +2315,18 @@ public class StudyTest {
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID modificationGroupUuid1 = UUID.randomUUID();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(rootNodeUuid, BuildStatus.NOT_BUILT, modificationGroupUuid1, "variant_1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(rootNodeUuid, modificationGroupUuid1, "variant_1");
         UUID modificationGroupUuid2 = UUID.randomUUID();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(modificationNode1.getId(), BuildStatus.NOT_BUILT, modificationGroupUuid2, "variant_2");
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(modificationNode1.getId(), modificationGroupUuid2, "variant_2");
         ModelNode modelNode1 = createModelNode(modificationNode2.getId());
         UUID modificationGroupUuid3 = UUID.randomUUID();
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(modelNode1.getId(), BuildStatus.NOT_BUILT, modificationGroupUuid3, "variant_3");
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(modelNode1.getId(), modificationGroupUuid3, "variant_3");
         ModelNode modelNode2 = createModelNode(modificationNode3.getId());
         UUID modificationGroupUuid4 = UUID.randomUUID();
-        NetworkModificationNode modificationNode4 = createNetworkModificationNode(modelNode2.getId(), BuildStatus.NOT_BUILT, modificationGroupUuid4, "variant_4");
+        NetworkModificationNode modificationNode4 = createNetworkModificationNode(modelNode2.getId(), modificationGroupUuid4, "variant_4");
         ModelNode modelNode3 = createModelNode(modificationNode4.getId());
         UUID modificationGroupUuid5 = UUID.randomUUID();
-        NetworkModificationNode modificationNode5 = createNetworkModificationNode(modelNode3.getId(), BuildStatus.BUILT, modificationGroupUuid5, "variant_5");
+        NetworkModificationNode modificationNode5 = createNetworkModificationNode(modelNode3.getId(), modificationGroupUuid5, "variant_5");
 
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
         assertNull(buildInfos.getOriginVariantId());  // previous built node is root node
@@ -2358,7 +2357,7 @@ public class StudyTest {
 
         assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
         assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
-        assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
 
         modificationNode5.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode5 as built
         networkModificationTreeService.doUpdateNode(modificationNode5);
