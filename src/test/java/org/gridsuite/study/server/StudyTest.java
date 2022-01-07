@@ -1582,6 +1582,7 @@ public class StudyTest {
             .networkModification(networkModificationUuid)
             .variantId(variantId)
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .buildStatus(BuildStatus.NOT_BUILT)
             .children(Collections.emptyList())
             .build();
         webTestClient.post().uri("/v1/tree/nodes/{id}", parentNodeUuid).bodyValue(modificationNode)
