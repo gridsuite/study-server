@@ -19,7 +19,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,8 +95,8 @@ public class StudyService {
     static final String UPDATE_TYPE_LINE = "line";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
-    static final String UPDATE_TYPE_REALIZATION_COMPLETED = "realizationCompleted";
-    static final String UPDATE_TYPE_REALIZATION_CANCELLED = "realizationCancelled";
+    static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
+    static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     static final String HEADER_ERROR = "error";
     static final String UPDATE_TYPE_STUDY = "study";
     static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
@@ -347,10 +347,59 @@ public class StudyService {
         return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
+    public static String escapeLucene(String s) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < s.length(); ++i) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '+':
+                case '\\':
+                case '-':
+                case '!':
+                case '(':
+                case ')':
+                case ':':
+                case '^':
+                case '[':
+                case ']':
+                case '"':
+                case '{':
+                case '}':
+                case '~':
+                case '*':
+                case '?':
+                case '|':
+                case '&':
+                case '/':
+
+                case ' ': // white space has to be escaped, too
+                    sb.append('\\');
+                    break;
+                default:
+                    // do nothing but appease sonarlint
+            }
+
+            sb.append(c);
+        }
+
+        return sb.toString();
+    }
+
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput,
+        EquipmentInfosService.FieldSelector fieldSelector) {
         return networkStoreService
-            .getNetworkUuid(studyUuid)
-            .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND %s", networkUuid, query)));
+                .getNetworkUuid(studyUuid)
+                .flatMapIterable(networkUuid -> {
+                    String query = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid);
+                    return equipmentInfosService.search(query);
+                });
+    }
+
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid) {
+        return String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
+            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
+            escapeLucene(userInput));
     }
 
     @Transactional
@@ -1495,20 +1544,20 @@ public class StudyService {
         return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
     }
 
-    private Mono<RealizationInfos> getRealizationInfos(UUID nodeUuid) {
-        return Mono.fromCallable(() -> networkModificationTreeService.getRealizationInfos(nodeUuid));
+    private Mono<BuildInfos> getBuildInfos(UUID nodeUuid) {
+        return Mono.fromCallable(() -> networkModificationTreeService.getBuildInfos(nodeUuid));
     }
 
-    public Mono<Void> realizeNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        return getRealizationInfos(nodeUuid).flatMap(infos -> networkModificationService.realizeNode(studyUuid, nodeUuid, infos));
+    public Mono<Void> buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        return getBuildInfos(nodeUuid).flatMap(infos -> networkModificationService.buildNode(studyUuid, nodeUuid, infos));
     }
 
-    public Mono<Void> stopRealization(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        return networkModificationService.stopRealization(studyUuid, nodeUuid);
+    public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        return networkModificationService.stopBuild(studyUuid, nodeUuid);
     }
 
     @Bean
-    public Consumer<Flux<Message<String>>> consumeRealizationResult() {
+    public Consumer<Flux<Message<String>>> consumeBuildResult() {
         return f -> f.log(StudyService.CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
                 Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
@@ -1518,13 +1567,13 @@ public class StudyService {
                     try {
                         receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                        LOGGER.info("Realization completed for node '{}'", receiverObj.getNodeUuid());
+                        LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
-                        return updateRealizationStatus(receiverObj.getNodeUuid(), RealizationStatus.REALIZED)
+                        return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT)
                             .then(Mono.fromRunnable(() -> {
                                 // send notification
                                 UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_REALIZATION_COMPLETED, substationsIds);
+                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
                             }));
                     } catch (JsonProcessingException e) {
                         LOGGER.error(e.toString());
@@ -1537,7 +1586,7 @@ public class StudyService {
     }
 
     @Bean
-    public Consumer<Flux<Message<String>>> consumeRealizationStopped() {
+    public Consumer<Flux<Message<String>>> consumeBuildStopped() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
                 String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -1546,13 +1595,13 @@ public class StudyService {
                     try {
                         receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
 
-                        LOGGER.info("Realization stopped for node '{}'", receiverObj.getNodeUuid());
+                        LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
-                        return updateRealizationStatus(receiverObj.getNodeUuid(), RealizationStatus.NOT_REALIZED)
+                        return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT)
                             .then(Mono.fromRunnable(() -> {
                                 // send notification
                                 UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_REALIZATION_CANCELLED);
+                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
                             }));
                     } catch (JsonProcessingException e) {
                         LOGGER.error(e.toString());
@@ -1564,8 +1613,8 @@ public class StudyService {
             .subscribe();
     }
 
-    Mono<Void> updateRealizationStatus(UUID nodeUuid, RealizationStatus realizationStatus) {
-        return networkModificationTreeService.updateRealizationStatus(nodeUuid, realizationStatus);
+    Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 }
 

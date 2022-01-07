@@ -9,12 +9,12 @@ package org.gridsuite.study.server;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.RealizationInfos;
+import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -218,7 +218,7 @@ public class NetworkModificationTreeService {
             .id(node.getIdNode())
             .name("Root")
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .realizationStatus(RealizationStatus.NOT_REALIZED)
+            .buildStatus(BuildStatus.NOT_BUILT)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
     }
@@ -379,66 +379,66 @@ public class NetworkModificationTreeService {
         return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
     }
 
-    private void getRealizationInfos(NodeEntity nodeEntity, RealizationInfos realizationInfos) {
+    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.ROOT) {
             RootNode rootNode = (RootNode) node;
-            if (rootNode.getRealizationStatus() != RealizationStatus.REALIZED && rootNode.getNetworkModification() != null) {
-                realizationInfos.insert(rootNode.getNetworkModification());
+            if (rootNode.getBuildStatus() != BuildStatus.BUILT && rootNode.getNetworkModification() != null) {
+                buildInfos.insert(rootNode.getNetworkModification());
             }
         } else if (node.getType() == NodeType.MODEL) {
-            getRealizationInfos(nodeEntity.getParentNode(), realizationInfos);
+            getBuildInfos(nodeEntity.getParentNode(), buildInfos);
         } else {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-            if (modificationNode.getRealizationStatus() != RealizationStatus.REALIZED && modificationNode.getNetworkModification() != null) {
-                realizationInfos.insert(modificationNode.getNetworkModification());
+            if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
+                buildInfos.insert(modificationNode.getNetworkModification());
             }
-            if (modificationNode.getRealizationStatus() == RealizationStatus.REALIZED) {
-                realizationInfos.setOriginVariantId(modificationNode.getVariantId());
+            if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
+                buildInfos.setOriginVariantId(modificationNode.getVariantId());
             } else {
-                getRealizationInfos(nodeEntity.getParentNode(), realizationInfos);
+                getBuildInfos(nodeEntity.getParentNode(), buildInfos);
             }
         }
     }
 
     @Transactional
-    public RealizationInfos getRealizationInfos(UUID nodeUuid) {
-        RealizationInfos realizationInfos = new RealizationInfos();
+    public BuildInfos getBuildInfos(UUID nodeUuid) {
+        BuildInfos buildInfos = new BuildInfos();
         NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        realizationInfos.setDestinationVariantId(self.doGetVariantId(nodeUuid, true).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)));
-        getRealizationInfos(nodeEntity, realizationInfos);
-        return realizationInfos;
+        buildInfos.setDestinationVariantId(self.doGetVariantId(nodeUuid, true).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)));
+        getBuildInfos(nodeEntity, buildInfos);
+        return buildInfos;
     }
 
     @Transactional
-    public void invalidateChildrenRealizationStatus(NodeEntity nodeEntity, List<UUID> changedNodes) {
+    public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
                 changedNodes.add(child.getIdNode());
-                repositories.get(child.getType()).invalidateRealizationStatus(child.getIdNode());
-                invalidateChildrenRealizationStatus(child, changedNodes);
+                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode());
+                invalidateChildrenBuildStatus(child, changedNodes);
             });
     }
 
     @Transactional
-    public void doUpdateRealizationStatus(UUID nodeUuid, RealizationStatus realizationStatus) {
+    public void doUpdateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             changedNodes.add(nodeUuid);
-            repositories.get(n.getType()).updateRealizationStatus(nodeUuid, realizationStatus);
-            invalidateChildrenRealizationStatus(n, changedNodes);
+            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus);
+            invalidateChildrenBuildStatus(n, changedNodes);
         });
 
         emitNodesChanged(studyId, changedNodes);
     }
 
-    public Mono<Void> updateRealizationStatus(UUID nodeUuid, RealizationStatus realizationStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateRealizationStatus(nodeUuid, realizationStatus));
+    public Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        return Mono.fromRunnable(() -> self.doUpdateBuildStatus(nodeUuid, buildStatus));
     }
 
-    public RealizationStatus getRealizationStatus(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getRealizationStatus(nodeUuid)).orElse(RealizationStatus.NOT_REALIZED);
+    public BuildStatus getBuildStatus(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
     }
 }

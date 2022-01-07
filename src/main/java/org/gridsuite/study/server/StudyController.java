@@ -13,19 +13,24 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Level;
@@ -52,6 +57,31 @@ public class StudyController {
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
+    }
+
+    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
+        private final Class<E> enumClass;
+
+        public MyEnumConverter(Class<E> enumClass) {
+            this.enumClass = enumClass;
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            try {
+                E value = Enum.valueOf(enumClass, text.toUpperCase());
+                setValue(value);
+            } catch (IllegalArgumentException ex) {
+                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
+                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
+            }
+        }
+    }
+
+    @InitBinder
+    public void initBinder(WebDataBinder webdataBinder) {
+        webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
+            new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
     }
 
     @GetMapping(value = "/studies")
@@ -618,11 +648,16 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search equipments in elasticsearch")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of equipments found"),
-            @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                                 @Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchEquipments(studyUuid, query));
+        @ApiResponse(responseCode = "200", description = "List of equipments found"),
+        @ApiResponse(responseCode = "404", description = "The study not found"),
+        @ApiResponse(responseCode = "400", description = "The fieLd selector is unknown")
+    })
+    public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(
+        @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
+        @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(studyService.searchEquipments(studyUuid, userInput, fieldSelector));
     }
 
     @PostMapping(value = "/tree/nodes/{id}")
@@ -728,21 +763,21 @@ public class StudyController {
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization")
-    @Operation(summary = "realize a study node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been realized"),
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")
+    @Operation(summary = "build a study node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<Mono<Void>> realizeNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Mono<Void>> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.realizeNode(studyUuid, nodeUuid)));
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.buildNode(studyUuid, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/realization/stop")
-    @Operation(summary = "stop a node realization")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The realization has been stopped"),
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build/stop")
+    @Operation(summary = "stop a node build")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The build has been stopped"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<Mono<Void>> stopRealization(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Mono<Void>> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.stopRealization(studyUuid, nodeUuid));
+        return ResponseEntity.ok().body(studyService.stopBuild(studyUuid, nodeUuid));
     }
 }

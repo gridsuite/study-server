@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.RealizationInfos;
+import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.Receiver;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
@@ -255,7 +255,7 @@ public class NetworkModificationService {
         });
     }
 
-    Mono<Void> realizeNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull RealizationInfos realizationInfos) {
+    Mono<Void> buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
         return networkStoreService.getNetworkUuid(studyUuid).flatMap(networkUuid -> {
             String receiver;
             try {
@@ -264,7 +264,7 @@ public class NetworkModificationService {
                 return Mono.error(new UncheckedIOException(e));
             }
 
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "realization");
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
             var path = uriComponentsBuilder
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .build()
@@ -273,20 +273,20 @@ public class NetworkModificationService {
             return webClient.post()
                 .uri(getNetworkModificationServerURI(true) + path)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(realizationInfos))
+                .body(BodyInserters.fromValue(buildInfos))
                 .retrieve()
                 .bodyToMono(Void.class);
         });
     }
 
-    public Mono<Void> stopRealization(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        var path = UriComponentsBuilder.fromPath("realization/stop")
+        var path = UriComponentsBuilder.fromPath("build/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .build()
             .toUriString();

@@ -10,8 +10,8 @@ package org.gridsuite.study.server.networkmodificationtree.dto;
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-public enum RealizationStatus {
-    NOT_REALIZED,
-    REALIZED,
-    REALIZED_INVALID;
+public enum BuildStatus {
+    NOT_BUILT,
+    BUILT,
+    BUILT_INVALID;
 }

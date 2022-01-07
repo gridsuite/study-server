@@ -25,7 +25,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RealizationStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
@@ -206,7 +206,7 @@ public class NetworkModificationTreeTest {
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), RealizationStatus.NOT_REALIZED);
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
         createNode(root, model);
         createNode(root, hypo);
@@ -304,7 +304,7 @@ public class NetworkModificationTreeTest {
     public void testNodeInsertion() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                                     "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), RealizationStatus.REALIZED);
+                                                                                     "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         /* trying to insert before root */
         webTestClient.post().uri("/v1/tree/nodes/{id}?mode=BEFORE", root.getId()).bodyValue(networkModification)
             .exchange()
@@ -340,7 +340,7 @@ public class NetworkModificationTreeTest {
     public void testInsertAfter() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", null,
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), RealizationStatus.REALIZED);
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
         createNode(root, model);
         createNode(root, model);
@@ -372,7 +372,7 @@ public class NetworkModificationTreeTest {
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), RealizationStatus.NOT_REALIZED);
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root, hypo);
         hypo.setName("grunt");
         hypo.setNetworkModification(UUID.randomUUID());
@@ -407,7 +407,7 @@ public class NetworkModificationTreeTest {
     public void testLightNode() {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), RealizationStatus.REALIZED);
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root, hypo);
         createNode(root, hypo);
         createNode(root, hypo);
@@ -453,7 +453,7 @@ public class NetworkModificationTreeTest {
 
     private NetworkModificationNode buildNetworkModification(String name, String description, UUID idHypo, String variantId,
                                                              LoadFlowStatus loadFlowStatus, LoadFlowResult loadFlowResult,
-                                                             UUID securityAnalysisResultUuid, RealizationStatus realizationStatus) {
+                                                             UUID securityAnalysisResultUuid, BuildStatus buildStatus) {
         return NetworkModificationNode.builder()
             .name(name)
             .description(description)
@@ -462,7 +462,7 @@ public class NetworkModificationTreeTest {
             .loadFlowStatus(loadFlowStatus)
             .loadFlowResult(loadFlowResult)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
-            .realizationStatus(realizationStatus)
+            .buildStatus(buildStatus)
             .children(Collections.emptyList()).build();
     }
 
@@ -519,7 +519,7 @@ public class NetworkModificationTreeTest {
             }
             assertEquals(expectedModificationNode.getSecurityAnalysisResultUuid(), currentModificationNode.getSecurityAnalysisResultUuid());
         }
-        assertEquals(expectedModificationNode.getRealizationStatus(), currentModificationNode.getRealizationStatus());
+        assertEquals(expectedModificationNode.getBuildStatus(), currentModificationNode.getBuildStatus());
     }
 }
 
