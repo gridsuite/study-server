@@ -12,6 +12,7 @@ import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
 
@@ -76,5 +77,20 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     @Override
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return null;
+    }
+
+    @Override
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+        // Do nothing : no build associated to this node
+    }
+
+    @Override
+    public BuildStatus getBuildStatus(AbstractNode node) {
+        return BuildStatus.NOT_BUILT;
+    }
+
+    @Override
+    public void invalidateBuildStatus(AbstractNode node) {
+        // Do nothing : no build associated to this node
     }
 }

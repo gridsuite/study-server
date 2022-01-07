@@ -12,6 +12,7 @@ import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
@@ -28,6 +29,13 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
+    public void createNodeInfo(AbstractNode nodeInfo) {
+        RootNode rootNode = (RootNode) nodeInfo;
+        rootNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        super.createNodeInfo(rootNode);
+    }
+
+    @Override
     public RootNodeInfoEntity toEntity(AbstractNode node) {
         RootNode rootNode = (RootNode) node;
         var rootNodeInfoEntity = new RootNodeInfoEntity();
@@ -35,6 +43,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         rootNodeInfoEntity.setLoadFlowStatus(rootNode.getLoadFlowStatus());
         rootNodeInfoEntity.setLoadFlowResult(StudyService.toEntity(rootNode.getLoadFlowResult()));
         rootNodeInfoEntity.setSecurityAnalysisResultUuid(rootNode.getSecurityAnalysisResultUuid());
+        rootNodeInfoEntity.setBuildStatus(rootNode.getBuildStatus());
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
@@ -46,7 +55,8 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
                                                    node.getNetworkModificationId(),
                                                    node.getLoadFlowStatus(),
                                                    StudyService.fromEntity(node.getLoadFlowResult()),
-                                                   node.getSecurityAnalysisResultUuid()));
+                                                   node.getSecurityAnalysisResultUuid(),
+                                                   node.getBuildStatus()));
     }
 
     @Override
@@ -101,5 +111,26 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     @Override
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return ((RootNode) node).getSecurityAnalysisResultUuid();
+    }
+
+    @Override
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+        RootNode rootNode = (RootNode) node;
+        rootNode.setBuildStatus(buildStatus);
+        updateNode(rootNode);
+    }
+
+    @Override
+    public BuildStatus getBuildStatus(AbstractNode node) {
+        return ((RootNode) node).getBuildStatus();
+    }
+
+    @Override
+    public void invalidateBuildStatus(AbstractNode node) {
+        RootNode rootNode = (RootNode) node;
+        if (rootNode.getBuildStatus() == BuildStatus.BUILT) {
+            rootNode.setBuildStatus(BuildStatus.BUILT_INVALID);
+            updateNode(rootNode);
+        }
     }
 }

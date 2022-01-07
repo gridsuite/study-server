@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
@@ -28,13 +29,21 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public void createNodeInfo(AbstractNode nodeInfo) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
+        networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        super.createNodeInfo(networkModificationNode);
+    }
+
+    @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModification(),
                                                                                       modificationNode.getVariantId(),
                                                                                       modificationNode.getLoadFlowStatus(),
                                                                                       StudyService.toEntity(modificationNode.getLoadFlowResult()),
-                                                                                      modificationNode.getSecurityAnalysisResultUuid());
+                                                                                      modificationNode.getSecurityAnalysisResultUuid(),
+                                                                                      modificationNode.getBuildStatus());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -44,7 +53,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                                                                   node.getVariantId(),
                                                                   node.getLoadFlowStatus(),
                                                                   StudyService.fromEntity(node.getLoadFlowResult()),
-                                                                  node.getSecurityAnalysisResultUuid()));
+                                                                  node.getSecurityAnalysisResultUuid(),
+                                                                  node.getBuildStatus()));
     }
 
     @Override
@@ -104,5 +114,26 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
+    }
+
+    @Override
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        networkModificationNode.setBuildStatus(buildStatus);
+        updateNode(networkModificationNode);
+    }
+
+    @Override
+    public BuildStatus getBuildStatus(AbstractNode node) {
+        return ((NetworkModificationNode) node).getBuildStatus();
+    }
+
+    @Override
+    public void invalidateBuildStatus(AbstractNode node) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        if (networkModificationNode.getBuildStatus() == BuildStatus.BUILT) {
+            networkModificationNode.setBuildStatus(BuildStatus.BUILT_INVALID);
+            updateNode(networkModificationNode);
+        }
     }
 }

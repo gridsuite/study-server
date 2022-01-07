@@ -762,4 +762,22 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadFlowInfos(studyUuid, nodeUuid)
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")
+    @Operation(summary = "build a study node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
+                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
+    public ResponseEntity<Mono<Void>> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.buildNode(studyUuid, nodeUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build/stop")
+    @Operation(summary = "stop a node build")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The build has been stopped"),
+                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
+    public ResponseEntity<Mono<Void>> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().body(studyService.stopBuild(studyUuid, nodeUuid));
+    }
 }

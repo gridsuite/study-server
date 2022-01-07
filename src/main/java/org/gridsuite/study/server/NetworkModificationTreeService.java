@@ -9,9 +9,12 @@ package org.gridsuite.study.server;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -215,6 +218,7 @@ public class NetworkModificationTreeService {
             .id(node.getIdNode())
             .name("Root")
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .buildStatus(BuildStatus.NOT_BUILT)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
     }
@@ -373,5 +377,68 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
         return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
+    }
+
+    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
+        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
+        if (node.getType() == NodeType.ROOT) {
+            RootNode rootNode = (RootNode) node;
+            if (rootNode.getBuildStatus() != BuildStatus.BUILT && rootNode.getNetworkModification() != null) {
+                buildInfos.insert(rootNode.getNetworkModification());
+            }
+        } else if (node.getType() == NodeType.MODEL) {
+            getBuildInfos(nodeEntity.getParentNode(), buildInfos);
+        } else {
+            NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+            if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
+                buildInfos.insert(modificationNode.getNetworkModification());
+            }
+            if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
+                buildInfos.setOriginVariantId(modificationNode.getVariantId());
+            } else {
+                getBuildInfos(nodeEntity.getParentNode(), buildInfos);
+            }
+        }
+    }
+
+    @Transactional
+    public BuildInfos getBuildInfos(UUID nodeUuid) {
+        BuildInfos buildInfos = new BuildInfos();
+        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        buildInfos.setDestinationVariantId(self.doGetVariantId(nodeUuid, true).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)));
+        getBuildInfos(nodeEntity, buildInfos);
+        return buildInfos;
+    }
+
+    @Transactional
+    public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes) {
+        nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
+            .forEach(child -> {
+                changedNodes.add(child.getIdNode());
+                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode());
+                invalidateChildrenBuildStatus(child, changedNodes);
+            });
+    }
+
+    @Transactional
+    public void doUpdateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        List<UUID> changedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(n -> {
+            changedNodes.add(nodeUuid);
+            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus);
+            invalidateChildrenBuildStatus(n, changedNodes);
+        });
+
+        emitNodesChanged(studyId, changedNodes);
+    }
+
+    public Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        return Mono.fromRunnable(() -> self.doUpdateBuildStatus(nodeUuid, buildStatus));
+    }
+
+    public BuildStatus getBuildStatus(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
     }
 }
