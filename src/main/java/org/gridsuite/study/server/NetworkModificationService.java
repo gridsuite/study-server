@@ -160,10 +160,7 @@ public class NetworkModificationService {
         });
     }
 
-    Flux<EquipmentModificationInfos> applyLineChanges(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(lineId);
-
+    Flux<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId) {
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
                 .queryParam(GROUP, groupUuid);
@@ -181,7 +178,7 @@ public class NetworkModificationService {
                     .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
                         handleChangeError(response, LINE_MODIFICATION_FAILED)
                     )
-                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                    .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
                     });
         });
     }
