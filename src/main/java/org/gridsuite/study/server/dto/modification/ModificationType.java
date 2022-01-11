@@ -20,7 +20,8 @@ public enum ModificationType {
     LINE_CREATION,
     TWO_WINDINGS_TRANSFORMER_CREATION,
     SUBSTATION_CREATION,
-    GROOVY_SCRIPT;
+    GROOVY_SCRIPT,
+    BRANCH_STATUS;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
