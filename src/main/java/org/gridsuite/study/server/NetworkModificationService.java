@@ -293,4 +293,16 @@ public class NetworkModificationService {
             .retrieve()
             .bodyToMono(Void.class);
     }
+
+    Mono<Void> changeModificationActiveState(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, boolean active) {
+        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}" + DELIMITER + "modifications" + DELIMITER + "{modificationUuid}")
+            .queryParam("active", active)
+            .buildAndExpand(groupUuid, modificationUuid)
+            .toUriString();
+
+        return webClient.put()
+            .uri(getNetworkModificationServerURI(false) + path)
+            .retrieve()
+            .bodyToMono(Void.class);
+    }
 }

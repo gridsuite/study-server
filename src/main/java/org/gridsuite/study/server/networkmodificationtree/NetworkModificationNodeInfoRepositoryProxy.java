@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -117,9 +118,10 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         networkModificationNode.setBuildStatus(buildStatus);
+        changedNodes.add(node.getId());
         updateNode(networkModificationNode);
     }
 
@@ -129,10 +131,11 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void invalidateBuildStatus(AbstractNode node) {
+    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         if (networkModificationNode.getBuildStatus() == BuildStatus.BUILT) {
             networkModificationNode.setBuildStatus(BuildStatus.BUILT_INVALID);
+            changedNodes.add(node.getId());
             updateNode(networkModificationNode);
         }
     }

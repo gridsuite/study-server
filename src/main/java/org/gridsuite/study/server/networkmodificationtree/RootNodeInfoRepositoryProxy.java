@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -114,9 +115,10 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
         RootNode rootNode = (RootNode) node;
         rootNode.setBuildStatus(buildStatus);
+        changedNodes.add(rootNode.getId());
         updateNode(rootNode);
     }
 
@@ -126,10 +128,11 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
-    public void invalidateBuildStatus(AbstractNode node) {
+    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         RootNode rootNode = (RootNode) node;
         if (rootNode.getBuildStatus() == BuildStatus.BUILT) {
             rootNode.setBuildStatus(BuildStatus.BUILT_INVALID);
+            changedNodes.add(rootNode.getId());
             updateNode(rootNode);
         }
     }

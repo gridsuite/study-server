@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeI
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -57,9 +58,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract UUID getSecurityAnalysisResultUuid(AbstractNode node);
 
-    public abstract void updateBuildStatus(AbstractNode node, BuildStatus buildStatus);
+    public abstract void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes);
 
-    public abstract void invalidateBuildStatus(AbstractNode node);
+    public abstract void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes);
 
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
@@ -137,15 +138,15 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
     }
 
-    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        updateBuildStatus(getNode(nodeUuid), buildStatus);
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus, List<UUID> changedNodes) {
+        updateBuildStatus(getNode(nodeUuid), buildStatus, changedNodes);
     }
 
     public BuildStatus getBuildStatus(UUID nodeUuid) {
         return getBuildStatus(getNode(nodeUuid));
     }
 
-    public void invalidateBuildStatus(UUID nodeUuid) {
-        invalidateBuildStatus(getNode(nodeUuid));
+    public void invalidateBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
+        invalidateBuildStatus(getNode(nodeUuid), changedNodes);
     }
 }

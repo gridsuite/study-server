@@ -414,8 +414,7 @@ public class NetworkModificationTreeService {
     public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
-                changedNodes.add(child.getIdNode());
-                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode());
+                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
                 invalidateChildrenBuildStatus(child, changedNodes);
             });
     }
@@ -426,12 +425,13 @@ public class NetworkModificationTreeService {
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            changedNodes.add(nodeUuid);
-            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus);
+            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes);
             invalidateChildrenBuildStatus(n, changedNodes);
         });
 
-        emitNodesChanged(studyId, changedNodes);
+        if (!changedNodes.isEmpty()) {
+            emitNodesChanged(studyId, changedNodes);
+        }
     }
 
     public Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
@@ -440,5 +440,24 @@ public class NetworkModificationTreeService {
 
     public BuildStatus getBuildStatus(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
+    }
+
+    @Transactional
+    public void doInvalidateBuildStatus(UUID nodeUuid) {
+        List<UUID> changedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(n -> {
+            repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+            invalidateChildrenBuildStatus(n, changedNodes);
+        });
+
+        if (!changedNodes.isEmpty()) {
+            emitNodesChanged(studyId, changedNodes);
+        }
+    }
+
+    public Mono<Void> invalidateBuildStatus(UUID nodeUuid) {
+        return Mono.fromRunnable(() -> self.doInvalidateBuildStatus(nodeUuid));
     }
 }
