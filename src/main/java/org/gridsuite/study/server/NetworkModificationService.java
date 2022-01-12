@@ -51,6 +51,7 @@ import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
+    public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
 
     private String networkModificationServerBaseUri;
@@ -88,7 +89,7 @@ public class NetworkModificationService {
 
     public Flux<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}")
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUuid)
             .toUriString();
         return webClient.get().uri(getNetworkModificationServerURI(false) + path)
@@ -103,7 +104,7 @@ public class NetworkModificationService {
 
     Mono<Void> deleteNetworkModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}")
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
                 .buildAndExpand(groupUuid)
                 .toUriString();
         return webClient.delete()
