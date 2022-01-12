@@ -2375,12 +2375,21 @@ public class StudyTest {
     @Test
     public void deleteModificationRequest() {
         createStudy("userId", CASE_UUID, false);
-        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        UUID studyUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
+        createNetworkModificationNode(rootNodeUuid);
+        NetworkModificationNode node3 = createNetworkModificationNode(modificationNode.getId());
+        /*  root
+           /   \
+         node  modification node
+                 \
+                node3
+            node is only there to test that when we update modification node, it is not in notifications list
+         */
         UUID modificationUuid = UUID.randomUUID();
         webTestClient.delete()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modifcationUuid}", studyNameUserIdUuid, modificationNode.getId(), modificationUuid)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modifcationUuid}", studyUuid, modificationNode.getId(), modificationUuid)
             .exchange()
             .expectStatus().isOk();
 
@@ -2389,11 +2398,12 @@ public class StudyTest {
         );
 
         var res = output.receive(1000);
-        assertEquals(studyNameUserIdUuid, res.getHeaders().get("studyUuid"));
+        assertEquals(studyUuid, res.getHeaders().get("studyUuid"));
         var nodesList = res.getHeaders().get("nodes", List.class);
         assertNotNull(nodesList);
-        assertEquals(1, nodesList.size());
-        assertEquals(modificationNode.getId(), nodesList.get(0));
+        /* we have changed modification node, */
+        assertEquals(2, nodesList.size());
+        assertEquals(Set.of(modificationNode.getId(), node3.getId()), new HashSet(nodesList));
         assertEquals("nodeUpdated", res.getHeaders().get("updateType"));
 
     }
