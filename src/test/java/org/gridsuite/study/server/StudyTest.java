@@ -2389,7 +2389,7 @@ public class StudyTest {
          */
         UUID modificationUuid = UUID.randomUUID();
         webTestClient.delete()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modifcationUuid}", studyUuid, modificationNode.getId(), modificationUuid)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", studyUuid, modificationNode.getId(), modificationUuid)
             .exchange()
             .expectStatus().isOk();
 
