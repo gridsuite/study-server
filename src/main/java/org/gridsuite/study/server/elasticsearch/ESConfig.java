@@ -80,6 +80,8 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
             .withConnectTimeout(timeout * 1000L).withSocketTimeout(timeout * 1000L)
             .build();
 
+        System.out.println("HOST = " + esHost + " PORT = " + esPort);
+
         return RestClients.create(clientConfiguration).rest();
     }
 

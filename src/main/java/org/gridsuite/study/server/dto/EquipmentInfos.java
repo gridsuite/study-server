@@ -31,7 +31,7 @@ import java.util.UUID;
 @Getter
 @ToString
 @EqualsAndHashCode
-@Document(indexName = "#{@environment.getProperty('index.prefix')}equipments")
+@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}equipments")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "EquipmentInfos")
 public class EquipmentInfos {

@@ -29,24 +29,14 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Build with Maven
-        run: mvn --batch-mode -P jacoco install
-
-      - name: Run SonarCloud analysis
-        run: >
-          mvn --batch-mode -DskipTests sonar:sonar
-          -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.organization=gridsuite
-          -Dsonar.projectKey=org.gridsuite:study-server
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn --batch-mode -P jacoco -DskipTests install
 
       - name: Build Docker image
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/pbES'
         run: >
           mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
           -Djib.httpTimeout=60000
-          -Djib.to.image=docker.io/gridsuite/study-server
+          -Djib.to.image=docker.io/gridsuite/study-server:pbES
           -Djib.to.auth.username=gridsuiteci
           -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
 

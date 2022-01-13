@@ -59,6 +59,8 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
             .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
             .build();
 
+        System.out.println("QUERY2 = " + query);
+
         return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
             .stream()
             .map(SearchHit::getContent)
