@@ -395,6 +395,18 @@ public class NetworkModificationTreeTest {
         assertEquals(1, updated.size());
         updated.forEach(id -> assertEquals(hypo.getId(), id));
 
+        var justeANameUpdate = NetworkModificationNode.builder()
+            .name("My taylor is rich!").id(hypo.getId()).build();
+
+        webTestClient.put().uri("/v1/tree/nodes").bodyValue(justeANameUpdate)
+            .exchange()
+            .expectStatus().isOk();
+        output.receive(TIMEOUT).getHeaders();
+
+        var newNode = getNode(hypo.getId());
+        hypo.setName(justeANameUpdate.getName());
+        assertNodeEquals(hypo, newNode);
+
         hypo.setId(UUID.randomUUID());
         webTestClient.put().uri("/v1/tree/nodes").bodyValue(hypo)
             .exchange()
