@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -369,20 +370,40 @@ public class StudyService {
         return sb.toString();
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput,
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
         EquipmentInfosService.FieldSelector fieldSelector) {
-        return networkStoreService
-                .getNetworkUuid(studyUuid)
-                .flatMapIterable(networkUuid -> {
-                    String query = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid);
-                    return equipmentInfosService.search(query);
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid))
+                .flatMapIterable(tuple -> {
+                    UUID networkUuid = tuple.getT1();
+                    String variantId = tuple.getT2();
+                    if (variantId.isEmpty()) {
+                        variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
+                    }
+                    // Get equipments in initial variant matching query
+                    String queryInitialVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, VariantManagerConstants.INITIAL_VARIANT_ID);
+                    List<EquipmentInfos> matchingEquipments = equipmentInfosService.search(queryInitialVariant);
+
+                    // Get added/removed equipment to/from the chosen variant
+                    if (!variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) {
+                        String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
+                        Set<String> removedEquipmentInVariant = equipmentInfosService.search(queryTombstonedEquipments).stream().map(EquipmentInfos::getId).collect(Collectors.toSet());
+                        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId);
+                        List<EquipmentInfos> addedEquipmentInVariant = equipmentInfosService.search(queryVariant);
+                        matchingEquipments = matchingEquipments.stream().filter(ei -> !removedEquipmentInVariant.contains(ei.getId())).collect(Collectors.toList());
+                        matchingEquipments.addAll(addedEquipmentInVariant);
+                    }
+                    return matchingEquipments;
                 });
     }
 
-    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid) {
-        return String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
-            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
-            escapeLucene(userInput));
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId) {
+        return String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND NOT tombstoned:true AND %s:(*%s*)", networkUuid, variantId,
+                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
+                escapeLucene(userInput));
+    }
+
+    private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
+        return String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND tombstoned:true", networkUuid, variantId);
     }
 
     @Transactional

@@ -15,6 +15,8 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
+
+import com.powsybl.iidm.network.VariantManagerConstants;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -51,11 +53,16 @@ public class EquipmentInfosServiceTests {
 
     private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
 
+    private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
+
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
     @MockBean
     private NetworkService networkStoreService;
+
+    @MockBean
+    private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
     private StudyService studyService;
@@ -63,6 +70,7 @@ public class EquipmentInfosServiceTests {
     @Before
     public void setup() {
         when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(Mono.just(NETWORK_UUID));
+        when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
 
         try {
             equipmentInfosService.deleteAll(NETWORK_UUID);
@@ -176,6 +184,7 @@ public class EquipmentInfosServiceTests {
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
             .networkUuid(EquipmentInfosServiceTests.NETWORK_UUID)
+            .variantId(VariantManagerConstants.INITIAL_VARIANT_ID)
             .id(i.getId())
             .name(i.getNameOrId())
             .type(i.getType().name())
@@ -189,7 +198,7 @@ public class EquipmentInfosServiceTests {
     private void testNameFullAscii(String pat) {
         Set<EquipmentInfos> hits = new HashSet<>();
 
-        studyService.searchEquipments(NETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME).subscribe(hits::add);
+        studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME).subscribe(hits::add);
         pbsc.checkThat(hits.size(), is(1));
     }
 

@@ -63,4 +63,8 @@ public class EquipmentInfos {
     Set<VoltageLevelInfos> voltageLevels;
 
     UUID networkUuid;
+
+    String variantId;
+
+    Boolean tombstoned;
 }
