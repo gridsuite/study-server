@@ -1617,7 +1617,11 @@ public class StudyService {
         return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
-    public Mono<Void> deleteModification(UUID nodeUuid, UUID modificationUuid) {
+    @Transactional
+    public Mono<Void> deleteModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid) {
+        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
         return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupId ->
                 networkModificationService.deleteModification(groupId, modificationUuid)
             )

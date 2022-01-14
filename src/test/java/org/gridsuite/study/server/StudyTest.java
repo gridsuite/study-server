@@ -2387,6 +2387,12 @@ public class StudyTest {
                 node3
             node is only there to test that when we update modification node, it is not in notifications list
          */
+
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", UUID.randomUUID(), modificationNode.getId(), node3.getId())
+            .exchange()
+            .expectStatus().isForbidden();
+
         UUID modificationUuid = UUID.randomUUID();
         webTestClient.delete()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", studyUuid, modificationNode.getId(), modificationUuid)

@@ -645,7 +645,7 @@ public class StudyController {
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @PathVariable("modificationUuid") UUID modificationUuid) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
-            .then(studyService.deleteModification(nodeUuid, modificationUuid)));
+            .then(studyService.deleteModification(studyUuid, nodeUuid, modificationUuid)));
     }
 
     @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
