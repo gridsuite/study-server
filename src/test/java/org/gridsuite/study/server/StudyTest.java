@@ -2327,10 +2327,16 @@ public class StudyTest {
         UUID modificationGroupUuid1 = UUID.randomUUID();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(rootNodeUuid, modificationGroupUuid1, "variant_1");
 
-        // deactivate modification
-        UUID nodeNotFoundUuid = UUID.randomUUID();
         UUID modificationUuid = UUID.randomUUID();
+        UUID nodeNotFoundUuid = UUID.randomUUID();
 
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false", studyUuid, rootNodeUuid, modificationUuid)
+            .exchange()
+            .expectStatus().isOk();
+        checkUpdateModelsStatusMessagesReceived(studyUuid, rootNodeUuid);
+
+        // deactivate modification on modificationNode
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false", studyUuid, nodeNotFoundUuid, modificationUuid)
             .exchange()
