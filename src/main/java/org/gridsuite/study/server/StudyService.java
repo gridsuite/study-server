@@ -1615,12 +1615,11 @@ public class StudyService {
     }
 
     public Mono<Void> changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID modificationUuid, boolean active) {
-        return getModificationGroupUuid(nodeUuid).flatMap(groupUuid -> {
-            Mono<Void> monoUpdateStatusResult = updateStatusResult(studyUuid, nodeUuid);
-
-            return networkModificationService.changeModificationActiveState(groupUuid, modificationUuid, active)
-                .then(monoUpdateStatusResult);
-        });
+        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        return networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active)
+            .then(updateStatusResult(studyUuid, nodeUuid));
     }
 }
 

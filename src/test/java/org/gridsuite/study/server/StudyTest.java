@@ -30,6 +30,7 @@ import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -310,9 +311,6 @@ public class StudyTest {
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build(), "sa.stopped");
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/groups/.*/modifications/.*\\?active=.*")) {  // activate/deactivate modification
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*") ||
@@ -2343,7 +2341,10 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications/.*\\?active=false")));
+        AbstractNode node = networkModificationTreeService.getSimpleNode(modificationNode1.getId()).block();
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
+
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
 
         // reactivate modification
@@ -2352,7 +2353,10 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications/.*\\?active=true")));
+        node = networkModificationTreeService.getSimpleNode(modificationNode1.getId()).block();
+        modificationNode = (NetworkModificationNode) node;
+        assertTrue(modificationNode.getModificationsToExclude().isEmpty());
+
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
     }
 

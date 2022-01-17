@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,17 +48,21 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         rootNodeInfoEntity.setBuildStatus(rootNode.getBuildStatus());
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
+        rootNodeInfoEntity.setModificationsToExclude(rootNode.getModificationsToExclude());
         return rootNodeInfoEntity;
     }
 
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
+        @SuppressWarnings("unused")
+        int ignoreSize = node.getModificationsToExclude().size();
         return completeNodeInfo(node, new RootNode(null,
                                                    node.getNetworkModificationId(),
                                                    node.getLoadFlowStatus(),
                                                    StudyService.fromEntity(node.getLoadFlowResult()),
                                                    node.getSecurityAnalysisResultUuid(),
-                                                   node.getBuildStatus()));
+                                                   node.getBuildStatus(),
+                                                   node.getModificationsToExclude()));
     }
 
     @Override
@@ -135,5 +140,19 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
             changedNodes.add(rootNode.getId());
             updateNode(rootNode);
         }
+    }
+
+    @Override
+    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
+        RootNode rootNode = (RootNode) node;
+        if (rootNode.getModificationsToExclude() == null) {
+            rootNode.setModificationsToExclude(new HashSet<>());
+        }
+        if (!active) {
+            rootNode.getModificationsToExclude().add(modificationUuid);
+        } else {
+            rootNode.getModificationsToExclude().remove(modificationUuid);
+        }
+        updateNode(rootNode);
     }
 }

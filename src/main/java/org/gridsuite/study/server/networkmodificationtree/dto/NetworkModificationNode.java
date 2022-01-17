@@ -15,6 +15,8 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -38,6 +40,8 @@ public class NetworkModificationNode extends AbstractNode {
     UUID securityAnalysisResultUuid;
 
     BuildStatus buildStatus;
+
+    Set<UUID> modificationsToExclude = new HashSet<>();
 
     @Override
     public NodeType getType() {

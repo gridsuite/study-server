@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,18 +45,22 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
                                                                                       modificationNode.getLoadFlowStatus(),
                                                                                       StudyService.toEntity(modificationNode.getLoadFlowResult()),
                                                                                       modificationNode.getSecurityAnalysisResultUuid(),
-                                                                                      modificationNode.getBuildStatus());
+                                                                                      modificationNode.getBuildStatus(),
+                                                                                      modificationNode.getModificationsToExclude());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
+        @SuppressWarnings("unused")
+        int ignoreSize = node.getModificationsToExclude().size();
         return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(),
                                                                   node.getVariantId(),
                                                                   node.getLoadFlowStatus(),
                                                                   StudyService.fromEntity(node.getLoadFlowResult()),
                                                                   node.getSecurityAnalysisResultUuid(),
-                                                                  node.getBuildStatus()));
+                                                                  node.getBuildStatus(),
+                                                                  node.getModificationsToExclude()));
     }
 
     @Override
@@ -138,5 +143,19 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             changedNodes.add(node.getId());
             updateNode(networkModificationNode);
         }
+    }
+
+    @Override
+    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        if (networkModificationNode.getModificationsToExclude() == null) {
+            networkModificationNode.setModificationsToExclude(new HashSet<>());
+        }
+        if (!active) {
+            networkModificationNode.getModificationsToExclude().add(modificationUuid);
+        } else {
+            networkModificationNode.getModificationsToExclude().remove(modificationUuid);
+        }
+        updateNode(networkModificationNode);
     }
 }

@@ -173,7 +173,7 @@ public class NetworkModificationTreeService {
 
     public UUID getStudyUuidForNodeId(UUID id) {
         Optional<NodeEntity> node = nodesRepository.findById(id);
-        return node.orElseThrow().getStudy().getId();
+        return node.orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getStudy().getId();
     }
 
     @Transactional
@@ -236,7 +236,7 @@ public class NetworkModificationTreeService {
         nodes.stream()
             .filter(n -> n.getParentNode() != null)
             .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
-        var root = (RootNode) fullMap.get(nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow().getIdNode());
+        var root = (RootNode) fullMap.get(nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode());
         if (root != null) {
             root.setStudyId(studyId);
         }
@@ -257,12 +257,15 @@ public class NetworkModificationTreeService {
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
 
+    @Transactional
+    public AbstractNode doGetSimpleNode(UUID id) {
+        AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
+        return node;
+    }
+
     public Mono<AbstractNode> getSimpleNode(UUID id) {
-        return Mono.fromCallable(() -> {
-            AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-            nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
-            return node;
-        });
+        return Mono.fromCallable(() -> self.doGetSimpleNode(id));
     }
 
     public UUID getStudyRootNodeUuid(UUID studyId) {
@@ -383,15 +386,25 @@ public class NetworkModificationTreeService {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.ROOT) {
             RootNode rootNode = (RootNode) node;
-            if (rootNode.getBuildStatus() != BuildStatus.BUILT && rootNode.getNetworkModification() != null) {
-                buildInfos.insert(rootNode.getNetworkModification());
+            if (rootNode.getBuildStatus() != BuildStatus.BUILT) {
+                if (rootNode.getNetworkModification() != null) {
+                    buildInfos.insertModificationGroup(rootNode.getNetworkModification());
+                }
+                if (rootNode.getModificationsToExclude() != null) {
+                    buildInfos.addModificationsToExclude(rootNode.getModificationsToExclude());
+                }
             }
         } else if (node.getType() == NodeType.MODEL) {
             getBuildInfos(nodeEntity.getParentNode(), buildInfos);
         } else {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-            if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
-                buildInfos.insert(modificationNode.getNetworkModification());
+            if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
+                if (modificationNode.getNetworkModification() != null) {
+                    buildInfos.insertModificationGroup(modificationNode.getNetworkModification());
+                }
+                if (modificationNode.getModificationsToExclude() != null) {
+                    buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
+                }
             }
             if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
                 buildInfos.setOriginVariantId(modificationNode.getVariantId());
@@ -438,8 +451,13 @@ public class NetworkModificationTreeService {
         return Mono.fromRunnable(() -> self.doUpdateBuildStatus(nodeUuid, buildStatus));
     }
 
-    public BuildStatus getBuildStatus(UUID nodeUuid) {
+    @Transactional(readOnly = true)
+    public BuildStatus doGetBuildStatus(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
+    }
+
+    public BuildStatus getBuildStatus(UUID nodeUuid) {
+        return self.doGetBuildStatus(nodeUuid);
     }
 
     @Transactional
@@ -459,5 +477,14 @@ public class NetworkModificationTreeService {
 
     public Mono<Void> invalidateBuildStatus(UUID nodeUuid) {
         return Mono.fromRunnable(() -> self.doInvalidateBuildStatus(nodeUuid));
+    }
+
+    @Transactional
+    public void doHandleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).handleExcludeModification(nodeUuid, modificationUUid, active));
+    }
+
+    public Mono<Void> handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
+        return Mono.fromRunnable(() -> self.doHandleExcludeModification(nodeUuid, modificationUUid, active));
     }
 }

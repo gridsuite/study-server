@@ -15,15 +15,19 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.ForeignKey;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -56,4 +60,9 @@ public class RootNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "buildStatus", nullable = false)
     @Enumerated(EnumType.STRING)
     private BuildStatus buildStatus;
+
+    @Column(name = "modificationsToExclude")
+    @ElementCollection
+    @CollectionTable(foreignKey = @ForeignKey(name = "rootNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "rootNodeInfoEntity_modificationsToExclude_idx", columnList = "root_node_info_entity_id_node")})
+    private Set<UUID> modificationsToExclude;
 }

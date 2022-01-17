@@ -412,6 +412,7 @@ public class NetworkModificationTreeTest {
         createNode(root, hypo);
         createNode(root, hypo);
         AbstractNode node = getNode(root.getId());
+
         assertEquals(3, node.getChildrenIds().size());
     }
 

@@ -62,6 +62,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes);
 
+    public abstract void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active);
+
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
     }
@@ -148,5 +150,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public void invalidateBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
         invalidateBuildStatus(getNode(nodeUuid), changedNodes);
+    }
+
+    public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
+        handleExcludeModification(getNode(nodeUuid), modificationUuid, active);
     }
 }
