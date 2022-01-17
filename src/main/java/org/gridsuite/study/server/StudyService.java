@@ -1615,7 +1615,7 @@ public class StudyService {
     }
 
     public Mono<Void> changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID modificationUuid, boolean active) {
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+        if (!self.getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         return networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active)
