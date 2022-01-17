@@ -779,6 +779,7 @@ public class StudyService {
             UUID networkUuid = tuple3.getT1();
             String provider = tuple3.getT2();
             String variantId = tuple3.getT3();
+
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", networkUuid.toString()).queryParam("reportName", "loadflow").queryParam("overwrite", true);
             if (!provider.isEmpty()) {
@@ -806,7 +807,9 @@ public class StudyService {
 
     private Mono<Void> setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
         return updateLoadFlowStatus(nodeUuid, LoadFlowStatus.RUNNING)
-            .doOnSuccess(s -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS));
+            .doOnSuccess(s ->
+                emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS)
+            );
     }
 
     public Mono<Collection<String>> getExportFormats() {

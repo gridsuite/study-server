@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.networkmodificationtree;
 
 import com.powsybl.loadflow.LoadFlowResult;
+import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -28,15 +29,30 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     }
 
     @Override
-    public ModelNodeInfoEntity toEntity(AbstractNode node) {
-        var modelNodeInfoEntity = new ModelNodeInfoEntity(((ModelNode) node).getModel());
-        return completeEntityNodeInfo(node, modelNodeInfoEntity);
+    public void createNodeInfo(AbstractNode nodeInfo) {
+        ModelNode modelNode = (ModelNode) nodeInfo;
+        modelNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        super.createNodeInfo(modelNode);
+    }
 
+    @Override
+    public ModelNodeInfoEntity toEntity(AbstractNode node) {
+        ModelNode modelNode = (ModelNode) node;
+        var modelNodeInfoEntity = new ModelNodeInfoEntity(modelNode.getModel(),
+            modelNode.getLoadFlowStatus(),
+            StudyService.toEntity(modelNode.getLoadFlowResult()),
+            modelNode.getSecurityAnalysisResultUuid(),
+            modelNode.getBuildStatus());
+        return completeEntityNodeInfo(node, modelNodeInfoEntity);
     }
 
     @Override
     public ModelNode toDto(ModelNodeInfoEntity node) {
-        return completeNodeInfo(node, new ModelNode(node.getModel()));
+        return completeNodeInfo(node, new ModelNode(node.getModel(),
+            node.getLoadFlowStatus(),
+            StudyService.fromEntity(node.getLoadFlowResult()),
+            node.getSecurityAnalysisResultUuid(),
+            node.getBuildStatus()));
     }
 
     @Override
@@ -51,46 +67,61 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
 
     @Override
     public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
-        return LoadFlowStatus.NOT_DONE;
+        LoadFlowStatus status = ((ModelNode) node).getLoadFlowStatus();
+        return status != null ? status : LoadFlowStatus.NOT_DONE;
     }
 
     @Override
     public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-        // Do nothing : no loadflow result and status associated to this node
+        ModelNode modificationNode = (ModelNode) node;
+        modificationNode.setLoadFlowResult(loadFlowResult);
+        modificationNode.setLoadFlowStatus(loadFlowStatus);
+        updateNode(modificationNode);
     }
 
     @Override
     public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-        // Do nothing : no loadflow status associated to this node
+        ModelNode modelNode = (ModelNode) node;
+        modelNode.setLoadFlowStatus(loadFlowStatus);
+        updateNode(modelNode);
     }
 
     @Override
     public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
-        return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
+        ModelNode modelNode = (ModelNode) node;
+        return LoadFlowInfos.builder().loadFlowStatus(modelNode.getLoadFlowStatus()).loadFlowResult(modelNode.getLoadFlowResult()).build();
     }
 
     @Override
     public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
-        // Do nothing : no security analysis result associated to this node
+        ModelNode modelNode = (ModelNode) node;
+        modelNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+        updateNode(modelNode);
     }
 
     @Override
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
-        return null;
+        return ((ModelNode) node).getSecurityAnalysisResultUuid();
     }
 
     @Override
     public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
-        // Do nothing : no build associated to this node
+        ModelNode modelNode = (ModelNode) node;
+        modelNode.setBuildStatus(buildStatus);
+        updateNode(modelNode);
     }
 
     @Override
     public BuildStatus getBuildStatus(AbstractNode node) {
-        return BuildStatus.NOT_BUILT;
+        return ((ModelNode) node).getBuildStatus();
     }
 
     @Override
     public void invalidateBuildStatus(AbstractNode node) {
-        // Do nothing : no build associated to this node
+        ModelNode modelNode = (ModelNode) node;
+        if (modelNode.getBuildStatus() == BuildStatus.BUILT) {
+            modelNode.setBuildStatus(BuildStatus.BUILT_INVALID);
+            updateNode(modelNode);
+        }
     }
 }

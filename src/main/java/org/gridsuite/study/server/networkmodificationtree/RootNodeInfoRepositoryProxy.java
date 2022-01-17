@@ -8,7 +8,6 @@
 package org.gridsuite.study.server.networkmodificationtree;
 
 import com.powsybl.loadflow.LoadFlowResult;
-import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -29,21 +28,8 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
-    public void createNodeInfo(AbstractNode nodeInfo) {
-        RootNode rootNode = (RootNode) nodeInfo;
-        rootNode.setBuildStatus(BuildStatus.NOT_BUILT);
-        super.createNodeInfo(rootNode);
-    }
-
-    @Override
     public RootNodeInfoEntity toEntity(AbstractNode node) {
-        RootNode rootNode = (RootNode) node;
         var rootNodeInfoEntity = new RootNodeInfoEntity();
-        rootNodeInfoEntity.setNetworkModificationId(rootNode.getNetworkModification());
-        rootNodeInfoEntity.setLoadFlowStatus(rootNode.getLoadFlowStatus());
-        rootNodeInfoEntity.setLoadFlowResult(StudyService.toEntity(rootNode.getLoadFlowResult()));
-        rootNodeInfoEntity.setSecurityAnalysisResultUuid(rootNode.getSecurityAnalysisResultUuid());
-        rootNodeInfoEntity.setBuildStatus(rootNode.getBuildStatus());
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
         return rootNodeInfoEntity;
@@ -51,12 +37,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
-        return completeNodeInfo(node, new RootNode(null,
-                                                   node.getNetworkModificationId(),
-                                                   node.getLoadFlowStatus(),
-                                                   StudyService.fromEntity(node.getLoadFlowResult()),
-                                                   node.getSecurityAnalysisResultUuid(),
-                                                   node.getBuildStatus()));
+        return completeNodeInfo(node, new RootNode(null));
     }
 
     @Override
@@ -66,71 +47,51 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
 
     @Override
     public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
-        RootNode rootNode = (RootNode) node;
-        if (rootNode.getNetworkModification() == null && generateId) {
-            rootNode.setNetworkModification(UUID.randomUUID());
-            updateNode(rootNode);
-        }
-        return Optional.ofNullable(rootNode.getNetworkModification());
+        return Optional.empty();
     }
 
     @Override
     public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
-        LoadFlowStatus status = ((RootNode) node).getLoadFlowStatus();
-        return status != null ? status : LoadFlowStatus.NOT_DONE;
+        return LoadFlowStatus.NOT_DONE;
     }
 
     @Override
     public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-        RootNode rootNode = (RootNode) node;
-        rootNode.setLoadFlowResult(loadFlowResult);
-        rootNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(rootNode);
+        // Do nothing : no loadflow result and status associated to this node
     }
 
     @Override
     public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-        RootNode rootNode = (RootNode) node;
-        rootNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(rootNode);
+        // Do nothing : no loadflow status associated to this node
     }
 
     @Override
     public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
-        RootNode rootNode = (RootNode) node;
-        return LoadFlowInfos.builder().loadFlowStatus(rootNode.getLoadFlowStatus()).loadFlowResult(rootNode.getLoadFlowResult()).build();
+        return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
     }
 
     @Override
     public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
-        RootNode rootNode = (RootNode) node;
-        rootNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-        updateNode(rootNode);
+        // Do nothing : no security analysis result associated to this node
     }
 
     @Override
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
-        return ((RootNode) node).getSecurityAnalysisResultUuid();
+        return null;
     }
 
     @Override
     public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
-        RootNode rootNode = (RootNode) node;
-        rootNode.setBuildStatus(buildStatus);
-        updateNode(rootNode);
+        // Do nothing : no build status associated to this node
     }
 
     @Override
     public BuildStatus getBuildStatus(AbstractNode node) {
-        return ((RootNode) node).getBuildStatus();
+        return BuildStatus.NOT_BUILT;
     }
 
     @Override
     public void invalidateBuildStatus(AbstractNode node) {
-        RootNode rootNode = (RootNode) node;
-        if (rootNode.getBuildStatus() == BuildStatus.BUILT) {
-            rootNode.setBuildStatus(BuildStatus.BUILT_INVALID);
-            updateNode(rootNode);
-        }
+        // Do nothing : no build status associated to this node
     }
 }
