@@ -298,7 +298,7 @@ public class NetworkModificationService {
     public Mono<Void> deleteModification(UUID groupUuid, UUID modificationUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
-        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}"
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH
                 + DELIMITER + "modifications" + DELIMITER + "{modificationUuid}")
             .buildAndExpand(groupUuid, modificationUuid)
             .toUriString();
