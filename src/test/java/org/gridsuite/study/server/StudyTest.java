@@ -412,6 +412,8 @@ public class StudyTest {
                         .build(), "build.stopped");
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/.*/modifications/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200);
                 }
 
                 switch (path) {
@@ -2364,6 +2366,64 @@ public class StudyTest {
         assertTrue(modificationNode.getModificationsToExclude().isEmpty());
 
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
+    }
+
+    private void checkUpdatedNodesMessageReceived(UUID studyUuid, int size, Set<UUID> nodesId) {
+        var message = output.receive(TIMEOUT);
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(studyUuid, headers.get(StudyService.HEADER_STUDY_UUID));
+        var nodesList = headers.get("nodes", List.class);
+        assertNotNull(nodesList);
+        assertEquals(size, nodesList.size());
+        assertEquals(nodesId, new HashSet(nodesList));
+        assertEquals("nodeUpdated", headers.get(StudyService.HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    public void deleteModificationRequest() {
+        createStudy("userId", CASE_UUID, false);
+        UUID studyUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(rootNodeUuid);
+        createNetworkModificationNode(rootNodeUuid);
+        NetworkModificationNode node3 = createNetworkModificationNode(modificationNode.getId());
+        /*  root
+           /   \
+         node  modification node
+                 \
+                node3
+            node is only there to test that when we update modification node, it is not in notifications list
+         */
+
+        node3.setBuildStatus(BuildStatus.BUILT);
+        webTestClient.put().uri("/v1/tree/nodes").bodyValue(node3)
+            .exchange()
+            .expectStatus().isOk();
+        checkUpdatedNodesMessageReceived(studyUuid, 1, Set.of(node3.getId()));
+
+        modificationNode.setBuildStatus(BuildStatus.BUILT);
+        webTestClient.put().uri("/v1/tree/nodes").bodyValue(modificationNode)
+            .exchange()
+            .expectStatus().isOk();
+        checkUpdatedNodesMessageReceived(studyUuid, 1, Set.of(modificationNode.getId()));
+
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", UUID.randomUUID(), modificationNode.getId(), node3.getId())
+            .exchange()
+            .expectStatus().isForbidden();
+
+        UUID modificationUuid = UUID.randomUUID();
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", studyUuid, modificationNode.getId(), modificationUuid)
+            .exchange()
+            .expectStatus().isOk();
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(
+            r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification() + "/modifications/" + modificationUuid))
+        );
+
+        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
+        checkUpdatedNodesMessageReceived(studyUuid, 2, Set.of(modificationNode.getId(), node3.getId()));
     }
 
     @After

@@ -257,15 +257,15 @@ public class NetworkModificationTreeService {
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
 
+    public Mono<AbstractNode> getSimpleNode(UUID id) {
+        return Mono.fromCallable(() -> self.doGetSimpleNode(id));
+    }
+
     @Transactional
     public AbstractNode doGetSimpleNode(UUID id) {
         AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
         return node;
-    }
-
-    public Mono<AbstractNode> getSimpleNode(UUID id) {
-        return Mono.fromCallable(() -> self.doGetSimpleNode(id));
     }
 
     public UUID getStudyRootNodeUuid(UUID studyId) {
