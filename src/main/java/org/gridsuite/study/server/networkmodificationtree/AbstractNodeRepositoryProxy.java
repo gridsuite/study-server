@@ -15,6 +15,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
+import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.Collection;
 import java.util.Map;
@@ -88,13 +89,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void updateNode(AbstractNode node) {
-        if (nodeInfoRepository.existsById(node.getId())) {
-            NodeInfoEntity entity = toEntity(node);
-            entity.markNotNew();
-            nodeInfoRepository.save(entity);
-        } else {
-            throw new StudyException(StudyException.Type.ELEMENT_NOT_FOUND);
-        }
+        var persistedNode = getNode(node.getId());
+        /* using only DTO values not jpa Entity */
+        PropertyUtils.copyNonNullProperties(node, persistedNode);
+        var entity = toEntity(persistedNode);
+        entity.markNotNew();
+        nodeInfoRepository.save(entity);
     }
 
     public Map<UUID, NodeDto> getAll(Collection<UUID> ids) {
