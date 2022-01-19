@@ -42,13 +42,23 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     }
 
     @Override
-    public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
+    public EquipmentInfos addEquipmentInfos(@NonNull EquipmentInfos equipmentInfos) {
         return equipmentInfosRepository.save(equipmentInfos);
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
+    public TombstonedEquipmentInfos addTombstonedEquipmentInfos(TombstonedEquipmentInfos tombstonedEquipmentInfos) {
+        return tombstonedEquipmentInfosRepository.save(tombstonedEquipmentInfos);
+    }
+
+    @Override
+    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return equipmentInfosRepository.findAllByNetworkUuid(networkUuid);
+    }
+
+    @Override
+    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
+        return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
 
     @Override

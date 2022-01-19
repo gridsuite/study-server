@@ -22,8 +22,13 @@ import java.util.UUID;
 public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
-    public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
+    public EquipmentInfos addEquipmentInfos(@NonNull EquipmentInfos equipmentInfos) {
         return equipmentInfos;
+    }
+
+    @Override
+    public TombstonedEquipmentInfos addTombstonedEquipmentInfos(TombstonedEquipmentInfos tombstonedEquipmentInfos) {
+        return tombstonedEquipmentInfos;
     }
 
     @Override
@@ -32,7 +37,12 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
+    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
         return Collections.emptyList();
     }
 
@@ -43,6 +53,6 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
     public List<TombstonedEquipmentInfos> searchTombstonedEquipments(String query) {
-        return null;
+        return Collections.emptyList();
     }
 }

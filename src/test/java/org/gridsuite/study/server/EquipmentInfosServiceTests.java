@@ -18,6 +18,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.junit.Before;
@@ -82,18 +83,35 @@ public class EquipmentInfosServiceTests {
     @Test
     public void testAddDeleteEquipmentInfos() {
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
-        assertEquals(equipmentInfosService.add(loadInfos), loadInfos);
-        assertEquals(1, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        assertEquals(equipmentInfosService.addEquipmentInfos(loadInfos), loadInfos);
+        assertEquals(1, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
-        assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
 
-        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
-        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build());
-        assertEquals(2, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
+        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build());
+        assertEquals(2, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
-        assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
+    }
+
+    @Test
+    public void testAddDeleteTombstonedEquipmentInfos() {
+        TombstonedEquipmentInfos loadInfos = TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").build();
+        assertEquals(equipmentInfosService.addTombstonedEquipmentInfos(loadInfos), loadInfos);
+        assertEquals(1, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+
+        equipmentInfosService.deleteAll(NETWORK_UUID);
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").build());
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").build());
+        assertEquals(2, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+
+        equipmentInfosService.deleteAll(NETWORK_UUID);
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
     }
 
     @Test
@@ -109,7 +127,7 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw2").name("name_tw2").type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl6").name("vl6").build())).build();
         EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl7").name("vl7").build())).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::add);
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::addEquipmentInfos);
 
         Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(LOAD)"));
         assertEquals(0, hits.size());
@@ -144,7 +162,7 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw2").name("name_tw2").type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl6").name("vl6").build())).build();
         EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl7").name("vl7").build())).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::add);
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::addEquipmentInfos);
 
         assertEquals(7, equipmentInfosService.searchEquipments("*").size());
 
@@ -226,7 +244,7 @@ public class EquipmentInfosServiceTests {
     public void testSearchSpecialChars() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
-        network.getIdentifiables().forEach(idable -> equipmentInfosService.add(toEquipmentInfos(idable)));
+        network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
         Set<EquipmentInfos> hits;
 

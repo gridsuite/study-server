@@ -25,9 +25,13 @@ public interface EquipmentInfosService {
         NAME, ID
     }
 
-    EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos); // Just for unit tests
+    EquipmentInfos addEquipmentInfos(@NonNull EquipmentInfos equipmentInfos); // Just for unit tests
 
-    Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid);
+    TombstonedEquipmentInfos addTombstonedEquipmentInfos(@NonNull TombstonedEquipmentInfos tombstonedEquipmentInfos); // Just for unit tests
+
+    Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
+
+    Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
 
     void deleteAll(@NonNull UUID networkUuid);
 
