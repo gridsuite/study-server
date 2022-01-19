@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2021, RTE (http://www.rte-france.com)
+  Copyright (c) 2022, RTE (http://www.rte-france.com)
   This Source Code Form is subject to the terms of the Mozilla Public
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -20,47 +20,31 @@ import org.springframework.data.elasticsearch.annotations.InnerField;
 import org.springframework.data.elasticsearch.annotations.MultiField;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
-import java.util.Set;
 import java.util.UUID;
 
 /**
- * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @SuperBuilder
 @NoArgsConstructor
 @Getter
 @ToString
 @EqualsAndHashCode
-@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}equipments")
+@Document(indexName = "#{@environment.getProperty('index.prefix')}tombstoned-equipments")
 @Setting(settingPath = "elasticsearch_settings.json")
-@TypeAlias(value = "EquipmentInfos")
-public class EquipmentInfos {
+@TypeAlias(value = "TombstonedEquipmentInfos")
+public class TombstonedEquipmentInfos {
     @Id
     String uniqueId;
 
     @MultiField(
-        mainField = @Field(name = "equipmentId", type = FieldType.Text),
-        otherFields = {
-            @InnerField(suffix = "fullascii", type = FieldType.Keyword, normalizer = "fullascii"),
-            @InnerField(suffix = "raw", type = FieldType.Keyword)
-        }
+            mainField = @Field(name = "equipmentId", type = FieldType.Text),
+            otherFields = {
+                    @InnerField(suffix = "fullascii", type = FieldType.Keyword, normalizer = "fullascii"),
+                    @InnerField(suffix = "raw", type = FieldType.Keyword)
+            }
     )
     String id;
-
-    @MultiField(
-        mainField = @Field(name = "equipmentName", type = FieldType.Text),
-        otherFields = {
-            @InnerField(suffix = "fullascii", type = FieldType.Keyword, normalizer = "fullascii"),
-            @InnerField(suffix = "raw", type = FieldType.Keyword)
-        }
-    )
-    String name;
-
-    @Field("equipmentType")
-    String type;
-
-    @Field(type = FieldType.Nested, includeInParent = true)
-    Set<VoltageLevelInfos> voltageLevels;
 
     UUID networkUuid;
 

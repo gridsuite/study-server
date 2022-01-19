@@ -217,10 +217,10 @@ public class StudyTest {
         when(studyInfosService.search(String.format("userId:%s", "userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND NOT tombstoned:true AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND NOT tombstoned:true AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);

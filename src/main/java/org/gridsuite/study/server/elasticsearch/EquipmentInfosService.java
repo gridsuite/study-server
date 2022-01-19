@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -30,5 +31,7 @@ public interface EquipmentInfosService {
 
     void deleteAll(@NonNull UUID networkUuid);
 
-    List<EquipmentInfos> search(@NonNull final String query);
+    List<EquipmentInfos> searchEquipments(@NonNull final String query);
+
+    List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query);
 }
