@@ -97,6 +97,11 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
 
     @Override
     public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-        // Do nothing : no build associated to this node
+        // Do nothing : no modifications associated to this node
+    }
+
+    @Override
+    public void removeModificationToExclude(AbstractNode node, UUID modificationUuid) {
+        // Do nothing : no modifications associated to this node
     }
 }

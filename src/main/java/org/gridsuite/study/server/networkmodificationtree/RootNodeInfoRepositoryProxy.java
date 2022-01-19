@@ -155,4 +155,9 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         }
         updateNode(rootNode);
     }
+
+    @Override
+    public void removeModificationToExclude(AbstractNode node, UUID modificationUuid) {
+        // Do nothing : no modifications associated to this node
+    }
 }

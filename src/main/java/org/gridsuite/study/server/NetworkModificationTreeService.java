@@ -487,4 +487,13 @@ public class NetworkModificationTreeService {
     public Mono<Void> handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
         return Mono.fromRunnable(() -> self.doHandleExcludeModification(nodeUuid, modificationUUid, active));
     }
+
+    @Transactional
+    public void doRemoveModificationToExclude(UUID nodeUuid, UUID modificationUUid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationToExclude(nodeUuid, modificationUUid));
+    }
+
+    public Mono<Void> removeModificationToExclude(UUID nodeUuid, UUID modificationUuid) {
+        return Mono.fromRunnable(() -> self.doRemoveModificationToExclude(nodeUuid, modificationUuid));
+    }
 }

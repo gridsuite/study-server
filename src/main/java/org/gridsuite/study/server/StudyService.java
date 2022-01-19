@@ -1629,10 +1629,10 @@ public class StudyService {
         }
         return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupId ->
             networkModificationService.deleteModification(groupId, modificationUuid)
-        )
-            .doOnSuccess(
-                e -> updateStatusResult(studyUuid, nodeUuid).subscribe()
-            );
+        ).doOnSuccess(
+                e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationUuid)
+                    .then(updateStatusResult(studyUuid, nodeUuid)).subscribe()
+        );
     }
 }
 
