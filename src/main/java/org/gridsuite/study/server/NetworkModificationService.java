@@ -49,6 +49,7 @@ import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
+    public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
 
     private String networkModificationServerBaseUri;
@@ -84,6 +85,16 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
+    public Flux<ModificationInfos> getModifications(UUID groupUuid) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+            .buildAndExpand(groupUuid)
+            .toUriString();
+        return webClient.get().uri(getNetworkModificationServerURI(false) + path)
+            .retrieve()
+            .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() { });
+    }
+
     public Mono<Void> deleteModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
         return deleteNetworkModifications(groupUUid);
@@ -91,7 +102,7 @@ public class NetworkModificationService {
 
     private Mono<Void> deleteNetworkModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "{groupUuid}")
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUuid)
             .toUriString();
         return webClient.delete()
@@ -279,6 +290,20 @@ public class NetworkModificationService {
         return webClient.put()
             .uri(getNetworkModificationServerURI(false) + path)
             .retrieve()
+            .bodyToMono(Void.class);
+    }
+
+    public Mono<Void> deleteModification(UUID groupUuid, UUID modificationUuid) {
+        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(modificationUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH
+                + DELIMITER + "modifications" + DELIMITER + "{modificationUuid}")
+            .buildAndExpand(groupUuid, modificationUuid)
+            .toUriString();
+        return webClient.delete()
+            .uri(getNetworkModificationServerURI(false) + path)
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
             .bodyToMono(Void.class);
     }
 }

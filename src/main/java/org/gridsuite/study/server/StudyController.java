@@ -601,6 +601,16 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
     }
 
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
+    @Operation(summary = "delete a network modification")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been deleted")})
+    public ResponseEntity<Mono<Void>> deleteModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @PathVariable("nodeUuid") UUID nodeUuid,
+                                                 @PathVariable("modificationUuid") UUID modificationUuid) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+            .then(studyService.deleteModification(studyUuid, nodeUuid, modificationUuid)));
+    }
+
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search studies in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of studies found")})

@@ -262,11 +262,14 @@ public class NetworkModificationTreeService {
 
     // TODO test if studyUuid exist and have a node <nodeId>
     public Mono<AbstractNode> getSimpleNode(UUID studyUuid, UUID nodeId) {
-        return Mono.fromCallable(() -> {
-            AbstractNode node = nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-            nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
-            return node;
-        });
+        return Mono.fromCallable(() -> self.doGetSimpleNode(nodeId));
+    }
+
+    @Transactional
+    public AbstractNode doGetSimpleNode(UUID nodeId) {
+        AbstractNode node = nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
+        return node;
     }
 
     public UUID getStudyRootNodeUuid(UUID studyId) {

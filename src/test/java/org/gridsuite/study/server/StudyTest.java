@@ -412,6 +412,8 @@ public class StudyTest {
                         .build(), "build.stopped");
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/.*/modifications/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200);
                 }
 
                 switch (path) {
@@ -2241,6 +2243,48 @@ public class StudyTest {
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode4.getId());
 
         assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
+    }
+
+    @Test
+    public void deleteModificationRequest() {
+        createStudy("userId", CASE_UUID, false);
+        UUID studyUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid);
+        createNetworkModificationNode(studyUuid, rootNodeUuid);
+        NetworkModificationNode node3 = createNetworkModificationNode(studyUuid, modificationNode.getId());
+        /*  root
+           /   \
+         node  modification node
+                 \
+                node3
+            node is only there to test that when we update modification node, it is not in notifications list
+         */
+
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", UUID.randomUUID(), modificationNode.getId(), node3.getId())
+            .exchange()
+            .expectStatus().isForbidden();
+
+        UUID modificationUuid = UUID.randomUUID();
+        webTestClient.delete()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", studyUuid, modificationNode.getId(), modificationUuid)
+            .exchange()
+            .expectStatus().isOk();
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(
+            r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification() + "/modifications/" + modificationUuid))
+        );
+
+        var res = output.receive(1000);
+        assertEquals(studyUuid, res.getHeaders().get("studyUuid"));
+        var nodesList = res.getHeaders().get("nodes", List.class);
+        assertNotNull(nodesList);
+        /* we have changed modification node, */
+        assertEquals(2, nodesList.size());
+        assertEquals(Set.of(modificationNode.getId(), node3.getId()), new HashSet(nodesList));
+        assertEquals("nodeUpdated", res.getHeaders().get("updateType"));
+
     }
 
     @After

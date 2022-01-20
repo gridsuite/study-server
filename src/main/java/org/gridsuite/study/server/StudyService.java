@@ -1583,5 +1583,18 @@ public class StudyService {
     Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
+
+    @Transactional
+    public Mono<Void> deleteModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid) {
+        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupId ->
+                networkModificationService.deleteModification(groupId, modificationUuid)
+            )
+            .doOnSuccess(
+                e -> updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT).subscribe()
+            );
+    }
 }
 
