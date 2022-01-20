@@ -13,13 +13,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.springframework.http.*;
@@ -48,15 +46,13 @@ public class StudyController {
     private final StudyService studyService;
     private final ReportService reportService;
     private final NetworkStoreService networkStoreService;
-    private final NetworkModificationService networkModificationService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkStoreService networkStoreService, NetworkModificationService networkModificationService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkStoreService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
-        this.networkModificationService = networkModificationService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
@@ -88,7 +84,7 @@ public class StudyController {
     @Operation(summary = "Get all studies for a user")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies")})
     public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyList(@RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyList(userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies(userId));
     }
 
     @GetMapping(value = "/study_creation_requests")
@@ -102,15 +98,15 @@ public class StudyController {
     @GetMapping(value = "/studies/metadata")
     @Operation(summary = "Get studies metadata")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies metadata")})
-    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestParam("id") List<UUID> uuids) {
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestParam("ids") List<UUID> uuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids));
     }
 
     @PostMapping(value = "/studies/cases/{caseUuid}")
     @Operation(summary = "create a study from an existing case")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-            @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
+        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
+        @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestParam("isPrivate") Boolean isPrivate,
@@ -123,9 +119,9 @@ public class StudyController {
     @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "create a study and import the case")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-            @ApiResponse(responseCode = "409", description = "The study already exist"),
-            @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
+        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
+        @ApiResponse(responseCode = "409", description = "The study already exist"),
+        @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@RequestPart("caseFile") FilePart caseFile,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestParam("isPrivate") Boolean isPrivate,
@@ -138,11 +134,10 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "get a study")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The study information"),
-            @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
-    public ResponseEntity<Mono<StudyInfos>> getStudy(@PathVariable("studyUuid") UUID studyUuid,
-                                                     @RequestHeader("userId") String headerUserId) {
-        Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyUuid, headerUserId);
+        @ApiResponse(responseCode = "200", description = "The study information"),
+        @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
+    public ResponseEntity<Mono<StudyInfos>> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
@@ -409,20 +404,6 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid).then()));
     }
 
-    @GetMapping(value = "/studies/{groupUuid}/network/modifications")
-    @Operation(summary = "Get all network modifications")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network modifications")})
-    public ResponseEntity<Flux<ModificationInfos>> getModifications(@PathVariable("groupUuid") UUID groupUuid) {
-        return ResponseEntity.ok().body(networkModificationService.getModifications(groupUuid));
-    }
-
-    @DeleteMapping(value = "/studies/{groupUuid}/network/modifications")
-    @Operation(summary = "Delete all network modifications")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Network modifications deleted")})
-    public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("groupUuid") UUID groupUuid) {
-        return ResponseEntity.ok().body(networkModificationService.deleteModifications(groupUuid));
-    }
-
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Change the given line status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Line status changed")})
@@ -442,24 +423,6 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(nodeUuid)
                 .then(studyService.runLoadFlow(studyUuid, nodeUuid)));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/public")
-    @Operation(summary = "set study to public")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The switch is public")})
-    public ResponseEntity<Mono<StudyInfos>> makeStudyPublic(@PathVariable("studyUuid") UUID studyUuid,
-                                                            @RequestHeader("userId") String headerUserId) {
-
-        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyUuid, headerUserId, false));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/private")
-    @Operation(summary = "set study to private")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study is private")})
-    public ResponseEntity<Mono<StudyInfos>> makeStudyPrivate(@PathVariable("studyUuid") UUID studyUuid,
-                                                             @RequestHeader("userId") String headerUserId) {
-
-        return ResponseEntity.ok().body(studyService.changeStudyAccessRights(studyUuid, headerUserId, true));
     }
 
     @GetMapping(value = "/export-network-formats")
@@ -500,7 +463,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
     @Operation(summary = "Get a security analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
-            @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
+        @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
@@ -590,7 +553,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
-            @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
+        @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return studyService.getSecurityAnalysisStatus(nodeUuid)
@@ -648,7 +611,7 @@ public class StudyController {
             .then(studyService.deleteModification(studyUuid, nodeUuid, modificationUuid)));
     }
 
-    @GetMapping(value = "/studies/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search studies in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of studies found")})
     public ResponseEntity<Flux<CreatedStudyBasicInfos>> searchStudies(@Parameter(description = "Lucene query") @RequestParam(value = "q") String query) {
@@ -670,44 +633,58 @@ public class StudyController {
             .body(studyService.searchEquipments(studyUuid, userInput, fieldSelector));
     }
 
-    @PostMapping(value = "/tree/nodes/{id}")
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Create a node as before / after the given node ID")
-    @ApiResponse(responseCode = "200", description = "The node has been added")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The node has been added"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
+                                                         @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                          @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(referenceId, node, insertMode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode));
     }
 
-    @DeleteMapping(value = "/tree/nodes/{id}")
+    @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Delete node with given id")
-    @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted")
-    public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "id of child to remove") @PathVariable UUID id,
-                                                 @Parameter(description = "deleteChildren")  @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(id, deleteChildren));
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "the nodes have been successfully deleted"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+    public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                 @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
+                                                 @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(studyUuid, nodeId, deleteChildren));
     }
 
-    @GetMapping(value = "/tree/{id}")
+    @GetMapping(value = "/studies/{studyUuid}/tree")
     @Operation(summary = "get network modification tree for the given study")
-    @ApiResponse(responseCode = "200", description = "network modification tree")
-    public Mono<ResponseEntity<RootNode>> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("id") UUID id) {
-        return networkModificationTreeService.getStudyTree(id)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "network modification tree"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+    public Mono<ResponseEntity<RootNode>> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        return networkModificationTreeService.getStudyTree(studyUuid)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @PutMapping(value = "/tree/nodes")
+    @PutMapping(value = "/studies/{studyUuid}/tree/nodes")
     @Operation(summary = "update node")
-    @ApiResponse(responseCode = "200", description = "the node has been updated")
-    public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node) {
-        return ResponseEntity.ok().body(networkModificationTreeService.updateNode(node));
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "the node has been updated"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+    public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node,
+                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(networkModificationTreeService.updateNode(studyUuid, node));
     }
 
-    @GetMapping(value = "/tree/nodes/{id}")
+    @GetMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "get simplified node")
-    @ApiResponse(responseCode = "200", description = "simplified nodes (without children")
-    public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "node uuid") @PathVariable("id") UUID id) {
-        return networkModificationTreeService.getSimpleNode(id)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "simplified nodes (without children"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+    public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                      @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
+        return networkModificationTreeService.getSimpleNode(studyUuid, nodeId)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
     }
