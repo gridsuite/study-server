@@ -246,8 +246,8 @@ public class StudyService {
                 .build();
     }
 
-    public Flux<CreatedStudyBasicInfos> getStudyList(String userId) {
-        return Flux.fromStream(() -> studyRepository.findByUserIdOrIsPrivate(userId, false).stream())
+    public Flux<CreatedStudyBasicInfos> getStudies(String userId) {
+        return Flux.fromStream(() -> studyRepository.findAllByUserId(userId).stream())
             .map(StudyService::toCreatedStudyBasicInfos)
             .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
@@ -257,7 +257,7 @@ public class StudyService {
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
-        return Flux.fromStream(() -> studyCreationRequestRepository.findByUserIdOrIsPrivate(userId, false).stream())
+        return Flux.fromStream(() -> studyCreationRequestRepository.findAllByUserId(userId).stream())
             .map(StudyService::toBasicStudyInfos)
             .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
@@ -306,15 +306,8 @@ public class StudyService {
                 );
     }
 
-    public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String headerUserId) {
-        Mono<StudyEntity> studyMono = getStudy(studyUuid);
-        return studyMono.flatMap(study -> {
-            if (study.isPrivate() && !study.getUserId().equals(headerUserId)) {
-                return Mono.error(new StudyException(NOT_ALLOWED));
-            } else {
-                return Mono.just(study);
-            }
-        }).map(StudyService::toStudyInfos);
+    public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid) {
+        return getStudy(studyUuid).map(StudyService::toStudyInfos);
     }
 
     @Transactional(readOnly = true)
@@ -322,25 +315,8 @@ public class StudyService {
         return studyRepository.findById(studyUuid).orElse(null);
     }
 
-    @Transactional
-    public StudyEntity doGetStudyAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        StudyEntity studyEntity = doGetStudy(studyUuid);
-        if (studyEntity != null) {
-            //only the owner of a study can change the access rights
-            if (!headerUserId.equals(studyEntity.getUserId())) {
-                throw new StudyException(NOT_ALLOWED);
-            }
-            studyEntity.setPrivate(toPrivate);
-        }
-        return studyEntity;
-    }
-
     public Mono<StudyEntity> getStudy(UUID studyUuid) {
         return Mono.fromCallable(() -> self.doGetStudy(studyUuid));
-    }
-
-    public Mono<StudyEntity> getStudyAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        return Mono.fromCallable(() -> self.doGetStudyAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate));
     }
 
     Flux<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -411,9 +387,6 @@ public class StudyService {
             networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
             groupsUuids = networkModificationTreeService.getAllModificationGroupUuids(studyUuid);
             studyRepository.findById(studyUuid).ifPresent(s -> {
-                if (!s.getUserId().equals(userId)) {
-                    throw new StudyException(NOT_ALLOWED);
-                }
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
@@ -835,12 +808,6 @@ public class StudyService {
                 return new ExportNetworkInfos(filename, bytes);
             });
         });
-    }
-
-    public Mono<StudyInfos> changeStudyAccessRights(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        return getStudyAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate)
-            .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-            .map(StudyService::toStudyInfos);
     }
 
     public Mono<Void> changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull  String status, @NonNull UUID nodeUuid) {
