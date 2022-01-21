@@ -17,7 +17,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
 
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -53,16 +52,6 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
             StudyService.fromEntity(node.getLoadFlowResult()),
             node.getSecurityAnalysisResultUuid(),
             node.getBuildStatus()));
-    }
-
-    @Override
-    public Optional<String> getVariantId(AbstractNode node, boolean generateId) {
-        return Optional.empty();
-    }
-
-    @Override
-    public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
-        return Optional.empty();
     }
 
     @Override
