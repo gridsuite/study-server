@@ -39,6 +39,8 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyService.QUERY_PARAM_DESTINATION_VARIANT_ID;
+import static org.gridsuite.study.server.StudyService.QUERY_PARAM_ORIGIN_VARIANT_ID;
 import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 
 /**
@@ -306,4 +308,22 @@ public class NetworkModificationService {
             .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
             .bodyToMono(Void.class);
     }
+
+    Mono<Void> cloneNetworkVariant(@NonNull UUID studyUuid, @NonNull String originVariantId, @NonNull String destinationVariantId) {
+        return networkStoreService.getNetworkUuid(studyUuid).flatMap(networkUuid -> {
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "clone");
+            var path = uriComponentsBuilder
+                .queryParam(QUERY_PARAM_ORIGIN_VARIANT_ID, originVariantId)
+                .queryParam(QUERY_PARAM_DESTINATION_VARIANT_ID, destinationVariantId)
+                .build()
+                .toUriString();
+
+            return webClient.put()
+                .uri(getNetworkModificationServerURI(true) + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .bodyToMono(Void.class);
+        });
+    }
+
 }

@@ -214,7 +214,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void createRoot(StudyEntity study) {
+    public NodeEntity createRoot(StudyEntity study) {
         NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study));
         var root = RootNode.builder()
             .studyId(study.getId())
@@ -222,6 +222,7 @@ public class NetworkModificationTreeService {
             .name("Root")
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
+        return node;
     }
 
     @Transactional
@@ -490,5 +491,10 @@ public class NetworkModificationTreeService {
     public Mono<UUID> getParentNode(UUID nodeUuid, NodeType nodeType) {
         return Mono.fromCallable(() -> self.doGetParentNode(nodeUuid, nodeType).orElse(null))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    @Transactional(readOnly = true)
+    public List<NodeEntity> getAllNodes(UUID studyUuid) {
+        return nodesRepository.findAllByStudyId(studyUuid);
     }
 }

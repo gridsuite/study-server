@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -21,6 +22,11 @@ import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,6 +118,9 @@ public class StudyService {
     static final String RESULT_UUID = "resultUuid";
 
     static final String QUERY_PARAM_RECEIVER = "receiver";
+    static final String QUERY_PARAM_ORIGIN_VARIANT_ID = "originVariantId";
+    static final String QUERY_PARAM_DESTINATION_VARIANT_ID = "destinationVariantId";
+
     static final String HEADER_RECEIVER = "receiver";
 
     // Self injection for @transactional support in internal calls to other methods of this service
@@ -277,6 +286,7 @@ public class StudyService {
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                         .doFinally(st -> {
                             deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();
+                            buildFirstNode(s.getId()).subscribe();
                             LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                         })
                         .subscribe()
@@ -300,6 +310,7 @@ public class StudyService {
                         .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
                         .doFinally(r -> {
                             deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();  // delete the study if the creation has been canceled
+                            buildFirstNode(s.getId()).subscribe();
                             LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                         })
                         .subscribe()
@@ -1340,7 +1351,23 @@ public class StudyService {
     @Transactional
     public StudyEntity insertStudy(StudyEntity studyEntity) {
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity);
+        // create 3 nodes : root node, modification node 0 and model node 0
+        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode modificationNode = NetworkModificationNode
+            .builder()
+            .name("modification node 0")
+            .variantId(UUID.randomUUID().toString())
+            .build();
+        networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER).subscribe();
+
+        ModelNode modelNode = ModelNode
+            .builder()
+            .name("model node 0")
+            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .buildStatus(BuildStatus.NOT_BUILT)
+            .build();
+        networkModificationTreeService.createNode(studyEntity.getId(), modificationNode.getId(), modelNode, InsertMode.AFTER).subscribe();
+
         return study;
     }
 
@@ -1598,6 +1625,13 @@ public class StudyService {
             .doOnSuccess(
                 e -> updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT).subscribe()
             );
+    }
+
+    public Mono<Void> buildFirstNode(UUID studyUuid) {
+        NodeEntity node = networkModificationTreeService.getAllNodes(studyUuid).stream().filter(nodeEntity -> nodeEntity.getType() == NodeType.NETWORK_MODIFICATION)
+            .findFirst().orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+
+        return getVariantId(node.getIdNode()).flatMap(variantId -> networkModificationService.cloneNetworkVariant(studyUuid, VariantManagerConstants.INITIAL_VARIANT_ID, variantId));
     }
 }
 
