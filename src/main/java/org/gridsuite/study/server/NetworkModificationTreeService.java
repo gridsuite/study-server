@@ -275,8 +275,7 @@ public class NetworkModificationTreeService {
         return nodesRepository.findByStudyIdAndType(studyId, NodeType.ROOT).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode();
     }
 
-    @Transactional
-    public Optional<String> doGetVariantId(UUID nodeUuid, boolean generateId) {
+    private UUID getModificationNodeUuidFromNode(UUID nodeUuid) {
         Optional<NodeEntity> nodeEntity = nodesRepository.findById(nodeUuid);
         if (!nodeEntity.isPresent()) {
             throw new StudyException(ELEMENT_NOT_FOUND);
@@ -286,7 +285,12 @@ public class NetworkModificationTreeService {
         if (nodeEntity.get().getType() == NodeType.MODEL) {
             tmpUuid = self.doGetParentNode(nodeUuid, NodeType.NETWORK_MODIFICATION).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         }
-        UUID modificationNodeUuid = tmpUuid;
+        return tmpUuid;
+    }
+
+    @Transactional
+    public Optional<String> doGetVariantId(UUID nodeUuid, boolean generateId) {
+        UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
         return nodesRepository.findById(modificationNodeUuid).flatMap(n -> repositories.get(n.getType()).getVariantId(modificationNodeUuid, generateId));
     }
 
@@ -297,16 +301,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public Optional<UUID> doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
-        Optional<NodeEntity> nodeEntity = nodesRepository.findById(nodeUuid);
-        if (!nodeEntity.isPresent()) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
-        // if nodeUuid is a model node, get parent node of type network modification node
-        UUID tmpUuid = nodeUuid;
-        if (nodeEntity.get().getType() == NodeType.MODEL) {
-            tmpUuid = self.doGetParentNode(nodeUuid, NodeType.NETWORK_MODIFICATION).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        }
-        UUID modificationNodeUuid = tmpUuid;
+        UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
         return nodesRepository.findById(modificationNodeUuid).flatMap(n -> repositories.get(n.getType()).getModificationGroupUuid(modificationNodeUuid, generateId));
     }
 
