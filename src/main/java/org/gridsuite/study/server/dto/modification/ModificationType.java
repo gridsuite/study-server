@@ -37,7 +37,7 @@ public enum ModificationType {
             case SUBSTATION_CREATION:
                 return "substations";
             case SHUNT_COMPENSATOR_CREATION:
-                return "shunts-compensator";
+                return "shunt-compensators";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
