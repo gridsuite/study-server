@@ -492,9 +492,4 @@ public class NetworkModificationTreeService {
         return Mono.fromCallable(() -> self.doGetParentNode(nodeUuid, nodeType).orElse(null))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
-
-    @Transactional(readOnly = true)
-    public List<NodeEntity> getAllNodes(UUID studyUuid) {
-        return nodesRepository.findAllByStudyId(studyUuid);
-    }
 }

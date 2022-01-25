@@ -416,10 +416,6 @@ public class StudyTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/modifications/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/clone.*") && request.getMethod().equals("PUT")) {
-                    // variant cloning
-                    return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -484,17 +480,17 @@ public class StudyTest {
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID:
-                    case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID:
+                    case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         countDownLatch.await(2, TimeUnit.SECONDS);
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
-                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
                             .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
@@ -1592,8 +1588,8 @@ public class StudyTest {
         assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        output.receive(1000);
-        output.receive(1000);
+        output.receive(1000);  // message for first modification node creation
+        output.receive(1000);  // message for first model node creation
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
@@ -1615,12 +1611,10 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
-        Thread.sleep(1000);
-        var requests = getRequestsDone(4);
+        var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", CASE_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", CASE_UUID_STRING)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/.*/clone\\?originVariantId=.*&destinationVariantId=.*")));
+        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", CASE_UUID_STRING, FIRST_VARIANT_ID)));
 
         return studyUuid;
     }
@@ -1685,21 +1679,12 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
-        Thread.sleep(1000);
-        int nbRequests = caseUuid == null ? 2 : 4;
-        if (errorMessage.length != 0) {
-            nbRequests -= 1;
-        }
-        var requests = getRequestsDone(nbRequests);
+        var requests = getRequestsDone(caseUuid == null ? 1 : 3);
         assertTrue(requests.contains("/v1/cases/private"));
         if (caseUuid != null) {
             assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
-            assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", caseUuid)));
+            assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", caseUuid, FIRST_VARIANT_ID)));
         }
-        if (errorMessage.length == 0) {
-            assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/.*/clone\\?originVariantId=.*&destinationVariantId=.*")));
-        }
-
         return studyUuid;
     }
 
@@ -1752,11 +1737,10 @@ public class StudyTest {
         output.receive(1000);
 
         // assert that all http requests have been sent to remote services
-        var httpRequests = getRequestsDone(4);
+        var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.contains("/v1/cases/private"));
         assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
-        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s", IMPORTED_BLOCKING_CASE_UUID_STRING)));
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/networks/.*/clone\\?originVariantId=.*&destinationVariantId=.*")));
+        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", IMPORTED_BLOCKING_CASE_UUID_STRING, FIRST_VARIANT_ID)));
 
         countDownLatch = new CountDownLatch(1);
 
@@ -1784,11 +1768,10 @@ public class StudyTest {
         output.receive(1000);
 
         // assert that all http requests have been sent to remote services
-        var requests = getRequestsDone(4);
+        var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/.*/clone\\?originVariantId=.*&destinationVariantId=.*")));
+        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID)));
     }
 
     @Test
@@ -2396,7 +2379,6 @@ public class StudyTest {
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid);
         createNetworkModificationNode(studyUuid, rootNodeUuid);
         NetworkModificationNode node3 = createNetworkModificationNode(studyUuid, modificationNode.getId());
-
         /*  root
            /   \
          node  modification node
@@ -2416,8 +2398,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        var requestsDone = getRequestsDone(1);
-        assertTrue(requestsDone.stream().anyMatch(
+        assertTrue(getRequestsDone(1).stream().anyMatch(
             r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification() + "/modifications/" + modificationUuid))
         );
 
