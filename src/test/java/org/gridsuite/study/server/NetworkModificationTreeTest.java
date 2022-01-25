@@ -25,6 +25,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
@@ -176,25 +177,29 @@ public class NetworkModificationTreeTest {
         assertEquals(study.getId(), root.getStudyId());
         assertEquals(0, root.getChildren().size());
 
-        webTestClient.get().uri("/v1/tree/{id}", UUID.randomUUID())
+        webTestClient.get().uri("/v1/studies/{studyUuid}/tree", UUID.randomUUID())
             .exchange()
             .expectStatus().isNotFound();
 
-        webTestClient.delete().uri("/v1/tree/nodes/{id}?deleteChildren={delete}", root.getId(), false)
+        webTestClient.get().uri("/v1/studies/{studyUuid}/tree", study.getId())
+            .exchange()
+            .expectStatus().isOk();
+
+        webTestClient.delete().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", study.getId(), root.getId(), false)
             .exchange()
             .expectStatus().is4xxClientError();
     }
 
-    private AbstractNode getNode(UUID idNode) throws IOException {
-        return objectMapper.readValue(webTestClient.get().uri("/v1/tree/nodes/{id}", idNode)
+    private AbstractNode getNode(UUID studyUuid, UUID idNode) throws IOException {
+        return objectMapper.readValue(webTestClient.get().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, idNode)
             .exchange()
             .expectStatus().isOk()
-            .expectBody().returnResult().getResponseBody(), new TypeReference<>() {
-            });
+            .expectBody().returnResult().getResponseBody(), new TypeReference<>() { }
+        );
     }
 
     private RootNode getRootNode(UUID study) throws IOException {
-        return objectMapper.readValue(webTestClient.get().uri("/v1/tree/{id}", study)
+        return objectMapper.readValue(webTestClient.get().uri("/v1/studies/{uuid}/tree", study)
             .exchange()
             .expectStatus().isOk()
             .expectBody().returnResult().getResponseBody(), new TypeReference<>() {
@@ -205,10 +210,10 @@ public class NetworkModificationTreeTest {
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
-        createNode(root, model);
-        createNode(root, hypo);
+        createNode(root.getStudyId(), root, model);
+        createNode(root.getStudyId(), root, hypo);
         root = getRootNode(root.getStudyId());
 
         List<AbstractNode> children = root.getChildren();
@@ -221,8 +226,8 @@ public class NetworkModificationTreeTest {
 
         model.setName("niark");
         hypo.setName("condriak");
-        createNode(children.get(1), model);
-        createNode(children.get(1), hypo);
+        createNode(root.getStudyId(), children.get(1), model);
+        createNode(root.getStudyId(), children.get(1), hypo);
 
         /*  expected
                 root
@@ -242,7 +247,7 @@ public class NetworkModificationTreeTest {
         children = child.getChildren();
         assertChildrenEquals(Set.of(hypo, model), children);
 
-        deleteNode(child, false, Set.of(child));
+        deleteNode(root.getStudyId(), child, false, Set.of(child));
 
         /*  expected
               root
@@ -253,9 +258,9 @@ public class NetworkModificationTreeTest {
         root = getRootNode(root.getStudyId());
         assertEquals(3, root.getChildren().size());
         child = root.getChildren().get(0);
-        createNode(child, hypo);
+        createNode(root.getStudyId(), child, hypo);
 
-        deleteNode(child, true, Set.of(hypo, child));
+        deleteNode(root.getStudyId(), child, true, Set.of(hypo, child));
 
         /* expected
             root
@@ -269,14 +274,14 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.doDeleteTree(root.getStudyId());
         assertEquals(0, nodeRepository.findAll().size());
 
-        webTestClient.post().uri("/v1/tree/nodes/{id}", UUID.randomUUID()).bodyValue(hypo)
+        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID()).bodyValue(hypo)
             .exchange()
             .expectStatus().isNotFound();
 
     }
 
-    private void deleteNode(AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion) {
-        webTestClient.delete().uri("/v1/tree/nodes/{id}?deleteChildren={delete}", child.getId(), deleteChildren)
+    private void deleteNode(UUID studyUuid, AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion) {
+        webTestClient.delete().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
@@ -303,14 +308,14 @@ public class NetworkModificationTreeTest {
     public void testNodeInsertion() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                                     "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
+                                                                                     "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         /* trying to insert before root */
-        webTestClient.post().uri("/v1/tree/nodes/{id}?mode=BEFORE", root.getId()).bodyValue(networkModification)
+        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?mode=BEFORE", root.getStudyId(), root.getId()).bodyValue(networkModification)
             .exchange()
             .expectStatus().is4xxClientError();
 
-        createNode(root, networkModification);
-        createNode(root, networkModification);
+        createNode(root.getStudyId(), root, networkModification);
+        createNode(root.getStudyId(), root, networkModification);
         root = getRootNode(root.getStudyId());
         /* root
             / \
@@ -318,7 +323,7 @@ public class NetworkModificationTreeTest {
          */
         AbstractNode unchangedNode = root.getChildren().get(0);
         AbstractNode willBeMoved = root.getChildren().get(1);
-        insertNode(willBeMoved, networkModification, InsertMode.BEFORE);
+        insertNode(root.getStudyId(), willBeMoved, networkModification, InsertMode.BEFORE);
         /* root
             / \
            n3  n2
@@ -330,7 +335,7 @@ public class NetworkModificationTreeTest {
         AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
 
-        webTestClient.post().uri("/v1/tree/nodes/{id}", UUID.randomUUID()).bodyValue(networkModification)
+        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID()).bodyValue(networkModification)
             .exchange()
             .expectStatus().isNotFound();
     }
@@ -339,13 +344,13 @@ public class NetworkModificationTreeTest {
     public void testInsertAfter() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", null,
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         final ModelNode model = buildModel("loadflow", "dance", "loadflow");
-        createNode(root, model);
-        createNode(root, model);
+        createNode(root.getStudyId(), root, model);
+        createNode(root.getStudyId(), root, model);
         root = getRootNode(root.getStudyId());
         var originalChildren = root.getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
-        insertNode(root, hypo, InsertMode.AFTER);
+        insertNode(root.getStudyId(), root, hypo, InsertMode.AFTER);
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().size());
         var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
@@ -371,13 +376,13 @@ public class NetworkModificationTreeTest {
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
-        createNode(root, hypo);
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, hypo);
         hypo.setName("grunt");
         hypo.setNetworkModification(UUID.randomUUID());
         root = getRootNode(root.getStudyId());
         hypo.setId(root.getChildren().get(0).getId());
-        webTestClient.put().uri("/v1/tree/nodes").bodyValue(hypo)
+        webTestClient.put().uri("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId()).bodyValue(hypo)
             .exchange()
             .expectStatus().isOk();
         root = getRootNode(root.getStudyId());
@@ -394,8 +399,20 @@ public class NetworkModificationTreeTest {
         assertEquals(1, updated.size());
         updated.forEach(id -> assertEquals(hypo.getId(), id));
 
+        var justeANameUpdate = NetworkModificationNode.builder()
+            .name("My taylor is rich!").id(hypo.getId()).build();
+
+        webTestClient.put().uri("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId()).bodyValue(justeANameUpdate)
+            .exchange()
+            .expectStatus().isOk();
+        output.receive(TIMEOUT).getHeaders();
+
+        var newNode = getNode(root.getStudyId(), hypo.getId());
+        hypo.setName(justeANameUpdate.getName());
+        assertNodeEquals(hypo, newNode);
+
         hypo.setId(UUID.randomUUID());
-        webTestClient.put().uri("/v1/tree/nodes").bodyValue(hypo)
+        webTestClient.put().uri("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId()).bodyValue(hypo)
             .exchange()
             .expectStatus().isNotFound();
 
@@ -406,17 +423,17 @@ public class NetworkModificationTreeTest {
     public void testLightNode() {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(),
-                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID());
-        createNode(root, hypo);
-        createNode(root, hypo);
-        createNode(root, hypo);
-        AbstractNode node = getNode(root.getId());
+                                                                      "variant_1", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, hypo);
+        createNode(root.getStudyId(), root, hypo);
+        createNode(root.getStudyId(), root, hypo);
+        AbstractNode node = getNode(root.getStudyId(), root.getId());
         assertEquals(3, node.getChildrenIds().size());
     }
 
-    private void createNode(AbstractNode parentNode, AbstractNode newNode) {
+    private void createNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode) {
         newNode.setId(null);
-        webTestClient.post().uri("/v1/tree/nodes/{id}", parentNode.getId()).bodyValue(newNode)
+        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId()).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
@@ -425,9 +442,9 @@ public class NetworkModificationTreeTest {
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_BEFORE));
     }
 
-    private void insertNode(AbstractNode parentNode, AbstractNode newNode, InsertMode mode) {
+    private void insertNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode, InsertMode mode) {
         newNode.setId(null);
-        webTestClient.post().uri("/v1/tree/nodes/{id}?mode={mode}", parentNode.getId(), mode).bodyValue(newNode)
+        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={mode}", studyUuid, parentNode.getId(), mode).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
@@ -452,7 +469,7 @@ public class NetworkModificationTreeTest {
 
     private NetworkModificationNode buildNetworkModification(String name, String description, UUID idHypo, String variantId,
                                                              LoadFlowStatus loadFlowStatus, LoadFlowResult loadFlowResult,
-                                                             UUID securityAnalysisResultUuid) {
+                                                             UUID securityAnalysisResultUuid, BuildStatus buildStatus) {
         return NetworkModificationNode.builder()
             .name(name)
             .description(description)
@@ -461,6 +478,7 @@ public class NetworkModificationTreeTest {
             .loadFlowStatus(loadFlowStatus)
             .loadFlowResult(loadFlowResult)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
+            .buildStatus(buildStatus)
             .children(Collections.emptyList()).build();
     }
 
@@ -517,6 +535,7 @@ public class NetworkModificationTreeTest {
             }
             assertEquals(expectedModificationNode.getSecurityAnalysisResultUuid(), currentModificationNode.getSecurityAnalysisResultUuid());
         }
+        assertEquals(expectedModificationNode.getBuildStatus(), currentModificationNode.getBuildStatus());
     }
 }
 

@@ -31,6 +31,7 @@ public class StudyException extends RuntimeException {
         GENERATOR_CREATION_FAILED,
         LINE_CREATION_FAILED,
         TWO_WINDINGS_TRANSFORMER_CREATION_FAILED,
+        SUBSTATION_CREATION_FAILED,
         UNKNOWN_EQUIPMENT_TYPE
     }
 

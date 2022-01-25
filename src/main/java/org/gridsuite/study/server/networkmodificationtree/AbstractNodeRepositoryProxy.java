@@ -12,8 +12,10 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
+import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.Collection;
 import java.util.Map;
@@ -46,6 +48,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract LoadFlowInfos getLoadFlowInfos(AbstractNode node);
 
+    public abstract BuildStatus getBuildStatus(AbstractNode node);
+
     public abstract void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus);
 
     public abstract void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus);
@@ -53,6 +57,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public abstract void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid);
 
     public abstract UUID getSecurityAnalysisResultUuid(AbstractNode node);
+
+    public abstract void updateBuildStatus(AbstractNode node, BuildStatus buildStatus);
+
+    public abstract void invalidateBuildStatus(AbstractNode node);
 
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
@@ -66,10 +74,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return toDto(nodeInfoRepository.findById(id).orElseThrow(() -> new StudyException(StudyException.Type.ELEMENT_NOT_FOUND)));
     }
 
-    protected NodeDto completeNodeInfo(AbstractNodeInfoEntity nodeEntity, NodeDto node) {
-        node.setId(nodeEntity.getNode().getIdNode());
-        node.setName(nodeEntity.getName());
-        node.setDescription(nodeEntity.getDescription());
+    protected NodeDto completeNodeInfo(AbstractNodeInfoEntity nodeInfoEntity, NodeDto node) {
+        node.setId(nodeInfoEntity.getId());
+        node.setName(nodeInfoEntity.getName());
+        node.setDescription(nodeInfoEntity.getDescription());
         return node;
     }
 
@@ -81,13 +89,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void updateNode(AbstractNode node) {
-        if (nodeInfoRepository.existsById(node.getId())) {
-            NodeInfoEntity entity = toEntity(node);
-            entity.markNotNew();
-            nodeInfoRepository.save(entity);
-        } else {
-            throw new StudyException(StudyException.Type.ELEMENT_NOT_FOUND);
-        }
+        var persistedNode = getNode(node.getId());
+        /* using only DTO values not jpa Entity */
+        PropertyUtils.copyNonNullProperties(node, persistedNode);
+        var entity = toEntity(persistedNode);
+        entity.markNotNew();
+        nodeInfoRepository.save(entity);
     }
 
     public Map<UUID, NodeDto> getAll(Collection<UUID> ids) {
@@ -128,5 +135,17 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        updateBuildStatus(getNode(nodeUuid), buildStatus);
+    }
+
+    public BuildStatus getBuildStatus(UUID nodeUuid) {
+        return getBuildStatus(getNode(nodeUuid));
+    }
+
+    public void invalidateBuildStatus(UUID nodeUuid) {
+        invalidateBuildStatus(getNode(nodeUuid));
     }
 }

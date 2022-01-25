@@ -9,9 +9,12 @@ package org.gridsuite.study.server;
 import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -129,8 +132,9 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public AbstractNode doCreateNode(UUID id, AbstractNode nodeInfo, InsertMode insertMode) {
-        Optional<NodeEntity> referenceNode = nodesRepository.findById(id);
+    // TODO test if studyUuid exist and have a node <nodeId>
+    public AbstractNode doCreateNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+        Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
             if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
                 throw new StudyException(NOT_ALLOWED);
@@ -143,28 +147,29 @@ public class NetworkModificationTreeService {
             if (insertMode.equals(InsertMode.BEFORE)) {
                 reference.setParentNode(node);
             } else if (insertMode.equals(InsertMode.AFTER)) {
-                nodesRepository.findAllByParentNodeIdNode(id).stream()
+                nodesRepository.findAllByParentNodeIdNode(nodeId).stream()
                     .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                     .forEach(child -> child.setParentNode(node));
             }
-            emitNodeInserted(getStudyUuidForNodeId(id), id, node.getIdNode(), insertMode);
+            emitNodeInserted(getStudyUuidForNodeId(nodeId), nodeId, node.getIdNode(), insertMode);
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    public Mono<AbstractNode> createNode(UUID id, AbstractNode nodeInfo, InsertMode insertMode) {
-        return Mono.fromCallable(() -> self.doCreateNode(id, nodeInfo, insertMode));
+    public Mono<AbstractNode> createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+        return Mono.fromCallable(() -> self.doCreateNode(studyUuid, nodeId, nodeInfo, insertMode));
     }
 
-    public Mono<Void> deleteNode(UUID id, boolean deleteChildren) {
-        return Mono.fromRunnable(() -> self.doDeleteNode(id, deleteChildren));
+    public Mono<Void> deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        return Mono.fromRunnable(() -> self.doDeleteNode(studyUuid, nodeId, deleteChildren));
     }
 
     @Transactional
-    public void doDeleteNode(UUID id, boolean deleteChildren) {
+    // TODO test if studyUuid exist and have a node <nodeId>
+    public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
         List<UUID> removedNodes = new ArrayList<>();
-        UUID studyId = getStudyUuidForNodeId(id);
-        deleteNodes(id, deleteChildren, false, removedNodes);
+        UUID studyId = getStudyUuidForNodeId(nodeId);
+        deleteNodes(nodeId, deleteChildren, false, removedNodes);
         emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
@@ -215,6 +220,7 @@ public class NetworkModificationTreeService {
             .id(node.getIdNode())
             .name("Root")
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .buildStatus(BuildStatus.NOT_BUILT)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
     }
@@ -243,22 +249,27 @@ public class NetworkModificationTreeService {
         return Mono.fromCallable(() -> self.doGetStudyTree(studyId));
     }
 
-    public Mono<Void> updateNode(AbstractNode node) {
-        return Mono.fromRunnable(() -> self.doUpdateNode(node));
+    public Mono<Void> updateNode(UUID studyUuid, AbstractNode node) {
+        return Mono.fromRunnable(() -> self.doUpdateNode(studyUuid, node));
     }
 
     @Transactional
-    public void doUpdateNode(AbstractNode node) {
+    // TODO test if studyUuid exist and have the node
+    public void doUpdateNode(UUID studyUuid, AbstractNode node) {
         repositories.get(node.getType()).updateNode(node);
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
 
-    public Mono<AbstractNode> getSimpleNode(UUID id) {
-        return Mono.fromCallable(() -> {
-            AbstractNode node = nodesRepository.findById(id).map(n -> repositories.get(n.getType()).getNode(id)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-            nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
-            return node;
-        });
+    // TODO test if studyUuid exist and have a node <nodeId>
+    public Mono<AbstractNode> getSimpleNode(UUID studyUuid, UUID nodeId) {
+        return Mono.fromCallable(() -> self.doGetSimpleNode(nodeId));
+    }
+
+    @Transactional
+    public AbstractNode doGetSimpleNode(UUID nodeId) {
+        AbstractNode node = nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
+        return node;
     }
 
     public UUID getStudyRootNodeUuid(UUID studyId) {
@@ -373,5 +384,68 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
         return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
+    }
+
+    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
+        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
+        if (node.getType() == NodeType.ROOT) {
+            RootNode rootNode = (RootNode) node;
+            if (rootNode.getBuildStatus() != BuildStatus.BUILT && rootNode.getNetworkModification() != null) {
+                buildInfos.insert(rootNode.getNetworkModification());
+            }
+        } else if (node.getType() == NodeType.MODEL) {
+            getBuildInfos(nodeEntity.getParentNode(), buildInfos);
+        } else {
+            NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+            if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
+                buildInfos.insert(modificationNode.getNetworkModification());
+            }
+            if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
+                buildInfos.setOriginVariantId(modificationNode.getVariantId());
+            } else {
+                getBuildInfos(nodeEntity.getParentNode(), buildInfos);
+            }
+        }
+    }
+
+    @Transactional
+    public BuildInfos getBuildInfos(UUID nodeUuid) {
+        BuildInfos buildInfos = new BuildInfos();
+        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        buildInfos.setDestinationVariantId(self.doGetVariantId(nodeUuid, true).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)));
+        getBuildInfos(nodeEntity, buildInfos);
+        return buildInfos;
+    }
+
+    @Transactional
+    public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes) {
+        nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
+            .forEach(child -> {
+                changedNodes.add(child.getIdNode());
+                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode());
+                invalidateChildrenBuildStatus(child, changedNodes);
+            });
+    }
+
+    @Transactional
+    public void doUpdateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        List<UUID> changedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(n -> {
+            changedNodes.add(nodeUuid);
+            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus);
+            invalidateChildrenBuildStatus(n, changedNodes);
+        });
+
+        emitNodesChanged(studyId, changedNodes);
+    }
+
+    public Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        return Mono.fromRunnable(() -> self.doUpdateBuildStatus(nodeUuid, buildStatus));
+    }
+
+    public BuildStatus getBuildStatus(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
     }
 }

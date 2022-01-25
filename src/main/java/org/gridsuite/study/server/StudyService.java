@@ -14,14 +14,13 @@ import com.powsybl.iidm.network.Country;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +36,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.support.MessageBuilder;
-import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +60,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -78,7 +77,7 @@ public class StudyService {
 
     public static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
-    private static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
+    public static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
 
     private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
 
@@ -96,6 +95,8 @@ public class StudyService {
     static final String UPDATE_TYPE_LINE = "line";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
+    static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     static final String HEADER_ERROR = "error";
     static final String UPDATE_TYPE_STUDY = "study";
     static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
@@ -110,20 +111,14 @@ public class StudyService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String RESULT_UUID = "resultUuid";
 
-    static final String RECEIVER = "receiver";
+    static final String QUERY_PARAM_RECEIVER = "receiver";
+    static final String HEADER_RECEIVER = "receiver";
 
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
     StudyService self;
 
     NetworkModificationTreeService networkModificationTreeService;
-
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    private static class Receiver {
-        private UUID nodeUuid;
-    }
 
     private final WebClient webClient;
 
@@ -154,7 +149,7 @@ public class StudyService {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
                 UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-                String receiver = message.getHeaders().get(RECEIVER, String.class);
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
@@ -167,7 +162,7 @@ public class StudyService {
                         return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid)
                             .then(Mono.fromCallable(() -> {
                                 // send notifications
-                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                                 return null;
@@ -251,8 +246,8 @@ public class StudyService {
                 .build();
     }
 
-    public Flux<CreatedStudyBasicInfos> getStudyList(String userId) {
-        return Flux.fromStream(() -> studyRepository.findByUserIdOrIsPrivate(userId, false).stream())
+    public Flux<CreatedStudyBasicInfos> getStudies(String userId) {
+        return Flux.fromStream(() -> studyRepository.findAllByUserId(userId).stream())
             .map(StudyService::toCreatedStudyBasicInfos)
             .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
@@ -262,7 +257,7 @@ public class StudyService {
     }
 
     Flux<BasicStudyInfos> getStudyCreationRequests(String userId) {
-        return Flux.fromStream(() -> studyCreationRequestRepository.findByUserIdOrIsPrivate(userId, false).stream())
+        return Flux.fromStream(() -> studyCreationRequestRepository.findAllByUserId(userId).stream())
             .map(StudyService::toBasicStudyInfos)
             .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
     }
@@ -311,15 +306,8 @@ public class StudyService {
                 );
     }
 
-    public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid, String headerUserId) {
-        Mono<StudyEntity> studyMono = getStudy(studyUuid);
-        return studyMono.flatMap(study -> {
-            if (study.isPrivate() && !study.getUserId().equals(headerUserId)) {
-                return Mono.error(new StudyException(NOT_ALLOWED));
-            } else {
-                return Mono.just(study);
-            }
-        }).map(StudyService::toStudyInfos);
+    public Mono<StudyInfos> getCurrentUserStudy(UUID studyUuid) {
+        return getStudy(studyUuid).map(StudyService::toStudyInfos);
     }
 
     @Transactional(readOnly = true)
@@ -327,35 +315,67 @@ public class StudyService {
         return studyRepository.findById(studyUuid).orElse(null);
     }
 
-    @Transactional
-    public StudyEntity doGetStudyAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        StudyEntity studyEntity = doGetStudy(studyUuid);
-        if (studyEntity != null) {
-            //only the owner of a study can change the access rights
-            if (!headerUserId.equals(studyEntity.getUserId())) {
-                throw new StudyException(NOT_ALLOWED);
-            }
-            studyEntity.setPrivate(toPrivate);
-        }
-        return studyEntity;
-    }
-
     public Mono<StudyEntity> getStudy(UUID studyUuid) {
         return Mono.fromCallable(() -> self.doGetStudy(studyUuid));
-    }
-
-    public Mono<StudyEntity> getStudyAndUpdateIsPrivate(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        return Mono.fromCallable(() -> self.doGetStudyAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate));
     }
 
     Flux<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
         return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String query) {
+    public static String escapeLucene(String s) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < s.length(); ++i) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '+':
+                case '\\':
+                case '-':
+                case '!':
+                case '(':
+                case ')':
+                case ':':
+                case '^':
+                case '[':
+                case ']':
+                case '"':
+                case '{':
+                case '}':
+                case '~':
+                case '*':
+                case '?':
+                case '|':
+                case '&':
+                case '/':
+
+                case ' ': // white space has to be escaped, too
+                    sb.append('\\');
+                    break;
+                default:
+                    // do nothing but appease sonarlint
+            }
+
+            sb.append(c);
+        }
+
+        return sb.toString();
+    }
+
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput,
+        EquipmentInfosService.FieldSelector fieldSelector) {
         return networkStoreService
-            .getNetworkUuid(studyUuid)
-            .flatMapIterable(networkUuid -> equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND %s", networkUuid, query)));
+                .getNetworkUuid(studyUuid)
+                .flatMapIterable(networkUuid -> {
+                    String query = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid);
+                    return equipmentInfosService.search(query);
+                });
+    }
+
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid) {
+        return String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
+            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
+            escapeLucene(userInput));
     }
 
     @Transactional
@@ -367,9 +387,6 @@ public class StudyService {
             networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
             groupsUuids = networkModificationTreeService.getAllModificationGroupUuids(studyUuid);
             studyRepository.findById(studyUuid).ifPresent(s -> {
-                if (!s.getUserId().equals(userId)) {
-                    throw new StudyException(NOT_ALLOWED);
-                }
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
@@ -799,13 +816,7 @@ public class StudyService {
         });
     }
 
-    public Mono<StudyInfos> changeStudyAccessRights(UUID studyUuid, String headerUserId, boolean toPrivate) {
-        return getStudyAndUpdateIsPrivate(studyUuid, headerUserId, toPrivate)
-            .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)))
-            .map(StudyService::toStudyInfos);
-    }
-
-    public Mono<Void> changeLineStatus(UUID studyUuid, String lineId, String status, UUID nodeUuid) {
+    public Mono<Void> changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull  String status, @NonNull UUID nodeUuid) {
         return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
@@ -816,7 +827,7 @@ public class StudyService {
                     .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE));
 
-            return networkModificationService.applyLineChanges(studyUuid, lineId, status, groupUuid, variantId)
+            return networkModificationService.changeLineStatus(studyUuid, lineId, status, groupUuid, variantId)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
@@ -1056,7 +1067,7 @@ public class StudyService {
             }
             var path = uriComponentsBuilder
                 .queryParam("contingencyListName", contingencyListNames)
-                .queryParam(RECEIVER, receiver)
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .buildAndExpand(networkUuid)
                 .toUriString();
 
@@ -1264,7 +1275,7 @@ public class StudyService {
                    throw new UncheckedIOException(e);
                }
                String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                   .queryParam(RECEIVER, receiver)
+                   .queryParam(QUERY_PARAM_RECEIVER, receiver)
                    .buildAndExpand(resultUuid)
                    .toUriString();
                return webClient
@@ -1279,7 +1290,7 @@ public class StudyService {
     public Consumer<Flux<Message<String>>> consumeSaStopped() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
             .flatMap(message -> {
-                String receiver = message.getHeaders().get(RECEIVER, String.class);
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
                 if (receiver != null) {
                     Receiver receiverObj;
                     try {
@@ -1291,7 +1302,7 @@ public class StudyService {
                         return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null)
                             .then(Mono.fromCallable(() -> {
                                 // send notification for stopped computation
-                                UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                                 emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                                 return null;
                             }));
@@ -1498,6 +1509,92 @@ public class StudyService {
         Objects.requireNonNull(nodeUuid);
 
         return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
+    }
+
+    private Mono<BuildInfos> getBuildInfos(UUID nodeUuid) {
+        return Mono.fromCallable(() -> networkModificationTreeService.getBuildInfos(nodeUuid));
+    }
+
+    public Mono<Void> buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        return getBuildInfos(nodeUuid).flatMap(infos -> networkModificationService.buildNode(studyUuid, nodeUuid, infos));
+    }
+
+    public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        return networkModificationService.stopBuild(studyUuid, nodeUuid);
+    }
+
+    @Bean
+    public Consumer<Flux<Message<String>>> consumeBuildResult() {
+        return f -> f.log(StudyService.CATEGORY_BROKER_INPUT, Level.FINE)
+            .flatMap(message -> {
+                Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+                if (receiver != null) {
+                    Receiver receiverObj;
+                    try {
+                        receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
+
+                        LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
+
+                        return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT)
+                            .then(Mono.fromRunnable(() -> {
+                                // send notification
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
+                            }));
+                    } catch (JsonProcessingException e) {
+                        LOGGER.error(e.toString());
+                    }
+                }
+                return Mono.empty();
+            })
+            .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+            .subscribe();
+    }
+
+    @Bean
+    public Consumer<Flux<Message<String>>> consumeBuildStopped() {
+        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE)
+            .flatMap(message -> {
+                String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+                if (receiver != null) {
+                    Receiver receiverObj;
+                    try {
+                        receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), Receiver.class);
+
+                        LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
+
+                        return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT)
+                            .then(Mono.fromRunnable(() -> {
+                                // send notification
+                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
+                            }));
+                    } catch (JsonProcessingException e) {
+                        LOGGER.error(e.toString());
+                    }
+                }
+                return Mono.empty();
+            })
+            .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+            .subscribe();
+    }
+
+    Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
+    }
+
+    @Transactional
+    public Mono<Void> deleteModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid) {
+        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupId ->
+                networkModificationService.deleteModification(groupId, modificationUuid)
+            )
+            .doOnSuccess(
+                e -> updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT).subscribe()
+            );
     }
 }
 

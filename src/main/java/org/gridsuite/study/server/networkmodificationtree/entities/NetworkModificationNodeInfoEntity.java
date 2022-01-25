@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
 import javax.persistence.CascadeType;
@@ -55,4 +56,8 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column(name = "securityAnalysisResultUuid")
     private UUID securityAnalysisResultUuid;
+
+    @Column(name = "buildStatus", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private BuildStatus buildStatus;
 }
