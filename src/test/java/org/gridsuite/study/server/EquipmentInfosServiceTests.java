@@ -15,6 +15,7 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.junit.Before;
@@ -177,7 +178,7 @@ public class EquipmentInfosServiceTests {
             .networkUuid(EquipmentInfosServiceTests.NETWORK_UUID)
             .id(i.getId())
             .name(i.getNameOrId())
-            .type(EquipmentType.getType(i).name())
+            .type(i.getType().name())
             .voltageLevels(Set.of(VoltageLevelInfos.builder().id("vlid").name("vlname").build()))
             .build();
     }
