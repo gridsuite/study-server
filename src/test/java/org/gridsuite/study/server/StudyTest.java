@@ -1902,7 +1902,7 @@ public class StudyTest {
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
 
-        // create substation
+        // create voltage level
         String createVoltageLevelAttributes = "{\"voltageLevelId\":\"voltageLevelId1\",\"voltageLevelName\":\"voltageLevelName1\""
             + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
         webTestClient.put()
@@ -1912,7 +1912,7 @@ public class StudyTest {
             .expectStatus().isOk();
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, new HashSet<>());
 
-        // create substation on modification node child of root node
+        // create voltage level on modification node child of root node
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createVoltageLevelAttributes)

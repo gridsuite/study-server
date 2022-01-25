@@ -105,8 +105,8 @@ public class StudyController {
     @PostMapping(value = "/studies/cases/{caseUuid}")
     @Operation(summary = "create a study from an existing case")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-            @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
+        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
+        @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestParam("isPrivate") Boolean isPrivate,
@@ -119,9 +119,9 @@ public class StudyController {
     @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "create a study and import the case")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-            @ApiResponse(responseCode = "409", description = "The study already exist"),
-            @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
+        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
+        @ApiResponse(responseCode = "409", description = "The study already exist"),
+        @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@RequestPart("caseFile") FilePart caseFile,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestParam("isPrivate") Boolean isPrivate,
@@ -134,8 +134,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "get a study")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The study information"),
-            @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
+        @ApiResponse(responseCode = "200", description = "The study information"),
+        @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
     public ResponseEntity<Mono<StudyInfos>> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
         Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
@@ -463,7 +463,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
     @Operation(summary = "Get a security analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
-            @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
+        @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
@@ -553,7 +553,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
-            @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
+        @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return studyService.getSecurityAnalysisStatus(nodeUuid)
@@ -744,9 +744,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level has been created")})
     public ResponseEntity<Mono<Void>> createVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
         @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String createSubstationAttributes) {
+        @RequestBody String createVoltageLevelAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
-            .then(studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid)));
+            .then(studyService.createEquipment(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
