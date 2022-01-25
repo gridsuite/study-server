@@ -44,6 +44,7 @@ public class RestResponseEntityExceptionHandler {
                 case LINE_MODIFICATION_FAILED:
                 case LOAD_CREATION_FAILED:
                 case GENERATOR_CREATION_FAILED:
+                case SHUNT_COMPENSATOR_CREATION_FAILED:
                 case LINE_CREATION_FAILED:
                 case TWO_WINDINGS_TRANSFORMER_CREATION_FAILED:
                 case SUBSTATION_CREATION_FAILED:

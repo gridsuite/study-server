@@ -709,6 +709,16 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid)));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunts-compensator")
+    @Operation(summary = "create a shunt-compensator in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The shunt-compensator has been created")})
+    public ResponseEntity<Mono<Void>> createShuntCompensator(@PathVariable("studyUuid") UUID studyUuid,
+                                                             @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @RequestBody String createShuntCompensatorAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+            .then(studyService.createEquipment(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid)));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines")
     @Operation(summary = "create a line in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line has been created")})
