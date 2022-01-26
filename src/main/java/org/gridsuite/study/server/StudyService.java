@@ -1353,7 +1353,7 @@ public class StudyService {
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
             .name("modification node 0")
-            .variantId(UUID.randomUUID().toString())
+            .variantId(FIRST_VARIANT_ID)
             .build();
         networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER).subscribe();
 
