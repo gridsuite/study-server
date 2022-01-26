@@ -12,7 +12,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -38,22 +37,22 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public Optional<String> getVariantId(AbstractNode node, boolean generateId) {
+    public String getVariantId(AbstractNode node, boolean generateId) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         if (networkModificationNode.getVariantId() == null && generateId) {
             networkModificationNode.setVariantId(UUID.randomUUID().toString());  // variant id generated with UUID format ????
             updateNode(networkModificationNode);
         }
-        return Optional.ofNullable(networkModificationNode.getVariantId());
+        return networkModificationNode.getVariantId();
     }
 
     @Override
-    public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
+    public UUID getModificationGroupUuid(AbstractNode node, boolean generateId) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         if (networkModificationNode.getNetworkModification() == null && generateId) {
             networkModificationNode.setNetworkModification(UUID.randomUUID());
             updateNode(networkModificationNode);
         }
-        return Optional.ofNullable(networkModificationNode.getNetworkModification());
+        return networkModificationNode.getNetworkModification();
     }
 }

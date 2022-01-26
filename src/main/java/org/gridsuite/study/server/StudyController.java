@@ -753,7 +753,8 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")
     @Operation(summary = "build a study node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
-                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
+                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
+                           @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Mono<Void>> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.buildNode(studyUuid, nodeUuid)));

@@ -12,8 +12,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 
-import java.util.Optional;
-
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -36,7 +34,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
-    public Optional<String> getVariantId(AbstractNode node, boolean generateId) {
-        return Optional.of("");  // we will use the network initial variant
+    public String getVariantId(AbstractNode node, boolean generateId) {
+        return "";  // we will use the network initial variant
     }
 }

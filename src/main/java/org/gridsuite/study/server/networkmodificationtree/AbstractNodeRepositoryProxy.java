@@ -19,7 +19,6 @@ import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -40,12 +39,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract NodeDto toDto(NodeInfoEntity node);
 
-    public Optional<String> getVariantId(AbstractNode node, boolean generateId) {
-        return Optional.empty();
+    public String getVariantId(AbstractNode node, boolean generateId) {
+        return null;
     }
 
-    public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
-        return Optional.empty();
+    public UUID getModificationGroupUuid(AbstractNode node, boolean generateId) {
+        return null;
     }
 
     public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
@@ -122,11 +121,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         nodeInfoRepository.deleteByIdNodeIn(collect);
     }
 
-    public Optional<String> getVariantId(UUID nodeUuid, boolean generateId) {
+    public String getVariantId(UUID nodeUuid, boolean generateId) {
         return getVariantId(getNode(nodeUuid), generateId);
     }
 
-    public Optional<UUID> getModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+    public UUID getModificationGroupUuid(UUID nodeUuid, boolean generateId) {
         return getModificationGroupUuid(getNode(nodeUuid), generateId);
     }
 

@@ -281,32 +281,31 @@ public class NetworkModificationTreeService {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
         // if nodeUuid is a model node, get parent node of type network modification node
-        UUID tmpUuid = nodeUuid;
-        if (nodeEntity.get().getType() == NodeType.MODEL) {
-            tmpUuid = self.doGetParentNode(nodeUuid, NodeType.NETWORK_MODIFICATION).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        }
-        return tmpUuid;
+        UUID modificationNodeUuid = nodeEntity.get().getType() != NodeType.MODEL
+            ? nodeUuid
+            : self.doGetParentNode(nodeUuid, NodeType.NETWORK_MODIFICATION).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        return modificationNodeUuid;
     }
 
     @Transactional
-    public Optional<String> doGetVariantId(UUID nodeUuid, boolean generateId) {
+    public String doGetVariantId(UUID nodeUuid, boolean generateId) {
         UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
-        return nodesRepository.findById(modificationNodeUuid).flatMap(n -> repositories.get(n.getType()).getVariantId(modificationNodeUuid, generateId));
+        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getVariantId(modificationNodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     public Mono<String> getVariantId(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetVariantId(nodeUuid, true).orElse(null))
+        return Mono.fromCallable(() -> self.doGetVariantId(nodeUuid, true))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
     @Transactional
-    public Optional<UUID> doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+    public UUID doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
         UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
-        return nodesRepository.findById(modificationNodeUuid).flatMap(n -> repositories.get(n.getType()).getModificationGroupUuid(modificationNodeUuid, generateId));
+        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(modificationNodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(nodeUuid, true).orElse(null))
+        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(nodeUuid, true))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
@@ -314,7 +313,12 @@ public class NetworkModificationTreeService {
     public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false).ifPresent(uuids::add));
+        nodes.forEach(n -> {
+            UUID modificationUuid = repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false);
+            if (modificationUuid != null) {
+                uuids.add(modificationUuid);
+            }
+        });
         return uuids;
     }
 
@@ -408,7 +412,7 @@ public class NetworkModificationTreeService {
                 getBuildInfos(nodeEntity.getParentNode(), buildInfos);
             } else {
                 Optional<UUID> modificationNodeUuid = self.doGetParentNode(modelNode.getId(), NodeType.NETWORK_MODIFICATION);
-                modificationNodeUuid.ifPresent(uuid -> buildInfos.setOriginVariantId(self.doGetVariantId(uuid, true).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND))));
+                modificationNodeUuid.ifPresent(uuid -> buildInfos.setOriginVariantId(self.doGetVariantId(uuid, true)));
             }
         } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
@@ -431,7 +435,7 @@ public class NetworkModificationTreeService {
         Optional<UUID> modificationNodeUuid = self.doGetParentNode(nodeUuid, NodeType.NETWORK_MODIFICATION);
         modificationNodeUuid.ifPresent(uuid -> {
             NodeEntity modificationNodeEntity = nodesRepository.findById(uuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-            buildInfos.setDestinationVariantId(self.doGetVariantId(uuid, true).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)));
+            buildInfos.setDestinationVariantId(self.doGetVariantId(uuid, true));
             getBuildInfos(modificationNodeEntity, buildInfos);
         });
 
@@ -473,8 +477,11 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Optional<UUID> doGetParentNode(UUID nodeUuid, NodeType nodeType) {
         NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        if (nodeEntity.getType() == NodeType.ROOT && nodeType != NodeType.ROOT) {
+            return Optional.empty();
+        }
         if (nodeEntity.getType() == NodeType.ROOT || nodeEntity.getParentNode().getType() == nodeType) {
-            return Optional.of(nodeEntity.getParentNode().getIdNode());
+            return Optional.of(nodeEntity.getParentNode() != null ? nodeEntity.getParentNode().getIdNode() : nodeEntity.getIdNode());
         } else {
             return doGetParentNode(nodeEntity.getParentNode().getIdNode(), nodeType);
         }

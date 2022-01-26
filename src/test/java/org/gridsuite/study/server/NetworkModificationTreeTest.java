@@ -361,7 +361,7 @@ public class NetworkModificationTreeTest {
         assertEquals(1, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
 
         UUID modelUuid = model.getId();
-        assertFalse(networkModificationTreeService.doGetModificationGroupUuid(modelUuid, true).isEmpty());
+        assertNotNull(networkModificationTreeService.doGetModificationGroupUuid(modelUuid, true));
         assertFalse(networkModificationTreeService.doGetVariantId(modelUuid, true).isEmpty());
     }
 
