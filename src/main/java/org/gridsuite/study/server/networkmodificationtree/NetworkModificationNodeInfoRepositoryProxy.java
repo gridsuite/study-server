@@ -53,7 +53,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        int ignoreSize = node.getModificationsToExclude().size();
+        int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(),
                                                                   node.getVariantId(),
                                                                   node.getLoadFlowStatus(),
@@ -139,9 +139,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         if (networkModificationNode.getBuildStatus() == BuildStatus.BUILT) {
-            networkModificationNode.setBuildStatus(BuildStatus.BUILT_INVALID);
-            changedNodes.add(node.getId());
-            updateNode(networkModificationNode);
+            updateBuildStatus(node, BuildStatus.BUILT_INVALID, changedNodes);
         }
     }
 

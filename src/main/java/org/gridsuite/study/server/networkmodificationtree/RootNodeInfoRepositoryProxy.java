@@ -55,7 +55,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     @Override
     public RootNode toDto(RootNodeInfoEntity node) {
         @SuppressWarnings("unused")
-        int ignoreSize = node.getModificationsToExclude().size();
+        int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new RootNode(null,
                                                    node.getNetworkModificationId(),
                                                    node.getLoadFlowStatus(),
@@ -136,9 +136,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         RootNode rootNode = (RootNode) node;
         if (rootNode.getBuildStatus() == BuildStatus.BUILT) {
-            rootNode.setBuildStatus(BuildStatus.BUILT_INVALID);
-            changedNodes.add(rootNode.getId());
-            updateNode(rootNode);
+            updateBuildStatus(node, BuildStatus.BUILT_INVALID, changedNodes);
         }
     }
 
