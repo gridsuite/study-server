@@ -1835,23 +1835,54 @@ public class StudyTest {
         // create substation
         String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, rootNodeUuid)
-                .bodyValue(createSubstationAttributes)
-                .exchange()
-                .expectStatus().isOk();
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, rootNodeUuid)
+            .bodyValue(createSubstationAttributes)
+            .exchange()
+            .expectStatus().isOk();
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, new HashSet<>());
 
         // create substation on modification node child of root node
         webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, modificationNodeUuid)
-                .bodyValue(createSubstationAttributes)
-                .exchange()
-                .expectStatus().isOk();
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, modificationNodeUuid)
+            .bodyValue(createSubstationAttributes)
+            .exchange()
+            .expectStatus().isOk();
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, new HashSet<>());
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*") && r.getBody().equals(createSubstationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createSubstationAttributes)));
+    }
+
+    @Test
+    public void testCreateVoltageLevel() {
+        createStudy("userId", CASE_UUID, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        // create voltage level
+        String createVoltageLevelAttributes = "{\"voltageLevelId\":\"voltageLevelId1\",\"voltageLevelName\":\"voltageLevelName1\""
+            + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels", studyNameUserIdUuid, rootNodeUuid)
+            .bodyValue(createVoltageLevelAttributes)
+            .exchange()
+            .expectStatus().isOk();
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, new HashSet<>());
+
+        // create voltage level on modification node child of root node
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels", studyNameUserIdUuid, modificationNodeUuid)
+            .bodyValue(createVoltageLevelAttributes)
+            .exchange()
+            .expectStatus().isOk();
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, new HashSet<>());
+
+        var requests = getRequestsWithBodyDone(2);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*") && r.getBody().equals(createVoltageLevelAttributes)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createVoltageLevelAttributes)));
     }
 
     @Test
