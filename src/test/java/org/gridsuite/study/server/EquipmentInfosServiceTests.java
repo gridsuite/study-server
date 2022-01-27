@@ -6,13 +6,16 @@
  */
 package org.gridsuite.study.server;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Stream;
-
+import com.google.common.collect.Iterables;
+import com.powsybl.commons.datasource.ReadOnlyDataSource;
+import com.powsybl.commons.datasource.ResourceDataSource;
+import com.powsybl.commons.datasource.ResourceSet;
+import com.powsybl.iidm.network.Identifiable;
+import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.xml.XMLImporter;
+import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.EquipmentType;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.junit.Before;
@@ -25,23 +28,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.NoSuchIndexException;
 import org.springframework.test.context.junit4.SpringRunner;
+import reactor.core.publisher.Mono;
 
-import com.google.common.collect.Iterables;
-import com.powsybl.commons.datasource.ReadOnlyDataSource;
-import com.powsybl.commons.datasource.ResourceDataSource;
-import com.powsybl.commons.datasource.ResourceSet;
-import com.powsybl.iidm.network.Identifiable;
-import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.xml.XMLImporter;
-import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
-import com.powsybl.network.store.iidm.impl.NetworkImpl;
-import nl.jqno.equalsverifier.EqualsVerifier;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
+
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
-import reactor.core.publisher.Mono;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -181,7 +178,7 @@ public class EquipmentInfosServiceTests {
             .networkUuid(EquipmentInfosServiceTests.NETWORK_UUID)
             .id(i.getId())
             .name(i.getNameOrId())
-            .type(EquipmentType.getType(i).name())
+            .type(i.getType().name())
             .voltageLevels(Set.of(VoltageLevelInfos.builder().id("vlid").name("vlname").build()))
             .build();
     }
@@ -260,25 +257,5 @@ public class EquipmentInfosServiceTests {
 
         hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.fullascii:(*fFR1àÀ1  FFR2AA1  2*)"));
         pbsc.checkThat(hits.size(), is(1));
-    }
-
-    @Test
-    public void testEquipmentType() {
-        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
-        Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
-
-        assertEquals(EquipmentType.SUBSTATION, EquipmentType.getType(network.getSubstation("BBE1AA")));
-        assertEquals(EquipmentType.VOLTAGE_LEVEL, EquipmentType.getType(network.getVoltageLevel("BBE1AA1")));
-        assertEquals(EquipmentType.LOAD, EquipmentType.getType(network.getLoad("BBE1AA1 _load")));
-        assertEquals(EquipmentType.LINE, EquipmentType.getType(network.getLine("BBE1AA1  BBE2AA1  1")));
-        assertEquals(EquipmentType.TWO_WINDINGS_TRANSFORMER, EquipmentType.getType(network.getTwoWindingsTransformer("BBE1AA1  BBE3AA1  2")));
-        assertEquals(EquipmentType.CONFIGURED_BUS, EquipmentType.getType(network.getBusBreakerView().getBus("BBE1AA1 ")));
-    }
-
-    @Test
-    public void testBadEquipmentType() {
-        Identifiable<Network> network = new NetworkFactoryImpl().createNetwork("test", "test");
-        String errorMessage = assertThrows(StudyException.class, () -> EquipmentType.getType(network)).getMessage();
-        assertTrue(errorMessage.contains(String.format("The equipment type : %s is unknown", NetworkImpl.class.getSimpleName())));
     }
 }

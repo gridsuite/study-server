@@ -48,6 +48,7 @@ public class RestResponseEntityExceptionHandler {
                 case LINE_CREATION_FAILED:
                 case TWO_WINDINGS_TRANSFORMER_CREATION_FAILED:
                 case SUBSTATION_CREATION_FAILED:
+                case VOLTAGE_LEVEL_CREATION_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case DELETE_EQUIPMENT_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
