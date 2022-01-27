@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2021, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -737,6 +737,16 @@ public class StudyController {
                                                                    @RequestBody String createSubstationAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
                 .then(studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels")
+    @Operation(summary = "create a voltage level in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level has been created")})
+    public ResponseEntity<Mono<Void>> createVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody String createVoltageLevelAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+            .then(studyService.createEquipment(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
