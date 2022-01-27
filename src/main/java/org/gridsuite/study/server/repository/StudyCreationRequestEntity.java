@@ -22,11 +22,11 @@ import javax.persistence.*;
 @Getter
 @Setter
 @Entity
-@Table(name = "StudyCreationRequest", indexes = {@Index(name = "studyCreationRequest_isPrivate_index", columnList = "isPrivate"), @Index(name = "studyCreationRequest_userId_index", columnList = "userId")})
+@Table(name = "StudyCreationRequest", indexes = {@Index(name = "studyCreationRequest_userId_index", columnList = "userId")})
 public class StudyCreationRequestEntity implements BasicStudyEntity {
 
-    public StudyCreationRequestEntity(String userId, LocalDateTime date, boolean isPrivate) {
-        this(null, userId, date, isPrivate);
+    public StudyCreationRequestEntity(String userId, LocalDateTime date) {
+        this(null, userId, date);
     }
 
     @Id
@@ -38,7 +38,4 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
 
     @Column(name = "creationDate", nullable = false)
     private LocalDateTime date;
-
-    @Column(name = "isPrivate", nullable = false)
-    private Boolean isPrivate;
 }
