@@ -480,17 +480,17 @@ public class StudyTest {
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID:
-                    case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID:
+                    case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         countDownLatch.await(2, TimeUnit.SECONDS);
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks?caseUuid=" + CASE_UUID_STRING:
-                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
+                    case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
                             .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
@@ -1588,6 +1588,9 @@ public class StudyTest {
         assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
+        output.receive(1000);  // message for first modification node creation
+        output.receive(1000);  // message for first model node creation
+
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
@@ -1611,7 +1614,7 @@ public class StudyTest {
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", CASE_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", CASE_UUID_STRING)));
+        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", CASE_UUID_STRING, FIRST_VARIANT_ID)));
 
         return studyUuid;
     }
@@ -1651,6 +1654,11 @@ public class StudyTest {
         assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
+        if (errorMessage.length == 0) {
+            output.receive(1000);
+            output.receive(1000);
+        }
+
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
@@ -1675,9 +1683,8 @@ public class StudyTest {
         assertTrue(requests.contains("/v1/cases/private"));
         if (caseUuid != null) {
             assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
-            assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", caseUuid)));
+            assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", caseUuid, FIRST_VARIANT_ID)));
         }
-
         return studyUuid;
     }
 
@@ -1733,7 +1740,7 @@ public class StudyTest {
         var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.contains("/v1/cases/private"));
         assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
-        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s", IMPORTED_BLOCKING_CASE_UUID_STRING)));
+        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", IMPORTED_BLOCKING_CASE_UUID_STRING, FIRST_VARIANT_ID)));
 
         countDownLatch = new CountDownLatch(1);
 
@@ -1764,7 +1771,7 @@ public class StudyTest {
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s", NEW_STUDY_CASE_UUID)));
+        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID)));
     }
 
     @Test
@@ -2403,7 +2410,6 @@ public class StudyTest {
         assertEquals(2, nodesList.size());
         assertEquals(Set.of(modificationNode.getId(), node3.getId()), new HashSet(nodesList));
         assertEquals("nodeUpdated", res.getHeaders().get("updateType"));
-
     }
 
     @After
