@@ -21,6 +21,10 @@ import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.ModelNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +116,10 @@ public class StudyService {
     static final String RESULT_UUID = "resultUuid";
 
     static final String QUERY_PARAM_RECEIVER = "receiver";
+
     static final String HEADER_RECEIVER = "receiver";
+
+    static final String FIRST_VARIANT_ID = "first_variant_id";
 
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
@@ -556,6 +563,7 @@ public class StudyService {
     private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String userId, boolean isPrivate) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, caseUuid)
+            .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
             .buildAndExpand()
             .toUriString();
 
@@ -746,6 +754,7 @@ public class StudyService {
             UUID networkUuid = tuple3.getT1();
             String provider = tuple3.getT2();
             String variantId = tuple3.getT3();
+
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", networkUuid.toString()).queryParam("reportName", "loadflow").queryParam("overwrite", true);
             if (!provider.isEmpty()) {
@@ -773,7 +782,9 @@ public class StudyService {
 
     private Mono<Void> setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
         return updateLoadFlowStatus(nodeUuid, LoadFlowStatus.RUNNING)
-            .doOnSuccess(s -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS));
+            .doOnSuccess(s ->
+                emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS)
+            );
     }
 
     public Mono<Collection<String>> getExportFormats() {
@@ -1328,7 +1339,23 @@ public class StudyService {
     @Transactional
     public StudyEntity insertStudy(StudyEntity studyEntity) {
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity);
+        // create 3 nodes : root node, modification node 0 and model node 0
+        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode modificationNode = NetworkModificationNode
+            .builder()
+            .name("modification node 0")
+            .variantId(FIRST_VARIANT_ID)
+            .build();
+        networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER).subscribe();
+
+        ModelNode modelNode = ModelNode
+            .builder()
+            .name("model node 0")
+            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .buildStatus(BuildStatus.BUILT)
+            .build();
+        networkModificationTreeService.createNode(studyEntity.getId(), modificationNode.getId(), modelNode, InsertMode.AFTER).subscribe();
+
         return study;
     }
 

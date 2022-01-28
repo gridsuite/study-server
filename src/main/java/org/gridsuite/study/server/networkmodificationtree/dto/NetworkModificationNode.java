@@ -6,13 +6,11 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
-import com.powsybl.loadflow.LoadFlowResult;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 import java.util.HashSet;
@@ -32,14 +30,6 @@ public class NetworkModificationNode extends AbstractNode {
     UUID networkModification;
 
     String variantId;
-
-    LoadFlowStatus loadFlowStatus;
-
-    LoadFlowResult loadFlowResult;
-
-    UUID securityAnalysisResultUuid;
-
-    BuildStatus buildStatus;
 
     Set<UUID> modificationsToExclude = new HashSet<>();
 

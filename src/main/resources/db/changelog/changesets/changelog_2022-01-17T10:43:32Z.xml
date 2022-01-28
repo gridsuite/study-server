@@ -8,28 +8,12 @@
             <column name="modifications_to_exclude" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet author="lecuyerfra (generated)" id="1642416219900-5">
-        <createTable tableName="root_node_info_entity_modifications_to_exclude">
-            <column name="root_node_info_entity_id_node" type="UUID">
-                <constraints nullable="false"/>
-            </column>
-            <column name="modifications_to_exclude" type="UUID"/>
-        </createTable>
-    </changeSet>
     <changeSet author="lecuyerfra (generated)" id="1642416219900-6">
         <createIndex indexName="networkModificationNodeInfoEntity_modificationsToExclude_idx" tableName="network_modification_node_info_entity_modifications_to_exclude">
             <column name="network_modification_node_info_entity_id_node"/>
         </createIndex>
     </changeSet>
-    <changeSet author="lecuyerfra (generated)" id="1642416219900-7">
-        <createIndex indexName="rootNodeInfoEntity_modificationsToExclude_idx" tableName="root_node_info_entity_modifications_to_exclude">
-            <column name="root_node_info_entity_id_node"/>
-        </createIndex>
-    </changeSet>
     <changeSet author="lecuyerfra (generated)" id="1642416219900-8">
         <addForeignKeyConstraint baseColumnNames="network_modification_node_info_entity_id_node" baseTableName="network_modification_node_info_entity_modifications_to_exclude" constraintName="networkModificationNodeInfoEntity_modificationsToExclude_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
-    </changeSet>
-    <changeSet author="lecuyerfra (generated)" id="1642416219900-9">
-        <addForeignKeyConstraint baseColumnNames="root_node_info_entity_id_node" baseTableName="root_node_info_entity_modifications_to_exclude" constraintName="rootNodeInfoEntity_modificationsToExclude_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="root_node_info" validate="true"/>
     </changeSet>
 </databaseChangeLog>

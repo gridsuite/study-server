@@ -7,19 +7,12 @@
 
 package org.gridsuite.study.server.networkmodificationtree;
 
-import com.powsybl.loadflow.LoadFlowResult;
-import org.gridsuite.study.server.StudyService;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
 import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -31,21 +24,10 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void createNodeInfo(AbstractNode nodeInfo) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
-        networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
-        super.createNodeInfo(networkModificationNode);
-    }
-
-    @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModification(),
                                                                                       modificationNode.getVariantId(),
-                                                                                      modificationNode.getLoadFlowStatus(),
-                                                                                      StudyService.toEntity(modificationNode.getLoadFlowResult()),
-                                                                                      modificationNode.getSecurityAnalysisResultUuid(),
-                                                                                      modificationNode.getBuildStatus(),
                                                                                       modificationNode.getModificationsToExclude());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
@@ -56,91 +38,28 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(),
                                                                   node.getVariantId(),
-                                                                  node.getLoadFlowStatus(),
-                                                                  StudyService.fromEntity(node.getLoadFlowResult()),
-                                                                  node.getSecurityAnalysisResultUuid(),
-                                                                  node.getBuildStatus(),
                                                                   node.getModificationsToExclude()));
     }
 
     @Override
-    public Optional<String> getVariantId(AbstractNode node, boolean generateId) {
+    public String getVariantId(AbstractNode node, boolean generateId) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         if (networkModificationNode.getVariantId() == null && generateId) {
             networkModificationNode.setVariantId(UUID.randomUUID().toString());  // variant id generated with UUID format ????
             updateNode(networkModificationNode);
         }
-        return Optional.ofNullable(networkModificationNode.getVariantId());
+        return networkModificationNode.getVariantId();
     }
 
     @Override
-    public Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId) {
+    public UUID getModificationGroupUuid(AbstractNode node, boolean generateId) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         if (networkModificationNode.getNetworkModification() == null && generateId) {
             networkModificationNode.setNetworkModification(UUID.randomUUID());
             updateNode(networkModificationNode);
         }
-        return Optional.ofNullable(networkModificationNode.getNetworkModification());
-    }
 
-    @Override
-    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
-        LoadFlowStatus status = ((NetworkModificationNode) node).getLoadFlowStatus();
-        return status != null ? status : LoadFlowStatus.NOT_DONE;
-    }
-
-    @Override
-    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        networkModificationNode.setLoadFlowResult(loadFlowResult);
-        networkModificationNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(networkModificationNode);
-    }
-
-    @Override
-    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        networkModificationNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(networkModificationNode);
-    }
-
-    @Override
-    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        return LoadFlowInfos.builder().loadFlowStatus(networkModificationNode.getLoadFlowStatus()).loadFlowResult(networkModificationNode.getLoadFlowResult()).build();
-    }
-
-    @Override
-    public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        networkModificationNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-        updateNode(networkModificationNode);
-    }
-
-    @Override
-    public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
-    }
-
-    @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        networkModificationNode.setBuildStatus(buildStatus);
-        changedNodes.add(node.getId());
-        updateNode(networkModificationNode);
-    }
-
-    @Override
-    public BuildStatus getBuildStatus(AbstractNode node) {
-        return ((NetworkModificationNode) node).getBuildStatus();
-    }
-
-    @Override
-    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getBuildStatus() == BuildStatus.BUILT) {
-            updateBuildStatus(node, BuildStatus.BUILT_INVALID, changedNodes);
-        }
+        return networkModificationNode.getNetworkModification();
     }
 
     @Override
