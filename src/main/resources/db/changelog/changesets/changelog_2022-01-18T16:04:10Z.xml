@@ -1,0 +1,54 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-3.10.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.10.xsd">
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-3">
+        <addColumn tableName="model_info">
+            <column name="build_status" type="varchar(255)"/>
+        </addColumn>
+        <addNotNullConstraint tableName="model_info" columnName="build_status" defaultNullValue="NOT_BUILT"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-4">
+        <addColumn tableName="model_info">
+            <column name="load_flow_result_entity_id" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-5">
+        <addColumn tableName="model_info">
+            <column name="load_flow_status" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-6">
+        <addColumn tableName="model_info">
+            <column name="security_analysis_result_uuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-7">
+        <dropColumn columnName="BUILD_STATUS" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-8">
+        <dropColumn columnName="BUILD_STATUS" tableName="ROOT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-9">
+        <dropColumn columnName="LOAD_FLOW_RESULT_ENTITY_ID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-10">
+        <dropColumn columnName="LOAD_FLOW_RESULT_ENTITY_ID" tableName="ROOT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-11">
+        <dropColumn columnName="LOAD_FLOW_STATUS" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-12">
+        <dropColumn columnName="LOAD_FLOW_STATUS" tableName="ROOT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-13">
+        <dropColumn columnName="NETWORK_MODIFICATION_ID" tableName="ROOT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-14">
+        <dropColumn columnName="SECURITY_ANALYSIS_RESULT_UUID" tableName="NETWORK_MODIFICATION_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-15">
+        <dropColumn columnName="SECURITY_ANALYSIS_RESULT_UUID" tableName="ROOT_NODE_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1642521859587-16">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="model_info" constraintName="loadFlowResult_id_fk" referencedColumnNames="id" referencedTableName="load_flow_result"/>
+    </changeSet>
+</databaseChangeLog>
