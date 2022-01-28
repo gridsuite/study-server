@@ -2177,12 +2177,6 @@ public class StudyTest {
 
         // create shunt compensator
         String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
-        webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators", studyNameUserIdUuid, rootNodeUuid)
-            .bodyValue(createShuntCompensatorAttributes)
-            .exchange()
-            .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, rootNodeUuid, ImmutableSet.of("s2"));
 
         // create suntCompensator on modification node child of root node
         webTestClient.put()
