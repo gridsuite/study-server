@@ -289,9 +289,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public String findVariantId(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getVariantId(nodeUuid, generateId)).orElse(null);
+    }
+
+    @Transactional
     public String doGetVariantId(UUID nodeUuid, boolean generateId) {
         UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
-        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getVariantId(modificationNodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        return findVariantId(modificationNodeUuid, generateId);
     }
 
     public Mono<String> getVariantId(UUID nodeUuid) {
@@ -300,9 +305,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public UUID findModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElse(null);
+    }
+
+    @Transactional
     public UUID doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
         UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
-        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(modificationNodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        return findModificationGroupUuid(modificationNodeUuid, generateId);
     }
 
     public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {

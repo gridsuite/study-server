@@ -653,7 +653,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(studyUuid, nodeId, deleteChildren));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteNode(studyUuid, nodeId, deleteChildren));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/tree")

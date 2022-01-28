@@ -19,6 +19,11 @@ import com.jayway.jsonpath.spi.mapper.MappingProvider;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.SneakyThrows;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -40,6 +45,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,6 +65,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -73,6 +81,8 @@ import static org.junit.Assert.*;
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class NetworkModificationTreeTest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeTest.class);
 
     private static final long TIMEOUT = 1000;
     @Autowired
@@ -103,8 +113,22 @@ public class NetworkModificationTreeTest {
 
     LoadFlowResult loadFlowResult;
 
+    @Autowired
+    private StudyService studyService;
+
+    @Autowired
+    private NetworkStoreService networkStoreService;
+
+    @Autowired
+    private NetworkModificationService networkModificationService;
+
+    @Autowired
+    private ReportService reportService;
+
+    private MockWebServer server;
+
     @Before
-    public void setUp() {
+    public void setUp() throws IOException {
         Configuration.defaultConfiguration();
         MockitoAnnotations.initMocks(this);
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -136,6 +160,49 @@ public class NetworkModificationTreeTest {
         loadFlowResult = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
                                                 List.of(new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 10, "bus_1", 5.),
                                                         new LoadFlowResultImpl.ComponentResultImpl(2, 2, LoadFlowResult.ComponentResult.Status.FAILED, 20, "bus_2", 10.)));
+
+        server = new MockWebServer();
+
+        // Start the server.
+        server.start();
+
+        // Ask the server for its URL. You'll need this to make HTTP requests.
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+        studyService.setCaseServerBaseUri(baseUrl);
+        studyService.setNetworkConversionServerBaseUri(baseUrl);
+        studyService.setSingleLineDiagramServerBaseUri(baseUrl);
+        studyService.setGeoDataServerBaseUri(baseUrl);
+        studyService.setNetworkMapServerBaseUri(baseUrl);
+        studyService.setLoadFlowServerBaseUri(baseUrl);
+        studyService.setSecurityAnalysisServerBaseUri(baseUrl);
+        studyService.setActionsServerBaseUri(baseUrl);
+        networkStoreService.setNetworkStoreServerBaseUri(baseUrl);
+        networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
+        reportService.setReportServerBaseUri(baseUrl);
+
+        final Dispatcher dispatcher = new Dispatcher() {
+            @SneakyThrows
+            @Override
+            public MockResponse dispatch(RecordedRequest request) {
+                String path = Objects.requireNonNull(request.getPath());
+
+                System.out.println("************ dispatch : path = ****" + path + "**************");
+                System.out.println("************ dispatch : request method = ****" + request.getMethod() + "**************");
+
+                if (path.matches("/v1/results/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else {
+                    LOGGER.error("Path not supported: " + request.getPath());
+                    return new MockResponse().setResponseCode(404);
+                }
+            }
+        };
+        server.setDispatcher(dispatcher);
     }
 
     @After
@@ -269,6 +336,9 @@ public class NetworkModificationTreeTest {
         root = getRootNode(root.getStudyId());
         assertEquals(2, root.getChildren().size());
         assertEquals(3, nodeRepository.findAll().size());
+
+        ModelNode model = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, model);
 
         networkModificationTreeService.doDeleteTree(root.getStudyId());
         assertEquals(0, nodeRepository.findAll().size());

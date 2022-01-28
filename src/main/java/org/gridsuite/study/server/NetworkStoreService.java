@@ -73,4 +73,9 @@ public class NetworkStoreService {
                 .retrieve()
                 .bodyToMono(Void.class);
     }
+
+    Mono<Void> deleteVariant(UUID networkUuid, String variantId) {
+        // TODO : get variant infos from network store server, find variant num associated to variant id and delete this variant num ???
+        return Mono.empty();
+    }
 }

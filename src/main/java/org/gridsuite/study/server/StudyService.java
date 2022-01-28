@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -1622,6 +1623,57 @@ public class StudyService {
             .doOnSuccess(
                 e -> updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT).subscribe()
             );
+    }
+
+    private Mono<Void> deleteSaResult(UUID uuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+            .buildAndExpand(uuid)
+            .toUriString();
+        return webClient
+            .delete()
+            .uri(securityAnalysisServerBaseUri + path)
+            .retrieve()
+            .bodyToMono(Void.class);
+    }
+
+    @Transactional
+    public Optional<DeleteNodeInfos> doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        // TODO : take deleteChildren into account
+        UUID networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
+        UUID groupUuid = networkModificationTreeService.findModificationGroupUuid(nodeId, false);
+        String variantId = networkModificationTreeService.findVariantId(nodeId, false);
+        AtomicReference<UUID> securityAnalysisResultUuid = new AtomicReference<>();
+        networkModificationTreeService.getSecurityAnalysisResultUuid(nodeId).subscribe(resultUuid -> securityAnalysisResultUuid.set(resultUuid));
+
+        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren);
+
+        return networkUuid != null ? Optional.of(new DeleteNodeInfos(networkUuid, groupUuid, variantId, securityAnalysisResultUuid.get())) : Optional.empty();
+    }
+
+    public Mono<Void> deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        return Mono.fromCallable(() -> self.doDeleteNode(studyUuid, nodeId, deleteChildren))
+            .flatMap(Mono::justOrEmpty)
+            .map(u -> {
+                startTime.set(System.nanoTime());
+                return u;
+            })
+            .publish(deleteNodeInfosMono ->
+                Mono.when(// in parallel
+                    // delete modifications
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getModificationGroupUuids())).flatMap(networkModificationService::deleteModifications),
+                    // delete security analysis result
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getSecurityAnalysisResultUuids())).flatMap(resultUuid -> deleteSaResult(resultUuid)),
+                    // delete network variant
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getVariantIds())).flatMap(resultUuid -> networkStoreService(infos.getNetworkUuid(), resultUuid)),
+                )
+            )
+            .doOnSuccess(r -> {
+                if (startTime.get() != null) {
+                    LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                }
+            })
+            .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 }
 
