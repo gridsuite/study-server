@@ -111,19 +111,7 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         ModelNode modelNode = (ModelNode) node;
         if (modelNode.getBuildStatus() == BuildStatus.BUILT) {
-            modelNode.setBuildStatus(BuildStatus.BUILT_INVALID);
-            updateNode(modelNode);
-            changedNodes.add(node.getId());
+            updateBuildStatus(modelNode, BuildStatus.BUILT_INVALID, changedNodes);
         }
-    }
-
-    @Override
-    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
-        // Do nothing : no modifications associated to this node
-    }
-
-    @Override
-    public void removeModificationToExclude(AbstractNode node, UUID modificationUuid) {
-        // Do nothing : no modifications associated to this node
     }
 }
