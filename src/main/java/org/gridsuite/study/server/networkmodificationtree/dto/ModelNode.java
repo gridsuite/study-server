@@ -6,12 +6,16 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import com.powsybl.loadflow.LoadFlowResult;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+
+import java.util.UUID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
@@ -24,6 +28,14 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 @NoArgsConstructor
 public class ModelNode extends AbstractNode {
     String model;
+
+    LoadFlowStatus loadFlowStatus;
+
+    LoadFlowResult loadFlowResult;
+
+    UUID securityAnalysisResultUuid;
+
+    BuildStatus buildStatus;
 
     @Override
     public NodeType getType() {
