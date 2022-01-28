@@ -142,6 +142,7 @@ public class StudyTest {
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
     private static final String VOLTAGE_LEVEL_ID = "VOLTAGE_LEVEL_ID";
     private static final String VARIANT_ID = "variant_1";
+    public static final String PUT = "PUT";
     private static final String VARIANT_ID_2 = "variant_2";
 
     @Autowired
@@ -374,6 +375,11 @@ public class StudyTest {
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*")) {
+                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators[?]group=.*") && PUT.equals(request.getMethod())) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
@@ -2159,6 +2165,29 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createGeneratorAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createGeneratorAttributes)));
+    }
+
+    @Test
+    public void testCreateShuntsCompensator() {
+        createStudy("userId", CASE_UUID, true);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        // create shunt compensator
+        String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+
+        // create suntCompensator on modification node child of root node
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators", studyNameUserIdUuid, modificationNodeUuid)
+            .bodyValue(createShuntCompensatorAttributes)
+            .exchange()
+            .expectStatus().isOk();
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators[?]group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createShuntCompensatorAttributes)));
     }
 
     @Test
