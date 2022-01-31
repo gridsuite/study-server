@@ -22,7 +22,8 @@ public enum ModificationType {
     SUBSTATION_CREATION,
     VOLTAGE_LEVEL_CREATION,
     GROOVY_SCRIPT,
-    BRANCH_STATUS;
+    BRANCH_STATUS,
+    SHUNT_COMPENSATOR_CREATION;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
@@ -36,6 +37,8 @@ public enum ModificationType {
                 return "two-windings-transformer";
             case SUBSTATION_CREATION:
                 return "substations";
+            case SHUNT_COMPENSATOR_CREATION:
+                return "shunt-compensators";
             case VOLTAGE_LEVEL_CREATION:
                 return "voltage-levels";
             default:
@@ -49,6 +52,8 @@ public enum ModificationType {
                 return StudyException.Type.LOAD_CREATION_FAILED;
             case GENERATOR_CREATION:
                 return StudyException.Type.GENERATOR_CREATION_FAILED;
+            case SHUNT_COMPENSATOR_CREATION:
+                return StudyException.Type.SHUNT_COMPENSATOR_CREATION_FAILED;
             case LINE_CREATION:
                 return StudyException.Type.LINE_CREATION_FAILED;
             case TWO_WINDINGS_TRANSFORMER_CREATION:
