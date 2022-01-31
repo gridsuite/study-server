@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -141,7 +140,7 @@ public class StudyService {
 
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
-    private final NetworkStoreService networkStoreService;
+    private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
     private final StudyInfosService studyInfosService;
@@ -197,7 +196,7 @@ public class StudyService {
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkStoreService networkStoreService,
+        NetworkService networkStoreService,
         NetworkModificationService networkModificationService,
         ReportService reportService,
         StudyInfosService studyInfosService,
@@ -1637,17 +1636,11 @@ public class StudyService {
     }
 
     @Transactional
-    public Optional<DeleteNodeInfos> doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
-        // TODO : take deleteChildren into account
-        UUID networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
-        UUID groupUuid = networkModificationTreeService.findModificationGroupUuid(nodeId, false);
-        String variantId = networkModificationTreeService.findVariantId(nodeId, false);
-        AtomicReference<UUID> securityAnalysisResultUuid = new AtomicReference<>();
-        networkModificationTreeService.getSecurityAnalysisResultUuid(nodeId).subscribe(resultUuid -> securityAnalysisResultUuid.set(resultUuid));
-
-        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren);
-
-        return networkUuid != null ? Optional.of(new DeleteNodeInfos(networkUuid, groupUuid, variantId, securityAnalysisResultUuid.get())) : Optional.empty();
+    public DeleteNodeInfos doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
+        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid).orElse(null));
+        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
+        return deleteNodeInfos;
     }
 
     public Mono<Void> deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
@@ -1665,7 +1658,7 @@ public class StudyService {
                     // delete security analysis result
                     deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getSecurityAnalysisResultUuids())).flatMap(resultUuid -> deleteSaResult(resultUuid)),
                     // delete network variant
-                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getVariantIds())).flatMap(resultUuid -> networkStoreService(infos.getNetworkUuid(), resultUuid)),
+                    deleteNodeInfosMono.flatMap(infos -> networkStoreService.deleteVariants(infos.getNetworkUuid(), infos.getVariantIds()))
                 )
             )
             .doOnSuccess(r -> {

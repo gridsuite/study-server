@@ -9,7 +9,9 @@ package org.gridsuite.study.server.dto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,12 +22,25 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
+@Setter
 public class DeleteNodeInfos {
     private UUID networkUuid;
 
-    private List<UUID> modificationGroupUuids;
+    private List<UUID> modificationGroupUuids = new ArrayList<>();
 
-    private List<String> variantIds;
+    private List<String> variantIds = new ArrayList<>();
 
-    private List<UUID> securityAnalysisResultUuids;
+    private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
+
+    public void addModificationGroupUuid(UUID modificationGroupUuid) {
+        modificationGroupUuids.add(modificationGroupUuid);
+    }
+
+    public void addVariantId(String variantId) {
+        variantIds.add(variantId);
+    }
+
+    public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {
+        securityAnalysisResultUuids.add(securityAnalysisResultUuid);
+    }
 }

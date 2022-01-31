@@ -158,9 +158,6 @@ public class StudyTest {
     private StudyService studyService;
 
     @Autowired
-    private NetworkStoreService networkStoreService;
-
-    @Autowired
     private NetworkModificationService networkModificationService;
 
     @Autowired
@@ -253,7 +250,6 @@ public class StudyTest {
         studyService.setLoadFlowServerBaseUri(baseUrl);
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
         studyService.setActionsServerBaseUri(baseUrl);
-        networkStoreService.setNetworkStoreServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
@@ -794,8 +790,7 @@ public class StudyTest {
         assertEquals(Boolean.FALSE, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        var httpRequests = getRequestsDone(2);
-        assertTrue(httpRequests.contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
+        var httpRequests = getRequestsDone(1);
         assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
 
         //get available export format

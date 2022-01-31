@@ -16,8 +16,11 @@ import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
+import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
+import com.powsybl.network.store.client.NetworkStoreService;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -50,6 +53,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.test.context.ContextConfiguration;
@@ -74,6 +78,9 @@ import java.util.stream.Collectors;
 import static org.gridsuite.study.server.NetworkModificationTreeService.*;
 import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
@@ -117,15 +124,27 @@ public class NetworkModificationTreeTest {
     private StudyService studyService;
 
     @Autowired
-    private NetworkStoreService networkStoreService;
-
-    @Autowired
     private NetworkModificationService networkModificationService;
 
     @Autowired
     private ReportService reportService;
 
     private MockWebServer server;
+
+    @MockBean
+    private NetworkStoreService networkStoreService;
+
+    @MockBean
+    private VariantManager variantManager;
+
+    private static final String TEST_FILE = "testCase.xiidm";
+    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final String VARIANT_ID = "variant_1";
+    private static final String VARIANT_ID_2 = "variant_2";
+
+    @MockBean
+    private Network network;
 
     @Before
     public void setUp() throws IOException {
@@ -135,6 +154,12 @@ public class NetworkModificationTreeTest {
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
         objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
+
+        given(networkStoreService.getNetwork(NETWORK_UUID)).willReturn(network);
+        given(network.getVariantManager()).willReturn(variantManager);
+        given(variantManager.getVariantIds()).willReturn(List.of(VARIANT_ID, VARIANT_ID_2));
+        doNothing().when(networkStoreService).flush(isA(Network.class));
+        doNothing().when(variantManager).removeVariant(VARIANT_ID);
 
         Configuration.setDefaults(new Configuration.Defaults() {
 
@@ -177,7 +202,6 @@ public class NetworkModificationTreeTest {
         studyService.setLoadFlowServerBaseUri(baseUrl);
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
         studyService.setActionsServerBaseUri(baseUrl);
-        networkStoreService.setNetworkStoreServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
@@ -186,9 +210,6 @@ public class NetworkModificationTreeTest {
             @Override
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-
-                System.out.println("************ dispatch : path = ****" + path + "**************");
-                System.out.println("************ dispatch : request method = ****" + request.getMethod() + "**************");
 
                 if (path.matches("/v1/results/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200)
@@ -215,11 +236,11 @@ public class NetworkModificationTreeTest {
         assertNull(output.receive(TIMEOUT));
     }
 
-    StudyEntity createDummyStudy() {
+    StudyEntity createDummyStudy(UUID networkUuid) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("").caseUuid(UUID.randomUUID())
             .date(LocalDateTime.now())
             .networkId("netId")
-            .networkUuid(UUID.randomUUID())
+            .networkUuid(networkUuid)
             .userId("userId")
             .loadFlowParameters(new LoadFlowParametersEntity())
             .build();
@@ -227,7 +248,7 @@ public class NetworkModificationTreeTest {
 
     @Test
     public void testStudyWithNoNodes() {
-        StudyEntity studyEntity = createDummyStudy();
+        StudyEntity studyEntity = createDummyStudy(NETWORK_UUID);
         var study = studyRepository.save(studyEntity);
 
         UUID studyUuid = study.getId();
@@ -276,8 +297,8 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), "variant_1");
-        final ModelNode model = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID);
+        ModelNode model = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, model);
         createNode(root.getStudyId(), root, hypo);
         root = getRootNode(root.getStudyId());
@@ -337,7 +358,7 @@ public class NetworkModificationTreeTest {
         assertEquals(2, root.getChildren().size());
         assertEquals(3, nodeRepository.findAll().size());
 
-        ModelNode model = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        model = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, model);
 
         networkModificationTreeService.doDeleteTree(root.getStudyId());
@@ -376,7 +397,7 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeInsertion() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), "variant_1");
+        final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID);
         /* trying to insert before root */
         webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?mode=BEFORE", root.getStudyId(), root.getId()).bodyValue(networkModification)
             .exchange()
@@ -411,7 +432,7 @@ public class NetworkModificationTreeTest {
     @Test
     public void testInsertAfter() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", null, "variant_1");
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", null, VARIANT_ID);
         final ModelNode model = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, model);
         createNode(root.getStudyId(), root, model);
@@ -423,7 +444,7 @@ public class NetworkModificationTreeTest {
         var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
         assertEquals(originalChildren, grandChildren);
 
-        assertEquals("variant_1", networkModificationTreeService.getVariantId(hypo.getId()).block());
+        assertEquals(VARIANT_ID, networkModificationTreeService.getVariantId(hypo.getId()).block());
 
         assertEquals(0, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
         UUID modificationGroupUuid = networkModificationTreeService.getModificationGroupUuid(hypo.getId()).block();
@@ -438,7 +459,7 @@ public class NetworkModificationTreeTest {
     @Test
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), "variant_1");
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID);
         createNode(root.getStudyId(), root, hypo);
         hypo.setName("grunt");
         hypo.setNetworkModification(UUID.randomUUID());
@@ -484,7 +505,7 @@ public class NetworkModificationTreeTest {
     @Test
     public void testLightNode() {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), "variant_1");
+        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID);
         createNode(root.getStudyId(), root, hypo);
         createNode(root.getStudyId(), root, hypo);
         createNode(root.getStudyId(), root, hypo);
@@ -495,8 +516,8 @@ public class NetworkModificationTreeTest {
     @Test
     public void testGetParentNode() throws Exception {
         RootNode root = createRoot();
-        final NetworkModificationNode hypo1 = buildNetworkModification("hypo", "potamus", null, "variant_1");
-        final NetworkModificationNode hypo2 = buildNetworkModification("hypo", "potamus", null, "variant_1");
+        final NetworkModificationNode hypo1 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID);
+        final NetworkModificationNode hypo2 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID);
         final ModelNode model1 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         final ModelNode model2 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
         final ModelNode model3 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
@@ -540,7 +561,7 @@ public class NetworkModificationTreeTest {
 
     @NotNull
     private StudyEntity insertDummyStudy() {
-        StudyEntity studyEntity = createDummyStudy();
+        StudyEntity studyEntity = createDummyStudy(NETWORK_UUID);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

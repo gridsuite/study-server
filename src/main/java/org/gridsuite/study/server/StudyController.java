@@ -45,10 +45,10 @@ public class StudyController {
 
     private final StudyService studyService;
     private final ReportService reportService;
-    private final NetworkStoreService networkStoreService;
+    private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkStoreService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
