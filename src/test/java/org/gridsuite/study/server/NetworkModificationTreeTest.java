@@ -313,6 +313,7 @@ public class NetworkModificationTreeTest {
 
         model.setName("niark");
         hypo.setName("condriak");
+        hypo.setNetworkModification(UUID.randomUUID());
         createNode(root.getStudyId(), children.get(1), model);
         createNode(root.getStudyId(), children.get(1), hypo);
 

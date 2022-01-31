@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,7 +18,6 @@ import java.util.UUID;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 
-@AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
