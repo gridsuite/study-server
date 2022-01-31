@@ -19,7 +19,6 @@ import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -40,27 +39,44 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract NodeDto toDto(NodeInfoEntity node);
 
-    public abstract Optional<String> getVariantId(AbstractNode node, boolean generateId);
+    public String getVariantId(AbstractNode node, boolean generateId) {
+        return null;
+    }
 
-    public abstract Optional<UUID> getModificationGroupUuid(AbstractNode node, boolean generateId);
+    public UUID getModificationGroupUuid(AbstractNode node, boolean generateId) {
+        return null;
+    }
 
-    public abstract LoadFlowStatus getLoadFlowStatus(AbstractNode node);
+    public LoadFlowStatus getLoadFlowStatus(AbstractNode node) {
+        return LoadFlowStatus.NOT_DONE;
+    }
 
-    public abstract LoadFlowInfos getLoadFlowInfos(AbstractNode node);
+    public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
+        return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
+    }
 
-    public abstract BuildStatus getBuildStatus(AbstractNode node);
+    public BuildStatus getBuildStatus(AbstractNode node) {
+        return BuildStatus.NOT_BUILT;
+    }
 
-    public abstract void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus);
+    public void updateLoadFlowResultAndStatus(AbstractNode node, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
+    }
 
-    public abstract void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus);
+    public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
+    }
 
-    public abstract void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid);
+    public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
+    }
 
-    public abstract UUID getSecurityAnalysisResultUuid(AbstractNode node);
+    public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
+        return null;
+    }
 
-    public abstract void updateBuildStatus(AbstractNode node, BuildStatus buildStatus);
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+    }
 
-    public abstract void invalidateBuildStatus(AbstractNode node);
+    public void invalidateBuildStatus(AbstractNode node) {
+    }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
         nodeInfoRepository.save(toEntity(nodeInfo));
@@ -105,11 +121,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         nodeInfoRepository.deleteByIdNodeIn(collect);
     }
 
-    public Optional<String> getVariantId(UUID nodeUuid, boolean generateId) {
+    public String getVariantId(UUID nodeUuid, boolean generateId) {
         return getVariantId(getNode(nodeUuid), generateId);
     }
 
-    public Optional<UUID> getModificationGroupUuid(UUID nodeUuid, boolean generateId) {
+    public UUID getModificationGroupUuid(UUID nodeUuid, boolean generateId) {
         return getModificationGroupUuid(getNode(nodeUuid), generateId);
     }
 

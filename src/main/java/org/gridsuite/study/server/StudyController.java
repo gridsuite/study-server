@@ -707,6 +707,16 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid)));
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators")
+    @Operation(summary = "create a shunt-compensator in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The shunt-compensator has been created")})
+    public ResponseEntity<Mono<Void>> createShuntCompensator(@PathVariable("studyUuid") UUID studyUuid,
+                                                             @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @RequestBody String createShuntCompensatorAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+            .then(studyService.createEquipment(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid)));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines")
     @Operation(summary = "create a line in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line has been created")})
@@ -761,9 +771,10 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/build")
     @Operation(summary = "build a study node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
-                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
+                           @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
+                           @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Mono<Void>> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.buildNode(studyUuid, nodeUuid)));
     }
 
