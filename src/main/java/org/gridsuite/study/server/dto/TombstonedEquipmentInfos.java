@@ -6,21 +6,15 @@
  */
 package org.gridsuite.study.server.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
-import org.springframework.data.elasticsearch.annotations.InnerField;
-import org.springframework.data.elasticsearch.annotations.MultiField;
 import org.springframework.data.elasticsearch.annotations.Setting;
-
-import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -28,25 +22,11 @@ import java.util.UUID;
 @SuperBuilder
 @NoArgsConstructor
 @Getter
-@ToString
-@EqualsAndHashCode
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+@Schema(description = "Tombstoned equipment infos")
 @Document(indexName = "#{@environment.getProperty('index.prefix')}tombstoned-equipments")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "TombstonedEquipmentInfos")
-public class TombstonedEquipmentInfos {
-    @Id
-    String uniqueId;
-
-    @MultiField(
-            mainField = @Field(name = "equipmentId", type = FieldType.Text),
-            otherFields = {
-                    @InnerField(suffix = "fullascii", type = FieldType.Keyword, normalizer = "fullascii"),
-                    @InnerField(suffix = "raw", type = FieldType.Keyword)
-            }
-    )
-    String id;
-
-    UUID networkUuid;
-
-    String variantId;
+public class TombstonedEquipmentInfos extends BasicEquipmentInfos {
 }

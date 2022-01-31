@@ -18,6 +18,7 @@ import java.util.UUID;
  * A class to mock metadatas transfer in the DB elasticsearch
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 public class EquipmentInfosServiceMock implements EquipmentInfosService {
 

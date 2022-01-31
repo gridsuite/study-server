@@ -18,6 +18,7 @@ import java.util.UUID;
  * An interface to define an api for metadatas transfer in the DB elasticsearch
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Service
 public interface EquipmentInfosService {
