@@ -294,10 +294,9 @@ public class NetworkModificationTreeService {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
         // if nodeUuid is a model node, get parent node of type network modification node
-        UUID modificationNodeUuid = nodeEntity.get().getType() != NodeType.MODEL
+        return nodeEntity.get().getType() != NodeType.MODEL
             ? nodeUuid
             : self.doGetParentNode(nodeUuid, NodeType.NETWORK_MODIFICATION).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        return modificationNodeUuid;
     }
 
     @Transactional
