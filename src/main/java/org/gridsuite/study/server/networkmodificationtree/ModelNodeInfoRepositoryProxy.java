@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
 
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -30,7 +31,9 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     @Override
     public void createNodeInfo(AbstractNode nodeInfo) {
         ModelNode modelNode = (ModelNode) nodeInfo;
-        modelNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        if (Objects.isNull(modelNode.getBuildStatus())) {
+            modelNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        }
         super.createNodeInfo(modelNode);
     }
 
