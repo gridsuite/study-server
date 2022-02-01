@@ -140,7 +140,7 @@ public class StudyService {
 
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
-    private final NetworkStoreService networkStoreService;
+    private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
     private final StudyInfosService studyInfosService;
@@ -196,7 +196,7 @@ public class StudyService {
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkStoreService networkStoreService,
+        NetworkService networkStoreService,
         NetworkModificationService networkModificationService,
         ReportService reportService,
         StudyInfosService studyInfosService,
@@ -1622,6 +1622,51 @@ public class StudyService {
             .doOnSuccess(
                 e -> updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT).subscribe()
             );
+    }
+
+    private Mono<Void> deleteSaResult(UUID uuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+            .buildAndExpand(uuid)
+            .toUriString();
+        return webClient
+            .delete()
+            .uri(securityAnalysisServerBaseUri + path)
+            .retrieve()
+            .bodyToMono(Void.class);
+    }
+
+    @Transactional
+    public DeleteNodeInfos doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
+        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid).orElse(null));
+        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
+        return deleteNodeInfos;
+    }
+
+    public Mono<Void> deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        return Mono.fromCallable(() -> self.doDeleteNode(studyUuid, nodeId, deleteChildren))
+            .flatMap(Mono::justOrEmpty)
+            .map(u -> {
+                startTime.set(System.nanoTime());
+                return u;
+            })
+            .publish(deleteNodeInfosMono ->
+                Mono.when(// in parallel
+                    // delete modifications
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getModificationGroupUuids())).flatMap(networkModificationService::deleteModifications),
+                    // delete security analysis result
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getSecurityAnalysisResultUuids())).flatMap(this::deleteSaResult),
+                    // delete network variant
+                    deleteNodeInfosMono.flatMap(infos -> networkStoreService.deleteVariants(infos.getNetworkUuid(), infos.getVariantIds()))
+                )
+            )
+            .doOnSuccess(r -> {
+                if (startTime.get() != null) {
+                    LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                }
+            })
+            .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 }
 

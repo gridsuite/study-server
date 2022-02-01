@@ -55,7 +55,7 @@ public class EquipmentInfosServiceTests {
     private EquipmentInfosService equipmentInfosService;
 
     @MockBean
-    private NetworkStoreService networkStoreService;
+    private NetworkService networkStoreService;
 
     @Autowired
     private StudyService studyService;
