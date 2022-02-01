@@ -2360,12 +2360,6 @@ public class StudyTest {
         UUID modificationUuid = UUID.randomUUID();
         UUID nodeNotFoundUuid = UUID.randomUUID();
 
-        webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false", studyUuid, rootNodeUuid, modificationUuid)
-            .exchange()
-            .expectStatus().isOk();
-        checkUpdateModelsStatusMessagesReceived(studyUuid, rootNodeUuid);
-
         // deactivate modification on modificationNode
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false", studyUuid, nodeNotFoundUuid, modificationUuid)
