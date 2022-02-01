@@ -207,6 +207,35 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
+    public void testModelNodeCreation() throws Exception {
+        RootNode root = createRoot();
+        // Check build status initialized to NOT_BUILT if null
+        final ModelNode model = buildModel("not_built", "not built node", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), null);
+        createNode(root.getStudyId(), root, model);
+        root = getRootNode(root.getStudyId());
+        List<AbstractNode> children = root.getChildren();
+        assertEquals(1, children.size());
+        ModelNode modelNode = (ModelNode) children.get(0);
+        assertEquals(BuildStatus.NOT_BUILT, modelNode.getBuildStatus());
+        assertEquals(LoadFlowStatus.NOT_DONE, modelNode.getLoadFlowStatus());
+        assertEquals("not_built", modelNode.getName());
+        assertEquals("not built node", modelNode.getDescription());
+        deleteNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)));
+        // Check built status correctly initialized
+        final ModelNode builtModel = buildModel("built", "built node", "loadflow", LoadFlowStatus.CONVERGED, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, builtModel);
+        root = getRootNode(root.getStudyId());
+        children = root.getChildren();
+        assertEquals(1, children.size());
+        modelNode = (ModelNode) children.get(0);
+        assertEquals(BuildStatus.BUILT, modelNode.getBuildStatus());
+        assertEquals(LoadFlowStatus.CONVERGED, modelNode.getLoadFlowStatus());
+        assertEquals("built", modelNode.getName());
+        assertEquals("built node", modelNode.getDescription());
+        deleteNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)));
+    }
+
+    @Test
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), "variant_1");
