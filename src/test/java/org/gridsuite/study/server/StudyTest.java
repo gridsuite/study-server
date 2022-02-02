@@ -17,6 +17,7 @@ import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.*;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import lombok.SneakyThrows;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -95,6 +96,7 @@ import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.cre
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 
 /**
@@ -158,9 +160,6 @@ public class StudyTest {
     private StudyService studyService;
 
     @Autowired
-    private NetworkStoreService networkStoreService;
-
-    @Autowired
     private NetworkModificationService networkModificationService;
 
     @Autowired
@@ -193,6 +192,9 @@ public class StudyTest {
     //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 
+    @MockBean
+    private NetworkStoreService networkStoreService;
+
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
             .networkUuid(NETWORK_UUID)
@@ -215,11 +217,13 @@ public class StudyTest {
         when(studyInfosService.search(String.format("userId:%s", "userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING)))
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING)))
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+
+        doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
     }
 
     private void cleanDB() {
@@ -253,7 +257,6 @@ public class StudyTest {
         studyService.setLoadFlowServerBaseUri(baseUrl);
         studyService.setSecurityAnalysisServerBaseUri(baseUrl);
         studyService.setActionsServerBaseUri(baseUrl);
-        networkStoreService.setNetworkStoreServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
@@ -634,6 +637,7 @@ public class StudyTest {
     @Test
     public void testSearch() {
         UUID studyUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeId = getRootNodeUuid(studyUuid);
 
         webTestClient.get()
                 .uri("/v1/search?q={request}", String.format("userId:%s", "userId"))
@@ -645,7 +649,7 @@ public class StudyTest {
                 .value(new MatcherJson<>(mapper, studiesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=name", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=name", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
@@ -654,7 +658,7 @@ public class StudyTest {
             .value(new MatcherJson<>(mapper, linesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=NAME", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
@@ -663,7 +667,7 @@ public class StudyTest {
             .value(new MatcherJson<>(mapper, linesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=ID", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=ID", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
@@ -672,7 +676,7 @@ public class StudyTest {
             .value(new MatcherJson<>(mapper, linesInfos));
 
         byte[] resp = webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=bogus", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isBadRequest()
@@ -793,8 +797,7 @@ public class StudyTest {
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        var httpRequests = getRequestsDone(2);
-        assertTrue(httpRequests.contains(String.format("/v1/networks/%s", NETWORK_UUID_STRING)));
+        var httpRequests = getRequestsDone(1);
         assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
@@ -2218,8 +2221,12 @@ public class StudyTest {
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
         UUID modificationNodeUuid = modificationNode.getId();
+        ModelNode modelNode = createModelNode(studyNameUserIdUuid, modificationNodeUuid);
+        UUID modelNodeUuid = modelNode.getId();
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
+        UUID modificationNodeUuid2 = modificationNode2.getId();
 
         // create shunt compensator
         String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";

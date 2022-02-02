@@ -15,7 +15,10 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
+
+import com.powsybl.iidm.network.VariantManagerConstants;
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.junit.Before;
@@ -51,11 +54,16 @@ public class EquipmentInfosServiceTests {
 
     private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
 
+    private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
+
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
     @MockBean
-    private NetworkStoreService networkStoreService;
+    private NetworkService networkStoreService;
+
+    @MockBean
+    private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
     private StudyService studyService;
@@ -63,6 +71,7 @@ public class EquipmentInfosServiceTests {
     @Before
     public void setup() {
         when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(Mono.just(NETWORK_UUID));
+        when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
 
         try {
             equipmentInfosService.deleteAll(NETWORK_UUID);
@@ -74,18 +83,35 @@ public class EquipmentInfosServiceTests {
     @Test
     public void testAddDeleteEquipmentInfos() {
         EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
-        assertEquals(equipmentInfosService.add(loadInfos), loadInfos);
-        assertEquals(1, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        assertEquals(equipmentInfosService.addEquipmentInfos(loadInfos), loadInfos);
+        assertEquals(1, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
-        assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
 
-        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
-        equipmentInfosService.add(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build());
-        assertEquals(2, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
+        equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").name("name2").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build());
+        assertEquals(2, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
-        assertEquals(0, Iterables.size(equipmentInfosService.findAll(NETWORK_UUID)));
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
+    }
+
+    @Test
+    public void testAddDeleteTombstonedEquipmentInfos() {
+        TombstonedEquipmentInfos loadInfos = TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id").build();
+        assertEquals(equipmentInfosService.addTombstonedEquipmentInfos(loadInfos), loadInfos);
+        assertEquals(1, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+
+        equipmentInfosService.deleteAll(NETWORK_UUID);
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").build());
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").build());
+        assertEquals(2, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+
+        equipmentInfosService.deleteAll(NETWORK_UUID);
+        assertEquals(0, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
     }
 
     @Test
@@ -101,27 +127,27 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw2").name("name_tw2").type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl6").name("vl6").build())).build();
         EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl7").name("vl7").build())).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::add);
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::addEquipmentInfos);
 
-        Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.search("equipmentType:(LOAD)"));
+        Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(LOAD)"));
         assertEquals(0, hits.size());
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentType:(GENERATOR)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(GENERATOR)"));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(generatorInfos));
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentType:(LINE)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(LINE)"));
         assertEquals(3, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
         assertTrue(hits.contains(otherLineInfos));
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentType:(TWO_WINDINGS_TRANSFORMER)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(TWO_WINDINGS_TRANSFORMER)"));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentType:(CONFIGURED_BUS)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(CONFIGURED_BUS)"));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(configuredBus));
     }
@@ -136,28 +162,28 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw2").name("name_tw2").type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl6").name("vl6").build())).build();
         EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl7").name("vl7").build())).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::add);
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::addEquipmentInfos);
 
-        assertEquals(7, equipmentInfosService.search("*").size());
+        assertEquals(7, equipmentInfosService.searchEquipments("*").size());
 
-        Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.search("equipmentId:(id_l*)"));
+        Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentId:(id_l*)"));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentId:(id_tw*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentId:(id_tw*)"));
         assertEquals(2, hits.size());
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentId:(id_l*) OR equipmentId:(id_tw*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentId:(id_l*) OR equipmentId:(id_tw*)"));
         assertEquals(4, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentId:(id_l* OR id_tw*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentId:(id_l* OR id_tw*)"));
         assertEquals(4, hits.size());
         assertEquals(4, hits.size());
         assertTrue(hits.contains(line1Infos));
@@ -165,10 +191,10 @@ public class EquipmentInfosServiceTests {
         assertTrue(hits.contains(tw1Infos));
         assertTrue(hits.contains(tw2Infos));
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentId:(id_l* AND id_tw*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentId:(id_l* AND id_tw*)"));
         assertEquals(0, hits.size());
 
-        hits = new HashSet<>(equipmentInfosService.search("equipmentType:(LINE) AND equipmentId:(*other*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(LINE) AND equipmentId:(*other*)"));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(otherLineInfos));
     }
@@ -176,6 +202,7 @@ public class EquipmentInfosServiceTests {
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
             .networkUuid(EquipmentInfosServiceTests.NETWORK_UUID)
+            .variantId(VariantManagerConstants.INITIAL_VARIANT_ID)
             .id(i.getId())
             .name(i.getNameOrId())
             .type(i.getType().name())
@@ -189,7 +216,7 @@ public class EquipmentInfosServiceTests {
     private void testNameFullAscii(String pat) {
         Set<EquipmentInfos> hits = new HashSet<>();
 
-        studyService.searchEquipments(NETWORK_UUID, pat, EquipmentInfosService.FieldSelector.NAME).subscribe(hits::add);
+        studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME).subscribe(hits::add);
         pbsc.checkThat(hits.size(), is(1));
     }
 
@@ -217,45 +244,45 @@ public class EquipmentInfosServiceTests {
     public void testSearchSpecialChars() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
-        network.getIdentifiables().forEach(idable -> equipmentInfosService.add(toEquipmentInfos(idable)));
+        network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
         Set<EquipmentInfos> hits;
 
         String prefix = "networkUuid:(" + NETWORK_UUID + ") AND ";
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.raw:(*___*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName.raw:(*___*)"));
         pbsc.checkThat(hits.size(), is(1));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName:(*e E*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName:(*e E*)"));
         pbsc.checkThat(hits.size(), is(4));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.raw:(*e\\ E*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName.raw:(*e\\ E*)"));
         pbsc.checkThat(hits.size(), is(1));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.raw:(*e\\ e*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName.raw:(*e\\ e*)"));
         pbsc.checkThat(hits.size(), is(0));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*e\\ E*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName.fullascii:(*e\\ E*)"));
         pbsc.checkThat(hits.size(), is(1));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(\\ sp*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName.fullascii:(\\ sp*)"));
         pbsc.checkThat(hits.size(), is(1));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*PS\\ )"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName.fullascii:(*PS\\ )"));
         pbsc.checkThat(hits.size(), is(1));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentName.fullascii:(*e\\ e*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentName.fullascii:(*e\\ e*)"));
         pbsc.checkThat(hits.size(), is(1));
 
         testNameFullAsciis();
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.raw:(*FFR1AA1  FFR2AA1  2*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentId.raw:(*FFR1AA1  FFR2AA1  2*)"));
         pbsc.checkThat(hits.size(), is(1));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.raw:(*fFR1AA1  FFR2AA1  2*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentId.raw:(*fFR1AA1  FFR2AA1  2*)"));
         pbsc.checkThat(hits.size(), is(0));
 
-        hits = new HashSet<>(equipmentInfosService.search(prefix + "equipmentId.fullascii:(*fFR1àÀ1  FFR2AA1  2*)"));
+        hits = new HashSet<>(equipmentInfosService.searchEquipments(prefix + "equipmentId.fullascii:(*fFR1àÀ1  FFR2AA1  2*)"));
         pbsc.checkThat(hits.size(), is(1));
     }
 }

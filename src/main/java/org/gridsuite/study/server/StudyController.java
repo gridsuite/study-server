@@ -45,10 +45,10 @@ public class StudyController {
 
     private final StudyService studyService;
     private final ReportService reportService;
-    private final NetworkStoreService networkStoreService;
+    private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkStoreService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -616,7 +616,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.searchStudies(query));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search equipments in elasticsearch")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "List of equipments found"),
@@ -625,10 +625,11 @@ public class StudyController {
     })
     public ResponseEntity<Flux<EquipmentInfos>> searchEquipments(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
         @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(studyService.searchEquipments(studyUuid, userInput, fieldSelector));
+            .body(studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
@@ -651,7 +652,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(studyUuid, nodeId, deleteChildren));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteNode(studyUuid, nodeId, deleteChildren));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/tree")

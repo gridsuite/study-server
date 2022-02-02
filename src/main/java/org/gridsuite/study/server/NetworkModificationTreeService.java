@@ -7,6 +7,8 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowResult;
+import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.BuildInfos;
@@ -161,16 +163,12 @@ public class NetworkModificationTreeService {
         return Mono.fromCallable(() -> self.doCreateNode(studyUuid, nodeId, nodeInfo, insertMode));
     }
 
-    public Mono<Void> deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
-        return Mono.fromRunnable(() -> self.doDeleteNode(studyUuid, nodeId, deleteChildren));
-    }
-
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+    public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         List<UUID> removedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeId);
-        deleteNodes(nodeId, deleteChildren, false, removedNodes);
+        deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
         emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
@@ -180,18 +178,32 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes) {
+    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
             if (!allowDeleteRoot && nodeToDelete.getType() == NodeType.ROOT) {
                 throw new StudyException(CANT_DELETE_ROOT_NODE);
             }
+
+            UUID modificationGroupUuid = repositories.get(nodeToDelete.getType()).getModificationGroupUuid(id, false);
+            if (modificationGroupUuid != null) {
+                deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
+            }
+            String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id, false);
+            if (!StringUtils.isBlank(variantId)) {
+                deleteNodeInfos.addVariantId(variantId);
+            }
+            UUID securityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSecurityAnalysisResultUuid(id);
+            if (securityAnalysisResultUuid != null) {
+                deleteNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+            }
+
             if (!deleteChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
                 nodesRepository.findAllByParentNodeIdNode(id)
-                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes));
+                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes, deleteNodeInfos));
             }
             removedNodes.add(id);
             repositories.get(nodeToDelete.getType()).deleteByNodeId(id);
@@ -282,16 +294,15 @@ public class NetworkModificationTreeService {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
         // if nodeUuid is a model node, get parent node of type network modification node
-        UUID modificationNodeUuid = nodeEntity.get().getType() != NodeType.MODEL
+        return nodeEntity.get().getType() != NodeType.MODEL
             ? nodeUuid
             : self.doGetParentNode(nodeUuid, NodeType.NETWORK_MODIFICATION).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-        return modificationNodeUuid;
     }
 
     @Transactional
     public String doGetVariantId(UUID nodeUuid, boolean generateId) {
         UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
-        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getVariantId(modificationNodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getVariantId(modificationNodeUuid, generateId)).orElse(null);
     }
 
     public Mono<String> getVariantId(UUID nodeUuid) {
@@ -302,7 +313,7 @@ public class NetworkModificationTreeService {
     @Transactional
     public UUID doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
         UUID modificationNodeUuid = getModificationNodeUuidFromNode(nodeUuid);
-        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(modificationNodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        return nodesRepository.findById(modificationNodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(modificationNodeUuid, generateId)).orElse(null);
     }
 
     public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {

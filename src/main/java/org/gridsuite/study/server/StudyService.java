@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -139,7 +140,7 @@ public class StudyService {
 
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
-    private final NetworkStoreService networkStoreService;
+    private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
     private final StudyInfosService studyInfosService;
@@ -195,7 +196,7 @@ public class StudyService {
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkStoreService networkStoreService,
+        NetworkService networkStoreService,
         NetworkModificationService networkModificationService,
         ReportService reportService,
         StudyInfosService studyInfosService,
@@ -365,20 +366,56 @@ public class StudyService {
         return sb.toString();
     }
 
-    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull String userInput,
-        EquipmentInfosService.FieldSelector fieldSelector) {
-        return networkStoreService
-                .getNetworkUuid(studyUuid)
-                .flatMapIterable(networkUuid -> {
-                    String query = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid);
-                    return equipmentInfosService.search(query);
+    Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
+                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid))
+                .flatMapIterable(tuple -> {
+                    UUID networkUuid = tuple.getT1();
+                    String variantId = tuple.getT2();
+                    if (variantId.isEmpty()) {
+                        variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
+                    }
+                    // Get equipments in initial variant matching query
+                    String queryInitialVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, VariantManagerConstants.INITIAL_VARIANT_ID);
+                    List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
+
+                    // Get added/removed equipment to/from the chosen variant
+                    return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID))
+                            ? equipmentInfosInInitVariant
+                            : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector, equipmentInfosInInitVariant);
                 });
     }
 
-    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid) {
-        return String.format("networkUuid.keyword:(%s) AND %s:(*%s*)", networkUuid,
-            fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
-            escapeLucene(userInput));
+    private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
+                                                                  EquipmentInfosService.FieldSelector fieldSelector,
+                                                                  List<EquipmentInfos> equipmentInfosInInitVariant) {
+        String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
+        Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
+                .stream()
+                .map(TombstonedEquipmentInfos::getId)
+                .collect(Collectors.toSet());
+
+        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId);
+        List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
+
+        List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
+                .stream()
+                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
+                .collect(Collectors.toList());
+
+        equipmentInfos.addAll(addedEquipmentInfosInVariant);
+
+        return equipmentInfos;
+    }
+
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId) {
+        return String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s:(*%s*)", networkUuid, variantId,
+                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
+                escapeLucene(userInput));
+    }
+
+    private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
+        return String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s)", networkUuid, variantId);
     }
 
     @Transactional
@@ -1616,6 +1653,51 @@ public class StudyService {
             .doOnSuccess(
                 e -> updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT).subscribe()
             );
+    }
+
+    private Mono<Void> deleteSaResult(UUID uuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+            .buildAndExpand(uuid)
+            .toUriString();
+        return webClient
+            .delete()
+            .uri(securityAnalysisServerBaseUri + path)
+            .retrieve()
+            .bodyToMono(Void.class);
+    }
+
+    @Transactional
+    public DeleteNodeInfos doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
+        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid).orElse(null));
+        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
+        return deleteNodeInfos;
+    }
+
+    public Mono<Void> deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        return Mono.fromCallable(() -> self.doDeleteNode(studyUuid, nodeId, deleteChildren))
+            .flatMap(Mono::justOrEmpty)
+            .map(u -> {
+                startTime.set(System.nanoTime());
+                return u;
+            })
+            .publish(deleteNodeInfosMono ->
+                Mono.when(// in parallel
+                    // delete modifications
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getModificationGroupUuids())).flatMap(networkModificationService::deleteModifications),
+                    // delete security analysis result
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getSecurityAnalysisResultUuids())).flatMap(this::deleteSaResult),
+                    // delete network variant
+                    deleteNodeInfosMono.flatMap(infos -> networkStoreService.deleteVariants(infos.getNetworkUuid(), infos.getVariantIds()))
+                )
+            )
+            .doOnSuccess(r -> {
+                if (startTime.get() != null) {
+                    LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                }
+            })
+            .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 }
 
