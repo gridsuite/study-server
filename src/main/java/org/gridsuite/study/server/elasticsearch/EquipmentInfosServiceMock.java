@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.lang.NonNull;
 
 import java.util.Collections;
@@ -17,12 +18,18 @@ import java.util.UUID;
  * A class to mock metadatas transfer in the DB elasticsearch
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
-    public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
+    public EquipmentInfos addEquipmentInfos(@NonNull EquipmentInfos equipmentInfos) {
         return equipmentInfos;
+    }
+
+    @Override
+    public TombstonedEquipmentInfos addTombstonedEquipmentInfos(TombstonedEquipmentInfos tombstonedEquipmentInfos) {
+        return tombstonedEquipmentInfos;
     }
 
     @Override
@@ -31,12 +38,22 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
+    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return Collections.emptyList();
     }
 
     @Override
-    public List<EquipmentInfos> search(@NonNull final String query) {
+    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<EquipmentInfos> searchEquipments(@NonNull final String query) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<TombstonedEquipmentInfos> searchTombstonedEquipments(String query) {
         return Collections.emptyList();
     }
 }

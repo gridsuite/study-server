@@ -8,6 +8,7 @@ package org.gridsuite.study.server.elasticsearch;
 
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
  * A class to implement elasticsearch indexing
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
@@ -30,30 +32,45 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
     private final EquipmentInfosRepository equipmentInfosRepository;
 
+    private final TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
-    public EquipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+    public EquipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
+        this.tombstonedEquipmentInfosRepository = tombstonedEquipmentInfosRepository;
         this.elasticsearchOperations = elasticsearchOperations;
     }
 
     @Override
-    public EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos) {
+    public EquipmentInfos addEquipmentInfos(@NonNull EquipmentInfos equipmentInfos) {
         return equipmentInfosRepository.save(equipmentInfos);
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid) {
+    public TombstonedEquipmentInfos addTombstonedEquipmentInfos(TombstonedEquipmentInfos tombstonedEquipmentInfos) {
+        return tombstonedEquipmentInfosRepository.save(tombstonedEquipmentInfos);
+    }
+
+    @Override
+    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return equipmentInfosRepository.findAllByNetworkUuid(networkUuid);
+    }
+
+    @Override
+    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
+        return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
 
     @Override
     public void deleteAll(@NonNull UUID networkUuid) {
         equipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
+        tombstonedEquipmentInfosRepository.deleteAllByNetworkUuid(networkUuid);
+
     }
 
     @Override
-    public List<EquipmentInfos> search(@NonNull final String query) {
+    public List<EquipmentInfos> searchEquipments(@NonNull final String query) {
         NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
             .withQuery(QueryBuilders.queryStringQuery(query))
             .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
@@ -63,5 +80,18 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
             .stream()
             .map(SearchHit::getContent)
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query) {
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                .withQuery(QueryBuilders.queryStringQuery(query))
+                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
+                .build();
+
+        return elasticsearchOperations.search(nativeSearchQuery, TombstonedEquipmentInfos.class)
+                .stream()
+                .map(SearchHit::getContent)
+                .collect(Collectors.toList());
     }
 }
