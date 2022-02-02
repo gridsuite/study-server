@@ -54,7 +54,7 @@ public class NetworkModificationService {
 
     private String networkModificationServerBaseUri;
 
-    private final NetworkStoreService networkStoreService;
+    private final NetworkService networkStoreService;
 
     private final WebClient webClient;
 
@@ -62,7 +62,7 @@ public class NetworkModificationService {
 
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
-                               NetworkStoreService networkStoreService,
+                               NetworkService networkStoreService,
                                WebClient.Builder webClientBuilder,
                                ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;

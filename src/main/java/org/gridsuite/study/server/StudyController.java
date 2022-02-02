@@ -45,10 +45,10 @@ public class StudyController {
 
     private final StudyService studyService;
     private final ReportService reportService;
-    private final NetworkStoreService networkStoreService;
+    private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkStoreService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
         this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -653,7 +653,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.deleteNode(studyUuid, nodeId, deleteChildren));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteNode(studyUuid, nodeId, deleteChildren));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/tree")
