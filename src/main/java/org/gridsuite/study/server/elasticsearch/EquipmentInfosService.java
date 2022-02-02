@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.util.UUID;
  * An interface to define an api for metadatas transfer in the DB elasticsearch
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Service
 public interface EquipmentInfosService {
@@ -24,11 +26,17 @@ public interface EquipmentInfosService {
         NAME, ID
     }
 
-    EquipmentInfos add(@NonNull EquipmentInfos equipmentInfos); // Just for unit tests
+    EquipmentInfos addEquipmentInfos(@NonNull EquipmentInfos equipmentInfos); // Just for unit tests
 
-    Iterable<EquipmentInfos> findAll(@NonNull UUID networkUuid);
+    TombstonedEquipmentInfos addTombstonedEquipmentInfos(@NonNull TombstonedEquipmentInfos tombstonedEquipmentInfos); // Just for unit tests
+
+    Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
+
+    Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
 
     void deleteAll(@NonNull UUID networkUuid);
 
-    List<EquipmentInfos> search(@NonNull final String query);
+    List<EquipmentInfos> searchEquipments(@NonNull final String query);
+
+    List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query);
 }

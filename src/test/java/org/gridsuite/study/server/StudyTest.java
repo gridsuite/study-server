@@ -218,10 +218,10 @@ public class StudyTest {
         when(studyInfosService.search(String.format("userId:%s", "userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING)))
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
-        when(equipmentInfosService.search(String.format("networkUuid.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING)))
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
@@ -638,6 +638,7 @@ public class StudyTest {
     @Test
     public void testSearch() {
         UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID rootNodeId = getRootNodeUuid(studyUuid);
 
         webTestClient.get()
                 .uri("/v1/search?q={request}", String.format("userId:%s", "userId"))
@@ -649,7 +650,7 @@ public class StudyTest {
                 .value(new MatcherJson<>(mapper, studiesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=name", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=name", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
@@ -658,7 +659,7 @@ public class StudyTest {
             .value(new MatcherJson<>(mapper, linesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=NAME", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
@@ -667,7 +668,7 @@ public class StudyTest {
             .value(new MatcherJson<>(mapper, linesInfos));
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=ID", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=ID", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
@@ -676,7 +677,7 @@ public class StudyTest {
             .value(new MatcherJson<>(mapper, linesInfos));
 
         byte[] resp = webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/search?userInput={request}&fieldSelector=bogus", studyUuid, "B")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus", studyUuid, rootNodeId, "B")
             .header("userId", "userId")
             .exchange()
             .expectStatus().isBadRequest()

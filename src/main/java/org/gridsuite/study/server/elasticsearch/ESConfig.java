@@ -61,8 +61,8 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
 
     @Bean
     @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
-    public EquipmentInfosService equipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
-        return new EquipmentInfosServiceImpl(equipmentInfosRepository, elasticsearchOperations);
+    public EquipmentInfosService equipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+        return new EquipmentInfosServiceImpl(equipmentInfosRepository, tombstonedEquipmentInfosRepository, elasticsearchOperations);
     }
 
     @Bean
