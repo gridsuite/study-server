@@ -44,6 +44,7 @@ public class RestResponseEntityExceptionHandler {
                 case LINE_MODIFICATION_FAILED:
                 case LOAD_CREATION_FAILED:
                 case GENERATOR_CREATION_FAILED:
+                case SHUNT_COMPENSATOR_CREATION_FAILED:
                 case LINE_CREATION_FAILED:
                 case TWO_WINDINGS_TRANSFORMER_CREATION_FAILED:
                 case SUBSTATION_CREATION_FAILED:
@@ -51,6 +52,8 @@ public class RestResponseEntityExceptionHandler {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case DELETE_EQUIPMENT_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
+                case BAD_NODE_TYPE:
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());
                 default:
             }
         } else if (exception instanceof ServerWebInputException) {
