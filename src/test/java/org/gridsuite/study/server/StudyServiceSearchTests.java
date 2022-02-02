@@ -52,7 +52,7 @@ public class StudyServiceSearchTests {
     private EquipmentInfosService equipmentInfosService;
 
     @MockBean
-    private NetworkStoreService networkStoreService;
+    private NetworkService networkService;
 
     @MockBean
     private NetworkModificationTreeService networkModificationTreeService;
@@ -62,7 +62,7 @@ public class StudyServiceSearchTests {
 
     @Before
     public void setup() {
-        when(networkStoreService.getNetworkUuid(STUDY_UUID)).thenReturn(Mono.just(NETWORK_UUID));
+        when(networkService.getNetworkUuid(STUDY_UUID)).thenReturn(Mono.just(NETWORK_UUID));
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID)).thenReturn(Mono.just(VARIANT_ID));
 
