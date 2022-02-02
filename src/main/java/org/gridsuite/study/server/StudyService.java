@@ -242,17 +242,17 @@ public class StudyService {
                 .build();
     }
 
-    public Flux<CreatedStudyBasicInfos> getStudyList() {
+    public Flux<CreatedStudyBasicInfos> getStudies() {
         return Flux.fromStream(() -> studyRepository.findAll().stream())
             .map(StudyService::toCreatedStudyBasicInfos)
             .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
 
-    public Flux<CreatedStudyBasicInfos> getStudyListMetadata(List<UUID> uuids) {
+    public Flux<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return Flux.fromStream(() -> studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos));
     }
 
-    Flux<BasicStudyInfos> getStudyCreationRequests() {
+    Flux<BasicStudyInfos> getStudiesCreationRequests() {
         return Flux.fromStream(() -> studyCreationRequestRepository.findAll().stream())
             .map(StudyService::toBasicStudyInfos)
             .sort(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed());
@@ -303,8 +303,7 @@ public class StudyService {
     }
 
     public Mono<StudyInfos> getStudyInfos(UUID studyUuid) {
-        Mono<StudyEntity> studyMono = getStudy(studyUuid);
-        return studyMono.map(StudyService::toStudyInfos);
+        return getStudy(studyUuid).map(StudyService::toStudyInfos);
     }
 
     @Transactional(readOnly = true)
