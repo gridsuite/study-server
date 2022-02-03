@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server;
 
-import com.google.common.collect.Iterables;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
@@ -34,6 +33,10 @@ public class EquipmentInfosServiceMockTests {
 
     private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
 
+    private static final String VARIANT_ID = "variant1";
+
+    private static final String NEW_VARIANT_ID = "variant2";
+
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
@@ -45,24 +48,32 @@ public class EquipmentInfosServiceMockTests {
         );
 
         equipmentsInfos.forEach(equipmentInfosService::addEquipmentInfos);
-        assertEquals(0, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
+        assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
 
         Stream<TombstonedEquipmentInfos> tombstonedEquipmentsInfos = Stream.of(
-                TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").variantId("variant1").build(),
-                TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").variantId("variant2").build()
+                TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").variantId(VARIANT_ID).build(),
+                TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").variantId(NEW_VARIANT_ID).build()
         );
 
         tombstonedEquipmentsInfos.forEach(equipmentInfosService::addTombstonedEquipmentInfos);
-        assertEquals(0, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+        assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
 
         equipmentInfosService.deleteAll(NETWORK_UUID);
-        assertEquals(0, Iterables.size(equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID)));
-        assertEquals(0, Iterables.size(equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID)));
+        assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
 
         List<EquipmentInfos> equipments = equipmentInfosService.searchEquipments("equipmentId.fullascii: id1");
         assertEquals(Collections.emptyList(), equipments);
 
         List<TombstonedEquipmentInfos> tombstonedEquipments = equipmentInfosService.searchTombstonedEquipments("equipmentId.fullascii: id1");
         assertEquals(Collections.emptyList(), tombstonedEquipments);
+
+        equipmentInfosService.cloneVariantModifications(NETWORK_UUID, VARIANT_ID, NEW_VARIANT_ID);
+        assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
+
+        equipmentInfosService.deleteVariants(NETWORK_UUID, List.of(VARIANT_ID, NEW_VARIANT_ID));
+        assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+        assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
     }
 }

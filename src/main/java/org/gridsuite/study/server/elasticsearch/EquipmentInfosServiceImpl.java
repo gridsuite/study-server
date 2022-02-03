@@ -6,9 +6,11 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
+import com.google.common.collect.Lists;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -34,6 +36,9 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
     private final TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository;
 
+    @Value("${spring.data.elasticsearch.partition-size:10000}")
+    private int partitionSize;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
     public EquipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
@@ -53,13 +58,57 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
+    public void addAllEquipmentInfos(List<EquipmentInfos> equipmentsInfos) {
+        Lists.partition(equipmentsInfos, partitionSize)
+                .parallelStream()
+                .forEach(equipmentInfosRepository::saveAll);
+    }
+
+    @Override
+    public void addAllTombstonedEquipmentInfos(List<TombstonedEquipmentInfos> tombstonedEquipmentInfos) {
+        Lists.partition(tombstonedEquipmentInfos, partitionSize)
+                .parallelStream()
+                .forEach(tombstonedEquipmentInfosRepository::saveAll);
+    }
+
+    @Override
+    public List<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return equipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
 
     @Override
-    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
+    public List<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
         return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
+    }
+
+    @Override
+    public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
+        variantIds.forEach(variantId -> {
+            equipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
+            tombstonedEquipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
+        });
+    }
+
+    @Override
+    public void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId) {
+        addAllEquipmentInfos(
+                equipmentInfosRepository.findAllByNetworkUuidAndVariantId(networkUuid, variantToCloneId).stream()
+                        .map(equipmentInfos -> {
+                            equipmentInfos.setUniqueId(null);
+                            equipmentInfos.setVariantId(variantId);
+                            return equipmentInfos;
+                        })
+                        .collect(Collectors.toList())
+        );
+        addAllTombstonedEquipmentInfos(
+                tombstonedEquipmentInfosRepository.findAllByNetworkUuidAndVariantId(networkUuid, variantToCloneId).stream()
+                        .map(tombstonedEquipmentInfos -> {
+                            tombstonedEquipmentInfos.setUniqueId(null);
+                            tombstonedEquipmentInfos.setVariantId(variantId);
+                            return tombstonedEquipmentInfos;
+                        })
+                        .collect(Collectors.toList())
+        );
     }
 
     @Override

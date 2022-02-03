@@ -33,18 +33,38 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     }
 
     @Override
+    public void addAllEquipmentInfos(List<EquipmentInfos> equipmentsInfos) {
+        // Do nothing
+    }
+
+    @Override
+    public void addAllTombstonedEquipmentInfos(List<TombstonedEquipmentInfos> tombstonedEquipmentsInfos) {
+        // Do nothing
+    }
+
+    @Override
     public void deleteAll(@NonNull UUID networkUuid) {
         // Nothing to delete
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
+    public List<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return Collections.emptyList();
     }
 
     @Override
-    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
+    public List<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
         return Collections.emptyList();
+    }
+
+    @Override
+    public void deleteVariants(UUID networkUuid, List<String> variantIds) {
+        // Nothing to delete
+    }
+
+    @Override
+    public void cloneVariantModifications(UUID networkUuid, String variantToCloneId, String variantId) {
+        // Nothing to clone
     }
 
     @Override

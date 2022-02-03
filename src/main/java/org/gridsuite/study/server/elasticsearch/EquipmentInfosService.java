@@ -30,9 +30,17 @@ public interface EquipmentInfosService {
 
     TombstonedEquipmentInfos addTombstonedEquipmentInfos(@NonNull TombstonedEquipmentInfos tombstonedEquipmentInfos); // Just for unit tests
 
-    Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
+    void addAllEquipmentInfos(@NonNull final List<EquipmentInfos> equipmentsInfos);
 
-    Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
+    void addAllTombstonedEquipmentInfos(@NonNull final List<TombstonedEquipmentInfos> tombstonedEquipmentsInfos);
+
+    List<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
+
+    List<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid); // Just for unit tests
+
+    void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds);
+
+    void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId);
 
     void deleteAll(@NonNull UUID networkUuid);
 
