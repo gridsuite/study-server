@@ -12,7 +12,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,7 +31,13 @@ public class BuildInfos {
 
     private List<UUID> modificationGroups = new ArrayList<>();
 
-    public void insert(UUID modificationUuid) {
-        modificationGroups.add(0, modificationUuid);
+    private Set<UUID> modificationsToExclude = new HashSet<>();
+
+    public void insertModificationGroup(UUID modificationGroupUuid) {
+        modificationGroups.add(0, modificationGroupUuid);
+    }
+
+    public void addModificationsToExclude(Set<UUID> modificationsUuid) {
+        modificationsToExclude.addAll(modificationsUuid);
     }
 }

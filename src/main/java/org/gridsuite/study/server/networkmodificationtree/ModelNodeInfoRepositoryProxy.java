@@ -17,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.ModelNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNodeInfoRepository;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -97,10 +98,11 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
         ModelNode modelNode = (ModelNode) node;
         modelNode.setBuildStatus(buildStatus);
         updateNode(modelNode);
+        changedNodes.add(node.getId());
     }
 
     @Override
@@ -109,11 +111,10 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
     }
 
     @Override
-    public void invalidateBuildStatus(AbstractNode node) {
+    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         ModelNode modelNode = (ModelNode) node;
         if (modelNode.getBuildStatus() == BuildStatus.BUILT) {
-            modelNode.setBuildStatus(BuildStatus.BUILT_INVALID);
-            updateNode(modelNode);
+            updateBuildStatus(modelNode, BuildStatus.BUILT_INVALID, changedNodes);
         }
     }
 }

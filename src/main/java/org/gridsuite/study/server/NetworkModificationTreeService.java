@@ -142,7 +142,7 @@ public class NetworkModificationTreeService {
             if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?  reference.getParentNode() : reference;
+            NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
             NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), reference.getStudy()));
             nodeInfo.setId(node.getIdNode());
             repositories.get(node.getType()).createNodeInfo(nodeInfo);
@@ -174,7 +174,7 @@ public class NetworkModificationTreeService {
 
     public UUID getStudyUuidForNodeId(UUID id) {
         Optional<NodeEntity> node = nodesRepository.findById(id);
-        return node.orElseThrow().getStudy().getId();
+        return node.orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getStudy().getId();
     }
 
     @Transactional
@@ -250,7 +250,7 @@ public class NetworkModificationTreeService {
         nodes.stream()
             .filter(n -> n.getParentNode() != null)
             .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
-        var root = (RootNode) fullMap.get(nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow().getIdNode());
+        var root = (RootNode) fullMap.get(nodes.stream().filter(n -> n.getType().equals(NodeType.ROOT)).findFirst().orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode());
         if (root != null) {
             root.setStudyId(studyId);
         }
@@ -429,7 +429,10 @@ public class NetworkModificationTreeService {
         } else if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getNetworkModification() != null) {
-                buildInfos.insert(modificationNode.getNetworkModification());
+                buildInfos.insertModificationGroup(modificationNode.getNetworkModification());
+            }
+            if (modificationNode.getModificationsToExclude() != null) {
+                buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
             getBuildInfos(nodeEntity.getParentNode(), buildInfos);
         }
@@ -458,8 +461,7 @@ public class NetworkModificationTreeService {
     public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
-                changedNodes.add(child.getIdNode());
-                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode());
+                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
                 invalidateChildrenBuildStatus(child, changedNodes);
             });
     }
@@ -470,20 +472,26 @@ public class NetworkModificationTreeService {
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            changedNodes.add(nodeUuid);
-            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus);
+            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes);
             invalidateChildrenBuildStatus(n, changedNodes);
         });
 
-        emitNodesChanged(studyId, changedNodes);
+        if (!changedNodes.isEmpty()) {
+            emitNodesChanged(studyId, changedNodes);
+        }
     }
 
     public Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         return Mono.fromRunnable(() -> self.doUpdateBuildStatus(nodeUuid, buildStatus));
     }
 
-    public BuildStatus getBuildStatus(UUID nodeUuid) {
+    @Transactional(readOnly = true)
+    public BuildStatus doGetBuildStatus(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
+    }
+
+    public BuildStatus getBuildStatus(UUID nodeUuid) {
+        return self.doGetBuildStatus(nodeUuid);
     }
 
     @Transactional(readOnly = true)
@@ -502,5 +510,42 @@ public class NetworkModificationTreeService {
     public Mono<UUID> getParentNode(UUID nodeUuid, NodeType nodeType) {
         return Mono.fromCallable(() -> self.doGetParentNode(nodeUuid, nodeType).orElse(null))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    @Transactional
+    public void doInvalidateBuildStatus(UUID nodeUuid) {
+        List<UUID> changedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(n -> {
+            repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+            invalidateChildrenBuildStatus(n, changedNodes);
+        });
+
+        if (!changedNodes.isEmpty()) {
+            emitNodesChanged(studyId, changedNodes);
+        }
+    }
+
+    public Mono<Void> invalidateBuildStatus(UUID nodeUuid) {
+        return Mono.fromRunnable(() -> self.doInvalidateBuildStatus(nodeUuid));
+    }
+
+    @Transactional
+    public void doHandleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).handleExcludeModification(nodeUuid, modificationUUid, active));
+    }
+
+    public Mono<Void> handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
+        return Mono.fromRunnable(() -> self.doHandleExcludeModification(nodeUuid, modificationUUid, active));
+    }
+
+    @Transactional
+    public void doRemoveModificationToExclude(UUID nodeUuid, UUID modificationUUid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationToExclude(nodeUuid, modificationUUid));
+    }
+
+    public Mono<Void> removeModificationToExclude(UUID nodeUuid, UUID modificationUuid) {
+        return Mono.fromRunnable(() -> self.doRemoveModificationToExclude(nodeUuid, modificationUuid));
     }
 }

@@ -13,6 +13,8 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -28,6 +30,8 @@ public class NetworkModificationNode extends AbstractNode {
     UUID networkModification;
 
     String variantId;
+
+    Set<UUID> modificationsToExclude = new HashSet<>();
 
     @Override
     public NodeType getType() {

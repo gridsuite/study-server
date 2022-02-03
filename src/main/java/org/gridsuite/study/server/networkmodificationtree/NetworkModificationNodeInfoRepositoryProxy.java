@@ -12,6 +12,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
+import java.util.HashSet;
 import java.util.UUID;
 
 /**
@@ -26,14 +27,18 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModification(),
-                                                                                      modificationNode.getVariantId());
+                                                                                      modificationNode.getVariantId(),
+                                                                                      modificationNode.getModificationsToExclude());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
     @Override
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
+        @SuppressWarnings("unused")
+        int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(),
-                                                                  node.getVariantId()));
+                                                                  node.getVariantId(),
+                                                                  node.getModificationsToExclude()));
     }
 
     @Override
@@ -53,6 +58,31 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             networkModificationNode.setNetworkModification(UUID.randomUUID());
             updateNode(networkModificationNode);
         }
+
         return networkModificationNode.getNetworkModification();
+    }
+
+    @Override
+    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        if (networkModificationNode.getModificationsToExclude() == null) {
+            networkModificationNode.setModificationsToExclude(new HashSet<>());
+        }
+        if (!active) {
+            networkModificationNode.getModificationsToExclude().add(modificationUuid);
+        } else {
+            networkModificationNode.getModificationsToExclude().remove(modificationUuid);
+        }
+        updateNode(networkModificationNode);
+    }
+
+    @Override
+    public void removeModificationToExclude(AbstractNode node, UUID modificationUuid) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        if (networkModificationNode.getModificationsToExclude() != null &&
+            networkModificationNode.getModificationsToExclude().contains(modificationUuid)) {
+            networkModificationNode.getModificationsToExclude().remove(modificationUuid);
+            updateNode(networkModificationNode);
+        }
     }
 }
