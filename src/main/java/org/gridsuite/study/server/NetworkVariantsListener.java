@@ -35,14 +35,17 @@ public class NetworkVariantsListener implements NetworkListener {
 
     @Override
     public void beforeRemoval(Identifiable identifiable) {
+        // Nothing to do in this listener
     }
 
     @Override
     public void afterRemoval(String s) {
+        // Nothing to do in this listener
     }
 
     @Override
     public void onUpdate(Identifiable identifiable, String attribute, Object oldValue, Object newValue) {
+        // Nothing to do in this listener
     }
 
     @Override

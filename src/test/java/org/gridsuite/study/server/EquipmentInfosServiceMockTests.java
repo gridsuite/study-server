@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 
@@ -42,7 +41,7 @@ public class EquipmentInfosServiceMockTests {
 
     @Test
     public void testAddDeleteEquipmentInfos() {
-        Stream<EquipmentInfos> equipmentsInfos = Stream.of(
+        List<EquipmentInfos> equipmentsInfos = List.of(
                 EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build(),
                 EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build()
         );
@@ -50,7 +49,7 @@ public class EquipmentInfosServiceMockTests {
         equipmentsInfos.forEach(equipmentInfosService::addEquipmentInfos);
         assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
 
-        Stream<TombstonedEquipmentInfos> tombstonedEquipmentsInfos = Stream.of(
+        List<TombstonedEquipmentInfos> tombstonedEquipmentsInfos = List.of(
                 TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").variantId(VARIANT_ID).build(),
                 TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id2").variantId(NEW_VARIANT_ID).build()
         );
@@ -67,6 +66,12 @@ public class EquipmentInfosServiceMockTests {
 
         List<TombstonedEquipmentInfos> tombstonedEquipments = equipmentInfosService.searchTombstonedEquipments("equipmentId.fullascii: id1");
         assertEquals(Collections.emptyList(), tombstonedEquipments);
+
+        equipmentInfosService.addAllEquipmentInfos(equipmentsInfos);
+        assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
+
+        equipmentInfosService.addAllTombstonedEquipmentInfos(tombstonedEquipmentsInfos);
+        assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
 
         equipmentInfosService.cloneVariantModifications(NETWORK_UUID, VARIANT_ID, NEW_VARIANT_ID);
         assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
