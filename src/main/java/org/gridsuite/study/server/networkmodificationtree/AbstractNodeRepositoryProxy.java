@@ -18,6 +18,7 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoR
 import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -72,10 +73,16 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus) {
+    public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
     }
 
-    public void invalidateBuildStatus(AbstractNode node) {
+    public void removeModificationToExclude(AbstractNode node, UUID modificationUuid) {
+    }
+
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
+    }
+
+    public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
     }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
@@ -153,15 +160,23 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
     }
 
-    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        updateBuildStatus(getNode(nodeUuid), buildStatus);
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus, List<UUID> changedNodes) {
+        updateBuildStatus(getNode(nodeUuid), buildStatus, changedNodes);
     }
 
     public BuildStatus getBuildStatus(UUID nodeUuid) {
         return getBuildStatus(getNode(nodeUuid));
     }
 
-    public void invalidateBuildStatus(UUID nodeUuid) {
-        invalidateBuildStatus(getNode(nodeUuid));
+    public void invalidateBuildStatus(UUID nodeUuid, List<UUID> changedNodes) {
+        invalidateBuildStatus(getNode(nodeUuid), changedNodes);
+    }
+
+    public void handleExcludeModification(UUID nodeUuid, UUID modificationUuid, boolean active) {
+        handleExcludeModification(getNode(nodeUuid), modificationUuid, active);
+    }
+
+    public void removeModificationToExclude(UUID nodeUuid, UUID modificationUuid) {
+        removeModificationToExclude(getNode(nodeUuid), modificationUuid);
     }
 }

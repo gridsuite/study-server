@@ -11,9 +11,14 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.ForeignKey;
+import javax.persistence.Index;
 import javax.persistence.Table;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -31,4 +36,9 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
     String variantId;
+
+    @Column(name = "modificationsToExclude")
+    @ElementCollection
+    @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
+    private Set<UUID> modificationsToExclude;
 }

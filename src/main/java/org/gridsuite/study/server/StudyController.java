@@ -789,4 +789,16 @@ public class StudyController {
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().body(studyService.stopBuild(studyUuid, nodeUuid));
     }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}")
+    @Operation(summary = "Activate/Deactivate a modification in a modification group associated with a study node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification has been activated/deactivated"),
+                           @ApiResponse(responseCode = "404", description = "The study/node/modification doesn't exist")})
+    public ResponseEntity<Mono<Void>> changeModificationActiveState(@PathVariable("studyUuid") UUID studyUuid,
+                                                                    @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                    @PathVariable("modificationUuid") UUID modificationUuid,
+                                                                    @Parameter(description = "active") @RequestParam("active") boolean active) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+            .then(studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active)));
+    }
 }
