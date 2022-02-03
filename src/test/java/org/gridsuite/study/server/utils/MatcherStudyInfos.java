@@ -18,12 +18,11 @@ import org.gridsuite.study.server.dto.StudyInfos;
  */
 public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos> {
 
-    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat, boolean studyPrivate) {
+    public static MatcherStudyInfos createMatcherStudyInfos(UUID studyUuid, String userId, String caseFormat) {
         return new MatcherStudyInfos(StudyInfos.builder()
                 .id(studyUuid)
                 .userId(userId)
                 .caseFormat(caseFormat)
-                .studyPrivate(studyPrivate)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .build());
     }

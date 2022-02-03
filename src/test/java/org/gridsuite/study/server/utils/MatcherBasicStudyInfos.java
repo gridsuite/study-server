@@ -20,11 +20,10 @@ import org.hamcrest.TypeSafeMatcher;
  */
 public class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeMatcher<T> {
 
-    public static MatcherBasicStudyInfos<BasicStudyInfos> createMatcherStudyBasicInfos(UUID studyUuid, String userId, boolean studyPrivate) {
+    public static MatcherBasicStudyInfos<BasicStudyInfos> createMatcherStudyBasicInfos(UUID studyUuid, String userId) {
         return new MatcherBasicStudyInfos<>(BasicStudyInfos.builder()
                 .id(studyUuid)
                 .userId(userId)
-                .studyPrivate(studyPrivate)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .build());
     }

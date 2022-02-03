@@ -37,6 +37,4 @@ public class BasicStudyInfos {
     String userId;
 
     ZonedDateTime creationDate;
-
-    boolean studyPrivate;
 }

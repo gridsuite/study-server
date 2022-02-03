@@ -24,7 +24,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Builder
-@Table(name = "study", indexes = {@Index(name = "studyEntity_isPrivate_index", columnList = "isPrivate"), @Index(name = "studyEntity_userId_index", columnList = "userId")})
+@Table(name = "study", indexes = {@Index(name = "studyEntity_userId_index", columnList = "userId")})
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
     @Id
@@ -51,9 +51,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @Column(name = "casePrivate",  nullable = false)
     private boolean casePrivate;
-
-    @Column(name = "isPrivate", nullable = false)
-    private boolean isPrivate;
 
     @Column(name = "loadFlowProvider")
     private String loadFlowProvider;

@@ -210,8 +210,8 @@ public class StudyTest {
         linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
 
         studiesInfos = List.of(
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").studyPrivate(false).creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build()
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build()
         );
 
         when(studyInfosService.add(any(CreatedStudyBasicInfos.class))).thenReturn(studiesInfos.get(0));
@@ -637,7 +637,7 @@ public class StudyTest {
 
     @Test
     public void testSearch() {
-        UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeId = getRootNodeUuid(studyUuid);
 
         webTestClient.get()
@@ -711,7 +711,7 @@ public class StudyTest {
             .isEqualTo("[]");
 
         //insert a study
-        UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyUuid = createStudy("userId", CASE_UUID);
 
         // check the study
         webTestClient.get()
@@ -721,7 +721,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBody(StudyInfos.class)
-            .value(createMatcherStudyInfos(studyUuid, "userId", "UCTE", false));
+            .value(createMatcherStudyInfos(studyUuid, "userId", "UCTE"));
 
         //insert a study with a non existing case and except exception
         webTestClient.post()
@@ -743,11 +743,11 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "UCTE", false));
+                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "UCTE"));
 
         //insert the same study but with another user (should work)
         //even with the same name should work
-        studyUuid = createStudy("userId2", CASE_UUID, true);
+        studyUuid = createStudy("userId2", CASE_UUID);
 
         webTestClient.get()
                 .uri("/v1/studies")
@@ -757,7 +757,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE", true));
+                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
 
         //insert a study with a case (multipartfile)
         UUID s2Uuid = createStudy("userId", TEST_FILE, IMPORTED_CASE_UUID_STRING, true);
@@ -770,7 +770,7 @@ public class StudyTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos(s2Uuid, "userId", "XIIDM", true));
+                .value(createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
 
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
@@ -796,11 +796,21 @@ public class StudyTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals("userId", headers.get(HEADER_USER_ID));
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(Boolean.FALSE, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         var httpRequests = getRequestsDone(1);
         assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
+
+        //expect only 1 study (public one) since the other is private and we use another userId
+        var result = webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "a")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .returnResult();
+        assertEquals(2, result.getResponseBody().size());
 
         //get available export format
         webTestClient.get()
@@ -819,19 +829,14 @@ public class StudyTest {
             .expectStatus().isOk();
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
-
-        // drop the broker message for study deletion (due to right access change)
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
     }
 
     @Test
     public void testMetadata() {
-        UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID oldStudyUuid = studyUuid;
 
-        studyUuid = createStudy("userId2", CASE_UUID, true);
+        studyUuid = createStudy("userId2", CASE_UUID);
 
         var res = webTestClient.get()
                 .uri("/v1/studies/metadata?ids=" + Stream.of(oldStudyUuid, studyUuid).map(Object::toString).collect(Collectors.joining(",")))
@@ -847,13 +852,13 @@ public class StudyTest {
         if (!res.get(0).getId().equals(oldStudyUuid)) {
             Collections.reverse(res);
         }
-        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "userId", "UCTE", false).matchesSafely(res.get(0)));
-        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE", true).matchesSafely(res.get(1)));
+        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "userId", "UCTE").matchesSafely(res.get(0)));
+        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE").matchesSafely(res.get(1)));
     }
 
     @Test
     public void testLogsReport() {
-        createStudy("userId", CASE_UUID, false);
+        createStudy("userId", CASE_UUID);
         UUID studyId = studyRepository.findAll().get(0).getId();
 
         webTestClient.get()
@@ -880,7 +885,7 @@ public class StudyTest {
     @Test
     public void testLoadFlow() {
         //insert a study
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
         UUID modificationNodeUuid = modificationNode.getId();
@@ -1111,7 +1116,7 @@ public class StudyTest {
     @Test
     public void testSecurityAnalysis() {
         //insert a study
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
         UUID modificationNodeUuid = modificationNode.getId();
@@ -1129,7 +1134,7 @@ public class StudyTest {
     @Test
     public void testDiagramsAndGraphics() {
         //insert a study
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID randomUuid = UUID.randomUUID();
 
@@ -1377,7 +1382,7 @@ public class StudyTest {
 
     @Test
     public void testNetworkModificationSwitch() {
-        createStudy("userId", CASE_UUID, false);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -1407,7 +1412,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE", false));
+                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
 
         // update switch on second modification node
         webTestClient.put()
@@ -1423,7 +1428,7 @@ public class StudyTest {
     @SneakyThrows
     @Test
     public void testNetworkModificationEquipment() {
-        createStudy("userId", CASE_UUID, false);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
@@ -1450,7 +1455,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE", false));
+                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
 
         // update equipment on second modification node
         webTestClient.put()
@@ -1534,10 +1539,10 @@ public class StudyTest {
     }
 
     @SneakyThrows
-    private UUID createStudy(String userId, UUID caseUuid, boolean isPrivate, String... errorMessage) {
+    private UUID createStudy(String userId, UUID caseUuid, String... errorMessage) {
         BasicStudyInfos infos = webTestClient.post()
-                .uri("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
-                        caseUuid, isPrivate)
+                .uri("/v1/studies/cases/{caseUuid}",
+                        caseUuid)
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isOk()
@@ -1554,7 +1559,6 @@ public class StudyTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         output.receive(TIMEOUT);  // message for first modification node creation
@@ -1566,7 +1570,6 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
@@ -1576,7 +1579,6 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
@@ -1590,7 +1592,6 @@ public class StudyTest {
 
     @SneakyThrows
     private UUID createStudy(String userId, String fileName, String caseUuid, boolean isPrivate, String... errorMessage) {
-        final WebTestClient.ResponseSpec exchange;
         final UUID studyUuid;
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
@@ -1620,7 +1621,6 @@ public class StudyTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         if (errorMessage.length == 0) {
@@ -1634,7 +1634,6 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
 
@@ -1644,7 +1643,6 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertNotEquals(isPrivate, headers.get(HEADER_IS_PUBLIC_STUDY));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
@@ -1678,7 +1676,7 @@ public class StudyTest {
                     .exchange()
                     .expectStatus().isOk()
                     .expectBody(BasicStudyInfos.class)
-                    .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId", true));
+                    .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
         }
 
         UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
@@ -1691,12 +1689,31 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(BasicStudyInfos.class)
                 .value(requests -> requests.get(0),
-                        createMatcherStudyBasicInfos(studyUuid, "userId", true));
+                        createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         countDownLatch.countDown();
 
         // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
         Thread.sleep(TIMEOUT);
+
+        webTestClient.get()
+            .uri("/v1/study_creation_requests")
+            .header("userId", "userId")
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBodyList(BasicStudyInfos.class)
+            .isEqualTo(List.of());
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(requests -> requests.get(0),
+                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);
@@ -1720,14 +1737,43 @@ public class StudyTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(BasicStudyInfos.class)
-                .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId", false));
+                .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
 
         studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
+
+        webTestClient.get()
+                .uri("/v1/study_creation_requests")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(BasicStudyInfos.class)
+                .value(requests -> requests.get(0),
+                        createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         countDownLatch.countDown();
 
         // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
         Thread.sleep(TIMEOUT);
+
+        webTestClient.get()
+            .uri("/v1/study_creation_requests")
+            .header("userId", "userId")
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBodyList(BasicStudyInfos.class)
+            .isEqualTo(List.of());
+
+        webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .value(requests -> requests.get(0),
+                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);
@@ -1745,7 +1791,7 @@ public class StudyTest {
 
     @Test
     public void testUpdateLines() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -1837,7 +1883,7 @@ public class StudyTest {
 
     @Test
     public void testCreateLoad() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -1872,7 +1918,7 @@ public class StudyTest {
 
     @Test
     public void testCreateSubstation() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -1907,7 +1953,7 @@ public class StudyTest {
 
     @Test
     public void testCreateVoltageLevel() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
@@ -1943,7 +1989,7 @@ public class StudyTest {
 
     @Test
     public void testDeleteEquipment() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -2054,7 +2100,7 @@ public class StudyTest {
 
     @Test
     public void testGetBusesOrBusbarSections() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
 
@@ -2087,7 +2133,7 @@ public class StudyTest {
 
     @Test
     public void testCreateGenerator() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -2122,7 +2168,7 @@ public class StudyTest {
 
     @Test
     public void testCreateShuntsCompensator() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -2149,7 +2195,7 @@ public class StudyTest {
 
     @Test
     public void testCreateLine() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -2196,7 +2242,7 @@ public class StudyTest {
 
     @Test
     public void testCreateTwoWindingsTransformer() {
-        createStudy("userId", CASE_UUID, true);
+        createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
@@ -2272,7 +2318,7 @@ public class StudyTest {
 
     @Test
     public void testBuild() {
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID modificationGroupUuid1 = UUID.randomUUID();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, modificationGroupUuid1, "variant_1");
@@ -2359,7 +2405,7 @@ public class StudyTest {
 
     @Test
     public void testChangeModificationActiveState() {
-        UUID studyUuid = createStudy("userId", CASE_UUID, false);
+        UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         UUID modificationGroupUuid1 = UUID.randomUUID();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, modificationGroupUuid1, "variant_1");
@@ -2399,7 +2445,7 @@ public class StudyTest {
 
     @Test
     public void deleteModificationRequest() {
-        createStudy("userId", CASE_UUID, false);
+        createStudy("userId", CASE_UUID);
         UUID studyUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid);

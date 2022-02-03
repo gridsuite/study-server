@@ -81,17 +81,17 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies")
-    @Operation(summary = "Get all studies for a user")
+    @Operation(summary = "Get all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies")})
-    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyList(@RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies(userId));
+    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyList() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
     }
 
     @GetMapping(value = "/study_creation_requests")
     @Operation(summary = "Get all study creation requests for a user")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of study creation requests")})
-    public ResponseEntity<Flux<BasicStudyInfos>> getStudyCreationRequestList(@RequestHeader("userId") String userId) {
-        Flux<BasicStudyInfos> studies = studyService.getStudyCreationRequests(userId);
+    public ResponseEntity<Flux<BasicStudyInfos>> getStudyCreationRequestList() {
+        Flux<BasicStudyInfos> studies = studyService.getStudiesCreationRequests();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
     }
 
@@ -99,7 +99,7 @@ public class StudyController {
     @Operation(summary = "Get studies metadata")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies metadata")})
     public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestParam("ids") List<UUID> uuids) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyListMetadata(uuids));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudiesMetadata(uuids));
     }
 
     @PostMapping(value = "/studies/cases/{caseUuid}")
@@ -109,9 +109,8 @@ public class StudyController {
         @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
-                                                                             @RequestParam("isPrivate") Boolean isPrivate,
                                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(caseUuid, userId, isPrivate, studyUuid)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(caseUuid, userId, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(studyService.assertCaseExists(caseUuid).then(createStudy));
     }
@@ -124,9 +123,8 @@ public class StudyController {
         @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@RequestPart("caseFile") FilePart caseFile,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
-                                                             @RequestParam("isPrivate") Boolean isPrivate,
                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(Mono.just(caseFile), userId, isPrivate, studyUuid)
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(Mono.just(caseFile), userId, studyUuid)
                 .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
         return ResponseEntity.ok().body(createStudy);
     }
@@ -134,10 +132,10 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "get a study")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The study information"),
-        @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
+            @ApiResponse(responseCode = "200", description = "The study information"),
+            @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
     public ResponseEntity<Mono<StudyInfos>> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        Mono<StudyInfos> studyMono = studyService.getCurrentUserStudy(studyUuid);
+        Mono<StudyInfos> studyMono = studyService.getStudyInfos(studyUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 

@@ -102,7 +102,6 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
-                .isPrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity)
                 .build();
 
@@ -115,7 +114,6 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat2")
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
-                .isPrivate(false)
                 .loadFlowParameters(loadFlowParametersEntity2)
                 .build();
 
@@ -128,7 +126,6 @@ public class RepositoriesTest {
                 .caseFormat("caseFormat3")
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
-                .isPrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity3)
                 .build();
 
@@ -141,7 +138,6 @@ public class RepositoriesTest {
         StudyEntity savedStudyEntity2 = studyRepository.findAll().get(1);
 
         assertEquals(studyEntity1.getUserId(), savedStudyEntity1.getUserId());
-
         assertEquals(studyEntity2.getUserId(), savedStudyEntity2.getUserId());
 
         // updates
@@ -159,7 +155,7 @@ public class RepositoriesTest {
     @Test
     public void testStudyCreationRequest() {
         UUID studyUuid = UUID.randomUUID();
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid, "foo", LocalDateTime.now(ZoneOffset.UTC), true);
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid, "foo", LocalDateTime.now(ZoneOffset.UTC));
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());
