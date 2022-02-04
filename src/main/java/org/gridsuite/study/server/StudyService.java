@@ -648,7 +648,7 @@ public class StudyService {
     }
 
     Mono<String> getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentPath) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/" + equipmentPath + "/{networkUuid}");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath);
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
         }
