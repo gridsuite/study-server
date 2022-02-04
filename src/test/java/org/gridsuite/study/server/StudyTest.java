@@ -507,20 +507,20 @@ public class StudyTest {
 
                     case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/substations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/2-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/3-windings-transformers/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/generators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/batteries/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/dangling-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/hvdc-lines/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/lcc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/vsc-converter-stations/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/loads/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/shunt-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/static-var-compensators/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/all/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/lines":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/substations":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/2-windings-transformers":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/3-windings-transformers":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/generators":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/batteries":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/dangling-lines":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/hvdc-lines":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/lcc-converter-stations":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/vsc-converter-stations":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/loads":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/shunt-compensators":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/static-var-compensators":
+                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/all":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -1251,7 +1251,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/lines/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/lines", NETWORK_UUID_STRING)));
 
         //get the substation map data of a network
         webTestClient.get()
@@ -1260,7 +1260,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/substations/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/substations", NETWORK_UUID_STRING)));
 
         //get the 2 windings transformers map data of a network
         webTestClient.get()
@@ -1269,7 +1269,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/2-windings-transformers/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/2-windings-transformers", NETWORK_UUID_STRING)));
 
         //get the 3 windings transformers map data of a network
         webTestClient.get()
@@ -1278,7 +1278,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/3-windings-transformers/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/3-windings-transformers", NETWORK_UUID_STRING)));
 
         //get the generators map data of a network
         webTestClient.get()
@@ -1287,7 +1287,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/generators/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/generators", NETWORK_UUID_STRING)));
 
         //get the batteries map data of a network
         webTestClient.get()
@@ -1296,7 +1296,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/batteries/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/batteries", NETWORK_UUID_STRING)));
 
         //get the dangling lines map data of a network
         webTestClient.get()
@@ -1305,7 +1305,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/dangling-lines/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/dangling-lines", NETWORK_UUID_STRING)));
 
         //get the hvdc lines map data of a network
         webTestClient.get()
@@ -1314,7 +1314,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/hvdc-lines/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/hvdc-lines", NETWORK_UUID_STRING)));
 
         //get the lcc converter stations map data of a network
         webTestClient.get()
@@ -1323,7 +1323,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/lcc-converter-stations/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/lcc-converter-stations", NETWORK_UUID_STRING)));
 
         //get the vsc converter stations map data of a network
         webTestClient.get()
@@ -1332,7 +1332,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/vsc-converter-stations/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/vsc-converter-stations", NETWORK_UUID_STRING)));
 
         //get the loads map data of a network
         webTestClient.get()
@@ -1341,7 +1341,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/loads/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads", NETWORK_UUID_STRING)));
 
         //get the shunt compensators map data of a network
         webTestClient.get()
@@ -1350,7 +1350,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/shunt-compensators/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/shunt-compensators", NETWORK_UUID_STRING)));
 
         //get the static var compensators map data of a network
         webTestClient.get()
@@ -1359,7 +1359,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/static-var-compensators/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/static-var-compensators", NETWORK_UUID_STRING)));
 
         //get all map data of a network
         webTestClient.get()
@@ -1368,7 +1368,7 @@ public class StudyTest {
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/all/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/all", NETWORK_UUID_STRING)));
 
         // get the svg component libraries
         webTestClient.get()
