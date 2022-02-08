@@ -1656,7 +1656,9 @@ public class StudyService {
             networkModificationService.deleteModification(groupId, modificationUuid)
         ).doOnSuccess(
                 e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationUuid)
-                    .then(updateStatuses(studyUuid, nodeUuid)).subscribe()
+                    .doOnSuccess(r -> networkModificationTreeService.notifyNodeChanged(studyUuid, nodeUuid))
+                    .then(updateStatuses(studyUuid, nodeUuid))
+                    .subscribe()
         );
     }
 
