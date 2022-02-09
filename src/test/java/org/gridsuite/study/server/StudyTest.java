@@ -2076,6 +2076,7 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 

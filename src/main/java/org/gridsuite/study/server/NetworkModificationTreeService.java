@@ -549,7 +549,7 @@ public class NetworkModificationTreeService {
         return Mono.fromRunnable(() -> self.doRemoveModificationToExclude(nodeUuid, modificationUuid));
     }
 
-    public void notifyNodeChanged(UUID studyUuid, UUID nodeUuid) {
-        emitNodesChanged(studyUuid, List.of(nodeUuid));
+    public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
+        emitNodesChanged(studyUuid, List.of(getModificationNodeUuidFromNode(nodeUuid)));
     }
 }

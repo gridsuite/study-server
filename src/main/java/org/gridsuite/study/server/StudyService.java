@@ -761,6 +761,7 @@ public class StudyService {
                 .doOnSuccess(substationIds ->
                     emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
+                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                 .then(monoUpdateStatusResult);
         });
     }
@@ -778,6 +779,7 @@ public class StudyService {
                 .doOnSuccess(substationIds ->
                     emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
+                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                 .then(monoUpdateStatusResult);
         });
     }
@@ -868,6 +870,7 @@ public class StudyService {
                 .doOnSuccess(substationIds ->
                     emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
+                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                 .then(monoUpdateStatusResult);
         });
     }
@@ -1460,6 +1463,7 @@ public class StudyService {
                 .doOnSuccess(substationIds ->
                     emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
                 )
+                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                 .then(monoUpdateStatusResult);
         });
     }
@@ -1656,7 +1660,7 @@ public class StudyService {
             networkModificationService.deleteModification(groupId, modificationUuid)
         ).doOnSuccess(
                 e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationUuid)
-                    .doOnSuccess(r -> networkModificationTreeService.notifyNodeChanged(studyUuid, nodeUuid))
+                    .doOnSuccess(r -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                     .then(updateStatuses(studyUuid, nodeUuid))
                     .subscribe()
         );
