@@ -2057,6 +2057,15 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
     }
 
+    private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
+        Message<byte[]> messageStatus = output.receive(TIMEOUT);
+        assertEquals("", new String(messageStatus.getPayload()));
+        MessageHeaders headersStatus = messageStatus.getHeaders();
+        assertEquals(studyUuid, headersStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodesUuids, headersStatus.get(NetworkModificationTreeService.HEADER_NODES));
+        assertEquals(NetworkModificationTreeService.NODE_UPDATED, headersStatus.get(StudyService.HEADER_UPDATE_TYPE));
+    }
+
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId, Set<String> modifiedIdsSet) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
@@ -2067,6 +2076,7 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
@@ -2474,6 +2484,7 @@ public class StudyTest {
             r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification() + "/modifications/" + modificationUuid))
         );
 
+        checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
     }
 
