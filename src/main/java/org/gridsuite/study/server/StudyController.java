@@ -461,6 +461,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
     @Operation(summary = "Get a security analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
+        @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -468,7 +469,7 @@ public class StudyController {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
         return studyService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes)
                 .map(result -> ResponseEntity.ok().body(result))
-                .defaultIfEmpty(ResponseEntity.notFound().build());
+                .defaultIfEmpty(ResponseEntity.noContent().build());
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count")
@@ -551,12 +552,13 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
+        @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return studyService.getSecurityAnalysisStatus(nodeUuid)
                 .map(result -> ResponseEntity.ok().body(result))
-                .defaultIfEmpty(ResponseEntity.notFound().build());
+                .defaultIfEmpty(ResponseEntity.noContent().build());
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop")
