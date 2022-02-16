@@ -86,7 +86,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_INSERT_BEFORE;
+import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_INSERT_MODE;
 import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_NEW_NODE;
 import static org.gridsuite.study.server.NetworkModificationTreeService.NODE_UPDATED;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
@@ -1507,7 +1507,7 @@ public class StudyTest {
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
-        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_BEFORE));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
         return modificationNode;
     }
 
@@ -1526,7 +1526,7 @@ public class StudyTest {
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         modelNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
-        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_BEFORE));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
         return modelNode;
     }
 
