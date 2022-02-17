@@ -367,7 +367,7 @@ public class StudyService {
     }
 
     Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector) {
+                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType) {
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid))
                 .flatMapIterable(tuple -> {
                     UUID networkUuid = tuple.getT1();
@@ -376,7 +376,7 @@ public class StudyService {
                         variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
                     }
                     // Get equipments in initial variant matching query
-                    String queryInitialVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, VariantManagerConstants.INITIAL_VARIANT_ID);
+                    String queryInitialVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
                     List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
 
                     // Get added/removed equipment to/from the chosen variant
@@ -395,7 +395,7 @@ public class StudyService {
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
-        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId);
+        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId, null);
         List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
 
         List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
@@ -408,10 +408,11 @@ public class StudyService {
         return equipmentInfos;
     }
 
-    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId) {
-        return String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s:(*%s*)", networkUuid, variantId,
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
+        String query = "networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s:(*%s*)" + (equipmentType == null ? "" : " AND equipmentType.keyword:(%s)");
+        return String.format(query, networkUuid, variantId,
                 fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
-                escapeLucene(userInput));
+                escapeLucene(userInput), equipmentType);
     }
 
     private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
@@ -663,6 +664,19 @@ public class StudyService {
             .bodyToMono(String.class);
     }
 
+    Mono<String> getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentUuid}");
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
+
+        return webClient.get()
+                .uri(networkMapServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
     Mono<String> getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
             getEquipmentsMapData(tuple.getT1(), tuple.getT2(), substationsIds, "substations")
@@ -726,6 +740,12 @@ public class StudyService {
     Mono<String> getLoadsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
             getEquipmentsMapData(tuple.getT1(), tuple.getT2(), substationsIds, "loads")
+        );
+    }
+
+    Mono<String> getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
+                getEquipmentMapData(tuple.getT1(), tuple.getT2(), "loads", loadId)
         );
     }
 
