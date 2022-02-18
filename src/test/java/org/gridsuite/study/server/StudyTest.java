@@ -147,6 +147,7 @@ public class StudyTest {
     private static final String VARIANT_ID = "variant_1";
     public static final String PUT = "PUT";
     private static final String VARIANT_ID_2 = "variant_2";
+    private static final String LOAD_ID_1 = "LOAD_ID_1";
 
     @Autowired
     private OutputDestination output;
@@ -291,6 +292,9 @@ public class StudyTest {
         String busbarSectionsDataAsString = mapper.writeValueAsString(List.of(
             IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
             IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()));
+
+        String loadDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id("LOAD_ID_1").name("LOAD_ID_1").build());
 
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
@@ -578,6 +582,10 @@ public class StudyTest {
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections":
                         return new MockResponse().setResponseCode(200).setBody(busbarSectionsDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads/" + LOAD_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(loadDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     default:
@@ -1423,6 +1431,23 @@ public class StudyTest {
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID_2)));
+    }
+
+    @Test
+    public void testGetLoadMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the load map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/{loadId}", studyNameUserIdUuid, rootNodeUuid, LOAD_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, "LOAD_ID_1")));
     }
 
     @SneakyThrows
