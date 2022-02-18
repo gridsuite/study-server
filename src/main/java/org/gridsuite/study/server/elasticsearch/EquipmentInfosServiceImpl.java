@@ -9,7 +9,6 @@ package org.gridsuite.study.server.elasticsearch;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -34,9 +33,6 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     private final EquipmentInfosRepository equipmentInfosRepository;
 
     private final TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository;
-
-    @Value("${spring.data.elasticsearch.partition-size:10000}")
-    private int partitionSize;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
