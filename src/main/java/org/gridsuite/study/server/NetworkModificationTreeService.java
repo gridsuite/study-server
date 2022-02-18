@@ -62,13 +62,13 @@ import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 public class NetworkModificationTreeService {
 
     public static final String HEADER_NODES = "nodes";
-    public static final String HEADER_NODE = "node";
+    public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_NEW_NODE = "newNode";
     public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
     public static final String NODE_UPDATED = "nodeUpdated";
     public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
-    public static final String HEADER_INSERT_BEFORE = "insertBefore";
+    public static final String HEADER_INSERT_MODE = "insertMode";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -90,13 +90,13 @@ public class NetworkModificationTreeService {
         treeUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
-    private void emitNodeInserted(UUID studyUuid, UUID referenceNode, UUID nodeCreated, InsertMode insertBefore) {
+    private void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated, InsertMode insertMode) {
         sendUpdateMessage(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
-            .setHeader(HEADER_NODE, referenceNode)
+            .setHeader(HEADER_PARENT_NODE, parentNode)
             .setHeader(HEADER_NEW_NODE, nodeCreated)
-            .setHeader(HEADER_INSERT_BEFORE, insertBefore.name())
+            .setHeader(HEADER_INSERT_MODE, insertMode.name())
             .build()
         );
     }
@@ -154,7 +154,7 @@ public class NetworkModificationTreeService {
                     .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                     .forEach(child -> child.setParentNode(node));
             }
-            emitNodeInserted(getStudyUuidForNodeId(nodeId), nodeId, node.getIdNode(), insertMode);
+            emitNodeInserted(getStudyUuidForNodeId(nodeId), parent.getIdNode(), node.getIdNode(), insertMode);
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
