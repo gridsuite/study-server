@@ -91,9 +91,9 @@ public class StudyService {
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_NODE = "node";
-    static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_STUDIES = "studies";
+    static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
     static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
@@ -430,11 +430,11 @@ public class StudyService {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
-                emitStudiesChanged(studyUuid, userId);
+                emitStudyDelete(studyUuid, userId);
             });
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
-            emitStudiesChanged(studyUuid, userId);
+            emitStudyDelete(studyUuid, userId);
         }
         return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupsUuids)) : Optional.empty();
     }
@@ -910,6 +910,14 @@ public class StudyService {
             .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
             .build()
         );
+    }
+
+    private void emitStudyDelete(UUID studyUuid, String userId) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE)
+            .build());
     }
 
     private void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
