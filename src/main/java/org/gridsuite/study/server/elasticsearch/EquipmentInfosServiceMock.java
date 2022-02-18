@@ -33,16 +33,6 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     }
 
     @Override
-    public void addAllEquipmentInfos(List<EquipmentInfos> equipmentsInfos) {
-        // Do nothing
-    }
-
-    @Override
-    public void addAllTombstonedEquipmentInfos(List<TombstonedEquipmentInfos> tombstonedEquipmentsInfos) {
-        // Do nothing
-    }
-
-    @Override
     public void deleteAll(@NonNull UUID networkUuid) {
         // Nothing to delete
     }
@@ -60,11 +50,6 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     @Override
     public void deleteVariants(UUID networkUuid, List<String> variantIds) {
         // Nothing to delete
-    }
-
-    @Override
-    public void cloneVariantModifications(UUID networkUuid, String variantToCloneId, String variantId) {
-        // Nothing to clone
     }
 
     @Override

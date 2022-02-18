@@ -67,16 +67,6 @@ public class EquipmentInfosServiceMockTests {
         List<TombstonedEquipmentInfos> tombstonedEquipments = equipmentInfosService.searchTombstonedEquipments("equipmentId.fullascii: id1");
         assertEquals(Collections.emptyList(), tombstonedEquipments);
 
-        equipmentInfosService.addAllEquipmentInfos(equipmentsInfos);
-        assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
-
-        equipmentInfosService.addAllTombstonedEquipmentInfos(tombstonedEquipmentsInfos);
-        assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
-
-        equipmentInfosService.cloneVariantModifications(NETWORK_UUID, VARIANT_ID, NEW_VARIANT_ID);
-        assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
-        assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());
-
         equipmentInfosService.deleteVariants(NETWORK_UUID, List.of(VARIANT_ID, NEW_VARIANT_ID));
         assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
         assertEquals(0, equipmentInfosService.findAllTombstonedEquipmentInfos(NETWORK_UUID).size());

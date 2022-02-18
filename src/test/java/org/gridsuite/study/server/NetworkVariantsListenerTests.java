@@ -33,14 +33,13 @@ public class NetworkVariantsListenerTests {
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final String VARIANT_ID = "variant_1";
-    private static final String VARIANT_ID_2 = "variant_2";
 
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
     @Before
     public void setup() {
-        equipmentInfosService.deleteVariants(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID, VARIANT_ID_2));
+        equipmentInfosService.deleteVariants(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID));
     }
 
     @Test
@@ -55,18 +54,10 @@ public class NetworkVariantsListenerTests {
 
         NetworkVariantsListener listener = new NetworkVariantsListener(NETWORK_UUID, equipmentInfosService);
 
-        listener.onVariantCreated(VARIANT_ID, VARIANT_ID_2);
-        List<EquipmentInfos> equipmentInfos = equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID);
-        assertEquals(6, equipmentInfos.size());
-        assertEquals(2, equipmentInfos.stream().filter(eq -> eq.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID)).count());
-        assertEquals(2, equipmentInfos.stream().filter(eq -> eq.getVariantId().equals(VARIANT_ID)).count());
-        assertEquals(2, equipmentInfos.stream().filter(eq -> eq.getVariantId().equals(VARIANT_ID_2)).count());
-
         listener.onVariantRemoved(VARIANT_ID);
-        equipmentInfos = equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID);
-        assertEquals(4, equipmentInfos.size());
+        List<EquipmentInfos> equipmentInfos = equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID);
+        assertEquals(2, equipmentInfos.size());
         assertEquals(2, equipmentInfos.stream().filter(eq -> eq.getVariantId().equals(VariantManagerConstants.INITIAL_VARIANT_ID)).count());
         assertEquals(0, equipmentInfos.stream().filter(eq -> eq.getVariantId().equals(VARIANT_ID)).count());
-        assertEquals(2, equipmentInfos.stream().filter(eq -> eq.getVariantId().equals(VARIANT_ID_2)).count());
     }
 }

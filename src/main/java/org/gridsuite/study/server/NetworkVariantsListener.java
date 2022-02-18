@@ -8,7 +8,6 @@ package org.gridsuite.study.server;
 
 import com.powsybl.iidm.network.Identifiable;
 import com.powsybl.iidm.network.NetworkListener;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 
 import java.util.List;
@@ -46,14 +45,6 @@ public class NetworkVariantsListener implements NetworkListener {
     @Override
     public void onUpdate(Identifiable identifiable, String attribute, Object oldValue, Object newValue) {
         // Nothing to do in this listener
-    }
-
-    @Override
-    public void onVariantCreated(String sourceVariantId, String targetVariantId) {
-        // Initial variant modifications are not cloned
-        if (!sourceVariantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) {
-            equipmentInfosService.cloneVariantModifications(networkUuid, sourceVariantId, targetVariantId);
-        }
     }
 
     @Override

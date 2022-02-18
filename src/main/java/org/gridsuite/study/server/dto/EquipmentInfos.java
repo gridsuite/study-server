@@ -26,7 +26,6 @@ import java.util.Set;
 @SuperBuilder
 @NoArgsConstructor
 @Getter
-@Setter
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "Equipment infos")

@@ -120,9 +120,6 @@ public class EquipmentInfosServiceTests {
         equipmentInfosService.addEquipmentInfos(EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id1").name("name1").type(IdentifiableType.LOAD.name()).variantId("variant1").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build());
         assertEquals(1, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
 
-        equipmentInfosService.cloneVariantModifications(NETWORK_UUID, "variant1", "variant2");
-        assertEquals(2, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
-
         equipmentInfosService.deleteVariants(NETWORK_UUID, List.of("variant1", "variant2"));
         assertEquals(0, equipmentInfosService.findAllEquipmentInfos(NETWORK_UUID).size());
     }

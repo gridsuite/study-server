@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import com.google.common.collect.Lists;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
@@ -58,20 +57,6 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     }
 
     @Override
-    public void addAllEquipmentInfos(List<EquipmentInfos> equipmentsInfos) {
-        Lists.partition(equipmentsInfos, partitionSize)
-                .parallelStream()
-                .forEach(equipmentInfosRepository::saveAll);
-    }
-
-    @Override
-    public void addAllTombstonedEquipmentInfos(List<TombstonedEquipmentInfos> tombstonedEquipmentInfos) {
-        Lists.partition(tombstonedEquipmentInfos, partitionSize)
-                .parallelStream()
-                .forEach(tombstonedEquipmentInfosRepository::saveAll);
-    }
-
-    @Override
     public List<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return equipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
@@ -87,28 +72,6 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
             equipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
             tombstonedEquipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
         });
-    }
-
-    @Override
-    public void cloneVariantModifications(@NonNull UUID networkUuid, @NonNull String variantToCloneId, @NonNull String variantId) {
-        addAllEquipmentInfos(
-                equipmentInfosRepository.findAllByNetworkUuidAndVariantId(networkUuid, variantToCloneId).stream()
-                        .map(equipmentInfos -> {
-                            equipmentInfos.setUniqueId(null);
-                            equipmentInfos.setVariantId(variantId);
-                            return equipmentInfos;
-                        })
-                        .collect(Collectors.toList())
-        );
-        addAllTombstonedEquipmentInfos(
-                tombstonedEquipmentInfosRepository.findAllByNetworkUuidAndVariantId(networkUuid, variantToCloneId).stream()
-                        .map(tombstonedEquipmentInfos -> {
-                            tombstonedEquipmentInfos.setUniqueId(null);
-                            tombstonedEquipmentInfos.setVariantId(variantId);
-                            return tombstonedEquipmentInfos;
-                        })
-                        .collect(Collectors.toList())
-        );
     }
 
     @Override
