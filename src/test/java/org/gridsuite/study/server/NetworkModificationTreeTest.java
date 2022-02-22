@@ -442,7 +442,7 @@ public class NetworkModificationTreeTest {
          */
         AbstractNode unchangedNode = root.getChildren().get(0);
         AbstractNode willBeMoved = root.getChildren().get(1);
-        insertNode(root.getStudyId(), willBeMoved, networkModification, InsertMode.BEFORE);
+        insertNode(root.getStudyId(), willBeMoved, networkModification, InsertMode.BEFORE, root);
         /* root
             / \
            n3  n2
@@ -468,7 +468,7 @@ public class NetworkModificationTreeTest {
         createNode(root.getStudyId(), root, model);
         root = getRootNode(root.getStudyId());
         var originalChildren = root.getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
-        insertNode(root.getStudyId(), root, hypo, InsertMode.AFTER);
+        insertNode(root.getStudyId(), root, hypo, InsertMode.AFTER, root);
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().size());
         var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
@@ -574,18 +574,18 @@ public class NetworkModificationTreeTest {
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
-        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_BEFORE));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
     }
 
-    private void insertNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode, InsertMode mode) {
+    private void insertNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode, InsertMode mode, AbstractNode newParentNode) {
         newNode.setId(null);
         webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={mode}", studyUuid, parentNode.getId(), mode).bodyValue(newNode)
             .exchange()
             .expectStatus().isOk();
         var mess = output.receive(TIMEOUT);
         assertEquals(NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(parentNode.getId(), mess.getHeaders().get(HEADER_NODE));
-        assertEquals(mode.name(), mess.getHeaders().get(HEADER_INSERT_BEFORE));
+        assertEquals(newParentNode.getId(), mess.getHeaders().get(HEADER_PARENT_NODE));
+        assertEquals(mode.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
     }
 
