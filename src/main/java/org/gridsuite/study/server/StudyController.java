@@ -354,9 +354,9 @@ public class StudyController {
     public ResponseEntity<Mono<String>> getLoadMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("loadId") String loadUuid) {
+            @PathVariable("loadId") String loadId) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadMapData(studyUuid, nodeUuid, loadUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadMapData(studyUuid, nodeUuid, loadId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators")

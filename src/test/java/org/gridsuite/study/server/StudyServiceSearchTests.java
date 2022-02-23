@@ -83,7 +83,7 @@ public class StudyServiceSearchTests {
         EquipmentInfos line2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l2").name("name_l2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
         EquipmentInfos twInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw1").name("name_tw1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl5").name("vl5").build())).build();
         EquipmentInfos load1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
-        EquipmentInfos load2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId2").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos load2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId2").name("name_load2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
 
         Stream.of(generatorInfos, line1Infos, line2Infos, twInfos, load1Infos, load2Infos).forEach(equipmentInfosService::addEquipmentInfos);
 
