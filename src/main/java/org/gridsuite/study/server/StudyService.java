@@ -674,6 +674,7 @@ public class StudyService {
         return webClient.get()
                 .uri(networkMapServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(EQUIPMENT_NOT_FOUND)))
                 .bodyToMono(String.class);
     }
 

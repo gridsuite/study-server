@@ -36,7 +36,8 @@ public class StudyException extends RuntimeException {
         VOLTAGE_LEVEL_CREATION_FAILED,
         UNKNOWN_EQUIPMENT_TYPE,
         BAD_NODE_TYPE,
-        NETWORK_NOT_FOUND
+        NETWORK_NOT_FOUND,
+        EQUIPMENT_NOT_FOUND,
     }
 
     private final Type type;
