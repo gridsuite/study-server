@@ -185,7 +185,6 @@ public class StudyServiceSearchTests {
         // Search all equipments with node of new variant
         hits.clear();
         studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
-        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(5, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
