@@ -82,29 +82,31 @@ public class StudyServiceSearchTests {
         EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
         EquipmentInfos line2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l2").name("name_l2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
         EquipmentInfos twInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw1").name("name_tw1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl5").name("vl5").build())).build();
+        EquipmentInfos load1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos load2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId2").name("name_load2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, twInfos).forEach(equipmentInfosService::addEquipmentInfos);
+        Stream.of(generatorInfos, line1Infos, line2Infos, twInfos, load1Infos, load2Infos).forEach(equipmentInfosService::addEquipmentInfos);
 
         // Search with node of initial variant
         Set<EquipmentInfos> hits = new HashSet<>();
-        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_g1", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_g1", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(1, hits.size());
         assertTrue(hits.contains(generatorInfos));
 
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_l", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_l", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(2, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
 
         // Search with node of new variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_g1", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_g1", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(1, hits.size());
         assertTrue(hits.contains(generatorInfos));
 
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_l", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_l", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(2, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -117,12 +119,12 @@ public class StudyServiceSearchTests {
 
         // Search new equipments with node of initial variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_new", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_new", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(0, hits.size());
 
         // Search all equipments with node of initial variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(4, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -131,14 +133,14 @@ public class StudyServiceSearchTests {
 
         // Search new equipments with node of new variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_new", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_new", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(2, hits.size());
         assertTrue(hits.contains(newGeneratorInfos));
         assertTrue(hits.contains(newLineInfos));
 
         // Search all equipments with node of new variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(6, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
@@ -153,18 +155,36 @@ public class StudyServiceSearchTests {
 
         // Search 2wt with node of initial variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_tw1", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id_tw1", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(1, hits.size());
         assertTrue(hits.contains(twInfos));
 
+        // Search specific load with node of initial variant
+        hits.clear();
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, "LOAD").subscribe(hits::add);
+        assertEquals(1, hits.size());
+        assertTrue(hits.contains(load1Infos));
+
+        // Search specific load with the wrong type -> expect no result
+        hits.clear();
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "loadId2", EquipmentInfosService.FieldSelector.ID, "LINE").subscribe(hits::add);
+        assertEquals(0, hits.size());
+
+        // Search both loads
+        hits.clear();
+        studyService.searchEquipments(STUDY_UUID, NODE_UUID, "loadId", EquipmentInfosService.FieldSelector.ID, "LOAD").subscribe(hits::add);
+        assertEquals(2, hits.size());
+        assertTrue(hits.contains(load2Infos));
+        assertTrue(hits.contains(load1Infos));
+
         // Search 2wt with node of new variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_tw1", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_tw1", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(0, hits.size());
 
         // Search all equipments with node of new variant
         hits.clear();
-        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID).subscribe(hits::add);
+        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null).subscribe(hits::add);
         assertEquals(5, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));

@@ -27,6 +27,7 @@ public class RestResponseEntityExceptionHandler {
                 case ELEMENT_NOT_FOUND:
                 case STUDY_NOT_FOUND:
                 case SECURITY_ANALYSIS_NOT_FOUND:
+                case EQUIPMENT_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getType());
                 case CASE_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(CASE_NOT_FOUND);
