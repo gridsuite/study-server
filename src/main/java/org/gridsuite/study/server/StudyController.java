@@ -348,6 +348,17 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/{loadId}")
+    @Operation(summary = "Get specific load description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load data")})
+    public ResponseEntity<Mono<String>> getLoadMapData(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("loadId") String loadId) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadMapData(studyUuid, nodeUuid, loadId));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators")
     @Operation(summary = "Get Network shunt compensators description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of shunt compensators data")})
@@ -629,9 +640,10 @@ public class StudyController {
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
-        @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector) {
+        @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector,
+        @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector));
+            .body(studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector, equipmentType));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
