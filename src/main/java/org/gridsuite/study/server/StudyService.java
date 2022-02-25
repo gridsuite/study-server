@@ -431,12 +431,12 @@ public class StudyService {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
-                emitStudyDelete(studyUuid, userId);
             });
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
-            emitStudyDelete(studyUuid, userId);
         }
+        emitStudyDelete(studyUuid, userId);
+
         return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupsUuids)) : Optional.empty();
     }
 
