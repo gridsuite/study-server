@@ -512,6 +512,18 @@ public class NetworkModificationTreeService {
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
+    @Transactional(readOnly = true)
+    public Optional<UUID> doGetLastParentModelNodeBuilt(UUID nodeUuid) {
+        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        if (nodeEntity.getType() == NodeType.ROOT) {
+            return Optional.of(nodeEntity.getIdNode());
+        } else if (nodeEntity.getType() == NodeType.MODEL && doGetBuildStatus(nodeEntity.getIdNode()) == BuildStatus.BUILT) {
+            return Optional.of(nodeEntity.getIdNode());
+        } else {
+            return doGetLastParentModelNodeBuilt(nodeEntity.getParentNode().getIdNode());
+        }
+    }
+
     @Transactional
     public void doInvalidateBuildStatus(UUID nodeUuid) {
         List<UUID> changedNodes = new ArrayList<>();

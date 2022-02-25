@@ -352,11 +352,12 @@ public class StudyController {
     @Operation(summary = "Get specific load description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load data")})
     public ResponseEntity<Mono<String>> getLoadMapData(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("loadId") String loadId) {
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "load id") @PathVariable("loadId") String loadId,
+            @Parameter(description = "Should search in upstream built node ?") @RequestParam(value = "searchInUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean shouldSearchInUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadMapData(studyUuid, nodeUuid, loadId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadMapData(studyUuid, nodeUuid, loadId, shouldSearchInUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators")
@@ -641,9 +642,10 @@ public class StudyController {
         @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
         @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector,
+        @Parameter(description = "Should search in upstream built node") @RequestParam(value = "searchInUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean shouldSearchInUpstreamBuiltParentNode,
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector, equipmentType));
+            .body(studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector, equipmentType, shouldSearchInUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")

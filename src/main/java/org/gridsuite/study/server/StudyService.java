@@ -367,8 +367,13 @@ public class StudyService {
     }
 
     Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType) {
-        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid))
+                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
+                                          boolean shouldSearchInUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (shouldSearchInUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid).orElse(null);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn))
                 .flatMapIterable(tuple -> {
                     UUID networkUuid = tuple.getT1();
                     String variantId = tuple.getT2();
@@ -744,8 +749,12 @@ public class StudyService {
         );
     }
 
-    Mono<String> getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId) {
-        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
+    Mono<String> getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId, boolean shouldSearchInUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (shouldSearchInUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid).orElse(null);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
                 getEquipmentMapData(tuple.getT1(), tuple.getT2(), "loads", loadId)
         );
     }
