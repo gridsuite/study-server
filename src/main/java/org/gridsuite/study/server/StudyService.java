@@ -1489,6 +1489,24 @@ public class StudyService {
         });
     }
 
+    public Mono<Void> updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType, UUID nodeUuid) {
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID groupUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
+
+            return networkModificationService.updateEquipmentCreation(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId)
+                    .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                    .collect(Collectors.toSet())
+                    .doOnSuccess(substationIds ->
+                            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
+                    )
+                    .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                    .then(monoUpdateStatusResult);
+        });
+    }
+
     Mono<Void> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
         return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID groupUuid = tuple.getT1();

@@ -214,7 +214,7 @@ public class NetworkModificationService {
                 .buildAndExpand()
                 .toUriString();
 
-            return webClient.put()
+            return webClient.post()
                 .uri(getNetworkModificationServerURI(true) + path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(createEquipmentAttributes))
@@ -223,6 +223,33 @@ public class NetworkModificationService {
                         handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
                 .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                 });
+        });
+    }
+
+    public Flux<EquipmentModificationInfos> updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes, UUID groupUuid,
+                                                            ModificationType modificationType, String variantId) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(createEquipmentAttributes);
+
+        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+                    .queryParam(GROUP, groupUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
+                    .buildAndExpand()
+                    .toUriString();
+
+            return webClient.put()
+                    .uri(getNetworkModificationServerURI(true) + path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(createEquipmentAttributes))
+                    .retrieve()
+                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                            handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                    });
         });
     }
 

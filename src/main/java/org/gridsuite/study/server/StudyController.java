@@ -752,7 +752,7 @@ public class StudyController {
                 .then(studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations")
     @Operation(summary = "create a substation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation has been created")})
     public ResponseEntity<Mono<Void>> createSubstation(@PathVariable("studyUuid") UUID studyUuid,
@@ -760,6 +760,16 @@ public class StudyController {
                                                                    @RequestBody String createSubstationAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
                 .then(studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations")
+    @Operation(summary = "update a substation creation in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation has been created")})
+    public ResponseEntity<Mono<Void>> updateSubstationCreation(@PathVariable("studyUuid") UUID studyUuid,
+                                                       @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @RequestBody String createSubstationAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+                .then(studyService.updateEquipmentCreation(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels")
