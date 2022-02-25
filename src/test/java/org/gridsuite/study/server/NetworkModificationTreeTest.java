@@ -566,6 +566,35 @@ public class NetworkModificationTreeTest {
         assertEquals(root.getId(), networkModificationTreeService.getParentNode(model3.getId(), NodeType.ROOT).block());
     }
 
+    @Test
+    public void testGetLastParentModelNodeBuilt() throws Exception {
+        RootNode root = createRoot();
+        final NetworkModificationNode hypo1 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID);
+        final NetworkModificationNode hypo2 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID);
+        final NetworkModificationNode hypo3 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID);
+        final ModelNode model1 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
+        final ModelNode model2 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
+        final ModelNode model3 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
+        final ModelNode model4 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.BUILT);
+        final ModelNode model5 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final ModelNode model6 = buildModel("loadflow", "dance", "loadflow", LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
+
+        createNode(root.getStudyId(), root, hypo1);
+        createNode(root.getStudyId(), hypo1, model1);
+        createNode(root.getStudyId(), model1, hypo2);
+        createNode(root.getStudyId(), hypo2, model2);
+        createNode(root.getStudyId(), model2, model3);
+        createNode(root.getStudyId(), model3, model4);
+        createNode(root.getStudyId(), model4, model5);
+        createNode(root.getStudyId(), model5, hypo3);
+        createNode(root.getStudyId(), hypo3, model5);
+        createNode(root.getStudyId(), model5, model6);
+
+        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(model4.getId()).get());
+        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(model6.getId()).get());
+        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(hypo3.getId()).get());
+    }
+
     private void createNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode) {
         newNode.setId(null);
         webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId()).bodyValue(newNode)

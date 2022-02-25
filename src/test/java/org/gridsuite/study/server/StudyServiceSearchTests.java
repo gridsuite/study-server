@@ -23,6 +23,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import reactor.core.publisher.Mono;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -65,6 +66,7 @@ public class StudyServiceSearchTests {
         when(networkService.getNetworkUuid(STUDY_UUID)).thenReturn(Mono.just(NETWORK_UUID));
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID)).thenReturn(Mono.just(VARIANT_ID));
+        when(networkModificationTreeService.doGetLastParentModelNodeBuilt(VARIANT_NODE_UUID)).thenReturn(Optional.of(VARIANT_NODE_UUID));
 
         try {
             equipmentInfosService.deleteAll(NETWORK_UUID);
@@ -185,6 +187,16 @@ public class StudyServiceSearchTests {
         // Search all equipments with node of new variant
         hits.clear();
         studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null, false).subscribe(hits::add);
+        assertEquals(5, hits.size());
+        assertTrue(hits.contains(line1Infos));
+        assertTrue(hits.contains(line2Infos));
+        assertTrue(hits.contains(generatorInfos));
+        assertTrue(hits.contains(newGeneratorInfos));
+        assertTrue(hits.contains(newLineInfos));
+
+        // Search all equipments with node of new variant
+        hits.clear();
+        studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id_", EquipmentInfosService.FieldSelector.ID, null, true).subscribe(hits::add);
         assertEquals(5, hits.size());
         assertTrue(hits.contains(line1Infos));
         assertTrue(hits.contains(line2Infos));
