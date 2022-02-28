@@ -387,20 +387,20 @@ public class StudyService {
                     // Get added/removed equipment to/from the chosen variant
                     return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                             ? equipmentInfosInInitVariant
-                            : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector, equipmentInfosInInitVariant);
+                            : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector, equipmentInfosInInitVariant, equipmentType);
                 });
     }
 
     private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
                                                                   EquipmentInfosService.FieldSelector fieldSelector,
-                                                                  List<EquipmentInfos> equipmentInfosInInitVariant) {
+                                                                  List<EquipmentInfos> equipmentInfosInInitVariant, String equipmentType) {
         String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
         Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
-        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId, null);
+        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId, equipmentType);
         List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
 
         List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
