@@ -1399,6 +1399,8 @@ public class StudyTest {
         UUID modelNodeUuid = modelNode.getId();
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
+        ModelNode modelNode2 = createModelNode(studyNameUserIdUuid, modificationNodeUuid2);
+        UUID modelNodeUuid2 = modelNode2.getId();
 
         // update switch on first modification node
         webTestClient.put()
@@ -1431,6 +1433,32 @@ public class StudyTest {
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID_2)));
+
+        // test build status on switch modification
+        modelNode.setBuildStatus(BuildStatus.BUILT);  // mark modelNode as built
+        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modelNode);
+        output.receive(TIMEOUT);
+        modelNode2.setBuildStatus(BuildStatus.BUILT);  // mark modelNode2 as built
+        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modelNode2);
+        output.receive(TIMEOUT);
+
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true", studyNameUserIdUuid, modificationNodeUuid, "switchId")
+            .exchange()
+            .expectStatus().isOk();
+
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+
+        requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID)));
+
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modelNodeUuid));  // modelNode is still built
+        assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modelNodeUuid2));  // modelNode2 is now invalid
     }
 
     @Test
