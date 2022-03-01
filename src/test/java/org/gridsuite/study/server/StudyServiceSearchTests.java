@@ -23,7 +23,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import reactor.core.publisher.Mono;
 
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -66,7 +65,7 @@ public class StudyServiceSearchTests {
         when(networkService.getNetworkUuid(STUDY_UUID)).thenReturn(Mono.just(NETWORK_UUID));
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID)).thenReturn(Mono.just(VARIANT_ID));
-        when(networkModificationTreeService.doGetLastParentModelNodeBuilt(VARIANT_NODE_UUID)).thenReturn(Optional.of(VARIANT_NODE_UUID));
+        when(networkModificationTreeService.doGetLastParentModelNodeBuilt(VARIANT_NODE_UUID)).thenReturn(VARIANT_NODE_UUID);
 
         try {
             equipmentInfosService.deleteAll(NETWORK_UUID);

@@ -590,9 +590,9 @@ public class NetworkModificationTreeTest {
         createNode(root.getStudyId(), hypo3, model5);
         createNode(root.getStudyId(), model5, model6);
 
-        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(model4.getId()).get());
-        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(model6.getId()).get());
-        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(hypo3.getId()).get());
+        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(model4.getId()));
+        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(model6.getId()));
+        assertEquals(model4.getId(), networkModificationTreeService.doGetLastParentModelNodeBuilt(hypo3.getId()));
     }
 
     private void createNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode) {
