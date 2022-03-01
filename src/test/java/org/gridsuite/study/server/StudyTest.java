@@ -804,7 +804,7 @@ public class StudyTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals("userId", headers.get(HEADER_USER_ID));
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         var httpRequests = getRequestsDone(1);
         assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
@@ -1604,7 +1604,7 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(3);
@@ -1668,7 +1668,7 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(caseUuid == null ? 1 : 3);
