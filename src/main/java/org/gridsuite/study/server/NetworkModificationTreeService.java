@@ -458,11 +458,13 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes) {
+    public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
-                repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
-                invalidateChildrenBuildStatus(child, changedNodes);
+                if (child.getType() == NodeType.MODEL && !invalidateOnlyChildrenBuildStatus) {
+                    repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
+                }
+                invalidateChildrenBuildStatus(child, changedNodes, child.getType() != NodeType.MODEL && invalidateOnlyChildrenBuildStatus);
             });
     }
 
@@ -473,7 +475,7 @@ public class NetworkModificationTreeService {
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes);
-            invalidateChildrenBuildStatus(n, changedNodes);
+            invalidateChildrenBuildStatus(n, changedNodes, false);
         });
 
         if (!changedNodes.isEmpty()) {
@@ -525,13 +527,15 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void doInvalidateBuildStatus(UUID nodeUuid) {
+    public void doInvalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
-            invalidateChildrenBuildStatus(n, changedNodes);
+            if (n.getType() == NodeType.MODEL && !invalidateOnlyChildrenBuildStatus) {
+                repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+            }
+            invalidateChildrenBuildStatus(n, changedNodes, n.getType() != NodeType.MODEL && invalidateOnlyChildrenBuildStatus);
         });
 
         if (!changedNodes.isEmpty()) {
@@ -539,8 +543,8 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public Mono<Void> invalidateBuildStatus(UUID nodeUuid) {
-        return Mono.fromRunnable(() -> self.doInvalidateBuildStatus(nodeUuid));
+    public Mono<Void> invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+        return Mono.fromRunnable(() -> self.doInvalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus));
     }
 
     @Transactional

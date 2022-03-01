@@ -1669,16 +1669,20 @@ public class StudyService {
         return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
-    Mono<Void> invalidateBuildStatus(UUID nodeUuid) {
-        return networkModificationTreeService.invalidateBuildStatus(nodeUuid);
+    Mono<Void> invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+        return networkModificationTreeService.invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
     }
 
     private Mono<Void> updateStatuses(UUID studyUuid, UUID nodeUuid) {
+        return updateStatuses(studyUuid, nodeUuid, true);
+    }
+
+    private Mono<Void> updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         return updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
             .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
             .then(invalidateSecurityAnalysisStatus(nodeUuid)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-            .then(invalidateBuildStatus(nodeUuid));
+            .then(invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus));
     }
 
     public Mono<Void> changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID modificationUuid, boolean active) {
@@ -1686,7 +1690,7 @@ public class StudyService {
             throw new StudyException(NOT_ALLOWED);
         }
         return networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active)
-            .then(updateStatuses(studyUuid, nodeUuid));
+            .then(updateStatuses(studyUuid, nodeUuid, false));
     }
 
     @Transactional
@@ -1699,7 +1703,7 @@ public class StudyService {
         ).doOnSuccess(
                 e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationUuid)
                     .doOnSuccess(r -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
-                    .then(updateStatuses(studyUuid, nodeUuid))
+                    .then(updateStatuses(studyUuid, nodeUuid, false))
                     .subscribe()
         );
     }
