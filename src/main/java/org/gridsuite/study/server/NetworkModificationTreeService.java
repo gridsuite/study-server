@@ -523,7 +523,7 @@ public class NetworkModificationTreeService {
             if (n.getType() == NodeType.MODEL && !invalidateOnlyChildrenBuildStatus) {
                 repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
             }
-            invalidateChildrenBuildStatus(n, changedNodes, invalidateOnlyChildrenBuildStatus);
+            invalidateChildrenBuildStatus(n, changedNodes, n.getType() != NodeType.MODEL && invalidateOnlyChildrenBuildStatus);
         });
 
         if (!changedNodes.isEmpty()) {
