@@ -143,7 +143,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(NOT_ALLOWED);
             }
             NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
-            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), reference.getStudy()));
+            NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeInfo.getType(), Boolean.FALSE, reference.getStudy()));
             nodeInfo.setId(node.getIdNode());
             repositories.get(node.getType()).createNodeInfo(nodeInfo);
 
@@ -227,7 +227,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NodeEntity createRoot(StudyEntity study) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, Boolean.TRUE, study));
         var root = RootNode.builder()
             .studyId(study.getId())
             .id(node.getIdNode())
@@ -524,6 +524,10 @@ public class NetworkModificationTreeService {
         } else {
             return doGetLastParentModelNodeBuilt(nodeEntity.getParentNode().getIdNode());
         }
+    }
+
+    public Mono<Boolean> isReadOnly(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> n.getReadOnly()));
     }
 
     @Transactional
