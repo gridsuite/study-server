@@ -804,7 +804,7 @@ public class StudyTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals("userId", headers.get(HEADER_USER_ID));
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         var httpRequests = getRequestsDone(1);
         assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
@@ -1399,6 +1399,8 @@ public class StudyTest {
         UUID modelNodeUuid = modelNode.getId();
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
+        ModelNode modelNode2 = createModelNode(studyNameUserIdUuid, modificationNodeUuid2);
+        UUID modelNodeUuid2 = modelNode2.getId();
 
         // update switch on first modification node
         webTestClient.put()
@@ -1431,6 +1433,32 @@ public class StudyTest {
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID_2)));
+
+        // test build status on switch modification
+        modelNode.setBuildStatus(BuildStatus.BUILT);  // mark modelNode as built
+        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modelNode);
+        output.receive(TIMEOUT);
+        modelNode2.setBuildStatus(BuildStatus.BUILT);  // mark modelNode2 as built
+        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modelNode2);
+        output.receive(TIMEOUT);
+
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true", studyNameUserIdUuid, modificationNodeUuid, "switchId")
+            .exchange()
+            .expectStatus().isOk();
+
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+
+        requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID)));
+
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modelNodeUuid));  // modelNode is still built
+        assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modelNodeUuid2));  // modelNode2 is now invalid
     }
 
     @Test
@@ -1604,7 +1632,7 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(3);
@@ -1668,7 +1696,7 @@ public class StudyTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(caseUuid == null ? 1 : 3);
