@@ -367,8 +367,13 @@ public class StudyService {
     }
 
     Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType) {
-        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid))
+                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
+                                          boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn))
                 .flatMapIterable(tuple -> {
                     UUID networkUuid = tuple.getT1();
                     String variantId = tuple.getT2();
@@ -382,20 +387,20 @@ public class StudyService {
                     // Get added/removed equipment to/from the chosen variant
                     return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                             ? equipmentInfosInInitVariant
-                            : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector, equipmentInfosInInitVariant);
+                            : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector, equipmentInfosInInitVariant, equipmentType);
                 });
     }
 
     private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
                                                                   EquipmentInfosService.FieldSelector fieldSelector,
-                                                                  List<EquipmentInfos> equipmentInfosInInitVariant) {
+                                                                  List<EquipmentInfos> equipmentInfosInInitVariant, String equipmentType) {
         String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
         Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
-        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId, null);
+        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId, equipmentType);
         List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
 
         List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
@@ -744,8 +749,12 @@ public class StudyService {
         );
     }
 
-    Mono<String> getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId) {
-        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
+    Mono<String> getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
                 getEquipmentMapData(tuple.getT1(), tuple.getT2(), "loads", loadId)
         );
     }
