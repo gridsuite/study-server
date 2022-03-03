@@ -213,7 +213,6 @@ public class NetworkModificationService {
             var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
-
             return webClient.post()
                 .uri(getNetworkModificationServerURI(true) + path)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -226,31 +225,23 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<EquipmentModificationInfos> updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes, UUID groupUuid,
-                                                            ModificationType modificationType, String variantId) {
-        Objects.requireNonNull(studyUuid);
+    public Mono<Void> updateEquipmentCreation(String createEquipmentAttributes, UUID groupUuid, ModificationType modificationType) {
         Objects.requireNonNull(createEquipmentAttributes);
 
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                    .queryParam(GROUP, groupUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder
-                    .buildAndExpand()
-                    .toUriString();
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(ModificationType.getUriFromType(modificationType))
+                .queryParam(GROUP, groupUuid);
+        var path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
 
-            return webClient.put()
-                    .uri(getNetworkModificationServerURI(true) + path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(BodyInserters.fromValue(createEquipmentAttributes))
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                            handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
-                    });
-        });
+        return webClient.put()
+                .uri(getNetworkModificationServerURI(false) + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(createEquipmentAttributes))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+                .bodyToMono(Void.class);
     }
 
     public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId) {
