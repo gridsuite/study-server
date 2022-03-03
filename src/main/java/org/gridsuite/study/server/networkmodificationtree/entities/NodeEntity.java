@@ -55,9 +55,6 @@ public class NodeEntity {
     @Enumerated(EnumType.STRING)
     NodeType type;
 
-    @Column
-    Boolean readOnly;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "study_id", foreignKey = @ForeignKey(name = "study_id_fk_constraint"))
     StudyEntity study;
