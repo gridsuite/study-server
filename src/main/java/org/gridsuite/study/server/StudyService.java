@@ -91,9 +91,9 @@ public class StudyService {
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_NODE = "node";
-    static final String HEADER_IS_PUBLIC_STUDY = "isPublicStudy";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_STUDIES = "studies";
+    static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
     static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
@@ -367,8 +367,13 @@ public class StudyService {
     }
 
     Flux<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType) {
-        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid))
+                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
+                                          boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn))
                 .flatMapIterable(tuple -> {
                     UUID networkUuid = tuple.getT1();
                     String variantId = tuple.getT2();
@@ -382,20 +387,20 @@ public class StudyService {
                     // Get added/removed equipment to/from the chosen variant
                     return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID))
                             ? equipmentInfosInInitVariant
-                            : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector, equipmentInfosInInitVariant);
+                            : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector, equipmentInfosInInitVariant, equipmentType);
                 });
     }
 
     private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
                                                                   EquipmentInfosService.FieldSelector fieldSelector,
-                                                                  List<EquipmentInfos> equipmentInfosInInitVariant) {
+                                                                  List<EquipmentInfos> equipmentInfosInInitVariant, String equipmentType) {
         String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
         Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
-        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId, null);
+        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId, equipmentType);
         List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
 
         List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
@@ -431,12 +436,12 @@ public class StudyService {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
-                emitStudiesChanged(studyUuid, userId);
             });
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
-            emitStudiesChanged(studyUuid, userId);
         }
+        emitStudyDelete(studyUuid, userId);
+
         return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupsUuids)) : Optional.empty();
     }
 
@@ -744,8 +749,12 @@ public class StudyService {
         );
     }
 
-    Mono<String> getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId) {
-        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
+    Mono<String> getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
                 getEquipmentMapData(tuple.getT1(), tuple.getT2(), "loads", loadId)
         );
     }
@@ -931,6 +940,14 @@ public class StudyService {
             .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
             .build()
         );
+    }
+
+    private void emitStudyDelete(UUID studyUuid, String userId) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE)
+            .build());
     }
 
     private void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
@@ -1670,16 +1687,20 @@ public class StudyService {
         return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
-    Mono<Void> invalidateBuildStatus(UUID nodeUuid) {
-        return networkModificationTreeService.invalidateBuildStatus(nodeUuid);
+    Mono<Void> invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+        return networkModificationTreeService.invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
     }
 
     private Mono<Void> updateStatuses(UUID studyUuid, UUID nodeUuid) {
+        return updateStatuses(studyUuid, nodeUuid, true);
+    }
+
+    private Mono<Void> updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         return updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
             .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
             .then(invalidateSecurityAnalysisStatus(nodeUuid)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))
-            .then(invalidateBuildStatus(nodeUuid));
+            .then(invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus));
     }
 
     public Mono<Void> changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID modificationUuid, boolean active) {
@@ -1687,7 +1708,7 @@ public class StudyService {
             throw new StudyException(NOT_ALLOWED);
         }
         return networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active)
-            .then(updateStatuses(studyUuid, nodeUuid));
+            .then(updateStatuses(studyUuid, nodeUuid, false));
     }
 
     @Transactional
@@ -1700,7 +1721,7 @@ public class StudyService {
         ).doOnSuccess(
                 e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationUuid)
                     .doOnSuccess(r -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
-                    .then(updateStatuses(studyUuid, nodeUuid))
+                    .then(updateStatuses(studyUuid, nodeUuid, false))
                     .subscribe()
         );
     }

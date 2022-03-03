@@ -216,7 +216,7 @@ public class EquipmentInfosServiceTests {
     private void testNameFullAscii(String pat) {
         Set<EquipmentInfos> hits = new HashSet<>();
 
-        studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null).subscribe(hits::add);
+        studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).subscribe(hits::add);
         pbsc.checkThat(hits.size(), is(1));
     }
 
