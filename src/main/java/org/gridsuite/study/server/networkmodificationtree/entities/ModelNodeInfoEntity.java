@@ -10,6 +10,8 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
@@ -32,6 +34,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
+@Setter
 @Entity
 @Table(name = "ModelInfo")
 public class ModelNodeInfoEntity extends AbstractNodeInfoEntity {
