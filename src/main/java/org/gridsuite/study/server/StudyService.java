@@ -989,6 +989,7 @@ public class StudyService {
     }
 
     private Mono<Void> assertCanModifyStudy(UUID studyUuid) {
+        // TODO to be implemented
         return Mono.empty();
     }
 
