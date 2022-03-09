@@ -619,7 +619,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteModification(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @PathVariable("modificationUuid") UUID modificationUuid) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.deleteModification(studyUuid, nodeUuid, modificationUuid)));
     }
 
@@ -711,7 +711,7 @@ public class StudyController {
                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid)));
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid)).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators")
