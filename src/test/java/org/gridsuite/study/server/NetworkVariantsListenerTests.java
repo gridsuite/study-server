@@ -10,11 +10,12 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.elasticsearch.NoSuchIndexException;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
@@ -30,16 +31,19 @@ import static org.junit.Assert.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=true"})
 public class NetworkVariantsListenerTests {
 
-    private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final String VARIANT_ID = "variant_1";
 
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
-    @Before
-    public void setup() {
-        equipmentInfosService.deleteVariants(NETWORK_UUID, List.of(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID));
+    @After
+    public void tearDown() {
+        try {
+            equipmentInfosService.deleteAll(NETWORK_UUID);
+        } catch (NoSuchIndexException ex) {
+            // no need to worry that much
+        }
     }
 
     @Test

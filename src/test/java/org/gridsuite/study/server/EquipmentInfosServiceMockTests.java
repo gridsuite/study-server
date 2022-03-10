@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=false"})
 public class EquipmentInfosServiceMockTests {
 
-    private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
 
     private static final String VARIANT_ID = "variant1";
 

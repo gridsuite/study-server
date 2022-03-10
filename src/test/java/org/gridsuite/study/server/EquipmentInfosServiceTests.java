@@ -21,6 +21,7 @@ import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,7 +54,7 @@ public class EquipmentInfosServiceTests {
 
     private static final String TEST_FILE = "testCase.xiidm";
 
-    private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
 
     private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
 
@@ -73,7 +74,10 @@ public class EquipmentInfosServiceTests {
     public void setup() {
         when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(Mono.just(NETWORK_UUID));
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
+    }
 
+    @After
+    public void tearDown() {
         try {
             equipmentInfosService.deleteAll(NETWORK_UUID);
         } catch (NoSuchIndexException ex) {
