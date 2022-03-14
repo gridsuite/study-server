@@ -1975,7 +1975,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createLoadAttributes)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/loads\\?group=.*") && r.getBody().equals(loadAttributesUpdated)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/loads") && r.getBody().equals(loadAttributesUpdated)));
     }
 
     @Test
@@ -2019,7 +2019,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*") && r.getBody().equals(createSubstationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createSubstationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createSubstationAttributes)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/substations\\?group=.*") && r.getBody().equals(substationAttributesUpdated)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/substations") && r.getBody().equals(substationAttributesUpdated)));
     }
 
     @Test
@@ -2065,7 +2065,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*") && r.getBody().equals(createVoltageLevelAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createVoltageLevelAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createVoltageLevelAttributes)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/voltage-levels\\?group=.*") && r.getBody().equals(voltageLevelAttributesUpdated)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/voltage-levels") && r.getBody().equals(voltageLevelAttributesUpdated)));
     }
 
     @Test
@@ -2265,7 +2265,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createGeneratorAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createGeneratorAttributes)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/generators\\?group=.*") && r.getBody().equals(generatorAttributesUpdated)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/generators") && r.getBody().equals(generatorAttributesUpdated)));
     }
 
     @Test
@@ -2301,7 +2301,7 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators[?]group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createShuntCompensatorAttributes)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/shunt-compensators\\?group=.*") && r.getBody().equals(shuntCompensatorAttributesUpdated)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/shunt-compensators") && r.getBody().equals(shuntCompensatorAttributesUpdated)));
     }
 
     @Test
@@ -2369,7 +2369,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createLineAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createLineAttributes)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/lines\\?group=.*") && r.getBody().equals(lineAttributesUpdated)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/lines") && r.getBody().equals(lineAttributesUpdated)));
     }
 
     @Test
@@ -2413,7 +2413,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformer\\?group=.*") && r.getBody().equals(createTwoWindingsTransformerAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformer\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createTwoWindingsTransformerAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformer\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createTwoWindingsTransformerAttributes)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/two-windings-transformer\\?group=.*") && r.getBody().equals(twoWindingsTransformerAttributesUpdated)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/two-windings-transformer") && r.getBody().equals(twoWindingsTransformerAttributesUpdated)));
     }
 
     private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid) {

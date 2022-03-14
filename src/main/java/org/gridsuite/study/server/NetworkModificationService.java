@@ -225,11 +225,10 @@ public class NetworkModificationService {
         });
     }
 
-    public Mono<Void> updateEquipmentCreation(String createEquipmentAttributes, UUID groupUuid, ModificationType modificationType) {
+    public Mono<Void> updateEquipmentCreation(String createEquipmentAttributes, ModificationType modificationType) {
         Objects.requireNonNull(createEquipmentAttributes);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(ModificationType.getUriFromType(modificationType))
-                .queryParam(GROUP, groupUuid);
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(ModificationType.getUriFromType(modificationType));
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
