@@ -1948,7 +1948,7 @@ public class StudyTest {
 
         // create load on first modification node
         String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createLoadAttributes)
             .exchange()
@@ -1956,7 +1956,7 @@ public class StudyTest {
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         // create load on second modification node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid2)
             .bodyValue(createLoadAttributes)
             .exchange()
@@ -1983,7 +1983,7 @@ public class StudyTest {
 
         // create substation on first modification node
         String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createSubstationAttributes)
             .exchange()
@@ -1991,7 +1991,7 @@ public class StudyTest {
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, new HashSet<>());
 
         // create substation on second modification node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, modificationNodeUuid2)
             .bodyValue(createSubstationAttributes)
             .exchange()
@@ -2019,7 +2019,7 @@ public class StudyTest {
         // create voltage level
         String createVoltageLevelAttributes = "{\"voltageLevelId\":\"voltageLevelId1\",\"voltageLevelName\":\"voltageLevelName1\""
             + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createVoltageLevelAttributes)
             .exchange()
@@ -2027,7 +2027,7 @@ public class StudyTest {
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, new HashSet<>());
 
         // create voltage level on second modification node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels", studyNameUserIdUuid, modificationNodeUuid2)
             .bodyValue(createVoltageLevelAttributes)
             .exchange()
@@ -2208,7 +2208,7 @@ public class StudyTest {
 
         // create generator on first modification node
         String createGeneratorAttributes = "{\"generatorId\":\"generatorId1\",\"generatorName\":\"generatorName1\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"100.0\",\"maxActivePower\":\"200.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createGeneratorAttributes)
             .exchange()
@@ -2216,7 +2216,7 @@ public class StudyTest {
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         // create generator on second modification node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators", studyNameUserIdUuid, modificationNodeUuid2)
             .bodyValue(createGeneratorAttributes)
             .exchange()
@@ -2245,7 +2245,7 @@ public class StudyTest {
         String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
 
         // create suntCompensator on modification node child of root node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createShuntCompensatorAttributes)
             .exchange()
@@ -2282,7 +2282,7 @@ public class StudyTest {
                 "\"busOrBusbarSectionId1\":\"idBus1\"," +
                 "\"voltageLevelId2\":\"idVL2\"," +
                 "\"busOrBusbarSectionId2\":\"idBus2\"}";
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createLineAttributes)
             .exchange()
@@ -2290,7 +2290,7 @@ public class StudyTest {
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         // create line on second modification node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines", studyNameUserIdUuid, modificationNodeUuid2)
             .bodyValue(createLineAttributes)
             .exchange()
@@ -2317,7 +2317,7 @@ public class StudyTest {
 
         // create 2WT on first modification node
         String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-        webTestClient.put()
+        webTestClient.post()
                 .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformer", studyNameUserIdUuid, modificationNodeUuid)
                 .bodyValue(createTwoWindingsTransformerAttributes)
                 .exchange()
@@ -2325,7 +2325,7 @@ public class StudyTest {
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         // create 2WT on second modification node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformer", studyNameUserIdUuid, modificationNodeUuid2)
             .bodyValue(createTwoWindingsTransformerAttributes)
             .exchange()
