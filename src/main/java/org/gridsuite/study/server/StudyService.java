@@ -1506,10 +1506,6 @@ public class StudyService {
         });
     }
 
-    private Mono<Void> updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus) {
-        return updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, true);
-    }
-
     private Mono<Void> updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
         return networkModificationTreeService.updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren);
     }
@@ -1581,6 +1577,7 @@ public class StudyService {
                             deletionInfo.getSubstationIds(), deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
                     )
                 )
+                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                 .then(monoUpdateStatusResult);
         });
     }
@@ -1738,7 +1735,7 @@ public class StudyService {
     }
 
     private Mono<Void> updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        return updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE)
+        return updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE)
             .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS))
             .then(invalidateSecurityAnalysisStatus(nodeUuid)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)))

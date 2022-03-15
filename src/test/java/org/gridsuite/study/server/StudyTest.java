@@ -2231,6 +2231,8 @@ public class StudyTest {
         assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
         assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
 
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
+
         // assert that the broker message has been sent for updating load flow status
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }

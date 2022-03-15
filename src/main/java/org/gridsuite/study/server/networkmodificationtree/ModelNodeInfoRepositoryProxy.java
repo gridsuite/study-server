@@ -9,6 +9,7 @@ package org.gridsuite.study.server.networkmodificationtree;
 
 import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyService;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -20,6 +21,8 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.ModelNode
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -70,6 +73,17 @@ public class ModelNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Mo
         modificationNode.setLoadFlowResult(loadFlowResult);
         modificationNode.setLoadFlowStatus(loadFlowStatus);
         updateNode(modificationNode);
+    }
+
+    @Override
+    //TODO overloading this method here is kind of a hack of the whole philosophy
+    //of the AbstractNodeRepositoryProxy. It's done to avoid converting from entities
+    //to dtos and back to entitites, which generate spurious database queries:
+    //subentities are deleted and reinserted all the time (for example LoadFlowResult)
+    //Everything should be refactored to use the same style as this method: load entities,
+    //modify them and let jpa flush the changes to the database when the transaction is committed.
+    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
+        this.nodeInfoRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).setLoadFlowStatus(loadFlowStatus);
     }
 
     @Override
