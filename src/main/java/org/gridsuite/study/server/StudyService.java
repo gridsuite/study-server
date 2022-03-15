@@ -689,15 +689,45 @@ public class StudyService {
         );
     }
 
+    Mono<String> getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
+                getEquipmentMapData(tuple.getT1(), tuple.getT2(), "substations", substationId)
+        );
+    }
+
     Mono<String> getLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
             getEquipmentsMapData(tuple.getT1(), tuple.getT2(), substationsIds, "lines")
         );
     }
 
+    Mono<String> getLineMapData(UUID studyUuid, UUID nodeUuid, String lineId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
+                getEquipmentMapData(tuple.getT1(), tuple.getT2(), "lines", lineId)
+        );
+    }
+
     Mono<String> getTwoWindingsTransformersMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
             getEquipmentsMapData(tuple.getT1(), tuple.getT2(), substationsIds, "2-windings-transformers")
+        );
+    }
+
+    Mono<String> getTwoWindingsTransformerMapData(UUID studyUuid, UUID nodeUuid, String twoWindingsTransformerId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
+                getEquipmentMapData(tuple.getT1(), tuple.getT2(), "2-windings-transformers", twoWindingsTransformerId)
         );
     }
 
@@ -710,6 +740,16 @@ public class StudyService {
     Mono<String> getGeneratorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
             getEquipmentsMapData(tuple.getT1(), tuple.getT2(), substationsIds, "generators")
+        );
+    }
+
+    Mono<String> getGeneratorMapData(UUID studyUuid, UUID nodeUuid, String generatorId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
+                getEquipmentMapData(tuple.getT1(), tuple.getT2(), "generators", generatorId)
         );
     }
 
@@ -765,9 +805,29 @@ public class StudyService {
         );
     }
 
+    Mono<String> getShuntCompensatorMapData(UUID studyUuid, UUID nodeUuid, String shuntCompensatorId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
+                getEquipmentMapData(tuple.getT1(), tuple.getT2(), "shunt-compensators", shuntCompensatorId)
+        );
+    }
+
     Mono<String> getStaticVarCompensatorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
             getEquipmentsMapData(tuple.getT1(), tuple.getT2(), substationsIds, "static-var-compensators")
+        );
+    }
+
+    Mono<String> getVoltageLevelMapData(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentModelNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
+                getEquipmentMapData(tuple.getT1(), tuple.getT2(), "voltage-levels", voltageLevelId)
         );
     }
 
