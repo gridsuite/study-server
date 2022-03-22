@@ -38,13 +38,18 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
+    public List<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return Collections.emptyList();
     }
 
     @Override
-    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
+    public List<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
         return Collections.emptyList();
+    }
+
+    @Override
+    public void deleteVariants(UUID networkUuid, List<String> variantIds) {
+        // Nothing to delete
     }
 
     @Override
