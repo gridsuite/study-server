@@ -232,6 +232,7 @@ public class StudyTest {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
+        equipmentInfosService.deleteAll(NETWORK_UUID);
     }
 
     @Before

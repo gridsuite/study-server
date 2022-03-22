@@ -10,6 +10,7 @@ import com.powsybl.commons.PowsyblException;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.context.annotation.ComponentScan;
@@ -32,11 +33,15 @@ import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 public class NetworkService {
     private final NetworkStoreService networkStoreService;
 
+    private final EquipmentInfosService equipmentInfosService;
+
     private final StudyRepository studyRepository;
 
     NetworkService(NetworkStoreService networkStoreService,
+                   EquipmentInfosService equipmentInfosService,
                    StudyRepository studyRepository) {
         this.networkStoreService = networkStoreService;
+        this.equipmentInfosService = equipmentInfosService;
         this.studyRepository = studyRepository;
     }
 
@@ -61,6 +66,7 @@ public class NetworkService {
     Mono<Void> deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
         try {
             Network network = networkStoreService.getNetwork(networkUuid);
+            network.addListener(new NetworkVariantsListener(networkUuid, equipmentInfosService));
             VariantManager variantManager = network.getVariantManager();
             Collection<String> allVariants = variantManager.getVariantIds();
             variantsToRemove.forEach(v -> {
