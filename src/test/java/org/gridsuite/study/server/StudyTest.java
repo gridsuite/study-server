@@ -1385,7 +1385,7 @@ public class StudyTest {
 
         //get the loads map data of a network
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads", studyNameUserIdUuid, rootNodeUuid)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/", studyNameUserIdUuid, rootNodeUuid)
             .exchange()
             .expectStatus().isOk()
             .expectHeader().contentType(MediaType.APPLICATION_JSON);
