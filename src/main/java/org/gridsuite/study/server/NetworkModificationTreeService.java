@@ -232,6 +232,7 @@ public class NetworkModificationTreeService {
             .studyId(study.getId())
             .id(node.getIdNode())
             .name("Root")
+            .readOnly(true)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
         return node;
@@ -524,6 +525,11 @@ public class NetworkModificationTreeService {
         } else {
             return doGetLastParentModelNodeBuilt(nodeEntity.getParentNode().getIdNode());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Mono<Boolean> isReadOnly(UUID nodeUuid) {
+        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid)));
     }
 
     @Transactional

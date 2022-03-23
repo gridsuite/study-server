@@ -46,4 +46,7 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
 
     @Column
     String description;
+
+    @Column
+    Boolean readOnly;
 }
