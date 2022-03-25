@@ -25,6 +25,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
         var rootNodeInfoEntity = new RootNodeInfoEntity();
         rootNodeInfoEntity.setIdNode(node.getId());
         rootNodeInfoEntity.setName("Root");
+        rootNodeInfoEntity.setReadOnly(node.getReadOnly());
         return rootNodeInfoEntity;
     }
 
