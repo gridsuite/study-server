@@ -148,6 +148,12 @@ public class StudyTest {
     public static final String PUT = "PUT";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String LOAD_ID_1 = "LOAD_ID_1";
+    private static final String LINE_ID_1 = "LINE_ID_1";
+    private static final String GENERATOR_ID_1 = "GENERATOR_ID_1";
+    private static final String SHUNT_COMPENSATOR_ID_1 = "SHUNT_COMPENSATOR_ID_1";
+    private static final String TWO_WINDINGS_TRANSFORMER_ID_1 = "2WT_ID_1";
+    private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
+    private static final String VL_ID_1 = "VL_ID_1";
 
     @Autowired
     private OutputDestination output;
@@ -295,8 +301,19 @@ public class StudyTest {
             IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()));
 
         String loadDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id("LOAD_ID_1").name("LOAD_ID_1").build());
-
+                IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
+        String lineDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
+        String generatorDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(GENERATOR_ID_1).name("GENERATOR_NAME_1").build());
+        String shuntCompensatorDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(SHUNT_COMPENSATOR_ID_1).name("SHUNT_COMPENSATOR_NAME_1").build());
+        String twoWindingsTransformerDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
+        String voltageLevelDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build());
+        String substationDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build());
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
@@ -589,6 +606,29 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody(loadDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/" + LINE_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/" + GENERATOR_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(generatorDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators/" + SHUNT_COMPENSATOR_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(shuntCompensatorDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers/" + TWO_WINDINGS_TRANSFORMER_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(twoWindingsTransformerDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/substations/" + SUBSTATION_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(substationDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(voltageLevelDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Path not supported: " + request.getPath());
                         return new MockResponse().setResponseCode(404);
@@ -1494,7 +1534,109 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, "LOAD_ID_1")));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, LOAD_ID_1)));
+    }
+
+    @Test
+    public void testGetLineMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the line map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/{lineId}", studyNameUserIdUuid, rootNodeUuid, LINE_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/lines/%s", NETWORK_UUID_STRING, LINE_ID_1)));
+    }
+
+    @Test
+    public void testGetGeneratorMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the generator map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/{generatorId}", studyNameUserIdUuid, rootNodeUuid, GENERATOR_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/generators/%s", NETWORK_UUID_STRING, GENERATOR_ID_1)));
+    }
+
+    @Test
+    public void testGet2wtMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the 2wt map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/{2wtId}", studyNameUserIdUuid, rootNodeUuid, TWO_WINDINGS_TRANSFORMER_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/2-windings-transformers/%s", NETWORK_UUID_STRING, TWO_WINDINGS_TRANSFORMER_ID_1)));
+    }
+
+    @Test
+    public void testGetShuntCompensatorMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the shunt compensator map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/{shuntCompensatorId}", studyNameUserIdUuid, rootNodeUuid, SHUNT_COMPENSATOR_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/shunt-compensators/%s", NETWORK_UUID_STRING, SHUNT_COMPENSATOR_ID_1)));
+    }
+
+    @Test
+    public void testGetSubstationMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the substation map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/{substationId}", studyNameUserIdUuid, rootNodeUuid, SUBSTATION_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/substations/%s", NETWORK_UUID_STRING, SUBSTATION_ID_1)));
+    }
+
+    @Test
+    public void testGetVoltageLevelsMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the voltage level map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}", studyNameUserIdUuid, rootNodeUuid, VL_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/voltage-levels/%s", NETWORK_UUID_STRING, VL_ID_1)));
     }
 
     @SneakyThrows
