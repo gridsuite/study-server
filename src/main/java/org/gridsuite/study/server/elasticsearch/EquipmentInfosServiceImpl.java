@@ -53,13 +53,21 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     }
 
     @Override
-    public Iterable<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
+    public List<EquipmentInfos> findAllEquipmentInfos(@NonNull UUID networkUuid) {
         return equipmentInfosRepository.findAllByNetworkUuid(networkUuid);
     }
 
     @Override
-    public Iterable<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
+    public List<TombstonedEquipmentInfos> findAllTombstonedEquipmentInfos(@NonNull UUID networkUuid) {
         return tombstonedEquipmentInfosRepository.findAllByNetworkUuid(networkUuid);
+    }
+
+    @Override
+    public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
+        variantIds.forEach(variantId -> {
+            equipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
+            tombstonedEquipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
+        });
     }
 
     @Override

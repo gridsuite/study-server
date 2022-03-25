@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.lang.NonNull;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -20,7 +21,11 @@ import java.util.UUID;
 @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
 @Lazy
 public interface EquipmentInfosRepository extends ElasticsearchRepository<EquipmentInfos, String> {
-    Iterable<EquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
+    List<EquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 
-    void deleteAllByNetworkUuid(UUID networkUuid);
+    List<EquipmentInfos> findAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
+
+    void deleteAllByNetworkUuid(@NonNull UUID networkUuid);
+
+    void deleteAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
 }

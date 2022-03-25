@@ -101,6 +101,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         node.setId(nodeInfoEntity.getId());
         node.setName(nodeInfoEntity.getName());
         node.setDescription(nodeInfoEntity.getDescription());
+        node.setReadOnly(nodeInfoEntity.getReadOnly());
         return node;
     }
 
@@ -108,6 +109,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         entity.setIdNode(node.getId());
         entity.setName(node.getName());
         entity.setDescription(node.getDescription());
+        entity.setReadOnly(node.getReadOnly());
         return entity;
     }
 
@@ -178,5 +180,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public void removeModificationToExclude(UUID nodeUuid, UUID modificationUuid) {
         removeModificationToExclude(getNode(nodeUuid), modificationUuid);
+    }
+
+    public Boolean isReadOnly(UUID nodeUuid) {
+        return getNode(nodeUuid).getReadOnly();
     }
 }

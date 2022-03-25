@@ -12,6 +12,7 @@ import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,7 +41,7 @@ public class StudyServiceSearchTests {
 
     private static final UUID STUDY_UUID = UUID.fromString("14526897-4b5d-11bd-b23e-17e46e4ef00d");
 
-    private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
+    private static final UUID NETWORK_UUID = UUID.randomUUID();
 
     private static final UUID NODE_UUID = UUID.fromString("12345678-8cf0-11bd-b23e-10b96e4ef00d");
 
@@ -66,7 +67,10 @@ public class StudyServiceSearchTests {
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID)).thenReturn(Mono.just(VARIANT_ID));
         when(networkModificationTreeService.doGetLastParentModelNodeBuilt(VARIANT_NODE_UUID)).thenReturn(VARIANT_NODE_UUID);
+    }
 
+    @After
+    public void tearDown() {
         try {
             equipmentInfosService.deleteAll(NETWORK_UUID);
         } catch (NoSuchIndexException ex) {

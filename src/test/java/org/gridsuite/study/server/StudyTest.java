@@ -148,6 +148,12 @@ public class StudyTest {
     public static final String POST = "POST";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String LOAD_ID_1 = "LOAD_ID_1";
+    private static final String LINE_ID_1 = "LINE_ID_1";
+    private static final String GENERATOR_ID_1 = "GENERATOR_ID_1";
+    private static final String SHUNT_COMPENSATOR_ID_1 = "SHUNT_COMPENSATOR_ID_1";
+    private static final String TWO_WINDINGS_TRANSFORMER_ID_1 = "2WT_ID_1";
+    private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
+    private static final String VL_ID_1 = "VL_ID_1";
 
     @Autowired
     private OutputDestination output;
@@ -232,6 +238,7 @@ public class StudyTest {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
+        equipmentInfosService.deleteAll(NETWORK_UUID);
     }
 
     @Before
@@ -294,8 +301,19 @@ public class StudyTest {
             IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()));
 
         String loadDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id("LOAD_ID_1").name("LOAD_ID_1").build());
-
+                IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
+        String lineDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
+        String generatorDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(GENERATOR_ID_1).name("GENERATOR_NAME_1").build());
+        String shuntCompensatorDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(SHUNT_COMPENSATOR_ID_1).name("SHUNT_COMPENSATOR_NAME_1").build());
+        String twoWindingsTransformerDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
+        String voltageLevelDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build());
+        String substationDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build());
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
@@ -588,6 +606,29 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody(loadDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/" + LINE_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/" + GENERATOR_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(generatorDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators/" + SHUNT_COMPENSATOR_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(shuntCompensatorDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers/" + TWO_WINDINGS_TRANSFORMER_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(twoWindingsTransformerDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/substations/" + SUBSTATION_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(substationDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(voltageLevelDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Path not supported: " + request.getPath());
                         return new MockResponse().setResponseCode(404);
@@ -904,6 +945,12 @@ public class StudyTest {
         ModelNode modelNode2 = createModelNode(studyNameUserIdUuid, modificationNodeUuid2);
         UUID modelNodeUuid2 = modelNode2.getId();
 
+        // run a loadflow on root node (not allowed)
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, rootNodeUuid)
+                .exchange()
+                .expectStatus().isForbidden();
+
         //run a loadflow
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modelNodeUuid)
@@ -1134,6 +1181,12 @@ public class StudyTest {
         UUID modificationNodeUuid2 = modificationNode2.getId();
         ModelNode modelNode2 = createModelNode(studyNameUserIdUuid, modificationNodeUuid2);
         UUID modelNodeUuid2 = modelNode2.getId();
+
+        // run security analysis on root node (not allowed)
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}", studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)
+                .exchange()
+                .expectStatus().isForbidden();
 
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modelNodeUuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modelNodeUuid2, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
@@ -1402,6 +1455,12 @@ public class StudyTest {
         ModelNode modelNode2 = createModelNode(studyNameUserIdUuid, modificationNodeUuid2);
         UUID modelNodeUuid2 = modelNode2.getId();
 
+        // update switch on root node (not allowed)
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true", studyNameUserIdUuid, rootNodeUuid, "switchId")
+                .exchange()
+                .expectStatus().isForbidden();
+
         // update switch on first modification node
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true", studyNameUserIdUuid, modificationNodeUuid, "switchId")
@@ -1475,7 +1534,109 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class);
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, "LOAD_ID_1")));
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, LOAD_ID_1)));
+    }
+
+    @Test
+    public void testGetLineMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the line map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/{lineId}", studyNameUserIdUuid, rootNodeUuid, LINE_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/lines/%s", NETWORK_UUID_STRING, LINE_ID_1)));
+    }
+
+    @Test
+    public void testGetGeneratorMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the generator map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/{generatorId}", studyNameUserIdUuid, rootNodeUuid, GENERATOR_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/generators/%s", NETWORK_UUID_STRING, GENERATOR_ID_1)));
+    }
+
+    @Test
+    public void testGet2wtMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the 2wt map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/{2wtId}", studyNameUserIdUuid, rootNodeUuid, TWO_WINDINGS_TRANSFORMER_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/2-windings-transformers/%s", NETWORK_UUID_STRING, TWO_WINDINGS_TRANSFORMER_ID_1)));
+    }
+
+    @Test
+    public void testGetShuntCompensatorMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the shunt compensator map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/{shuntCompensatorId}", studyNameUserIdUuid, rootNodeUuid, SHUNT_COMPENSATOR_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/shunt-compensators/%s", NETWORK_UUID_STRING, SHUNT_COMPENSATOR_ID_1)));
+    }
+
+    @Test
+    public void testGetSubstationMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the substation map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/{substationId}", studyNameUserIdUuid, rootNodeUuid, SUBSTATION_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/substations/%s", NETWORK_UUID_STRING, SUBSTATION_ID_1)));
+    }
+
+    @Test
+    public void testGetVoltageLevelsMapServer() {
+        //create study
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+
+        //get the voltage level map data info of a network
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}", studyNameUserIdUuid, rootNodeUuid, VL_ID_1)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class);
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/voltage-levels/%s", NETWORK_UUID_STRING, VL_ID_1)));
     }
 
     @SneakyThrows
@@ -1488,6 +1649,13 @@ public class StudyTest {
         UUID modificationNodeUuid = modificationNode.getId();
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNodeUuid);
         UUID modificationNodeUuid2 = modificationNode2.getId();
+
+        //update equipment on root node (not allowed)
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid, rootNodeUuid)
+                .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+                .exchange()
+                .expectStatus().isForbidden();
 
         //update equipment
         webTestClient.put()
@@ -1854,6 +2022,13 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
+        // change line status on root node (not allowed)
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, rootNodeUuid, "line12")
+                .bodyValue("lockout")
+                .exchange()
+                .expectStatus().isForbidden();
+
         // lockout line
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", studyNameUserIdUuid, modificationNodeUuid, "line12")
@@ -1946,9 +2121,17 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        // create load on first modification node
         String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+
+        // create load on root node (not allowed)
         webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createLoadAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // create load on first modification node
+        webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createLoadAttributes)
             .exchange()
@@ -1990,8 +2173,16 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        // create substation on first modification node
         String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
+      
+        // create substation on root node (not allowed)
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createSubstationAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // create substation on first modification node
         webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createSubstationAttributes)
@@ -2034,9 +2225,17 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        // create voltage level
         String createVoltageLevelAttributes = "{\"voltageLevelId\":\"voltageLevelId1\",\"voltageLevelName\":\"voltageLevelName1\""
             + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
+
+        // create voltage level on root node (not allowed)
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createVoltageLevelAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // create voltage level
         webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createVoltageLevelAttributes)
@@ -2079,6 +2278,13 @@ public class StudyTest {
         UUID modelNodeUuid = modelNode.getId();
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
+
+        // delete equipment on root node (not allowed)
+        webTestClient.delete()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
+                        studyNameUserIdUuid, rootNodeUuid, "LOAD", "idLoadToDelete")
+                .exchange()
+                .expectStatus().isForbidden();
 
         // delete equipment on first modification node
         webTestClient.delete()
@@ -2236,8 +2442,16 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        // create generator on first modification node
         String createGeneratorAttributes = "{\"generatorId\":\"generatorId1\",\"generatorName\":\"generatorName1\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"100.0\",\"maxActivePower\":\"200.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+
+        // create generator on root node (not allowed)
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createGeneratorAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // create generator on first modification node
         webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createGeneratorAttributes)
@@ -2282,6 +2496,12 @@ public class StudyTest {
 
         // create shunt compensator
         String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+        // create suntCompensator on root node (not allowed)
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createShuntCompensatorAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
 
         // create suntCompensator on modification node child of root node
         webTestClient.post()
@@ -2316,7 +2536,6 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        // create line on first modification node
         String createLineAttributes = "{" +
                 "\"lineId\":\"lineId1\"," +
                 "\"lineName\":\"lineName1\"," +
@@ -2330,6 +2549,15 @@ public class StudyTest {
                 "\"busOrBusbarSectionId1\":\"idBus1\"," +
                 "\"voltageLevelId2\":\"idVL2\"," +
                 "\"busOrBusbarSectionId2\":\"idBus2\"}";
+
+        // create line on root node (not allowed)
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createLineAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // create line on first modification node
         webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createLineAttributes)
@@ -2384,8 +2612,16 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        // create 2WT on first modification node
         String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+
+        // create 2WT on root node (not allowed)
+        webTestClient.post()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformer", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(createTwoWindingsTransformerAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // create 2WT on first modification node
         webTestClient.post()
                 .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformer", studyNameUserIdUuid, modificationNodeUuid)
                 .bodyValue(createTwoWindingsTransformerAttributes)
