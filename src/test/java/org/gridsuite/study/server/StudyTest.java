@@ -2131,7 +2131,7 @@ public class StudyTest {
                 .expectStatus().isForbidden();
 
         // create load on first modification node
-        webTestClient.put()
+        webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue(createLoadAttributes)
             .exchange()
@@ -2174,7 +2174,7 @@ public class StudyTest {
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
         String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
-      
+
         // create substation on root node (not allowed)
         webTestClient.post()
                 .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations", studyNameUserIdUuid, rootNodeUuid)
@@ -2497,7 +2497,7 @@ public class StudyTest {
         // create shunt compensator
         String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
         // create suntCompensator on root node (not allowed)
-        webTestClient.put()
+        webTestClient.post()
                 .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators", studyNameUserIdUuid, rootNodeUuid)
                 .bodyValue(createShuntCompensatorAttributes)
                 .exchange()
