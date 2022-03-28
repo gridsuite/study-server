@@ -7,6 +7,8 @@ spring:
   data:
     elasticsearch:
       host: localhost
+  main:
+    allow-circular-references: true
 
 backing-services:
   case:
