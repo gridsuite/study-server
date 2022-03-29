@@ -238,6 +238,18 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesMapData(studyUuid, nodeUuid, substationsIds));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/{lineId}")
+    @Operation(summary = "Get specific line description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line data")})
+    public ResponseEntity<Mono<String>> getLineMapData(
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "line id") @PathVariable("lineId") String lineId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLineMapData(studyUuid, nodeUuid, lineId, inUpstreamBuiltParentNode));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations")
     @Operation(summary = "Get Network substations description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substations data")})
@@ -249,6 +261,18 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/{substationId}")
+    @Operation(summary = "Get specific substation description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation data")})
+    public ResponseEntity<Mono<String>> getSubstationMapData(
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "substation Id") @PathVariable("substationId") String substationId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationMapData(studyUuid, nodeUuid, substationId, inUpstreamBuiltParentNode));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers")
     @Operation(summary = "Get Network 2 windings transformers description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of 2 windings transformers data")})
@@ -258,6 +282,18 @@ public class StudyController {
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getTwoWindingsTransformersMapData(studyUuid, nodeUuid, substationsIds));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/{twoWindingsTransformerId}")
+    @Operation(summary = "Get specific two windings transformer description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The two windings transformer data")})
+    public ResponseEntity<Mono<String>> getTwoWindingsTransformerMapData(
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "two windings transformer id") @PathVariable("twoWindingsTransformerId") String twoWindingsTransformerId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getTwoWindingsTransformerMapData(studyUuid, nodeUuid, twoWindingsTransformerId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/3-windings-transformers")
@@ -280,6 +316,18 @@ public class StudyController {
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getGeneratorsMapData(studyUuid, nodeUuid, substationsIds));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/{generatorId}")
+    @Operation(summary = "Get specific generator description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator data")})
+    public ResponseEntity<Mono<String>> getGeneratorMapData(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "generator id") @PathVariable("generatorId") String generatorId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getGeneratorMapData(studyUuid, nodeUuid, generatorId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/batteries")
@@ -371,6 +419,18 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getShuntCompensatorsMapData(studyUuid, nodeUuid, substationsIds));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/{shuntCompensatorId}")
+    @Operation(summary = "Get specific shunt compensator description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The shunt compensator data")})
+    public ResponseEntity<Mono<String>> getShuntCompensatorMapData(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "shunt compensator id") @PathVariable("shuntCompensatorId") String shuntCompensatorId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getShuntCompensatorMapData(studyUuid, nodeUuid, shuntCompensatorId, inUpstreamBuiltParentNode));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/static-var-compensators")
     @Operation(summary = "Get Network static var compensators description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of static var compensators data")})
@@ -380,6 +440,18 @@ public class StudyController {
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStaticVarCompensatorsMapData(studyUuid, nodeUuid, substationsIds));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}")
+    @Operation(summary = "Get specific voltage level description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level data")})
+    public ResponseEntity<Mono<String>> getVoltageLevelMapData(
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "voltage level id") @PathVariable("voltageLevelId") String voltageLevelId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelMapData(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all")
@@ -400,7 +472,7 @@ public class StudyController {
                                                         @PathVariable("switchId") String switchId,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @Parameter(description = "Switch open state") @RequestParam("open") boolean open) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
                 .then(studyService.changeSwitchState(studyUuid, switchId, open, nodeUuid)));
     }
 
@@ -411,7 +483,7 @@ public class StudyController {
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @RequestBody String groovyScript) {
 
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid).then()));
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid)).then(studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid).then()));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -422,7 +494,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("lineId") String lineId,
             @RequestBody String status) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid)));
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid)).then(studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
@@ -431,7 +503,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.assertLoadFlowRunnable(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertLoadFlowRunnable(nodeUuid))
                 .then(studyService.runLoadFlow(studyUuid, nodeUuid)));
     }
 
@@ -467,7 +539,7 @@ public class StudyController {
                                                           @RequestBody(required = false) String parameters) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         String nonNullParameters = Objects.toString(parameters, "");
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters, nodeUuid));
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters, nodeUuid)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")
@@ -609,7 +681,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @RequestBody String createLoadAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
     }
 
@@ -619,7 +691,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> deleteModification(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @PathVariable("modificationUuid") UUID modificationUuid) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.deleteModification(studyUuid, nodeUuid, modificationUuid)));
     }
 
@@ -711,7 +783,7 @@ public class StudyController {
                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid)));
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid)).then(studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators")
@@ -720,7 +792,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createGenerator(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @RequestBody String createGeneratorAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid)));
     }
 
@@ -730,7 +802,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createShuntCompensator(@PathVariable("studyUuid") UUID studyUuid,
                                                              @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody String createShuntCompensatorAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.createEquipment(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid)));
     }
 
@@ -740,7 +812,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createLine(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @RequestBody String createLineAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid)));
     }
 
@@ -750,7 +822,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createTwoWindingsTransformer(@PathVariable("studyUuid") UUID studyUuid,
                                                                    @PathVariable("nodeUuid") UUID nodeUuid,
                                                                    @RequestBody String createTwoWindingsTransformerAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
                 .then(studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid)));
     }
 
@@ -760,7 +832,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createSubstation(@PathVariable("studyUuid") UUID studyUuid,
                                                                    @PathVariable("nodeUuid") UUID nodeUuid,
                                                                    @RequestBody String createSubstationAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
                 .then(studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid)));
     }
 
@@ -770,7 +842,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> createVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
         @PathVariable("nodeUuid") UUID nodeUuid,
         @RequestBody String createVoltageLevelAttributes) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.createEquipment(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid)));
     }
 
@@ -812,7 +884,7 @@ public class StudyController {
                                                                     @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @PathVariable("modificationUuid") UUID modificationUuid,
                                                                     @Parameter(description = "active") @RequestParam("active") boolean active) {
-        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active)));
     }
 }

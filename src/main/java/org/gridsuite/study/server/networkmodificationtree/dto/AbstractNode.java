@@ -44,6 +44,7 @@ public abstract class AbstractNode {
     List<AbstractNode> children = new ArrayList<>();
     List<UUID> childrenIds = new ArrayList<>();
     String description;
+    Boolean readOnly;
 
     NodeType type;
 
