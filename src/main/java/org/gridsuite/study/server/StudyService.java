@@ -1756,14 +1756,14 @@ public class StudyService {
     }
 
     @Transactional
-    public Mono<Void> deleteModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid) {
+    public Mono<Void> deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
         if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupId ->
-            networkModificationService.deleteModification(groupId, modificationUuid)
+            networkModificationService.deleteModifications(groupId, modificationsUuids)
         ).doOnSuccess(
-                e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationUuid)
+                e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationsUuids)
                     .doOnSuccess(r -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                     .then(updateStatuses(studyUuid, nodeUuid, false))
                     .subscribe()
