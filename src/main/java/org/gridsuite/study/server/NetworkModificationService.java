@@ -225,10 +225,10 @@ public class NetworkModificationService {
         });
     }
 
-    public Mono<Void> updateEquipmentCreation(String createEquipmentAttributes, ModificationType modificationType) {
+    public Mono<Void> updateEquipmentCreation(String createEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
         Objects.requireNonNull(createEquipmentAttributes);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(ModificationType.getUriFromType(modificationType));
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-creation");
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
