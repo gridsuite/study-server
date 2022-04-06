@@ -685,7 +685,7 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}/loads-creation")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation")
     @Operation(summary = "update a load creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load creation has been updated")})
     public ResponseEntity<Mono<Void>> updateLoadCreation(@PathVariable("studyUuid") UUID studyUuid,
@@ -807,7 +807,7 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}/generators-creation")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/generators-creation")
     @Operation(summary = "update a generator creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator creation has been updated.")})
     public ResponseEntity<Mono<Void>> updateGeneratorCreation(@PathVariable("studyUuid") UUID studyUuid,
@@ -828,7 +828,7 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}/shunt-compensators-creation")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/shunt-compensators-creation")
     @Operation(summary = "update a shunt-compensator creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The shunt-compensator creation has been updated.")})
     public ResponseEntity<Mono<Void>> updateShuntCompensatorCreation(@PathVariable("studyUuid") UUID studyUuid,
@@ -849,7 +849,7 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}/lines-creation")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-creation")
     @Operation(summary = "update a line creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line creation has been updated.")})
     public ResponseEntity<Mono<Void>> updateLineCreation(@PathVariable("studyUuid") UUID studyUuid,
@@ -870,7 +870,7 @@ public class StudyController {
                 .then(studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}/two-windings-transformers-creation")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/two-windings-transformers-creation")
     @Operation(summary = "update a two windings transformer creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The two windings transformer creation has been updated.")})
     public ResponseEntity<Mono<Void>> updateTwoWindingsTransformerCreation(@PathVariable("studyUuid") UUID studyUuid,
@@ -891,7 +891,7 @@ public class StudyController {
                 .then(studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}/substations-creation")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/substations-creation")
     @Operation(summary = "update a substation creation in the study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation creation has been updated")})
     public ResponseEntity<Mono<Void>> updateSubstationCreation(@PathVariable("studyUuid") UUID studyUuid,
@@ -912,7 +912,7 @@ public class StudyController {
             .then(studyService.createEquipment(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}/voltage-levels-creation")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/voltage-levels-creation")
     @Operation(summary = "update a voltage level creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level creation has been updated.")})
     public ResponseEntity<Mono<Void>> updateVoltageLevelCreation(@PathVariable("studyUuid") UUID studyUuid,
