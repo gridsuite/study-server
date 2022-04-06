@@ -1763,7 +1763,7 @@ public class StudyService {
         return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupId ->
             networkModificationService.deleteModifications(groupId, modificationsUuids)
         ).doOnSuccess(
-                e -> networkModificationTreeService.removeModificationToExclude(nodeUuid, modificationsUuids)
+                e -> networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids)
                     .doOnSuccess(r -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                     .then(updateStatuses(studyUuid, nodeUuid, false))
                     .subscribe()

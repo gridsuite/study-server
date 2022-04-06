@@ -563,12 +563,12 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void doRemoveModificationToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationToExclude(nodeUuid, modificationUUid));
+    public void doRemoveModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationsToExclude(nodeUuid, modificationUUid));
     }
 
-    public Mono<Void> removeModificationToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
-        return Mono.fromRunnable(() -> self.doRemoveModificationToExclude(nodeUuid, modificationUuid));
+    public Mono<Void> removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
+        return Mono.fromRunnable(() -> self.doRemoveModificationsToExclude(nodeUuid, modificationUuid));
     }
 
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
