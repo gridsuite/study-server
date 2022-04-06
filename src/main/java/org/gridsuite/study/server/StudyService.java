@@ -1663,7 +1663,8 @@ public class StudyService {
     }
 
     public Mono<Void> buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        return getBuildInfos(nodeUuid).flatMap(infos -> networkModificationService.buildNode(studyUuid, nodeUuid, infos));
+        return getBuildInfos(nodeUuid).flatMap(infos -> networkModificationService.buildNode(studyUuid, nodeUuid, infos))
+            .then(updateBuildStatus(nodeUuid, BuildStatus.BUILDING));
     }
 
     public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
