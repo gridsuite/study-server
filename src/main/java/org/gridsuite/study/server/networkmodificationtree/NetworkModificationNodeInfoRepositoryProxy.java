@@ -78,11 +78,11 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
+    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationsUuids) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         if (networkModificationNode.getModificationsToExclude() != null &&
-            networkModificationNode.getModificationsToExclude().containsAll(modificationUuid)) {
-            modificationUuid.forEach(networkModificationNode.getModificationsToExclude()::remove);
+            networkModificationNode.getModificationsToExclude().containsAll(modificationsUuids)) {
+            modificationsUuids.forEach(networkModificationNode.getModificationsToExclude()::remove);
             updateNode(networkModificationNode);
         }
     }
