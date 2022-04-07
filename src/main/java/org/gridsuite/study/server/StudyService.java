@@ -1567,6 +1567,16 @@ public class StudyService {
         });
     }
 
+    public Mono<Void> updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, false);
+
+            return networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid)
+                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                .then(monoUpdateStatusResult);
+        });
+    }
+
     Mono<Void> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
         return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID groupUuid = tuple.getT1();
@@ -1663,7 +1673,8 @@ public class StudyService {
     }
 
     public Mono<Void> buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        return getBuildInfos(nodeUuid).flatMap(infos -> networkModificationService.buildNode(studyUuid, nodeUuid, infos));
+        return getBuildInfos(nodeUuid).flatMap(infos -> networkModificationService.buildNode(studyUuid, nodeUuid, infos))
+            .then(updateBuildStatus(nodeUuid, BuildStatus.BUILDING));
     }
 
     public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {

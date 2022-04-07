@@ -34,7 +34,7 @@ public enum ModificationType {
             case LINE_CREATION:
                 return "lines";
             case TWO_WINDINGS_TRANSFORMER_CREATION:
-                return "two-windings-transformer";
+                return "two-windings-transformers";
             case SUBSTATION_CREATION:
                 return "substations";
             case SHUNT_COMPENSATOR_CREATION:

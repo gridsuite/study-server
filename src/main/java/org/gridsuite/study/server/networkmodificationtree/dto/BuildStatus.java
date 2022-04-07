@@ -13,5 +13,6 @@ package org.gridsuite.study.server.networkmodificationtree.dto;
 public enum BuildStatus {
     NOT_BUILT,
     BUILT,
-    BUILT_INVALID;
+    BUILT_INVALID,
+    BUILDING;
 }
