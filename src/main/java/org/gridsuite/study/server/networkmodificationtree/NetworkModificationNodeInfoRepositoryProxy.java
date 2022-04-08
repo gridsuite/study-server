@@ -13,6 +13,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModifi
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -77,11 +78,10 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void removeModificationToExclude(AbstractNode node, UUID modificationUuid) {
+    public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationsUuids) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getModificationsToExclude() != null &&
-            networkModificationNode.getModificationsToExclude().contains(modificationUuid)) {
-            networkModificationNode.getModificationsToExclude().remove(modificationUuid);
+        if (networkModificationNode.getModificationsToExclude() != null) {
+            modificationsUuids.forEach(networkModificationNode.getModificationsToExclude()::remove);
             updateNode(networkModificationNode);
         }
     }

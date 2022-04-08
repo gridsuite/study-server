@@ -708,14 +708,14 @@ public class StudyController {
                 .then(studyService.updateEquipmentCreation(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid, modificationUuid)));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
-    @Operation(summary = "delete a network modification")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been deleted")})
-    public ResponseEntity<Mono<Void>> deleteModification(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @PathVariable("modificationUuid") UUID modificationUuid) {
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification")
+    @Operation(summary = "delete network modifications")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications have been deleted")})
+    public ResponseEntity<Mono<Void>> deleteModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                          @PathVariable("nodeUuid") UUID nodeUuid,
+                                                          @RequestParam(value = "modificationsUuids") List<UUID> modificationsUuids) {
         return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
-            .then(studyService.deleteModification(studyUuid, nodeUuid, modificationUuid)));
+            .then(studyService.deleteModifications(studyUuid, nodeUuid, modificationsUuids)));
     }
 
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)

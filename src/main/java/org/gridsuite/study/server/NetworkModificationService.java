@@ -33,6 +33,7 @@ import reactor.core.publisher.Mono;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -310,15 +311,13 @@ public class NetworkModificationService {
             .bodyToMono(Void.class);
     }
 
-    public Mono<Void> deleteModification(UUID groupUuid, UUID modificationUuid) {
+    public Mono<Void> deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUuid);
-        Objects.requireNonNull(modificationUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH
-                + DELIMITER + "modifications" + DELIMITER + "{modificationUuid}")
-            .buildAndExpand(groupUuid, modificationUuid)
-            .toUriString();
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications");
+        path.queryParam("modificationsUuids", modificationsUuids);
         return webClient.delete()
-            .uri(getNetworkModificationServerURI(false) + path)
+            .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString())
             .retrieve()
             .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
             .bodyToMono(Void.class);
