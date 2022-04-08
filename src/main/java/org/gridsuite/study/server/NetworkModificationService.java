@@ -315,7 +315,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications");
-        modificationsUuids.forEach(m -> path.queryParam("modificationsUuids", modificationsUuids));
+        path.queryParam("modificationsUuids", modificationsUuids);
         return webClient.delete()
             .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString())
             .retrieve()
