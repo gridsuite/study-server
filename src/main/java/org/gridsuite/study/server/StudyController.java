@@ -487,7 +487,7 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationId}")
-    @Operation(summary = "move")
+    @Operation(summary = "move network modification before another")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order is updated")})
     public ResponseEntity<Mono<Void>> moveModification(@PathVariable("studyUuid") UUID studyUuid,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
