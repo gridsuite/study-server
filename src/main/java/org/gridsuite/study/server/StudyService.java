@@ -874,6 +874,17 @@ public class StudyService {
         });
     }
 
+    private LoadFlowStatus computeLoadFlowStatus(LoadFlowResult result) {
+        LoadFlowStatus status = LoadFlowStatus.DIVERGED;
+        List<LoadFlowResult.ComponentResult> componentResults = result.getComponentResults();
+        if (!componentResults.isEmpty()) {
+            status = componentResults.stream().noneMatch(cr -> cr.getConnectedComponentNum() == 0 && cr.getSynchronousComponentNum() == 0 && cr.getStatus() != LoadFlowResult.ComponentResult.Status.CONVERGED)
+                ? LoadFlowStatus.CONVERGED
+                : LoadFlowStatus.DIVERGED;
+        }
+        return status;
+    }
+
     Mono<Void> runLoadFlow(UUID studyUuid, UUID nodeUuid) {
         return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid))).flatMap(tuple3 -> {
             UUID networkUuid = tuple3.getT1();
@@ -897,7 +908,7 @@ public class StudyService {
                 .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
                 .retrieve()
                 .bodyToMono(LoadFlowResult.class)
-                .flatMap(result -> updateLoadFlowResultAndStatus(nodeUuid, result, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED, false))
+                .flatMap(result -> updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false))
                 .doOnError(e -> updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE).subscribe())
                 .doOnCancel(() -> updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE).subscribe());
         }).doFinally(s ->
