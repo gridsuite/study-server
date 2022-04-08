@@ -463,7 +463,7 @@ public class StudyTest {
                         .build(), "build.stopped");
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/groups/.*/modifications/.*") && request.getMethod().equals("DELETE")) {
+                } else if (path.matches("/v1/groups/.*/modifications[?]") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
                 }
 
@@ -2892,18 +2892,17 @@ public class StudyTest {
          */
 
         webTestClient.delete()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", UUID.randomUUID(), modificationNode.getId(), node3.getId())
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}", UUID.randomUUID(), modificationNode.getId(), node3.getId())
             .exchange()
             .expectStatus().isForbidden();
 
         UUID modificationUuid = UUID.randomUUID();
         webTestClient.delete()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}", studyUuid, modificationNode.getId(), modificationUuid)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}", studyUuid, modificationNode.getId(), modificationUuid)
             .exchange()
             .expectStatus().isOk();
-
         assertTrue(getRequestsDone(1).stream().anyMatch(
-            r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification() + "/modifications/" + modificationUuid))
+            r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification() + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*"))
         );
 
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
