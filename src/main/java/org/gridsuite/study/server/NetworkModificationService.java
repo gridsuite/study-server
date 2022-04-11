@@ -52,6 +52,7 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
+    private static final String EQUIPMENT_ID = "equipmentId";
 
     private String networkModificationServerBaseUri;
 
@@ -207,7 +208,7 @@ public class NetworkModificationService {
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                .queryParam(GROUP, groupUuid);
+                    .queryParam(GROUP, groupUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -223,6 +224,35 @@ public class NetworkModificationService {
                         handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
                 .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                 });
+        });
+    }
+
+    public Flux<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String equipmentId, String modifyEquipmentAttributes,
+                                                            UUID groupUuid, ModificationType modificationType, String variantId) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(equipmentId);
+        Objects.requireNonNull(modifyEquipmentAttributes);
+
+        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+                    .queryParam(GROUP, groupUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
+                    .path(DELIMITER + "{equipmentId}")
+                    .buildAndExpand(equipmentId)
+                    .toUriString();
+
+            return webClient.put()
+                    .uri(getNetworkModificationServerURI(true) + path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(modifyEquipmentAttributes))
+                    .retrieve()
+                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                            handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                    });
         });
     }
 

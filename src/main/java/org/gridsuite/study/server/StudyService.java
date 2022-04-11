@@ -1557,13 +1557,31 @@ public class StudyService {
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
             return networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId)
-                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
-                .collect(Collectors.toSet())
-                .doOnSuccess(substationIds ->
-                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
-                )
-                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
-                .then(monoUpdateStatusResult);
+                    .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                    .collect(Collectors.toSet())
+                    .doOnSuccess(substationIds ->
+                            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
+                    )
+                    .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                    .then(monoUpdateStatusResult);
+        });
+    }
+
+    public Mono<Void> modifyEquipment(UUID studyUuid, String equipmentId, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid) {
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID groupUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
+
+            return networkModificationService.modifyEquipment(studyUuid, equipmentId, modifyEquipmentAttributes, groupUuid, modificationType, variantId)
+                    .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                    .collect(Collectors.toSet())
+                    .doOnSuccess(substationIds ->
+                            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
+                    )
+                    .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                    .then(monoUpdateStatusResult);
         });
     }
 
