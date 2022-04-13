@@ -1567,14 +1567,14 @@ public class StudyService {
         });
     }
 
-    public Mono<Void> modifyEquipment(UUID studyUuid, String equipmentId, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid) {
+    public Mono<Void> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid) {
         return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
-            return networkModificationService.modifyEquipment(studyUuid, equipmentId, modifyEquipmentAttributes, groupUuid, modificationType, variantId)
+            return networkModificationService.modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId)
                     .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                     .collect(Collectors.toSet())
                     .doOnSuccess(substationIds ->

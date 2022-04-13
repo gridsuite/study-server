@@ -698,15 +698,14 @@ public class StudyController {
                 .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads/{loadId}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads")
     @Operation(summary = "modify a load in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been modified")})
     public ResponseEntity<Mono<Void>> modifyLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @PathVariable("loadId") String loadId,
                                                  @RequestBody String modifyLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
-                .then(studyService.modifyEquipment(studyUuid, loadId, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid)));
+                .then(studyService.modifyEquipment(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation")

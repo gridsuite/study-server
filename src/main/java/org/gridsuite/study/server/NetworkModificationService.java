@@ -227,10 +227,9 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String equipmentId, String modifyEquipmentAttributes,
+    public Flux<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
                                                             UUID groupUuid, ModificationType modificationType, String variantId) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(equipmentId);
         Objects.requireNonNull(modifyEquipmentAttributes);
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
@@ -240,8 +239,7 @@ public class NetworkModificationService {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
             var path = uriComponentsBuilder
-                    .path(DELIMITER + "{equipmentId}")
-                    .buildAndExpand(equipmentId)
+                    .buildAndExpand()
                     .toUriString();
 
             return webClient.put()
