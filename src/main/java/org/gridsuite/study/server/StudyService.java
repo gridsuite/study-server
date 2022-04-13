@@ -1825,5 +1825,41 @@ public class StudyService {
             })
             .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
     }
+
+    public Mono<Void> reindexAllStudies() {
+        List<StudyEntity> studies = studyRepository.findAll();
+        studies.stream().forEach(studyEntity -> reindexStudy(studyEntity.getId()).subscribe());
+        return Mono.empty();
+    }
+
+    public Mono<Void> reindexStudy(UUID studyUuid) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        if (studyEntity.isPresent()) {
+            StudyEntity study = studyEntity.get();
+
+            CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
+            UUID networkUuid = study.getNetworkUuid();
+
+            // reindex study in elasticsearch
+            studyInfosService.recreateStudyInfos(studyInfos);
+
+            // reindex study network equipments in elasticsearch
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+            return webClient.post()
+                .uri(networkConversionServerBaseUri + path)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> Mono.error(new StudyException(NETWORK_INDEXATION_FAILED)))
+                .bodyToMono(Void.class)
+                .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                // mark all model nodes in study as not built
+                .then(invalidateBuildStatus(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false))
+                .doOnSuccess(r -> LOGGER.info("Study with id = '{}' has been reindexed", studyUuid));
+        } else {
+            return Mono.empty();
+        }
+    }
 }
 

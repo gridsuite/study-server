@@ -155,6 +155,15 @@ public class StudyTest {
     private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
     private static final String VL_ID_1 = "VL_ID_1";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
+    private static final String CASE_2_UUID_STRING = "656719f3-aaaa-48be-be46-ef7b93331e32";
+    private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
+    private static final String CASE_4_UUID_STRING = "196719f5-cccc-48be-be46-e92345951e32";
+    private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
+    private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
+    private static final String NETWORK_UUID_4_STRING = "33333333-cccc-48be-be46-e92345951e32";
+    private static final NetworkInfos NETWORK_INFOS_2 = new NetworkInfos(UUID.fromString(NETWORK_UUID_2_STRING), "file_2.xiidm");
+    private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
+    private static final NetworkInfos NETWORK_INFOS_4 = new NetworkInfos(UUID.fromString(NETWORK_UUID_4_STRING), "file_4.xiidm");
 
     @Autowired
     private OutputDestination output;
@@ -279,6 +288,9 @@ public class StudyTest {
         });
 
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
+        String networkInfos2AsString = mapper.writeValueAsString(NETWORK_INFOS_2);
+        String networkInfos3AsString = mapper.writeValueAsString(NETWORK_INFOS_3);
+        String networkInfos4AsString = mapper.writeValueAsString(NETWORK_INFOS_4);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
 
         String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
@@ -449,11 +461,13 @@ public class StudyTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/modifications[?]") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks/.*/reindex-all")) {
+                    return new MockResponse().setResponseCode(200);
                 }
 
                 switch (path) {
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/voltage-levels":
+                    case "/v1/networks/" + NETWORK_UUID_STRING:
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels":
                         return new MockResponse().setResponseCode(200).setBody(voltageLevelsMapDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/studies/cases/{caseUuid}":
@@ -463,14 +477,17 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
-                    case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
-                    case "/v1/cases/88888888-0000-0000-0000-000000000000/exists":
-                    case "/v1/cases/11888888-0000-0000-0000-000000000000/exists":
+                    case "/v1/cases/" + CASE_UUID_STRING + "/exists":
+                    case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/exists":
+                    case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/exists":
+                    case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/exists":
+                    case "/v1/cases/" + CASE_2_UUID_STRING + "/exists":
+                    case "/v1/cases/" + CASE_3_UUID_STRING + "/exists":
+                    case "/v1/cases/" + CASE_4_UUID_STRING + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format":
+                    case "/v1/cases/" + CASE_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("UCTE")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -478,6 +495,9 @@ public class StudyTest {
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
                     case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/format":
+                    case "/v1/cases/" + CASE_2_UUID_STRING + "/format":
+                    case "/v1/cases/" + CASE_3_UUID_STRING + "/format":
+                    case "/v1/cases/" + CASE_4_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -507,7 +527,7 @@ public class StudyTest {
                         }
                     }
 
-                    case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
+                    case "/" + CASE_API_VERSION + "/cases/" + IMPORTED_CASE_UUID_STRING:
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                         return new MockResponse().setResponseCode(200)
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
@@ -522,32 +542,40 @@ public class StudyTest {
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-
+                    case "/v1/networks?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
+                        return new MockResponse().setBody(String.valueOf(networkInfos2AsString)).setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks?caseUuid=" + CASE_3_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
+                        return new MockResponse().setBody(String.valueOf(networkInfos3AsString)).setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks?caseUuid=" + CASE_4_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
+                        return new MockResponse().setBody(String.valueOf(networkInfos4AsString)).setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
                             .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
 
-                    case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/lines":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/substations":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/2-windings-transformers":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/3-windings-transformers":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/generators":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/batteries":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/dangling-lines":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/hvdc-lines":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/lcc-converter-stations":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/vsc-converter-stations":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/loads":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/shunt-compensators":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/static-var-compensators":
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/all":
+                    case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING:
+                    case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING:
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/substations":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/3-windings-transformers":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/batteries":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/dangling-lines":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lcc-converter-stations":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/vsc-converter-stations":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/static-var-compensators":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/reports/38400000-8cf0-11bd-b23e-10b96e4ef00d":
+                    case "/v1/reports/" + NETWORK_UUID_STRING:
                         return new MockResponse().setResponseCode(200)
                             .setBody(mapper.writeValueAsString(REPORT_TEST))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
@@ -576,7 +604,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM":
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -1805,9 +1833,9 @@ public class StudyTest {
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(3);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/format", CASE_UUID_STRING)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", CASE_UUID_STRING, FIRST_VARIANT_ID)));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", caseUuid, FIRST_VARIANT_ID)));
 
         return studyUuid;
     }
@@ -2854,6 +2882,41 @@ public class StudyTest {
 
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
+    }
+
+    @Test
+    public void reindexStudyTest() {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+
+        webTestClient.post()
+            .uri("/v1/studies/{studyUuid}/reindex-all", study1Uuid)
+            .exchange()
+            .expectStatus().isOk();
+
+        Set<String> requests = getRequestsDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
+    }
+
+    @Test
+    public void reindexAllStudiesTest() throws Exception {
+        createStudy("userId", CASE_UUID);
+        createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
+        createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));
+        createStudy("userId", UUID.fromString(CASE_4_UUID_STRING));
+
+        webTestClient.post()
+            .uri("/v1/studies/reindex-all")
+            .exchange()
+            .expectStatus().isOk();
+
+        // wait a little until requests to network conversion server are done
+        Thread.sleep(TIMEOUT);
+
+        Set<String> requests = getRequestsDone(4);
+        assertTrue(requests.stream().anyMatch(r -> r.contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")
+            || r.contains("/v1/networks/" + NETWORK_UUID_2_STRING + "/reindex-all")
+            || r.contains("/v1/networks/" + NETWORK_UUID_3_STRING + "/reindex-all")
+            || r.contains("/v1/networks/" + NETWORK_UUID_4_STRING + "/reindex-all")));
     }
 
     @After

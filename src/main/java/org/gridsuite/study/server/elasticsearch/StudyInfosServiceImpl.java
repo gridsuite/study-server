@@ -55,4 +55,10 @@ public class StudyInfosServiceImpl implements StudyInfosService {
     public void deleteByUuid(@NonNull UUID uuid) {
         studyInfosRepository.deleteById(uuid);
     }
+
+    @Override
+    public void recreateStudyInfos(@NonNull final CreatedStudyBasicInfos studyInfos) {
+        studyInfosRepository.deleteById(studyInfos.getId());
+        studyInfosRepository.save(studyInfos);
+    }
 }
