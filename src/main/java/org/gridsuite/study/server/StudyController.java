@@ -492,7 +492,7 @@ public class StudyController {
     public ResponseEntity<Mono<Void>> moveModification(@PathVariable("studyUuid") UUID studyUuid,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @PathVariable("modificationId") UUID modificationUuid,
-                                                       @Parameter(description = "move before, if no value move to end") @RequestParam(value = "before", required = false) UUID before) {
+                                                        @Parameter(description = "move before, if no value move to end") @RequestParam(value = "before") UUID before) {
 
         return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
             .then(studyService.reorderModification(studyUuid, nodeUuid, modificationUuid, before)).then());
