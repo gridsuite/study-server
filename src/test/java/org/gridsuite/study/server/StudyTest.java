@@ -2893,12 +2893,17 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        Set<String> requests = getRequestsDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
     }
 
     @Test
-    public void reindexAllStudiesTest() throws Exception {
+    public void reindexAllStudiesTest() {
+        webTestClient.post()
+            .uri("/v1/studies/reindex-all")
+            .exchange()
+            .expectStatus().isOk();
+
         createStudy("userId", CASE_UUID);
         createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
         createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));
@@ -2909,14 +2914,11 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        // wait a little until requests to network conversion server are done
-        Thread.sleep(TIMEOUT);
-
-        Set<String> requests = getRequestsDone(4);
-        assertTrue(requests.stream().anyMatch(r -> r.contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")
-            || r.contains("/v1/networks/" + NETWORK_UUID_2_STRING + "/reindex-all")
-            || r.contains("/v1/networks/" + NETWORK_UUID_3_STRING + "/reindex-all")
-            || r.contains("/v1/networks/" + NETWORK_UUID_4_STRING + "/reindex-all")));
+        var requests = getRequestsWithBodyDone(4);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")
+            || r.getPath().contains("/v1/networks/" + NETWORK_UUID_2_STRING + "/reindex-all")
+            || r.getPath().contains("/v1/networks/" + NETWORK_UUID_3_STRING + "/reindex-all")
+            || r.getPath().contains("/v1/networks/" + NETWORK_UUID_4_STRING + "/reindex-all")));
     }
 
     @After
