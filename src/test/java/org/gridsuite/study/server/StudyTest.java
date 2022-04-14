@@ -2268,6 +2268,55 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation") && r.getBody().equals(voltageLevelAttributesUpdated)));
     }
 
+    @Test public void testReorderModification() {
+        createStudy("userId", CASE_UUID);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
+        UUID modificationNodeUuid = modificationNode.getId();
+        ModelNode modelNode = createModelNode(studyNameUserIdUuid, modificationNodeUuid);
+        UUID modelNodeUuid = modelNode.getId();
+
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2)
+            .exchange()
+            .expectStatus().isNotFound();
+
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                UUID.randomUUID(), modelNodeUuid, modification1, modification2)
+            .exchange()
+            .expectStatus().isForbidden();
+
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
+                studyNameUserIdUuid, modelNodeUuid, modification1, modification2)
+            .exchange()
+            .expectStatus().isOk();
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups/" +
+            modificationNode.getNetworkModification()
+            + "/modifications/move[?]modificationsToMove=.*" + modification1)));
+
+        // update switch on first modification node
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                studyNameUserIdUuid, modelNodeUuid, modification1, modification2)
+            .exchange()
+            .expectStatus().isOk();
+
+        requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups/" +
+            modificationNode.getNetworkModification()
+            + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before=" + modification2)));
+
+    }
+
     @Test
     public void testDeleteEquipment() {
         createStudy("userId", CASE_UUID);
