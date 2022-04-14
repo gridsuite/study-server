@@ -28,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -484,6 +485,18 @@ public class StudyController {
                                                         @RequestBody String groovyScript) {
 
         return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid)).then(studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid).then()));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
+    @Operation(summary = "move network modification before another")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order is updated")})
+    public ResponseEntity<Mono<Void>> moveModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                        @PathVariable("nodeUuid") UUID nodeUuid,
+                                                        @PathVariable("modificationUuid") UUID modificationUuid,
+                                                        @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid) {
+
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
+            .then(studyService.reorderModification(studyUuid, nodeUuid, modificationUuid, beforeUuid)).then());
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
