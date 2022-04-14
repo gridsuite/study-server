@@ -2281,13 +2281,13 @@ public class StudyTest {
         UUID modification2 = UUID.randomUUID();
 
         webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?before={modificationID2}",
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2)
             .exchange()
             .expectStatus().isNotFound();
 
         webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?before={modificationID2}",
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 UUID.randomUUID(), modelNodeUuid, modification1, modification2)
             .exchange()
             .expectStatus().isForbidden();
@@ -2305,7 +2305,7 @@ public class StudyTest {
 
         // update switch on first modification node
         webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?before={modificationID2}",
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, modelNodeUuid, modification1, modification2)
             .exchange()
             .expectStatus().isOk();

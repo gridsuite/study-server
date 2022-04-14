@@ -323,14 +323,14 @@ public class NetworkModificationService {
             .bodyToMono(Void.class);
     }
 
-    public Mono<Void> reorderModification(UUID groupUuid, UUID modificationUuid, UUID before) {
+    public Mono<Void> reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH
                 + DELIMITER + "modifications" + DELIMITER + "move")
             .queryParam("modificationsToMove", modificationUuid);
-        if (before != null) {
-            path.queryParam("before", before);
+        if (beforeUuid != null) {
+            path.queryParam("before", beforeUuid);
         }
 
         return webClient.put()
