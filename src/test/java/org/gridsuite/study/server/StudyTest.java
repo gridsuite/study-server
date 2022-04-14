@@ -2292,6 +2292,17 @@ public class StudyTest {
             .exchange()
             .expectStatus().isForbidden();
 
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
+                studyNameUserIdUuid, modelNodeUuid, modification1, modification2)
+            .exchange()
+            .expectStatus().isOk();
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups/" +
+            modificationNode.getNetworkModification()
+            + "/modifications/move[?]modificationsToMove=.*" + modification1)));
+
         // update switch on first modification node
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?before={modificationID2}",
@@ -2299,7 +2310,7 @@ public class StudyTest {
             .exchange()
             .expectStatus().isOk();
 
-        var requests = getRequestsWithBodyDone(1);
+        requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups/" +
             modificationNode.getNetworkModification()
             + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before=" + modification2)));
