@@ -322,4 +322,22 @@ public class NetworkModificationService {
             .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
             .bodyToMono(Void.class);
     }
+
+    public Mono<Void> reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
+        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(modificationUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH
+                + DELIMITER + "modifications" + DELIMITER + "move")
+            .queryParam("modificationsToMove", modificationUuid);
+        if (beforeUuid != null) {
+            path.queryParam("before", beforeUuid);
+        }
+
+        return webClient.put()
+            .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid, modificationUuid).toUriString())
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
+            .bodyToMono(Void.class);
+
+    }
 }

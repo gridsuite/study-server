@@ -1861,5 +1861,19 @@ public class StudyService {
             return Mono.empty();
         }
     }
+
+    public Mono<Void> reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
+        checkStudyContainsNode(studyUuid, nodeUuid);
+        return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupUuid ->
+            networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid)
+        ).then(updateStatuses(studyUuid, nodeUuid))
+        .doOnSuccess(r -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid));
+    }
+
+    private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
+        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
 }
 
