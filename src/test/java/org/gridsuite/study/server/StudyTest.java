@@ -2935,6 +2935,11 @@ public class StudyTest {
 
     @Test
     public void reindexStudyTest() {
+        webTestClient.post()
+            .uri("/v1/studies/{studyUuid}/reindex-all", UUID.randomUUID())
+            .exchange()
+            .expectStatus().isNotFound();
+
         UUID study1Uuid = createStudy("userId", CASE_UUID);
 
         webTestClient.post()
@@ -2948,11 +2953,6 @@ public class StudyTest {
 
     @Test
     public void reindexAllStudiesTest() {
-        webTestClient.post()
-            .uri("/v1/studies/reindex-all")
-            .exchange()
-            .expectStatus().isOk();
-
         createStudy("userId", CASE_UUID);
         createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
         createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));

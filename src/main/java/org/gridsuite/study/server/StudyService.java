@@ -1858,7 +1858,7 @@ public class StudyService {
                 .then(invalidateBuildStatus(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false))
                 .doOnSuccess(r -> LOGGER.info("Study with id = '{}' has been reindexed", studyUuid));
         } else {
-            return Mono.empty();
+            return Mono.error(new StudyException(STUDY_NOT_FOUND));
         }
     }
 
