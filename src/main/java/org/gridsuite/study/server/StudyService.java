@@ -1828,8 +1828,7 @@ public class StudyService {
 
     public Mono<Void> reindexAllStudies() {
         List<StudyEntity> studies = studyRepository.findAll();
-        studies.stream().forEach(studyEntity -> reindexStudy(studyEntity.getId()).subscribe());
-        return Mono.empty();
+        return Mono.fromRunnable(() -> studies.parallelStream().forEach(studyEntity -> reindexStudy(studyEntity.getId()).subscribe()));
     }
 
     public Mono<Void> reindexStudy(UUID studyUuid) {
@@ -1854,7 +1853,7 @@ public class StudyService {
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse -> Mono.error(new StudyException(NETWORK_INDEXATION_FAILED)))
                 .bodyToMono(Void.class)
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                // mark all model nodes in study as not built
+                // invalid all built model nodes in study
                 .then(invalidateBuildStatus(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false))
                 .doOnSuccess(r -> LOGGER.info("Study with id = '{}' has been reindexed", studyUuid));
         } else {
