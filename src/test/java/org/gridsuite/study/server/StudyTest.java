@@ -2399,6 +2399,11 @@ public class StudyTest {
     }
 
     @Test
+    public void testLineSplitWithVoltageLevel() {
+
+    }
+
+    @Test
     public void testDeleteEquipment() {
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();

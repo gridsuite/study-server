@@ -1901,5 +1901,24 @@ public class StudyService {
     public String getDefaultLoadflowProviderValue() {
         return defaultLoadflowProvider;
     }
+
+    public Mono<Void> lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
+        ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID groupUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
+
+            return networkModificationService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, groupUuid, modificationType, variantId, modificationUuid)
+                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                .collect(Collectors.toSet())
+                .doOnSuccess(substationIds ->
+                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
+                )
+                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                .then(monoUpdateStatusResult);
+        });
+    }
 }
 

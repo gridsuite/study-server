@@ -22,6 +22,7 @@ public enum ModificationType {
     TWO_WINDINGS_TRANSFORMER_CREATION,
     SUBSTATION_CREATION,
     VOLTAGE_LEVEL_CREATION,
+    LINE_SPLIT_WITH_VOLTAGE_LEVEL,
     GROOVY_SCRIPT,
     BRANCH_STATUS,
     SHUNT_COMPENSATOR_CREATION;
@@ -43,6 +44,8 @@ public enum ModificationType {
                 return "shunt-compensators";
             case VOLTAGE_LEVEL_CREATION:
                 return "voltage-levels";
+            case LINE_SPLIT_WITH_VOLTAGE_LEVEL:
+                return "line-splits";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
@@ -66,6 +69,8 @@ public enum ModificationType {
                 return StudyException.Type.SUBSTATION_CREATION_FAILED;
             case VOLTAGE_LEVEL_CREATION:
                 return StudyException.Type.VOLTAGE_LEVEL_CREATION_FAILED;
+            case LINE_SPLIT_WITH_VOLTAGE_LEVEL:
+                return StudyException.Type.LINE_SPLIT_FAILED;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
