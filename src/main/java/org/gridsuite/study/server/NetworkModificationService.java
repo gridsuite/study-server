@@ -52,7 +52,6 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
-    private static final String EQUIPMENT_ID = "equipmentId";
 
     private String networkModificationServerBaseUri;
 
