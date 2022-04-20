@@ -207,7 +207,7 @@ public class NetworkModificationService {
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                .queryParam(GROUP, groupUuid);
+                    .queryParam(GROUP, groupUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -223,6 +223,33 @@ public class NetworkModificationService {
                         handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
                 .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                 });
+        });
+    }
+
+    public Flux<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
+                                                            UUID groupUuid, ModificationType modificationType, String variantId) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(modifyEquipmentAttributes);
+
+        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+                    .queryParam(GROUP, groupUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
+                    .buildAndExpand()
+                    .toUriString();
+
+            return webClient.put()
+                    .uri(getNetworkModificationServerURI(true) + path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(modifyEquipmentAttributes))
+                    .retrieve()
+                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                            handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                    });
         });
     }
 

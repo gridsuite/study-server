@@ -2186,18 +2186,18 @@ public class StudyTest {
 
         // create load on first modification node
         webTestClient.post()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid)
-            .bodyValue(createLoadAttributes)
-            .exchange()
-            .expectStatus().isOk();
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid)
+                .bodyValue(createLoadAttributes)
+                .exchange()
+                .expectStatus().isOk();
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         // create load on second modification node
         webTestClient.post()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid2)
-            .bodyValue(createLoadAttributes)
-            .exchange()
-            .expectStatus().isOk();
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid2)
+                .bodyValue(createLoadAttributes)
+                .exchange()
+                .expectStatus().isOk();
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
 
         // update load creation
@@ -2213,6 +2213,49 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-creation") && r.getBody().equals(loadAttributesUpdated)));
+    }
+
+    @Test
+    public void testModifyLoad() {
+        createStudy("userId", CASE_UUID);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
+        UUID modificationNodeUuid = modificationNode.getId();
+        ModelNode modelNode = createModelNode(studyNameUserIdUuid, modificationNodeUuid);
+        UUID modelNodeUuid = modelNode.getId();
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
+        UUID modificationNodeUuid2 = modificationNode2.getId();
+
+        String loadModificationAttributes = "{\"equipmentId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"AUXILIARY\",\"activePower\":\"100.0\"}";
+
+        // modify load on root node (not allowed)
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, rootNodeUuid)
+                .bodyValue(loadModificationAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+
+        // modify load on first modification node
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid)
+                .bodyValue(loadModificationAttributes)
+                .exchange()
+                .expectStatus().isOk();
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
+
+        // modify load on second modification node
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNodeUuid2)
+                .bodyValue(loadModificationAttributes)
+                .exchange()
+                .expectStatus().isOk();
+        checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(2);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(loadModificationAttributes)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(loadModificationAttributes)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(loadModificationAttributes)));
     }
 
     @Test
@@ -2473,6 +2516,10 @@ public class StudyTest {
     }
 
     private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, Set<String> modifiedIdsSet) {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedIdsSet);
+    }
+
+    private void checkEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, Set<String> modifiedIdsSet) {
         checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedIdsSet);
     }
 
