@@ -15,6 +15,7 @@ import org.gridsuite.study.server.StudyException;
 public enum ModificationType {
     EQUIPMENT_ATTRIBUTE_MODIFICATION,
     LOAD_CREATION,
+    LOAD_MODIFICATION,
     EQUIPMENT_DELETION,
     GENERATOR_CREATION,
     LINE_CREATION,
@@ -28,6 +29,7 @@ public enum ModificationType {
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
             case LOAD_CREATION:
+            case LOAD_MODIFICATION:
                 return "loads";
             case GENERATOR_CREATION:
                 return "generators";
@@ -50,6 +52,8 @@ public enum ModificationType {
         switch (modificationType) {
             case LOAD_CREATION:
                 return StudyException.Type.LOAD_CREATION_FAILED;
+            case LOAD_MODIFICATION:
+                return StudyException.Type.LOAD_MODIFICATION_FAILED;
             case GENERATOR_CREATION:
                 return StudyException.Type.GENERATOR_CREATION_FAILED;
             case SHUNT_COMPENSATOR_CREATION:
