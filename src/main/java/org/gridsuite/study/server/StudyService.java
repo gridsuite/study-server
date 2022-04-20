@@ -875,14 +875,10 @@ public class StudyService {
     }
 
     private LoadFlowStatus computeLoadFlowStatus(LoadFlowResult result) {
-        LoadFlowStatus status = LoadFlowStatus.DIVERGED;
-        List<LoadFlowResult.ComponentResult> componentResults = result.getComponentResults();
-        if (!componentResults.isEmpty()) {
-            status = componentResults.stream().noneMatch(cr -> cr.getConnectedComponentNum() == 0 && cr.getSynchronousComponentNum() == 0 && cr.getStatus() != LoadFlowResult.ComponentResult.Status.CONVERGED)
-                ? LoadFlowStatus.CONVERGED
-                : LoadFlowStatus.DIVERGED;
-        }
-        return status;
+        return result.getComponentResults().stream().filter(cr -> cr.getConnectedComponentNum() == 0
+            && cr.getSynchronousComponentNum() == 0
+            && cr.getStatus() == LoadFlowResult.ComponentResult.Status.CONVERGED).collect(Collectors.toList()).isEmpty() ? LoadFlowStatus.DIVERGED
+            : LoadFlowStatus.CONVERGED;
     }
 
     Mono<Void> runLoadFlow(UUID studyUuid, UUID nodeUuid) {
