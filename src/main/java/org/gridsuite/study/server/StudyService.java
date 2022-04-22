@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -199,8 +200,8 @@ public class StudyService {
         NetworkService networkStoreService,
         NetworkModificationService networkModificationService,
         ReportService reportService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
+        @Lazy StudyInfosService studyInfosService,
+        @Lazy EquipmentInfosService equipmentInfosService,
         WebClient.Builder webClientBuilder,
         NetworkModificationTreeService networkModificationTreeService,
         ObjectMapper objectMapper) {
