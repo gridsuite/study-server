@@ -18,6 +18,8 @@ import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -1911,12 +1913,20 @@ public class StudyService {
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
             return networkModificationService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, groupUuid, modificationType, variantId, modificationUuid)
-                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
-                .doOnSuccess(substationIds ->
-                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
-                )
-                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                .doOnSuccess(modifications -> {
+                    Set<String> allImpactedSubstationIds = modifications.stream()
+                        .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
+                    List<EquipmentModificationInfos> deletions = modifications.stream()
+                        .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
+                        .map(EquipmentModificationInfos.class::cast)
+                        .collect(Collectors.toList());
+                    deletions.forEach(modif -> {
+                        emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
+                            allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId());
+                    });
+                    //emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, allImpactedSubstationIds);
+                }).doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                 .then(monoUpdateStatusResult);
         });
     }

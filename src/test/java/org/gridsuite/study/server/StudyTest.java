@@ -2351,6 +2351,11 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation") && r.getBody().equals(voltageLevelAttributesUpdated)));
     }
 
+    @Test
+    public void testLineSplitWithVoltageLevel() {
+
+    }
+
     @Test public void testReorderModification() {
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
@@ -2395,11 +2400,6 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups/" +
             modificationNode.getNetworkModification()
             + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before=" + modification2)));
-
-    }
-
-    @Test
-    public void testLineSplitWithVoltageLevel() {
 
     }
 

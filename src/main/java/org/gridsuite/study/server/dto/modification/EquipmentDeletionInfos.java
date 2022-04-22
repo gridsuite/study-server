@@ -23,6 +23,6 @@ import lombok.experimental.SuperBuilder;
 @ToString(callSuper = true)
 @Schema(description = "Equipment deletion")
 public class EquipmentDeletionInfos extends EquipmentModificationInfos {
-    @Schema(description = "Equipment type")
-    private String equipmentType;
+    //@Schema(description = "Equipment type")
+    //private String equipmentType;
 }
