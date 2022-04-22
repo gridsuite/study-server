@@ -18,15 +18,10 @@
     </changeSet>
     <changeSet author="lecuyerfra (generated)" id="1650377061543-6">
         <addColumn tableName="network_modification_node_info">
-            <column name="model" type="varchar(255)"/>
-        </addColumn>
-    </changeSet>
-    <changeSet author="lecuyerfra (generated)" id="1650377061543-7">
-        <addColumn tableName="network_modification_node_info">
             <column name="security_analysis_result_uuid" type="uuid"/>
         </addColumn>
     </changeSet>
-    <changeSet author="lecuyerfra (generated)" id="1650377061543-9">
+    <changeSet author="lecuyerfra (generated)" id="1650377061543-7">
         <dropTable tableName="MODEL_INFO"/>
     </changeSet>
     <changeSet author="lecuyerfra (generated)" id="1650377061543-2">

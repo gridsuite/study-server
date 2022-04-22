@@ -53,9 +53,6 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
     private Set<UUID> modificationsToExclude;
 
-    @Column
-    private String model;
-
     @Column(name = "loadFlowStatus")
     @Enumerated(EnumType.STRING)
     private LoadFlowStatus loadFlowStatus;

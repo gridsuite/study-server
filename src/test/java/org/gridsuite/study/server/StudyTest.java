@@ -1711,7 +1711,6 @@ public class StudyTest {
             .description("description")
             .networkModification(networkModificationUuid)
             .variantId(variantId)
-            .model("loadflow")
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
             .buildStatus(BuildStatus.NOT_BUILT)
             .children(Collections.emptyList())

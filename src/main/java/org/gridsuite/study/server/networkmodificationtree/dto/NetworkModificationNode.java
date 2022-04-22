@@ -35,8 +35,6 @@ public class NetworkModificationNode extends AbstractNode {
 
     Set<UUID> modificationsToExclude = new HashSet<>();
 
-    String model;
-
     LoadFlowStatus loadFlowStatus;
 
     LoadFlowResult loadFlowResult;
