@@ -1090,7 +1090,9 @@ public class StudyService {
             entity.getBalanceType(),
             true, // FIXME to persist
             EnumSet.noneOf(Country.class), // FIXME to persist
-            LoadFlowParameters.ConnectedComponentMode.MAIN); // FIXME to persist
+            LoadFlowParameters.ConnectedComponentMode.MAIN, // FIXME to persist
+            true// FIXME to persist
+            );
     }
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
