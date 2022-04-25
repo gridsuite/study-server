@@ -32,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -198,8 +199,8 @@ public class StudyService {
         NetworkService networkStoreService,
         NetworkModificationService networkModificationService,
         ReportService reportService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
+        @Lazy StudyInfosService studyInfosService,
+        @Lazy EquipmentInfosService equipmentInfosService,
         WebClient.Builder webClientBuilder,
         NetworkModificationTreeService networkModificationTreeService,
         ObjectMapper objectMapper) {
@@ -873,6 +874,13 @@ public class StudyService {
         });
     }
 
+    private LoadFlowStatus computeLoadFlowStatus(LoadFlowResult result) {
+        return result.getComponentResults().stream().filter(cr -> cr.getConnectedComponentNum() == 0
+            && cr.getSynchronousComponentNum() == 0
+            && cr.getStatus() == LoadFlowResult.ComponentResult.Status.CONVERGED).collect(Collectors.toList()).isEmpty() ? LoadFlowStatus.DIVERGED
+            : LoadFlowStatus.CONVERGED;
+    }
+
     Mono<Void> runLoadFlow(UUID studyUuid, UUID nodeUuid) {
         return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid))).flatMap(tuple3 -> {
             UUID networkUuid = tuple3.getT1();
@@ -896,7 +904,7 @@ public class StudyService {
                 .body(getLoadFlowParameters(studyUuid), LoadFlowParameters.class)
                 .retrieve()
                 .bodyToMono(LoadFlowResult.class)
-                .flatMap(result -> updateLoadFlowResultAndStatus(nodeUuid, result, result.isOk() ? LoadFlowStatus.CONVERGED : LoadFlowStatus.DIVERGED, false))
+                .flatMap(result -> updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false))
                 .doOnError(e -> updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE).subscribe())
                 .doOnCancel(() -> updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE).subscribe());
         }).doFinally(s ->
@@ -1550,13 +1558,31 @@ public class StudyService {
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
             return networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId)
-                .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
-                .collect(Collectors.toSet())
-                .doOnSuccess(substationIds ->
-                    emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
-                )
-                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
-                .then(monoUpdateStatusResult);
+                    .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                    .collect(Collectors.toSet())
+                    .doOnSuccess(substationIds ->
+                            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
+                    )
+                    .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                    .then(monoUpdateStatusResult);
+        });
+    }
+
+    public Mono<Void> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid) {
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID groupUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
+
+            return networkModificationService.modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId)
+                    .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
+                    .collect(Collectors.toSet())
+                    .doOnSuccess(substationIds ->
+                            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds)
+                    )
+                    .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                    .then(monoUpdateStatusResult);
         });
     }
 

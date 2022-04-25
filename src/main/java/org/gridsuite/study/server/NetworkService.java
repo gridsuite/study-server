@@ -14,6 +14,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -38,7 +39,7 @@ public class NetworkService {
     private final StudyRepository studyRepository;
 
     NetworkService(NetworkStoreService networkStoreService,
-                   EquipmentInfosService equipmentInfosService,
+                   @Lazy EquipmentInfosService equipmentInfosService,
                    StudyRepository studyRepository) {
         this.networkStoreService = networkStoreService;
         this.equipmentInfosService = equipmentInfosService;
