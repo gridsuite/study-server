@@ -30,6 +30,9 @@ import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.BusbarSectionCreationInfos;
+import org.gridsuite.study.server.dto.modification.LineSplitWithVoltageLevelInfos;
+import org.gridsuite.study.server.dto.modification.VoltageLevelCreationInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -2180,17 +2183,17 @@ public class StudyTest {
         // create load on first modification node
         webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNode1Uuid)
-            .bodyValue(createLoadAttributes)
-            .exchange()
-            .expectStatus().isOk();
+                .bodyValue(createLoadAttributes)
+                .exchange()
+                .expectStatus().isOk();
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
 
         // create load on second modification node
         webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", studyNameUserIdUuid, modificationNode2Uuid)
-            .bodyValue(createLoadAttributes)
-            .exchange()
-            .expectStatus().isOk();
+                .bodyValue(createLoadAttributes)
+                .exchange()
+                .expectStatus().isOk();
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
 
         // update load creation
@@ -2353,7 +2356,42 @@ public class StudyTest {
 
     @Test
     public void testLineSplitWithVoltageLevel() {
+        createStudy("userId", CASE_UUID);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+        ModelNode modelNode = createModelNode(studyNameUserIdUuid, modificationNodeUuid);
+        UUID modelNodeUuid = modelNode.getId();
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
+        UUID modificationNodeUuid2 = modificationNode2.getId();
 
+        VoltageLevelCreationInfos vl1 = VoltageLevelCreationInfos.builder()
+            .equipmentId("vl1")
+            .equipmentName("NewVoltageLevel")
+            .nominalVoltage(379.3)
+            .substationId("s1")
+            .busbarSections(Collections.singletonList(new BusbarSectionCreationInfos("v1bbs", "BBS1", 1, 1)))
+            .busbarConnections(Collections.emptyList())
+            .build();
+        LineSplitWithVoltageLevelInfos lineSplitWoVL = new LineSplitWithVoltageLevelInfos("line3", 10.0, vl1, null, "1.A",
+            "nl1", "NewLine1", "nl2", "NewLine2");
+
+        webTestClient.post()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",
+                studyNameUserIdUuid, modificationNodeUuid)
+            .bodyValue(BodyInserters.fromValue(lineSplitWoVL))
+            .exchange()
+            .expectStatus().isOk();
+
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
+                studyNameUserIdUuid, modificationNodeUuid2, MODIFICATION_UUID)
+            .bodyValue(BodyInserters.fromValue(lineSplitWoVL))
+            .exchange()
+            .expectStatus().isOk();
+
+        var requests = getRequestsWithBodyDone(2);
     }
 
     @Test public void testReorderModification() {
