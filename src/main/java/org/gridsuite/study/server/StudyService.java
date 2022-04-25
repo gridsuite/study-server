@@ -1854,7 +1854,7 @@ public class StudyService {
 
     public Mono<Void> reindexAllStudies() {
         List<StudyEntity> studies = studyRepository.findAll();
-        return Mono.fromRunnable(() -> studies.parallelStream().forEach(studyEntity -> reindexStudy(studyEntity.getId()).subscribe()));
+        return Mono.fromRunnable(() -> studies.stream().forEach(studyEntity -> reindexStudy(studyEntity.getId()).subscribe()));
     }
 
     public Mono<Void> reindexStudy(UUID studyUuid) {
