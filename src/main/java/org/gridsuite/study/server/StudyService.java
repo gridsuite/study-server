@@ -1921,11 +1921,8 @@ public class StudyService {
                         .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
                         .map(EquipmentModificationInfos.class::cast)
                         .collect(Collectors.toList());
-                    deletions.forEach(modif -> {
-                        emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
-                            allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId());
-                    });
-                    //emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, allImpactedSubstationIds);
+                    deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
+                        allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
                 }).doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
                 .then(monoUpdateStatusResult);
         });
