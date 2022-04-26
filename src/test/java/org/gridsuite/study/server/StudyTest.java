@@ -2393,12 +2393,14 @@ public class StudyTest {
                 studyNameUserIdUuid, modificationNodeUuid2, MODIFICATION_UUID)
             .bodyValue(lineSplitWoVLasJSON)
             .exchange()
-            .expectStatus().is4xxClientError();
+            .expectStatus().isOk();
 
         var requests = getRequestsWithBodyDone(2);
         assertEquals(2, requests.size());
         Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits\\?group=.*")).findFirst();
         Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/line-splits")).findFirst();
+        assertTrue(creationRequest.isPresent());
+        assertTrue(updateRequest.isPresent());
         assertEquals(lineSplitWoVLasJSON, creationRequest.get().getBody());
         assertEquals(lineSplitWoVLasJSON, updateRequest.get().getBody());
     }
