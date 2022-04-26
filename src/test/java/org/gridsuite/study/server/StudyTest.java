@@ -2370,8 +2370,6 @@ public class StudyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
-        ModelNode modelNode = createModelNode(studyNameUserIdUuid, modificationNodeUuid);
-        UUID modelNodeUuid = modelNode.getId();
 
         VoltageLevelCreationInfos vl1 = VoltageLevelCreationInfos.builder()
             .equipmentId("vl1")
