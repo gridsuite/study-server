@@ -450,6 +450,11 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits[?]group=.*") && POST.equals(request.getMethod())) {
+                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                         return new MockResponse().setResponseCode(200)
@@ -599,6 +604,7 @@ public class StudyTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/loads":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/static-var-compensators":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/line-splits":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -2366,8 +2372,6 @@ public class StudyTest {
         UUID modificationNodeUuid = modificationNode.getId();
         ModelNode modelNode = createModelNode(studyNameUserIdUuid, modificationNodeUuid);
         UUID modelNodeUuid = modelNode.getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modelNodeUuid, UUID.randomUUID(), VARIANT_ID_2);
-        UUID modificationNodeUuid2 = modificationNode2.getId();
 
         VoltageLevelCreationInfos vl1 = VoltageLevelCreationInfos.builder()
             .equipmentId("vl1")
@@ -2390,7 +2394,7 @@ public class StudyTest {
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
-                studyNameUserIdUuid, modificationNodeUuid2, MODIFICATION_UUID)
+                studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
             .bodyValue(lineSplitWoVLasJSON)
             .exchange()
             .expectStatus().isOk();
