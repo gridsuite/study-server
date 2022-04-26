@@ -45,6 +45,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
 import org.gridsuite.study.server.utils.MatcherReport;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
@@ -111,7 +112,7 @@ import static org.mockito.Mockito.when;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient
+@AutoConfigureWebTestClient(timeout = "PT59S")
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
@@ -358,6 +359,7 @@ public class StudyTest {
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
+            @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 Buffer body = request.getBody();
@@ -690,7 +692,7 @@ public class StudyTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Path not supported: " + request.getPath());
-                        return new MockResponse().setResponseCode(404);
+                        return new MockResponse().setResponseCode(418);
                 }
             }
         };
@@ -2354,6 +2356,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation") && r.getBody().equals(voltageLevelAttributesUpdated)));
     }
 
+    @SneakyThrows
     @Test
     public void testLineSplitWithVoltageLevel() {
         createStudy("userId", CASE_UUID);
@@ -2376,22 +2379,28 @@ public class StudyTest {
             .build();
         LineSplitWithVoltageLevelInfos lineSplitWoVL = new LineSplitWithVoltageLevelInfos("line3", 10.0, vl1, null, "1.A",
             "nl1", "NewLine1", "nl2", "NewLine2");
+        String lineSplitWoVLasJSON = mapper.writeValueAsString(lineSplitWoVL);
 
         webTestClient.post()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid)
-            .bodyValue(BodyInserters.fromValue(lineSplitWoVL))
+            .bodyValue(lineSplitWoVLasJSON)
             .exchange()
             .expectStatus().isOk();
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid2, MODIFICATION_UUID)
-            .bodyValue(BodyInserters.fromValue(lineSplitWoVL))
+            .bodyValue(lineSplitWoVLasJSON)
             .exchange()
-            .expectStatus().isOk();
+            .expectStatus().is4xxClientError();
 
         var requests = getRequestsWithBodyDone(2);
+        assertEquals(2, requests.size());
+        Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits\\?group=.*")).findFirst();
+        Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/line-splits")).findFirst();
+        assertEquals(lineSplitWoVLasJSON, creationRequest.get().getBody());
+        assertEquals(lineSplitWoVLasJSON, updateRequest.get().getBody());
     }
 
     @Test public void testReorderModification() {
