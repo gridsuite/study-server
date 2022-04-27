@@ -982,6 +982,6 @@ public class StudyController {
     @Operation(summary = "get load flow default provider value")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider value has been found"))
     public ResponseEntity<Mono<String>> getDefaultLoadflowProvider() {
-        return ResponseEntity.ok().body(Mono.fromCallable(() -> studyService.getDefaultLoadflowProviderValue()));
+        return ResponseEntity.ok().body(Mono.fromCallable(studyService::getDefaultLoadflowProviderValue));
     }
 }

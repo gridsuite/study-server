@@ -108,7 +108,7 @@ import static org.mockito.Mockito.when;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "200000")
+@AutoConfigureWebTestClient
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
@@ -2917,6 +2917,17 @@ public class StudyTest {
         StudyEntity study = studyRepository.findAll().get(0);
 
         assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
+    }
+
+    @Test public void getDefaultLoadflowProvider() {
+        String defaultLoadflowProviderResponse = webTestClient.get()
+            .uri("/v1/loadflow-default-provider")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(String.class)
+            .returnResult().getResponseBody();
+
+        assertEquals(defaultLoadflowProviderResponse, defaultLoadflowProvider);
     }
 
     @After
