@@ -1600,8 +1600,18 @@ public class StudyService {
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, false);
 
             return networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid)
-                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
-                .then(monoUpdateStatusResult);
+                    .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                    .then(monoUpdateStatusResult);
+        });
+    }
+
+    public Mono<Void> updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, false);
+
+            return networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid)
+                    .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                    .then(monoUpdateStatusResult);
         });
     }
 
