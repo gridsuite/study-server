@@ -114,7 +114,7 @@ import static org.mockito.Mockito.when;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "PT59S")
+@AutoConfigureWebTestClient//(timeout = "PT59S") // allows time to step with debugger
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
@@ -460,11 +460,19 @@ public class StudyTest {
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits[?]group=.*") && POST.equals(request.getMethod())) {
-                    return new MockResponse().setResponseCode(200)
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value()).setBody("workaround"); // until we don't need body for rising exception
+                    } else {
+                        return new MockResponse().setResponseCode(200)
                         .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
                 } else if (path.equals("/v1/modifications/" + MODIFICATION_UUID + "/line-splits")) {
-                    return new MockResponse().setResponseCode(200);
+                    if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(200);
+                    } else {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value()).setBody("workaround");
+                    }
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                         return new MockResponse().setResponseCode(200)
@@ -2416,6 +2424,22 @@ public class StudyTest {
         assertTrue(updateRequest.isPresent());
         assertEquals(lineSplitWoVLasJSON, creationRequest.get().getBody());
         assertEquals(lineSplitWoVLasJSON, updateRequest.get().getBody());
+
+        webTestClient.post()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",
+                studyNameUserIdUuid, modificationNodeUuid)
+            .bodyValue("bogus")
+            .exchange()
+            .expectStatus().is5xxServerError(); // wouldn't we propagate BAD_REQUEST ?
+
+        webTestClient.put()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
+                studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+            .bodyValue("bogus")
+            .exchange()
+            .expectStatus().is5xxServerError();
+
+        requests = getRequestsWithBodyDone(2);
     }
 
     @Test public void testReorderModification() {
