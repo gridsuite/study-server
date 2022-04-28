@@ -31,7 +31,9 @@ import okio.Buffer;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.BusbarSectionCreationInfos;
+import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.LineSplitWithVoltageLevelInfos;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.VoltageLevelCreationInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -356,6 +358,13 @@ public class StudyTest {
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
+        EquipmentModificationInfos lineToSplitDeletion = EquipmentModificationInfos.builder()
+            .type(ModificationType.EQUIPMENT_DELETION)
+            .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+            .build();
+        List<EquipmentModificationInfos> lineSplitResponseInfos = new ArrayList<>();
+        lineSplitResponseInfos.add(lineToSplitDeletion);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -451,10 +460,11 @@ public class StudyTest {
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits[?]group=.*") && POST.equals(request.getMethod())) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.equals("/v1/modifications/" + MODIFICATION_UUID + "/line-splits")) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                         return new MockResponse().setResponseCode(200)
@@ -604,7 +614,6 @@ public class StudyTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/loads":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/static-var-compensators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/line-splits":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -698,7 +707,7 @@ public class StudyTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Path not supported: " + request.getPath());
-                        return new MockResponse().setResponseCode(418);
+                        return new MockResponse().setResponseCode(404);
                 }
             }
         };
@@ -2389,6 +2398,8 @@ public class StudyTest {
             .bodyValue(lineSplitWoVLasJSON)
             .exchange()
             .expectStatus().isOk();
+
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
