@@ -375,7 +375,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
 
         if (modificationUuid == null) {
-            Flux<ModificationInfos> inspectable = networkStoreService.getNetworkUuid(studyUuid)
+            return networkStoreService.getNetworkUuid(studyUuid)
                 .flatMapMany(networkUuid -> {
                     UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
                             buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
@@ -396,7 +396,6 @@ public class NetworkModificationService {
                         .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
                         });
                 });
-            return inspectable;
         } else {
 
             UriComponentsBuilder uriComponentsBuilder;
