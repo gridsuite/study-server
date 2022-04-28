@@ -2243,10 +2243,19 @@ public class StudyTest {
                 .expectStatus().isOk();
         checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
 
-        var requests = getRequestsWithBodyDone(2);
+        // update load modification
+        String loadAttributesUpdated = "{\"loadId\":\"loadId1\",\"loadType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
+        webTestClient.put()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-modification", studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                .bodyValue(loadAttributesUpdated)
+                .exchange()
+                .expectStatus().isOk();
+
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(loadModificationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(loadModificationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(loadModificationAttributes)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-modification") && r.getBody().equals(loadAttributesUpdated)));
     }
 
     @Test
