@@ -102,6 +102,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         node.setName(nodeInfoEntity.getName());
         node.setDescription(nodeInfoEntity.getDescription());
         node.setReadOnly(nodeInfoEntity.getReadOnly());
+        node.setReportUuid(nodeInfoEntity.getReportUuid());
         return node;
     }
 
@@ -110,6 +111,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         entity.setName(node.getName());
         entity.setDescription(node.getDescription());
         entity.setReadOnly(node.getReadOnly());
+        entity.setReportUuid(node.getReportUuid());
         return entity;
     }
 
@@ -184,5 +186,17 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public Boolean isReadOnly(UUID nodeUuid) {
         return getNode(nodeUuid).getReadOnly();
+    }
+
+    public UUID getReportUuid(AbstractNode node, boolean generateId) {
+        if (node.getReportUuid() == null && generateId) {
+            node.setReportUuid(UUID.randomUUID());
+            updateNode(node);
+        }
+        return node.getReportUuid();
+    }
+
+    public UUID getReportUuid(UUID nodeUuid, boolean generateId) {
+        return getReportUuid(getNode(nodeUuid), generateId);
     }
 }

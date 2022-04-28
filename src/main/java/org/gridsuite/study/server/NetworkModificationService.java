@@ -52,6 +52,7 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
+    private static final String REPORT = "report";
 
     private String networkModificationServerBaseUri;
 
@@ -113,13 +114,14 @@ public class NetworkModificationService {
             .bodyToMono(Void.class);
     }
 
-    Flux<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId) {
+    Flux<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
                 .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT, reportUuid)
                 .queryParam("open", open);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);

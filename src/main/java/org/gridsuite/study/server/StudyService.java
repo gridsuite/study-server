@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -838,14 +839,15 @@ public class StudyService {
     }
 
     Mono<Void> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid), getReportUuid(nodeUuid)).flatMap(tuple -> {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
+            UUID reportUuid = tuple.getT3();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH));
 
-            return networkModificationService.changeSwitchState(studyUuid, switchId, open, groupUuid, variantId)
+            return networkModificationService.changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
@@ -1858,5 +1860,18 @@ public class StudyService {
             throw new StudyException(NOT_ALLOWED);
         }
     }
+
+    public Mono<UUID> getReportUuid(UUID nodeUuid) {
+        return networkModificationTreeService.getReportUuid(nodeUuid);
+    }
+
+    public Mono<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid) {
+        return getReportUuid(nodeUuid).flatMap(reportService::getReport);
+    }
+
+    public Mono<Void> deleteNodeReport(UUID studyUuid, UUID nodeUuid) {
+        return getReportUuid(nodeUuid).flatMap(reportService::deleteReport);
+    }
+
 }
 

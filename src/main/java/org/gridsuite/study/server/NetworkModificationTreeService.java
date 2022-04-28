@@ -550,4 +550,14 @@ public class NetworkModificationTreeService {
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
         emitNodesChanged(studyUuid, List.of(nodeUuid));
     }
+
+    @Transactional
+    public UUID doGetReportUuid(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuid(nodeUuid, generateId)).orElse(null);
+    }
+
+    public Mono<UUID> getReportUuid(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetReportUuid(nodeUuid, true))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
 }
