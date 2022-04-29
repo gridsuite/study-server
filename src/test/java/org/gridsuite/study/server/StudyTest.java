@@ -459,19 +459,35 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits[?]group=.*") && POST.equals(request.getMethod())) {
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
                     if (body.peek().readUtf8().equals("bogus")) {
-                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value()).setBody("workaround"); // until we don't need body for rising exception
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
                         return new MockResponse().setResponseCode(200)
-                        .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .setBody(voltageLevelDataAsString)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
-                } else if (path.equals("/v1/modifications/" + MODIFICATION_UUID + "/line-splits")) {
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(voltageLevelDataAsString)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
                         return new MockResponse().setResponseCode(200);
                     } else {
-                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value()).setBody("workaround");
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     }
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
@@ -718,8 +734,8 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody(voltageLevelDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
-                        LOGGER.error("Path not supported: " + request.getPath());
-                        return new MockResponse().setResponseCode(404);
+                        LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                        return new MockResponse().setResponseCode(418);
                 }
             }
         };
@@ -2463,14 +2479,16 @@ public class StudyTest {
                 studyNameUserIdUuid, modificationNodeUuid)
             .bodyValue("bogus")
             .exchange()
-            .expectStatus().is5xxServerError(); // wouldn't we propagate BAD_REQUEST ?
+            .expectStatus().is5xxServerError()
+            .expectBody(String.class).isEqualTo("400 BAD_REQUEST");
 
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
             .bodyValue("bogus")
             .exchange()
-            .expectStatus().is5xxServerError();
+            .expectStatus().is5xxServerError()
+            .expectBody(String.class).isEqualTo("400 BAD_REQUEST");
 
         requests = getRequestsWithBodyDone(2);
     }
