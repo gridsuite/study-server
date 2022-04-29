@@ -1850,8 +1850,7 @@ public class StudyService {
     }
 
     public Mono<Void> reindexAllStudies() {
-        List<StudyEntity> studies = studyRepository.findAll();
-        return Mono.fromRunnable(() -> studies.stream().forEach(studyEntity -> reindexStudy(studyEntity.getId()).subscribe()));
+        return Flux.concat(Flux.fromIterable(studyRepository.findAll()).map(studyEntity -> reindexStudy(studyEntity.getId()))).then();
     }
 
     public Mono<Void> reindexStudy(UUID studyUuid) {
