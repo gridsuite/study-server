@@ -784,8 +784,12 @@ public class StudyService {
         );
     }
 
-    Mono<String> getLoadsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple ->
+    Mono<String> getLoadsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+        }
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn)).flatMap(tuple ->
             getEquipmentsMapData(tuple.getT1(), tuple.getT2(), substationsIds, "loads")
         );
     }
