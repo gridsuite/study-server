@@ -39,4 +39,9 @@ public class StudyInfosServiceMock implements StudyInfosService {
     public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
         return Collections.emptyList();
     }
+
+    @Override
+    public void recreateStudyInfos(@NonNull final CreatedStudyBasicInfos studyInfos) {
+        // Nothing to recreate
+    }
 }
