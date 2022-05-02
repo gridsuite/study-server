@@ -39,6 +39,7 @@ public class StudyException extends RuntimeException {
         BAD_NODE_TYPE,
         NETWORK_NOT_FOUND,
         EQUIPMENT_NOT_FOUND,
+        NETWORK_INDEXATION_FAILED
     }
 
     private final Type type;
