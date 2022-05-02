@@ -620,7 +620,7 @@ public class NetworkModificationTreeTest {
     private StudyEntity insertDummyStudy() {
         StudyEntity studyEntity = createDummyStudy(NETWORK_UUID);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity, null);
         return study;
     }
 

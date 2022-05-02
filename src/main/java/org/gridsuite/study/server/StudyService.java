@@ -270,45 +270,49 @@ public class StudyService {
     public Mono<BasicStudyInfos> createStudy(UUID caseUuid, String userId, UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(userId, studyUuid)
-                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
-                .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getId(), userId), getCaseFormat(caseUuid))
-                        .flatMap(t -> {
-                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                            return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                    t.getT2(), caseUuid, false, toEntity(loadFlowParameters));
-                        })
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(st -> {
-                            deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();
-                            LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                        })
-                        .subscribe()
-                );
+            .doOnSubscribe(x -> startTime.set(System.nanoTime()))
+            .map(StudyService::toBasicStudyInfos)
+            .doOnSuccess(s -> {
+                UUID importReportUuid = UUID.randomUUID();
+                Mono.zip(persistentStore(caseUuid, s.getId(), userId, importReportUuid), getCaseFormat(caseUuid))
+                    .flatMap(t -> {
+                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                        return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                            t.getT2(), caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                    })
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                    .doFinally(st -> {
+                        deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();
+                        LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    })
+                    .subscribe();
+            });
     }
 
     public Mono<BasicStudyInfos> createStudy(Mono<FilePart> caseFile, String userId, UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(userId, studyUuid)
-                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
-                .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> importCase(caseFile, s.getId(), userId)
-                        .flatMap(uuid ->
-                                Mono.zip(persistentStore(uuid, s.getId(), userId), getCaseFormat(uuid))
-                                        .flatMap(t -> {
-                                            LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-                                            return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                    t.getT2(), uuid, true, toEntity(loadFlowParameters));
-                                        }))
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(r -> {
-                            deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();  // delete the study if the creation has been canceled
-                            LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                        })
-                        .subscribe()
-                );
+            .doOnSubscribe(x -> startTime.set(System.nanoTime()))
+            .map(StudyService::toBasicStudyInfos)
+            .doOnSuccess(s -> {
+                UUID importReportUuid = UUID.randomUUID();
+                importCase(caseFile, s.getId(), userId)
+                    .flatMap(uuid ->
+                        Mono.zip(persistentStore(uuid, s.getId(), userId, importReportUuid), getCaseFormat(uuid))
+                            .flatMap(t -> {
+                                LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
+                                return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                    t.getT2(), uuid, true, toEntity(loadFlowParameters), importReportUuid);
+                            }))
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                    .doFinally(r -> {
+                        deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();  // delete the study if the creation has been canceled
+                        LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    })
+                    .subscribe();
+            });
     }
 
     public Mono<StudyInfos> getStudyInfos(UUID studyUuid) {
@@ -479,8 +483,10 @@ public class StudyService {
     }
 
     private Mono<CreatedStudyBasicInfos> insertStudy(UUID studyUuid, String userId, UUID networkUuid, String networkId,
-                                                     String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters) {
-        return insertStudyEntity(studyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters)
+                                                     String caseFormat, UUID caseUuid, boolean casePrivate,
+                                                     LoadFlowParametersEntity loadFlowParameters,
+                                                     UUID importReportUuid) {
+        return insertStudyEntity(studyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid)
             .map(StudyService::toCreatedStudyBasicInfos)
             .map(studyInfosService::add)
             .doOnSuccess(infos -> emitStudiesChanged(studyUuid, userId));
@@ -600,10 +606,11 @@ public class StudyService {
         });
     }
 
-    private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String userId) {
+    private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, caseUuid)
             .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
+            .queryParam(REPORT, importReportUuid)
             .buildAndExpand()
             .toUriString();
 
@@ -1472,7 +1479,8 @@ public class StudyService {
 
     private Mono<StudyEntity> insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                                 String caseFormat, UUID caseUuid, boolean casePrivate,
-                                                LoadFlowParametersEntity loadFlowParameters) {
+                                                LoadFlowParametersEntity loadFlowParameters,
+                                                UUID importReportUuid) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1482,15 +1490,15 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
             StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, null, loadFlowParameters);
-            return insertStudy(studyEntity);
+            return insertStudy(studyEntity, importReportUuid);
         });
     }
 
     @Transactional
-    public StudyEntity insertStudy(StudyEntity studyEntity) {
+    public StudyEntity insertStudy(StudyEntity studyEntity, UUID importReportUuid) {
         var study = studyRepository.save(studyEntity);
         // create 2 nodes : root node, modification node 0
-        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
+        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity, importReportUuid);
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
             .name("modification node 0")

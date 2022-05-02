@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
+import static org.gridsuite.study.server.StudyConstants.REPORT;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 
@@ -52,7 +53,6 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
-    private static final String REPORT = "report";
 
     private String networkModificationServerBaseUri;
 

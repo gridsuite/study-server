@@ -219,13 +219,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NodeEntity createRoot(StudyEntity study) {
+    public NodeEntity createRoot(StudyEntity study, UUID importReportUuid) {
         NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study));
         var root = RootNode.builder()
             .studyId(study.getId())
             .id(node.getIdNode())
             .name("Root")
             .readOnly(true)
+            .reportUuid(importReportUuid)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
         return node;

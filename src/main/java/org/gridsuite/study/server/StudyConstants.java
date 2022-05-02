@@ -32,4 +32,5 @@ final class StudyConstants {
 
     static final String DELIMITER = "/";
     static final String QUERY_PARAM_VARIANT_ID = "variantId";
+    static final String REPORT = "report";
 }
