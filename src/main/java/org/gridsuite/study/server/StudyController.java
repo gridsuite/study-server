@@ -32,7 +32,6 @@ import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.logging.Level;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -84,22 +83,21 @@ public class StudyController {
     @GetMapping(value = "/studies")
     @Operation(summary = "Get all studies")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies")})
-    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyList() {
+    public ResponseEntity<List<CreatedStudyBasicInfos>> getStudyList() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
     }
 
     @GetMapping(value = "/study_creation_requests")
     @Operation(summary = "Get all study creation requests for a user")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of study creation requests")})
-    public ResponseEntity<Flux<BasicStudyInfos>> getStudyCreationRequestList() {
-        Flux<BasicStudyInfos> studies = studyService.getStudiesCreationRequests();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studies);
+    public ResponseEntity<List<BasicStudyInfos>> getStudyCreationRequestList() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudiesCreationRequests());
     }
 
     @GetMapping(value = "/studies/metadata")
     @Operation(summary = "Get studies metadata")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies metadata")})
-    public ResponseEntity<Flux<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestParam("ids") List<UUID> uuids) {
+    public ResponseEntity<List<CreatedStudyBasicInfos>> getStudyListMetadata(@RequestParam("ids") List<UUID> uuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudiesMetadata(uuids));
     }
 
@@ -108,12 +106,13 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The id of the network imported"),
         @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
-    public ResponseEntity<Mono<BasicStudyInfos>> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
+    public ResponseEntity<BasicStudyInfos> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(caseUuid, userId, studyUuid)
-                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
-        return ResponseEntity.ok().body(studyService.assertCaseExists(caseUuid).then(createStudy));
+        studyService.assertCaseExists(caseUuid);
+        BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid);
+        //TODO: add logs like before
+        return ResponseEntity.ok().body(createStudy);
     }
 
     @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -122,11 +121,11 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The id of the network imported"),
         @ApiResponse(responseCode = "409", description = "The study already exist"),
         @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@RequestPart("caseFile") FilePart caseFile,
+    public ResponseEntity<BasicStudyInfos> createStudy(@RequestPart("caseFile") FilePart caseFile,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestHeader("userId") String userId) {
-        Mono<BasicStudyInfos> createStudy = studyService.createStudy(Mono.just(caseFile), userId, studyUuid)
-                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
+        BasicStudyInfos createStudy = studyService.createStudy(caseFile, userId, studyUuid);
+        //TODO: add logs like before
         return ResponseEntity.ok().body(createStudy);
     }
 
@@ -143,10 +142,10 @@ public class StudyController {
     @DeleteMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "delete the study")
     @ApiResponse(responseCode = "200", description = "Study deleted")
-    public ResponseEntity<Mono<Void>> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
                                                   @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
-                studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId));
+        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
@@ -760,7 +759,7 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The node has been added"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<Mono<AbstractNode>> createNode(@RequestBody AbstractNode node,
+    public ResponseEntity<AbstractNode> createNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                          @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode) {

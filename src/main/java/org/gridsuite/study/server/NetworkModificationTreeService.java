@@ -152,8 +152,8 @@ public class NetworkModificationTreeService {
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    public Mono<AbstractNode> createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
-        return Mono.fromCallable(() -> self.doCreateNode(studyUuid, nodeId, nodeInfo, insertMode));
+    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+        return self.doCreateNode(studyUuid, nodeId, nodeInfo, insertMode);
     }
 
     @Transactional
