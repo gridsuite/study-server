@@ -989,13 +989,6 @@ public class StudyController {
             .then(studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active)));
     }
 
-    @PostMapping(value = "/studies/reindex-all")
-    @Operation(summary = "reindex all studies")
-    @ApiResponse(responseCode = "200", description = "Studies reindexed")
-    public ResponseEntity<Mono<Void>> reindexAllStudies() {
-        return ResponseEntity.ok().body(studyService.reindexAllStudies());
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/reindex-all")
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")

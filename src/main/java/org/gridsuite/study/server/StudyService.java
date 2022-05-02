@@ -1849,10 +1849,6 @@ public class StudyService {
             .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 
-    public Mono<Void> reindexAllStudies() {
-        return Flux.concat(Flux.fromIterable(studyRepository.findAll()).map(studyEntity -> reindexStudy(studyEntity.getId()))).then();
-    }
-
     public Mono<Void> reindexStudy(UUID studyUuid) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         if (studyEntity.isPresent()) {

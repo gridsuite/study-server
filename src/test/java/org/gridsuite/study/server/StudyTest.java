@@ -2974,25 +2974,6 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
     }
 
-    @Test
-    public void reindexAllStudiesTest() {
-        createStudy("userId", CASE_UUID);
-        createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
-        createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));
-        createStudy("userId", UUID.fromString(CASE_4_UUID_STRING));
-
-        webTestClient.post()
-            .uri("/v1/studies/reindex-all")
-            .exchange()
-            .expectStatus().isOk();
-
-        var requests = getRequestsWithBodyDone(4);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")
-            || r.getPath().contains("/v1/networks/" + NETWORK_UUID_2_STRING + "/reindex-all")
-            || r.getPath().contains("/v1/networks/" + NETWORK_UUID_3_STRING + "/reindex-all")
-            || r.getPath().contains("/v1/networks/" + NETWORK_UUID_4_STRING + "/reindex-all")));
-    }
-
     @After
     public void tearDown() {
         cleanDB();
