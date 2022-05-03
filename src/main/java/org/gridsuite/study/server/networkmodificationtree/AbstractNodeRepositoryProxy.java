@@ -11,6 +11,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
@@ -198,5 +199,13 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getReportUuid(UUID nodeUuid, boolean generateId) {
         return getReportUuid(getNode(nodeUuid), generateId);
+    }
+
+    public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {
+        return null;
+    }
+
+    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid, boolean generateId) {
+        return getNodeModificationInfos(getNode(nodeUuid), generateId);
     }
 }

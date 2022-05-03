@@ -12,6 +12,7 @@ import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -559,6 +560,16 @@ public class NetworkModificationTreeService {
 
     public Mono<UUID> getReportUuid(UUID nodeUuid) {
         return Mono.fromCallable(() -> self.doGetReportUuid(nodeUuid, true))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    @Transactional
+    public NodeModificationInfos doGetNodeModificationInfos(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid, generateId)).orElse(null);
+    }
+
+    public Mono<NodeModificationInfos> getNodeModificationInfos(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetNodeModificationInfos(nodeUuid, true))
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 }

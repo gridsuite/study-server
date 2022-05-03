@@ -39,7 +39,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.REPORT;
+import static org.gridsuite.study.server.StudyConstants.REPORT_UUID;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 
@@ -121,7 +121,7 @@ public class NetworkModificationService {
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
                 .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT, reportUuid)
+                .queryParam(REPORT_UUID, reportUuid)
                 .queryParam("open", open);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -139,13 +139,14 @@ public class NetworkModificationService {
         });
     }
 
-    public Flux<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId) {
+    public Flux<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
-                .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -162,10 +163,11 @@ public class NetworkModificationService {
         });
     }
 
-    Flux<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId) {
+    Flux<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId, UUID reportUuid) {
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
-                .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -203,13 +205,14 @@ public class NetworkModificationService {
     }
 
     public Flux<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes, UUID groupUuid,
-                                                            ModificationType modificationType, String variantId) {
+                                                            ModificationType modificationType, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createEquipmentAttributes);
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                    .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -229,13 +232,14 @@ public class NetworkModificationService {
     }
 
     public Flux<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
-                                                            UUID groupUuid, ModificationType modificationType, String variantId) {
+                                                            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(modifyEquipmentAttributes);
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                    .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -273,14 +277,15 @@ public class NetworkModificationService {
                 .bodyToMono(Void.class);
     }
 
-    public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId) {
+    public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);
         Objects.requireNonNull(equipmentId);
 
         return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
-                .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -367,6 +372,5 @@ public class NetworkModificationService {
             .retrieve()
             .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
             .bodyToMono(Void.class);
-
     }
 }
