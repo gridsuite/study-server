@@ -35,6 +35,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -538,23 +540,17 @@ public class StudyService {
     UUID importCase(FilePart multipartFile, UUID studyUuid, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid = null;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
             multipartBodyBuilder.part("file", multipartFile);
+            HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<MultiValueMap<String, HttpEntity<?>>>(multipartBodyBuilder.build(), headers);
 
-            caseUuid = webClient.post()
-                    .uri(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private")
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
-                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-                    //TODO: gérer erreur ici
-                        Mono.fromCallable(() -> new StudyException(STUDY_CREATION_FAILED))
-                        //handleStudyCreationError(studyUuid, userId, clientResponse, "case-server")
-                    )
-                    .bodyToMono(UUID.class)
-                    .publishOn(Schedulers.boundedElastic())
-                    .log(ROOT_CATEGORY_REACTOR, Level.FINE)
-                    .block();
+            try {
+                caseUuid = restTemplate.postForObject(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private", request, UUID.class);
+            } catch (HttpStatusCodeException e)   {
+                throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(), "case-server");
+            }
         } catch (Exception e) {
             if (!(e instanceof StudyException)) {
                 emitStudyCreationError(studyUuid, userId, e.getMessage());

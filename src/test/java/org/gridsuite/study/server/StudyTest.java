@@ -28,7 +28,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
-import org.gridsuite.study.server.dto.NetworkInfos;
+
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -64,6 +64,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -73,6 +74,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.util.MultiValueMap;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.config.EnableWebFlux;
@@ -217,6 +219,8 @@ public class StudyTest {
     @MockBean
     private NetworkStoreService networkStoreService;
 
+    private String baseUrl;
+
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
             .networkUuid(NETWORK_UUID)
@@ -263,6 +267,8 @@ public class StudyTest {
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
         initMockBeans(network);
+
+        baseUrl = "http://localhost:" + testPort;
 
         server = new MockWebServer();
 
@@ -836,76 +842,76 @@ public class StudyTest {
                 .value(studies -> studies.get(0),
                         createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
 
-//        //insert a study with a case (multipartfile)
-//        UUID s2Uuid = createStudy("userId", TEST_FILE, IMPORTED_CASE_UUID_STRING, true);
-//
-//        // check the study s2
-//        webTestClient.get()
-//                .uri("/v1/studies/{studyUuid}", s2Uuid)
-//                .header("userId", "userId")
-//                .exchange()
-//                .expectStatus().isOk()
-//                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-//                .expectBody(StudyInfos.class)
-//                .value(createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
-//
-//        UUID randomUuid = UUID.randomUUID();
-//        //get a non existing study -> 404 not found
-//        webTestClient.get()
-//            .uri("/v1/studies/{studyUuid}", randomUuid)
-//            .header("userId", "userId")
-//            .exchange()
-//            .expectStatus().isNotFound()
-//            .expectBody();
-//
-//        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-//
-//        //delete existing study s2
-//        webTestClient.delete()
-//            .uri("/v1/studies/" + s2Uuid)
-//            .header("userId", "userId")
-//            .exchange()
-//            .expectStatus().isOk();
-//
-//        // assert that the broker message has been sent
-//        Message<byte[]> message = output.receive(TIMEOUT);
-//        assertEquals("", new String(message.getPayload()));
-//        MessageHeaders headers = message.getHeaders();
-//        assertEquals("userId", headers.get(HEADER_USER_ID));
-//        assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
-//        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
-//
-//        var httpRequests = getRequestsDone(1);
-//        assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
-//
-//        //expect only 1 study (public one) since the other is private and we use another userId
-//        var result = webTestClient.get()
-//                .uri("/v1/studies")
-//                .header("userId", "a")
-//                .exchange()
-//                .expectStatus().isOk()
-//                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-//                .expectBodyList(CreatedStudyBasicInfos.class)
-//                .returnResult();
-//        assertEquals(2, result.getResponseBody().size());
-//
-//        //get available export format
-//        webTestClient.get()
-//            .uri("/v1/export-network-formats")
-//            .exchange()
-//            .expectStatus().isOk()
-//            .expectBody(String.class)
-//            .isEqualTo("[\"CGMES\",\"UCTE\",\"XIIDM\"]");
-//
-//        assertTrue(getRequestsDone(1).contains("/v1/export/formats"));
-//
-//        //export a network
-//        webTestClient.get()
-//            .uri("/v1/studies/{studyUuid}/export-network/{format}", studyNameUserIdUuid, "XIIDM")
-//            .exchange()
-//            .expectStatus().isOk();
-//
-//        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
+        //insert a study with a case (multipartfile)
+        UUID s2Uuid = createStudy("userId", TEST_FILE, IMPORTED_CASE_UUID_STRING, true);
+
+        // check the study s2
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}", s2Uuid)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(StudyInfos.class)
+                .value(createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
+
+        UUID randomUuid = UUID.randomUUID();
+        //get a non existing study -> 404 not found
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}", randomUuid)
+            .header("userId", "userId")
+            .exchange()
+            .expectStatus().isNotFound()
+            .expectBody();
+
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+
+        //delete existing study s2
+        webTestClient.delete()
+            .uri("/v1/studies/" + s2Uuid)
+            .header("userId", "userId")
+            .exchange()
+            .expectStatus().isOk();
+
+        // assert that the broker message has been sent
+        Message<byte[]> message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("userId", headers.get(HEADER_USER_ID));
+        assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        var httpRequests = getRequestsDone(1);
+        assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
+
+        //expect only 1 study (public one) since the other is private and we use another userId
+        var result = webTestClient.get()
+                .uri("/v1/studies")
+                .header("userId", "a")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(CreatedStudyBasicInfos.class)
+                .returnResult();
+        assertEquals(2, result.getResponseBody().size());
+
+        //get available export format
+        webTestClient.get()
+            .uri("/v1/export-network-formats")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(String.class)
+            .isEqualTo("[\"CGMES\",\"UCTE\",\"XIIDM\"]");
+
+        assertTrue(getRequestsDone(1).contains("/v1/export/formats"));
+
+        //export a network
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}/export-network/{format}", studyNameUserIdUuid, "XIIDM")
+            .exchange()
+            .expectStatus().isOk();
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -1790,7 +1796,7 @@ public class StudyTest {
         requestHeaders.add("userId", userId);
         HttpEntity<String> entity = new HttpEntity<String>(requestHeaders);
 
-        BasicStudyInfos infos = restTemplate.exchange("http://localhost:" + testPort + "/v1/studies/cases/{caseUuid}", HttpMethod.POST, entity, BasicStudyInfos.class, caseUuid).getBody();
+        BasicStudyInfos infos = restTemplate.exchange(baseUrl + "/v1/studies/cases/{caseUuid}", HttpMethod.POST, entity, BasicStudyInfos.class, caseUuid).getBody();
 
         UUID studyUuid = infos.getId();
 
@@ -1842,17 +1848,31 @@ public class StudyTest {
                 .filename(fileName)
                 .contentType(MediaType.TEXT_XML);
 
-            BasicStudyInfos infos = webTestClient.post()
-                .uri(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate)
-                .header("userId", userId)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(BasicStudyInfos.class)
-                .returnResult()
-                .getResponseBody();
+//            RestTemplate restTemplate = new RestTemplate();
+//            HttpHeaders requestHeaders = new HttpHeaders();
+//            requestHeaders.add("userId", userId);
+//            HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<MultiValueMap<String, HttpEntity<?>>>(bodyBuilder.build(), requestHeaders);
+//
+//            ResponseEntity<BasicStudyInfos> infosResponse = restTemplate.postForEntity(
+//                    baseUrl + STUDIES_URL + "?isPrivate={isPrivate}",
+//                    request,
+//                    BasicStudyInfos.class,
+//                    isPrivate
+//            );
 
+//            assertEquals(HttpStatus.OK, infosResponse.getStatusCode());
+
+            
+            BasicStudyInfos infos = webTestClient.post()
+                    .uri(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate)
+                    .header("userId", userId)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody(BasicStudyInfos.class)
+                    .returnResult()
+                    .getResponseBody();
             studyUuid = infos.getId();
         }
 
