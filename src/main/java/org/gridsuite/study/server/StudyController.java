@@ -24,6 +24,7 @@ import org.springframework.http.*;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -121,7 +122,7 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The id of the network imported"),
         @ApiResponse(responseCode = "409", description = "The study already exist"),
         @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<BasicStudyInfos> createStudy(@RequestPart("caseFile") FilePart caseFile,
+    public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("caseFile") MultipartFile caseFile,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestHeader("userId") String userId) {
         BasicStudyInfos createStudy = studyService.createStudy(caseFile, userId, studyUuid);

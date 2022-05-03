@@ -32,14 +32,15 @@ public class ReportService {
 
     private String reportServerBaseUri;
 
-    private final WebClient webClient;
+    private final WebClient webClient = null;
 
     @Autowired
-    public ReportService(WebClient.Builder webClientBuilder,
+    public ReportService(
+//            WebClient.Builder webClientBuilder,
                          ObjectMapper objectMapper,
                          @Value("${backing-services.report-server.base-uri:http://report-server/}") String reportServerBaseUri) {
         this.reportServerBaseUri = reportServerBaseUri;
-        this.webClient = webClientBuilder.build();
+//        this.webClient = webClientBuilder.build();
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
         objectMapper.registerModule(reporterModelJsonModule);

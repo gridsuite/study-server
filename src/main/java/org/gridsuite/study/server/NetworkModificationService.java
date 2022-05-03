@@ -57,18 +57,18 @@ public class NetworkModificationService {
 
     private final NetworkService networkStoreService;
 
-    private final WebClient webClient;
+    private final WebClient webClient = null;
 
     private final ObjectMapper objectMapper;
 
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkService networkStoreService,
-                               WebClient.Builder webClientBuilder,
+//                               WebClient.Builder webClientBuilder,
                                ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
-        this.webClient = webClientBuilder.build();
+//        this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
 

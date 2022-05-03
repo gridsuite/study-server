@@ -50,6 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -134,7 +135,7 @@ public class StudyService {
 
     NetworkModificationTreeService networkModificationTreeService;
 
-    private final WebClient webClient;
+    private final WebClient webClient = null;
     //TODO: resttemplate from config file
     private RestTemplate restTemplate = new RestTemplate();
     private String caseServerBaseUri;
@@ -209,7 +210,7 @@ public class StudyService {
         ReportService reportService,
         @Lazy StudyInfosService studyInfosService,
         @Lazy EquipmentInfosService equipmentInfosService,
-        WebClient.Builder webClientBuilder,
+//        WebClient.Builder webClientBuilder,
         NetworkModificationTreeService networkModificationTreeService,
         ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
@@ -228,7 +229,7 @@ public class StudyService {
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.webClient = webClientBuilder.build();
+//        this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
 
@@ -302,7 +303,7 @@ public class StudyService {
         //TODO: gérer le subscribeOn(Schedulers.boundedElastic())
     }
 
-    public BasicStudyInfos createStudy(FilePart caseFile, String userId, UUID studyUuid) {
+    public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 

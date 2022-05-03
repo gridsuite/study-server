@@ -16,7 +16,7 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @SpringBootApplication
-@EnableWebFlux
+//@EnableWebFlux
 public class StudyApplication {
 
     public static void main(String[] args) {
