@@ -32,7 +32,3 @@ backing-services:
 
 network-store-server:
   base-uri: http://localhost:8080/
-
-# default values for loadflow providers "Hades2" or "OpenLoadFlow"
-loadflow:
-  default-provider: OpenLoadFlow
