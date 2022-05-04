@@ -137,6 +137,7 @@ public class StudyService {
     private String loadFlowServerBaseUri;
     private String securityAnalysisServerBaseUri;
     private String actionsServerBaseUri;
+    private String defaultLoadflowProvider;
 
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
@@ -194,6 +195,7 @@ public class StudyService {
         @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
         @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
+        @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
         NetworkService networkStoreService,
@@ -220,6 +222,7 @@ public class StudyService {
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
@@ -1181,7 +1184,7 @@ public class StudyService {
     @Transactional
     public void doUpdateLoadFlowProvider(UUID studyUuid, String provider) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider));
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
     }
 
     public Mono<Void> updateLoadFlowProvider(UUID studyUuid, String provider) {
@@ -1479,7 +1482,7 @@ public class StudyService {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
-            StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, null, loadFlowParameters);
+            StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
             return insertStudy(studyEntity);
         });
     }
@@ -1891,6 +1894,10 @@ public class StudyService {
         if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public String getDefaultLoadflowProviderValue() {
+        return defaultLoadflowProvider;
     }
 }
 

@@ -989,6 +989,13 @@ public class StudyController {
             .then(studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active)));
     }
 
+    @GetMapping(value = "/loadflow-default-provider")
+    @Operation(summary = "get load flow default provider value")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider value has been found"))
+    public ResponseEntity<Mono<String>> getDefaultLoadflowProvider() {
+        return ResponseEntity.ok().body(Mono.fromCallable(studyService::getDefaultLoadflowProviderValue));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/reindex-all")
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")
