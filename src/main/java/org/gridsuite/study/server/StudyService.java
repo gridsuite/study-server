@@ -195,7 +195,7 @@ public class StudyService {
         @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
         @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
-        @Value("${loadflow.default-provider:OpenLoadFlow}") String defaultLoadflowProvider,
+        @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
         NetworkService networkStoreService,
