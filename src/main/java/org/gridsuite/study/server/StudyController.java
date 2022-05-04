@@ -135,9 +135,8 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study information"),
         @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
-    public ResponseEntity<Mono<StudyInfos>> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        Mono<StudyInfos> studyMono = studyService.getStudyInfos(studyUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyMono.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
+    public ResponseEntity<StudyInfos> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}")
@@ -213,19 +212,19 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines graphics")})
-    public ResponseEntity<Mono<String>> getLinesGraphics(
+    public ResponseEntity<String> getLinesGraphics(
             @PathVariable("studyUuid") UUID studyUuid) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(studyService::getLinesGraphics));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(networkStoreService.getNetworkUuid(studyUuid)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/geo-data/substations")
     @Operation(summary = "Get Network substations graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substations graphics")})
-    public ResponseEntity<Mono<String>> getSubstationsGraphic(
+    public ResponseEntity<String> getSubstationsGraphic(
             @PathVariable("studyUuid") UUID studyUuid) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(studyService::getSubstationsGraphics));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(networkStoreService.getNetworkUuid(studyUuid)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines")
@@ -671,14 +670,15 @@ public class StudyController {
     @Operation(summary = "Get study report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report for study"), @ApiResponse(responseCode = "404", description = "The study not found")})
     public ResponseEntity<Mono<ReporterModel>> getReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(reportService::getReport));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(reportService.getReport(networkStoreService.getNetworkUuid(studyUuid)));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/report")
     @Operation(summary = "Delete study report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report for study deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Mono<Void>> deleteReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(reportService::deleteReport));
+    public ResponseEntity<Void> deleteReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        reportService.deleteReport(networkStoreService.getNetworkUuid(studyUuid));
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/svg-component-libraries")

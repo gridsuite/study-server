@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -33,6 +35,8 @@ public class ReportService {
     private String reportServerBaseUri;
 
     private final WebClient webClient = null;
+
+    private RestTemplate restTemplate = new RestTemplate();
 
     @Autowired
     public ReportService(
@@ -63,11 +67,14 @@ public class ReportService {
                 .bodyToMono(ReporterModel.class);
     }
 
-    public Mono<Void> deleteReport(UUID networkUuid) {
-        return webClient.delete()
-                .uri(this.getReportServerURI() + networkUuid)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because report may not exist
-                .bodyToMono(Void.class);
+    public void deleteReport(UUID networkUuid) {
+        try {
+            restTemplate.delete(this.getReportServerURI() + networkUuid);
+        } catch (HttpStatusCodeException e)   {
+         // Ignore if 404 because report may not exist
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
     }
 }

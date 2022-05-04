@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
@@ -29,6 +30,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 
+import org.assertj.core.api.Assertions;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -52,9 +54,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.boot.web.client.RootUriTemplateHandler;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -74,11 +79,15 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.ResourceUtils;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.util.DefaultUriTemplateHandler;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -105,7 +114,12 @@ import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherSt
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -114,14 +128,22 @@ import static org.mockito.Mockito.when;
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient(timeout = "200000")
 //@EnableWebFlux
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
+@SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class StudyTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
 
-    @LocalServerPort
-    private String testPort;
+    @Autowired
+    private MockMvc mockMvc;
+    
+//    @LocalServerPort
+//    private String testPort;
+//
+//    RootUriTemplateHandler uriTemplateHandler;
+//
+//    RestTemplate restTemplate;
 
     private static final long TIMEOUT = 200000;
     private static final String STUDIES_URL = "/v1/studies";
@@ -267,9 +289,7 @@ public class StudyTest {
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
         initMockBeans(network);
-
-        baseUrl = "http://localhost:" + testPort;
-
+        
         server = new MockWebServer();
 
         // Start the server.
@@ -772,106 +792,106 @@ public class StudyTest {
     }
 
     @Test
-    public void test() {
+    public void test() throws Exception {
+        MvcResult result;
+        String resultAsString;
+
         //empty list
-//        webTestClient.get()
-//            .uri("/v1/studies")
-//            .header("userId", "userId")
-//            .exchange()
-//            .expectStatus().isOk()
-//            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-//            .expectBody(String.class)
-//            .isEqualTo("[]");
-//
-//        //empty list
-//        webTestClient.get()
-//            .uri("/v1/study_creation_requests")
-//            .header("userId", "userId")
-//            .exchange()
-//            .expectStatus().isOk()
-//            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-//            .expectBody(String.class)
-//            .isEqualTo("[]");
+        mockMvc.perform(get("/v1/studies").header("userId", "userId"))
+            .andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON),
+                content().string("[]")
+            );
+
+        //empty list
+        mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId"))
+            .andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON),
+                content().string("[]")
+            );
 
         //insert a study
         UUID studyUuid = createStudy("userId", CASE_UUID);
 
-//        // check the study
-//        webTestClient.get()
-//            .uri("/v1/studies/{studyUuid}", studyUuid)
-//            .header("userId", "userId")
-//            .exchange()
-//            .expectStatus().isOk()
-//            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-//            .expectBody(StudyInfos.class)
-//            .value(createMatcherStudyInfos(studyUuid, "userId", "UCTE"));
-//
-//        //insert a study with a non existing case and except exception
-//        webTestClient.post()
-//                .uri("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", "00000000-0000-0000-0000-000000000000", "false")
-//                .header("userId", "userId")
-//                .exchange()
-//                .expectStatus().isEqualTo(424)
-//                .expectBody()
-//                .jsonPath("$")
-//                .isEqualTo(CASE_NOT_FOUND.name());
-//
-//        assertTrue(getRequestsDone(1).contains(String.format("/v1/cases/%s/exists", "00000000-0000-0000-0000-000000000000")));
-//
-//        webTestClient.get()
-//                .uri("/v1/studies")
-//                .header("userId", "userId")
-//                .exchange()
-//                .expectStatus().isOk()
-//                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-//                .expectBodyList(CreatedStudyBasicInfos.class)
-//                .value(studies -> studies.get(0),
-//                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "UCTE"));
-//
-//        //insert the same study but with another user (should work)
-//        //even with the same name should work
-//        studyUuid = createStudy("userId2", CASE_UUID);
-//
-//        webTestClient.get()
-//                .uri("/v1/studies")
-//                .header("userId", "userId2")
-//                .exchange()
-//                .expectStatus().isOk()
-//                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-//                .expectBodyList(CreatedStudyBasicInfos.class)
-//                .value(studies -> studies.get(0),
-//                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
+        // check the study
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header("userId", "userId"))
+            .andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON)
+            ).andReturn();
+
+        resultAsString = result.getResponse().getContentAsString();
+        StudyInfos infos = mapper.readValue(resultAsString, StudyInfos.class);
+
+        assertThat(infos, createMatcherStudyInfos(studyUuid, "userId", "UCTE"));
+
+        //insert a study with a non existing case and except exception
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", "00000000-0000-0000-0000-000000000000", "false").header("userId", "userId"))
+            .andExpectAll(
+                status().isFailedDependency(),
+                content().contentType(MediaType.APPLICATION_JSON),
+                jsonPath("$").value(CASE_NOT_FOUND.name())
+            );
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/cases/%s/exists", "00000000-0000-0000-0000-000000000000")));
+
+        result = mockMvc.perform(get("/v1/studies").header("userId", "userId"))
+            .andExpectAll(
+                    status().isOk(),
+                    content().contentType(MediaType.APPLICATION_JSON)
+            ).andReturn();
+
+        resultAsString = result.getResponse().getContentAsString();
+        List<CreatedStudyBasicInfos> createdStudyBasicInfos = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertThat(createdStudyBasicInfos.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "UCTE"));
+
+
+        //insert the same study but with another user (should work)
+        //even with the same name should work
+        studyUuid = createStudy("userId2", CASE_UUID);
+
+        result = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON)
+                ).andReturn();
+
+        resultAsString = result.getResponse().getContentAsString();
+        createdStudyBasicInfos = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertThat(createdStudyBasicInfos.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
 
         //insert a study with a case (multipartfile)
         UUID s2Uuid = createStudy("userId", TEST_FILE, IMPORTED_CASE_UUID_STRING, true);
 
         // check the study s2
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}", s2Uuid)
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBody(StudyInfos.class)
-                .value(createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}", s2Uuid).header("userId", "userId"))
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON)
+                ).andReturn();
+
+        resultAsString = result.getResponse().getContentAsString();
+        StudyInfos studyInfos = mapper.readValue(resultAsString, StudyInfos.class);
+
+        assertThat(studyInfos, createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
 
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
-        webTestClient.get()
-            .uri("/v1/studies/{studyUuid}", randomUuid)
-            .header("userId", "userId")
-            .exchange()
-            .expectStatus().isNotFound()
-            .expectBody();
+        mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header("userId", "userId"))
+            .andExpectAll(
+                    status().isNotFound(),
+                    content().string("")
+            );
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
         //delete existing study s2
-        webTestClient.delete()
-            .uri("/v1/studies/" + s2Uuid)
-            .header("userId", "userId")
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", s2Uuid).header("userId", "userId"))
+            .andExpect(status().isOk());
 
         // assert that the broker message has been sent
         Message<byte[]> message = output.receive(TIMEOUT);
@@ -885,7 +905,7 @@ public class StudyTest {
         assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
 
         //expect only 1 study (public one) since the other is private and we use another userId
-        var result = webTestClient.get()
+        var resulta = webTestClient.get()
                 .uri("/v1/studies")
                 .header("userId", "a")
                 .exchange()
@@ -893,7 +913,7 @@ public class StudyTest {
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBodyList(CreatedStudyBasicInfos.class)
                 .returnResult();
-        assertEquals(2, result.getResponseBody().size());
+        assertEquals(2, resulta.getResponseBody().size());
 
         //get available export format
         webTestClient.get()
@@ -1791,12 +1811,11 @@ public class StudyTest {
 
     @SneakyThrows
     private UUID createStudy(String userId, UUID caseUuid, String... errorMessage) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders requestHeaders = new HttpHeaders();
-        requestHeaders.add("userId", userId);
-        HttpEntity<String> entity = new HttpEntity<String>(requestHeaders);
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
+                .andReturn();
+        String resultAsString = result.getResponse().getContentAsString();
 
-        BasicStudyInfos infos = restTemplate.exchange(baseUrl + "/v1/studies/cases/{caseUuid}", HttpMethod.POST, entity, BasicStudyInfos.class, caseUuid).getBody();
+        BasicStudyInfos infos = mapper.readValue(resultAsString, BasicStudyInfos.class);
 
         UUID studyUuid = infos.getId();
 
@@ -1843,29 +1862,18 @@ public class StudyTest {
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
 
-            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-            bodyBuilder.part("caseFile", mockFile.getBytes())
-                .filename(fileName)
-                .contentType(MediaType.TEXT_XML);
+            MvcResult result = mockMvc.perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate)
+                    .file(mockFile)
+                    .header("userId", userId)
+                    .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isOk())
+                .andReturn();
 
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders requestHeaders = new HttpHeaders();
-            requestHeaders.add("userId", userId);
-            requestHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-            HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<MultiValueMap<String, HttpEntity<?>>>(bodyBuilder.build(), requestHeaders);
+            String resultAsString = result.getResponse().getContentAsString();
+            BasicStudyInfos infos = mapper.readValue(resultAsString, BasicStudyInfos.class);
 
-            ResponseEntity<BasicStudyInfos> infosResponse = restTemplate.postForEntity(
-                    baseUrl + STUDIES_URL + "?isPrivate={isPrivate}",
-                    request,
-                    BasicStudyInfos.class,
-                    isPrivate
-            );
-          studyUuid = infosResponse.getBody().getId();
+            studyUuid = infos.getId();
 
-
-            assertEquals(HttpStatus.OK, infosResponse.getStatusCode());
-
-            
 //            BasicStudyInfos infos = webTestClient.post()
 //                    .uri(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate)
 //                    .header("userId", userId)

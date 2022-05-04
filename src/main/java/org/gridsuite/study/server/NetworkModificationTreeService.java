@@ -287,9 +287,13 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getVariantId(nodeUuid, generateId)).orElse(null);
     }
 
-    public Mono<String> getVariantId(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetVariantId(nodeUuid, true))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    public String getVariantId(UUID nodeUuid) {
+        String variantId = self.doGetVariantId(nodeUuid, true);
+        if (variantId == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        return variantId;
     }
 
     @Transactional
@@ -297,9 +301,12 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElse(null);
     }
 
-    public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(nodeUuid, true))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    public UUID getModificationGroupUuid(UUID nodeUuid) {
+        UUID modificationGroupUuid = self.doGetModificationGroupUuid(nodeUuid, true);
+        if (modificationGroupUuid == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+        return modificationGroupUuid;
     }
 
     @Transactional(readOnly = true)
@@ -338,8 +345,8 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowStatus(nodeUuid, loadFlowStatus));
     }
 
-    public Mono<Void> updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(nodeUuid, loadFlowStatus));
+    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
+        self.doUpdateLoadFlowStatus(nodeUuid, loadFlowStatus);
     }
 
     @Transactional

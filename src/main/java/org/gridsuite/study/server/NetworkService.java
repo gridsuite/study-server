@@ -46,22 +46,24 @@ public class NetworkService {
         this.studyRepository = studyRepository;
     }
 
-    Mono<UUID> getNetworkUuid(UUID studyUuid) {
-        return Mono.fromCallable(() -> doGetNetworkUuid(studyUuid).orElse(null))
-                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
+    UUID getNetworkUuid(UUID studyUuid) {
+        UUID networkUuid = doGetNetworkUuid(studyUuid).orElse(null);
+        if (networkUuid == null) {
+            throw new StudyException(STUDY_NOT_FOUND);
+        }
+        return networkUuid;
     }
 
     Optional<UUID> doGetNetworkUuid(UUID studyUuid) {
         return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid);
     }
 
-    Mono<Void> deleteNetwork(UUID networkUuid) {
+    void deleteNetwork(UUID networkUuid) {
         try {
             networkStoreService.deleteNetwork(networkUuid);
         } catch (PowsyblException e) {
             throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
         }
-        return Mono.empty();
     }
 
     Mono<Void> deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
