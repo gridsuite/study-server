@@ -26,6 +26,7 @@ public class StudyException extends RuntimeException {
         STUDY_CREATION_FAILED,
         LINE_MODIFICATION_FAILED,
         LOAD_CREATION_FAILED,
+        LOAD_MODIFICATION_FAILED,
         CANT_DELETE_ROOT_NODE,
         DELETE_EQUIPMENT_FAILED,
         GENERATOR_CREATION_FAILED,
@@ -38,6 +39,7 @@ public class StudyException extends RuntimeException {
         BAD_NODE_TYPE,
         NETWORK_NOT_FOUND,
         EQUIPMENT_NOT_FOUND,
+        NETWORK_INDEXATION_FAILED
     }
 
     private final Type type;

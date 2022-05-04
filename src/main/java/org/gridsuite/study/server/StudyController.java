@@ -392,9 +392,10 @@ public class StudyController {
     public ResponseEntity<Mono<String>> getLoadsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadsMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLoadsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/{loadId}")
@@ -695,7 +696,17 @@ public class StudyController {
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
                                                  @RequestBody String createLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
-            .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
+                .then(studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads")
+    @Operation(summary = "modify a load in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been modified")})
+    public ResponseEntity<Mono<Void>> modifyLoad(@PathVariable("studyUuid") UUID studyUuid,
+                                                 @PathVariable("nodeUuid") UUID nodeUuid,
+                                                 @RequestBody String modifyLoadAttributes) {
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
+                .then(studyService.modifyEquipment(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid)));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation")
@@ -983,5 +994,12 @@ public class StudyController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider value has been found"))
     public ResponseEntity<Mono<String>> getDefaultLoadflowProvider() {
         return ResponseEntity.ok().body(Mono.fromCallable(studyService::getDefaultLoadflowProviderValue));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/reindex-all")
+    @Operation(summary = "reindex the study")
+    @ApiResponse(responseCode = "200", description = "Study reindexed")
+    public ResponseEntity<Mono<Void>> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.reindexStudy(studyUuid));
     }
 }
