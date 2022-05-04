@@ -108,7 +108,7 @@ import static org.mockito.Mockito.when;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "200000")
+@AutoConfigureWebTestClient
 @EnableWebFlux
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
@@ -116,7 +116,7 @@ public class StudyTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
 
-    private static final long TIMEOUT = 200000;
+    private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_WITH_ERRORS = "testCase_with_errors.xiidm";
