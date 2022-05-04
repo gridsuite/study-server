@@ -457,7 +457,8 @@ public class StudyTest {
                             .setBody(loadFlowOKString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true") ||
-                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
+                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*") ||
+                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&provider=(Hades2|OpenLoadFlow)\\&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
                         .setBody(loadFlowErrorString)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1165,7 +1166,7 @@ public class StudyTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, UPDATE_TYPE_LOADFLOW);
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&provider=" + defaultLoadflowProvider + "\\&variantId=" + VARIANT_ID)));
 
         // check load flow status
         webTestClient.get()
