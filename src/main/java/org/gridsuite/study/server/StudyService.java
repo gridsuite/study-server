@@ -1599,6 +1599,7 @@ public class StudyService {
 
     public Mono<Void> updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
         return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, false);
 
             return networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid)
@@ -1910,7 +1911,7 @@ public class StudyService {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
-            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
 
             return networkModificationService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, groupUuid, modificationType, variantId, modificationUuid)
                 .collect(Collectors.toSet())
