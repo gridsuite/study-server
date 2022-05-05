@@ -18,6 +18,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -433,10 +434,12 @@ public class StudyService {
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         UUID networkUuid = null;
-        List<UUID> groupsUuids = new ArrayList<>();
+        List<UUID> groupUuids = new ArrayList<>();
+        List<UUID> reportUuids = new ArrayList<>();
         if (studyCreationRequestEntity.isEmpty()) {
             networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
-            groupsUuids = networkModificationTreeService.getAllModificationGroupUuids(studyUuid);
+            groupUuids = networkModificationTreeService.getAllModificationGroupUuids(studyUuid);
+            reportUuids = networkModificationTreeService.getAllReportUuids(studyUuid);
             studyRepository.findById(studyUuid).ifPresent(s -> {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
@@ -447,7 +450,7 @@ public class StudyService {
         }
         emitStudyDelete(studyUuid, userId);
 
-        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupsUuids)) : Optional.empty();
+        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupUuids, reportUuids)) : Optional.empty();
     }
 
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
@@ -460,9 +463,9 @@ public class StudyService {
             })
             .publish(deleteStudyInfosMono ->
                 Mono.when(// in parallel
-                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getGroupsUuids())).flatMap(networkModificationService::deleteModifications),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getGroupUuids())).flatMap(networkModificationService::deleteModifications),
                     deleteStudyInfosMono.flatMap(infos -> deleteEquipmentIndexes(infos.getNetworkUuid())),
-                    deleteStudyInfosMono.flatMap(infos -> reportService.deleteReport(infos.getNetworkUuid())),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getReportUuids())).flatMap(reportService::deleteReport),
                     deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid()))
                 )
             )
@@ -896,11 +899,11 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(UUID studyUuid, UUID nodeUuid) {
-        return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid), getReportUuid(nodeUuid))).flatMap(tuple4 -> {
-            UUID networkUuid = tuple4.getT1();
-            String provider = tuple4.getT2();
-            String variantId = tuple4.getT3();
-            UUID reportUuid = tuple4.getT4();
+        return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getNodeModificationInfos(nodeUuid))).flatMap(tuple3 -> {
+            UUID networkUuid = tuple3.getT1();
+            String provider = tuple3.getT2();
+            String variantId = tuple3.getT3().getVariantId();
+            UUID reportUuid = tuple3.getT3().getReportUuid();
 
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", reportUuid.toString())
@@ -1851,6 +1854,8 @@ public class StudyService {
                 Mono.when(// in parallel
                     // delete modifications
                     deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getModificationGroupUuids())).flatMap(networkModificationService::deleteModifications),
+                    // delete reports
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getReportUuids())).flatMap(reportService::deleteReport),
                     // delete security analysis result
                     deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getSecurityAnalysisResultUuids())).flatMap(this::deleteSaResult),
                     // delete network variant
@@ -1913,8 +1918,20 @@ public class StudyService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
+    public Mono<Pair<UUID, String>> getReportUuidAndName(UUID nodeUuid) {
+        return networkModificationTreeService.getReportUuidAndName(nodeUuid);
+    }
+
     public Mono<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid) {
-        return getReportUuid(nodeUuid).flatMap(reportService::getReport);
+        return getReportUuidAndName(nodeUuid).flatMap(info ->
+            reportService.getReport(info.getLeft()).switchIfEmpty(Mono.just(new ReporterModel(nodeUuid.toString(), nodeUuid.toString())))
+            .map(reporter -> {
+                ReporterModel newReporter = new ReporterModel(reporter.getTaskKey(), info.getRight(), reporter.getTaskValues());
+                reporter.getReports().forEach(newReporter::report);
+                reporter.getSubReporters().forEach(newReporter::addSubReporter);
+                return newReporter;
+            })
+        );
     }
 
     public Mono<Void> deleteNodeReport(UUID studyUuid, UUID nodeUuid) {

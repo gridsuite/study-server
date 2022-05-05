@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.networkmodificationtree;
 
 import com.powsybl.loadflow.LoadFlowResult;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
@@ -199,6 +200,18 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getReportUuid(UUID nodeUuid, boolean generateId) {
         return getReportUuid(getNode(nodeUuid), generateId);
+    }
+
+    public Pair<UUID, String> getReportUuidAndName(AbstractNode node, boolean generateId) {
+        if (node.getReportUuid() == null && generateId) {
+            node.setReportUuid(UUID.randomUUID());
+            updateNode(node);
+        }
+        return Pair.of(node.getReportUuid(), node.getName());
+    }
+
+    public Pair<UUID, String> getReportUuidAndName(UUID nodeUuid, boolean generateId) {
+        return getReportUuidAndName(getNode(nodeUuid), generateId);
     }
 
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {

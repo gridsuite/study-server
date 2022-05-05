@@ -483,6 +483,12 @@ public class NetworkModificationTreeTest {
         UUID nodeUuid = node2.getId();
         assertNotNull(networkModificationTreeService.doGetModificationGroupUuid(nodeUuid, true));
         assertFalse(networkModificationTreeService.doGetVariantId(nodeUuid, true).isEmpty());
+
+        assertEquals(0, networkModificationTreeService.getAllReportUuids(root.getStudyId()).size());
+        AtomicReference<UUID> reportUuid = new AtomicReference<>();
+        networkModificationTreeService.getReportUuid(node1.getId()).subscribe(reportUuid::set);
+        assertNotNull(reportUuid.get());
+        assertEquals(1, networkModificationTreeService.getAllReportUuids(root.getStudyId()).size());
     }
 
     @Test

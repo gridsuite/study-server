@@ -143,6 +143,7 @@ public class StudyTest {
     public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.6\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\"}";
     public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.6\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\"}";
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
+    private static final ReporterModel REPORT_TEST_ROOT_NODE = new ReporterModel("test", "Root");
     private static final String VOLTAGE_LEVEL_ID = "VOLTAGE_LEVEL_ID";
     private static final String VARIANT_ID = "variant_1";
     public static final String POST = "POST";
@@ -445,13 +446,13 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true") ||
-                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true") ||
+                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
                         return new MockResponse().setResponseCode(200)
                             .setBody(loadFlowOKString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true") ||
-                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true") ||
+                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
                         .setBody(loadFlowErrorString)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -477,6 +478,28 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
+                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                        .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                    return new MockResponse().setBody(String.valueOf(networkLoadFlowErrorInfosAsString)).setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                    countDownLatch.await(2, TimeUnit.SECONDS);
+                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/reports/.*")) {
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(mapper.writeValueAsString(REPORT_TEST))
+                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")
+                           || path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
 
                 switch (path) {
@@ -897,7 +920,7 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         var httpRequests = getRequestsDone(1);
-        assertTrue(httpRequests.contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
+        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         //expect only 1 study (public one) since the other is private and we use another userId
         var result = webTestClient.get()
@@ -956,28 +979,28 @@ public class StudyTest {
 
     @Test
     public void testLogsReport() {
-        createStudy("userId", CASE_UUID);
-        UUID studyId = studyRepository.findAll().get(0).getId();
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/report", studyId)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report", studyUuid, rootNodeUuid)
             .header("userId", "userId")
             .exchange()
             .expectStatus()
             .isOk()
             .expectBody(ReporterModel.class)
-            .value(new MatcherReport(REPORT_TEST));
+            .value(new MatcherReport(REPORT_TEST_ROOT_NODE));
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         webTestClient.delete()
-            .uri("/v1/studies/{studyUuid}/report", studyId)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report", studyUuid, rootNodeUuid)
             .header("userId", "userId")
             .exchange()
             .expectStatus()
             .isOk();
 
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
     @Test
@@ -1007,7 +1030,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
 
         // check load flow status
         webTestClient.get()
@@ -1078,7 +1101,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
 
         // get default load flow provider
         webTestClient.get()
@@ -1130,7 +1153,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID_2)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID_2)));
 
         // check load flow status
         webTestClient.get()
@@ -1159,7 +1182,7 @@ public class StudyTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, UPDATE_TYPE_LOADFLOW);
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
 
         // check load flow status
         webTestClient.get()
@@ -1850,7 +1873,7 @@ public class StudyTest {
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", caseUuid, FIRST_VARIANT_ID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
 
         return studyUuid;
     }
@@ -1914,7 +1937,7 @@ public class StudyTest {
         assertTrue(requests.contains("/v1/cases/private"));
         if (caseUuid != null) {
             assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
-            assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", caseUuid, FIRST_VARIANT_ID)));
+            assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
         }
         return studyUuid;
     }
@@ -1990,7 +2013,7 @@ public class StudyTest {
         var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.contains("/v1/cases/private"));
         assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
-        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", IMPORTED_BLOCKING_CASE_UUID_STRING, FIRST_VARIANT_ID)));
+        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
 
         countDownLatch = new CountDownLatch(1);
 
@@ -2050,7 +2073,7 @@ public class StudyTest {
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
     }
 
     @Test
@@ -2841,7 +2864,7 @@ public class StudyTest {
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(modificationNode5.getId());
         assertNull(buildInfos.getOriginVariantId());  // previous built node is root node
         assertEquals("variant_5", buildInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroups());
+        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
 
         modificationNode3.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode3 as built
         networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode3);
@@ -2850,7 +2873,7 @@ public class StudyTest {
         buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
         assertEquals("variant_3", buildInfos.getOriginVariantId());  // variant to clone is variant associated to node modificationNode3
         assertEquals("variant_4", buildInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroups());
+        assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroupUuids());
 
         modificationNode2.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode2 as not built
         networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode2);
