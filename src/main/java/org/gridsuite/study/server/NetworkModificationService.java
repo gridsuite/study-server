@@ -370,18 +370,19 @@ public class NetworkModificationService {
         return webClient.put().uri(getNetworkModificationServerURI(false) + path).retrieve().bodyToMono(Void.class);
     }
 
-    public Mono<Void> deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
+    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications");
         path.queryParam("modificationsUuids", modificationsUuids);
-        return webClient.delete()
-                .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString()).retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because
-                                                                                               // modification group
-                                                                                               // does not exist if no
-                                                                                               // modifications
-                .bodyToMono(Void.class);
+        try {
+            restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
+        } catch (HttpClientErrorException e) {
+            // Ignore 404 because modification group does not exist if no modifications
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
     }
 
     public Mono<Void> reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {

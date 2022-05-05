@@ -336,8 +336,8 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public Mono<Void> updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren));
+    public void updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
+        self.doUpdateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren);
     }
 
     @Transactional
@@ -511,8 +511,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<Boolean> isReadOnly(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid)));
+    public Optional<Boolean> isReadOnly(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid));
     }
 
     @Transactional
@@ -541,8 +541,8 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).handleExcludeModification(nodeUuid, modificationUUid, active));
     }
 
-    public Mono<Void> handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
-        return Mono.fromRunnable(() -> self.doHandleExcludeModification(nodeUuid, modificationUUid, active));
+    public void handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
+        self.doHandleExcludeModification(nodeUuid, modificationUUid, active);
     }
 
     @Transactional
@@ -550,8 +550,8 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationsToExclude(nodeUuid, modificationUUid));
     }
 
-    public Mono<Void> removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
-        return Mono.fromRunnable(() -> self.doRemoveModificationsToExclude(nodeUuid, modificationUuid));
+    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
+        self.doRemoveModificationsToExclude(nodeUuid, modificationUuid);
     }
 
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
