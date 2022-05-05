@@ -12,6 +12,5 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
  */
 public enum NodeType {
     ROOT,
-    MODEL,
     NETWORK_MODIFICATION
 }

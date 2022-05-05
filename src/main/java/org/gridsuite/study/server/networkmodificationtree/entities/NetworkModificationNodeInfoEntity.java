@@ -10,13 +10,23 @@ package org.gridsuite.study.server.networkmodificationtree.entities;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
+import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.ForeignKey;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import java.util.Set;
 import java.util.UUID;
@@ -27,18 +37,38 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
+@Setter
 @Entity
 @Table(name = "NetworkModificationNodeInfo  ")
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
-    UUID networkModificationId;
+    private UUID networkModificationId;
 
     @Column
-    String variantId;
+    private String variantId;
 
     @Column(name = "modificationsToExclude")
     @ElementCollection
     @CollectionTable(foreignKey = @ForeignKey(name = "networkModificationNodeInfoEntity_modificationsToExclude_fk"), indexes = {@Index(name = "networkModificationNodeInfoEntity_modificationsToExclude_idx", columnList = "network_modification_node_info_entity_id_node")})
     private Set<UUID> modificationsToExclude;
+
+    @Column(name = "loadFlowStatus")
+    @Enumerated(EnumType.STRING)
+    private LoadFlowStatus loadFlowStatus;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "loadFlowResultEntity_id",
+        referencedColumnName  =  "id",
+        foreignKey = @ForeignKey(
+            name = "loadFlowResult_id_fk"
+        ))
+    private LoadFlowResultEntity loadFlowResult;
+
+    @Column(name = "securityAnalysisResultUuid")
+    private UUID securityAnalysisResultUuid;
+
+    @Column(name = "buildStatus", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private BuildStatus buildStatus;
 }
