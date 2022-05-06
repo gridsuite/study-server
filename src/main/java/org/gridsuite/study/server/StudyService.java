@@ -1076,10 +1076,11 @@ public class StudyService {
         }
     }
 
-    private Mono<Void> assertSecurityAnalysisNotRunning(UUID nodeUuid) {
-        return getSecurityAnalysisStatus(nodeUuid).flatMap(sas -> sas.equals(SecurityAnalysisStatus.RUNNING.name())
-                ? Mono.error(new StudyException(SECURITY_ANALYSIS_RUNNING))
-                : Mono.empty());
+    private void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
+        String sas = getSecurityAnalysisStatus(nodeUuid);
+        if (sas.equals(SecurityAnalysisStatus.RUNNING.name())) {
+            throw new StudyException(SECURITY_ANALYSIS_RUNNING);
+        }
     }
 
     public void assertComputationNotRunning(UUID nodeUuid) {
@@ -1241,19 +1242,29 @@ public class StudyService {
         return result;
     }
 
-    public Mono<String> getSecurityAnalysisResult(UUID nodeUuid, List<String> limitTypes) {
+    public String getSecurityAnalysisResult(UUID nodeUuid, List<String> limitTypes) {
         Objects.requireNonNull(limitTypes);
+        String result = null;
+        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
 
-        return getSecurityAnalysisResultUuid(nodeUuid)
-                .flatMap(resultUuid -> Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                    String path = UriComponentsBuilder
-                            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-                            .queryParam("limitType", limitTypes).buildAndExpand(resultUuid).toUriString();
-                    return webClient.get().uri(securityAnalysisServerBaseUri + path).retrieve()
-                            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND,
-                                    clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
-                            .bodyToMono(String.class);
-                }));
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+                .queryParam("limitType", limitTypes).buildAndExpand(resultUuidOpt.get()).toUriString();
+        try {
+            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpClientErrorException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+
+        return result;
     }
 
     public Integer getContingencyCount(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid) {
@@ -1328,17 +1339,28 @@ public class StudyService {
         return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
     }
 
-    public Mono<String> getSecurityAnalysisStatus(UUID nodeUuid) {
-        return getSecurityAnalysisResultUuid(nodeUuid)
-                .flatMap(resultUuid -> Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                    String path = UriComponentsBuilder
-                            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-                            .buildAndExpand(resultUuid).toUriString();
-                    return webClient.get().uri(securityAnalysisServerBaseUri + path).retrieve()
-                            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND,
-                                    clientResponse -> Mono.error(new StudyException(SECURITY_ANALYSIS_NOT_FOUND)))
-                            .bodyToMono(String.class);
-                }));
+    public String getSecurityAnalysisStatus(UUID nodeUuid) {
+        String result = null;
+        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
+                .buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        try {
+            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpClientErrorException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+            }
+            throw e;
+        }
+
+        return result;
     }
 
     private Mono<Void> invalidateSaStatus(List<UUID> uuids) {
@@ -1394,24 +1416,28 @@ public class StudyService {
         this.actionsServerBaseUri = actionsServerBaseUri;
     }
 
-    public Mono<Void> stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        return getSecurityAnalysisResultUuid(nodeUuid)
-                .flatMap(resultUuid -> Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
-                    String receiver;
-                    try {
-                        receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
-                                StandardCharsets.UTF_8);
-                    } catch (JsonProcessingException e) {
-                        throw new UncheckedIOException(e);
-                    }
-                    String path = UriComponentsBuilder
-                            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                            .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
-                    return webClient.put().uri(securityAnalysisServerBaseUri + path).retrieve().bodyToMono(Void.class);
-                }));
+        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isEmpty()) {
+            return;
+        }
+
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
     }
 
     @Bean
@@ -1509,13 +1535,11 @@ public class StudyService {
         studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
-    Mono<List<String>> getAvailableSvgComponentLibraries() {
+    List<String> getAvailableSvgComponentLibraries() {
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries").toUriString();
 
-        return webClient.get().uri(singleLineDiagramServerBaseUri + path).retrieve()
-                .bodyToMono(new ParameterizedTypeReference<>() {
-                });
+        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() { }).getBody();
     }
 
     UUID getModificationGroupUuid(UUID nodeUuid) {
@@ -1630,7 +1654,7 @@ public class StudyService {
         return networkModificationTreeService.getLoadFlowStatus(nodeUuid);
     }
 
-    public Mono<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
+    public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
     }
 

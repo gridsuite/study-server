@@ -376,8 +376,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid)));
+    public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid));
     }
 
     @Transactional(readOnly = true)

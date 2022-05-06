@@ -1045,6 +1045,7 @@ public class StudyTest {
                 .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 
+    // TEST OK
     @Test
     public void testLogsReport() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -1205,6 +1206,7 @@ public class StudyTest {
                         LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
     }
 
+    //TEST OK
     @Test
     public void testLoadFlowError() throws Exception {
         UUID studyNameUserIdUuid = createStudy("userId", CASE_LOADFLOW_ERROR_UUID);
@@ -1214,9 +1216,8 @@ public class StudyTest {
         UUID modificationNodeUuid = modificationNode.getId();
 
         // run loadflow
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNodeUuid)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNodeUuid))
+            .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, UPDATE_TYPE_LOADFLOW);
@@ -1226,24 +1227,32 @@ public class StudyTest {
                         + VARIANT_ID)));
 
         // check load flow status
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
-                        modificationNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBody(LoadFlowInfos.class).value(new MatcherLoadFlowInfos(
-                        LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.DIVERGED).build()));
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
+                        modificationNodeUuid)).andExpectAll(
+                                status().isOk(),
+                                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        LoadFlowInfos lfInfos = mapper.readValue(resultAsString, LoadFlowInfos.class);
+
+        assertThat(lfInfos, new MatcherLoadFlowInfos(
+                LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.DIVERGED).build()));
     }
 
-    private void testSecurityAnalysisWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid) {
+    private void testSecurityAnalysisWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+
         // security analysis not found
-        webTestClient.get().uri("/v1/security-analysis/results/{resultUuid}", NOT_FOUND_SECURITY_ANALYSIS_UUID)
-                .exchange().expectStatus().isNotFound();
+        mockMvc.perform(get("/v1/security-analysis/results/{resultUuid}", NOT_FOUND_SECURITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
         // run security analysis
-        webTestClient.post().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME).exchange().expectStatus().isOk().expectBody(UUID.class)
-                .isEqualTo(resultUuid);
+        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME)).andExpect(status().isOk())
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
+        assertEquals(uuidResponse, resultUuid);
 
         Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
@@ -1261,22 +1270,21 @@ public class StudyTest {
                 + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "\\&receiver=.*nodeUuid.*")));
 
         // get security analysis result
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result", studyUuid, nodeUuid)
-                .exchange().expectStatus().isOk().expectBody(String.class).isEqualTo(SECURITY_ANALYSIS_RESULT_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result", studyUuid, nodeUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SECURITY_ANALYSIS_RESULT_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/results/%s?limitType", resultUuid)));
 
         // get security analysis status
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, nodeUuid)
-                .exchange().expectStatus().isOk().expectBody(String.class).isEqualTo(SECURITY_ANALYSIS_STATUS_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, nodeUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SECURITY_ANALYSIS_STATUS_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/results/%s/status", resultUuid)));
 
         // stop security analysis
-        webTestClient.put().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
 
         securityAnalysisStatusMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
@@ -1288,15 +1296,18 @@ public class StudyTest {
                 .anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
 
         // get contingency count
-        webTestClient.get().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}",
-                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME).exchange().expectStatus().isOk().expectBody(Integer.class)
-                .isEqualTo(1);
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}",
+                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME))
+                .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        Integer integerResponse = Integer.parseInt(resultAsString);
+        assertEquals(integerResponse, Integer.valueOf(1));
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME
                 + "/export\\?networkUuid=" + NETWORK_UUID_STRING + ".*")));
     }
 
+    //TEST OK
     @Test
     public void testSecurityAnalysis() throws Exception {
         // insert a study
@@ -1313,9 +1324,8 @@ public class StudyTest {
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         // run security analysis on root node (not allowed)
-        webTestClient.post().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME).exchange().expectStatus().isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)).andExpect(status().isForbidden());
 
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid,
                 UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
@@ -1323,34 +1333,38 @@ public class StudyTest {
                 UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
     }
 
+    //TEST OK
     @Test
-    public void testDiagramsAndGraphics() {
+    public void testDiagramsAndGraphics() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+
         // insert a study
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID randomUuid = UUID.randomUUID();
 
         // get the voltage level diagram svg
-        webTestClient.get().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId").exchange().expectHeader()
-                .contentType(MediaType.APPLICATION_XML).expectStatus().isOk().expectBody(String.class)
-                .isEqualTo("byte");
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
+                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_XML),
+                        content().string("byte"));
 
         assertTrue(getRequestsDone(1).contains(String.format(
                 "/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false",
                 NETWORK_UUID_STRING)));
 
         // get the voltage level diagram svg from a study that doesn't exist
-        webTestClient.get().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
-                randomUuid, rootNodeUuid, "voltageLevelId").exchange().expectStatus().isNotFound();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
+                randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
 
         // get the voltage level diagram svg and metadata
-        webTestClient.get().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId").exchange().expectHeader()
-                .contentType(MediaType.APPLICATION_JSON).expectStatus().isOk().expectBody(String.class)
-                .isEqualTo("svgandmetadata");
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
+                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        content().string("svgandmetadata"));
 
         assertTrue(getRequestsDone(1).contains(String.format(
                 "/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false",
@@ -1358,49 +1372,49 @@ public class StudyTest {
 
         // get the voltage level diagram svg and metadata from a study that doesn't
         // exist
-        webTestClient.get().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata",
-                randomUuid, rootNodeUuid, "voltageLevelId").exchange().expectStatus().isNotFound();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata",
+                randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
 
         // get the substation diagram svg
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
-                        studyNameUserIdUuid, rootNodeUuid, "substationId")
-                .exchange().expectHeader().contentType(MediaType.APPLICATION_XML).expectStatus().isOk()
-                .expectBody(String.class).isEqualTo("substation-byte");
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
+                        studyNameUserIdUuid, rootNodeUuid, "substationId")).andExpectAll(
+                                status().isOk(),
+                                content().contentType(MediaType.APPLICATION_XML),
+                                content().string("substation-byte"));
 
         assertTrue(getRequestsDone(1).contains(String.format(
                 "/v1/substation-svg/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal",
                 NETWORK_UUID_STRING)));
 
         // get the substation diagram svg from a study that doesn't exist
-        webTestClient.get().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg",
-                randomUuid, rootNodeUuid, "substationId").exchange().expectStatus().isNotFound();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg",
+                randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the substation diagram svg and metadata
-        webTestClient.get().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "substationId").exchange().expectHeader()
-                .contentType(MediaType.APPLICATION_JSON).expectStatus().isOk().expectBody(String.class)
-                .isEqualTo("substation-svgandmetadata");
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
+                studyNameUserIdUuid, rootNodeUuid, "substationId")).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        content().string("substation-svgandmetadata"));
 
         assertTrue(getRequestsDone(1).contains(String.format(
                 "/v1/substation-svg-and-metadata/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal",
                 NETWORK_UUID_STRING)));
 
         // get the substation diagram svg and metadata from a study that doesn't exist
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata",
-                        randomUuid, rootNodeUuid, "substationId")
-                .exchange().expectStatus().isNotFound();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata",
+                        randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get voltage levels
         EqualsVerifier.simple().forClass(VoltageLevelMapData.class).verify();
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .exchange().expectStatus().isOk().expectBodyList(VoltageLevelInfos.class)
-                .value(new MatcherJson<>(mapper, List.of(
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels", studyNameUserIdUuid,
+                        rootNodeUuid)).andExpect(status().isOk())
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        List<VoltageLevelInfos> vliListResponse = mapper.readValue(resultAsString, new TypeReference<List<VoltageLevelInfos>>() {
+        });
+
+        assertThat(vliListResponse, new MatcherJson<>(mapper, List.of(
                         VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
                         VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
                         VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
@@ -1415,135 +1429,138 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
 
         // get the lines-graphics of a network
-        webTestClient.get().uri("/v1/studies/{studyUuid}/geo-data/lines/", studyNameUserIdUuid).exchange()
-                .expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/geo-data/lines/", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/lines?networkUuid=%s", NETWORK_UUID_STRING)));
 
         // get the substation-graphics of a network
-        webTestClient.get().uri("/v1/studies/{studyUuid}/geo-data/substations/", studyNameUserIdUuid).exchange()
-                .expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/geo-data/substations/", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/substations?networkUuid=%s", NETWORK_UUID_STRING)));
 
         // get the lines map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/", studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/lines", NETWORK_UUID_STRING)));
 
         // get the substation map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/", studyNameUserIdUuid,
+                        rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/substations", NETWORK_UUID_STRING)));
 
         // get the 2 windings transformers map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/",
+                        studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1)
                 .contains(String.format("/v1/networks/%s/2-windings-transformers", NETWORK_UUID_STRING)));
 
         // get the 3 windings transformers map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/3-windings-transformers/",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/3-windings-transformers/",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1)
                 .contains(String.format("/v1/networks/%s/3-windings-transformers", NETWORK_UUID_STRING)));
 
         // get the generators map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/", studyNameUserIdUuid,
+                rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/generators", NETWORK_UUID_STRING)));
 
         // get the batteries map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/batteries/", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/batteries/", studyNameUserIdUuid,
+                rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/batteries", NETWORK_UUID_STRING)));
 
         // get the dangling lines map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/dangling-lines/", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/dangling-lines/", studyNameUserIdUuid,
+                rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/dangling-lines", NETWORK_UUID_STRING)));
 
         // get the hvdc lines map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/", studyNameUserIdUuid,
+                rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/hvdc-lines", NETWORK_UUID_STRING)));
 
         // get the lcc converter stations map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lcc-converter-stations/",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lcc-converter-stations/",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1)
                 .contains(String.format("/v1/networks/%s/lcc-converter-stations", NETWORK_UUID_STRING)));
 
         // get the vsc converter stations map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/vsc-converter-stations/",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/vsc-converter-stations/",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1)
                 .contains(String.format("/v1/networks/%s/vsc-converter-stations", NETWORK_UUID_STRING)));
 
         // get the loads map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/", studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads", NETWORK_UUID_STRING)));
 
         // get the shunt compensators map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/", studyNameUserIdUuid,
+                rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(
                 getRequestsDone(1).contains(String.format("/v1/networks/%s/shunt-compensators", NETWORK_UUID_STRING)));
 
         // get the static var compensators map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/static-var-compensators/",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/static-var-compensators/",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1)
                 .contains(String.format("/v1/networks/%s/static-var-compensators", NETWORK_UUID_STRING)));
 
         // get all map data of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all/", studyNameUserIdUuid, rootNodeUuid)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/all", NETWORK_UUID_STRING)));
 
         // get the svg component libraries
-        webTestClient.get().uri("/v1/svg-component-libraries").exchange().expectStatus().isOk().expectHeader()
-                .contentType(MediaType.APPLICATION_JSON);
+        mockMvc.perform(get("/v1/svg-component-libraries")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains("/v1/svg-component-libraries"));
     }

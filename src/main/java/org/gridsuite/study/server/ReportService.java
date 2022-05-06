@@ -41,7 +41,8 @@ public class ReportService {
 
     private final WebClient webClient = null;
 
-    private RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    private RestTemplate restTemplate;
 
     @Autowired
     public ReportService(

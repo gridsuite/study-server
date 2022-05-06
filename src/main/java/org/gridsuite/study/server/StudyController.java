@@ -597,13 +597,13 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
-    public Mono<ResponseEntity<String>> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<String> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        return studyService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes)
-                .map(result -> ResponseEntity.ok().body(result))
-                .defaultIfEmpty(ResponseEntity.noContent().build());
+        String result = studyService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes);
+        return result != null ? ResponseEntity.ok().body(result) :
+               ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count")
@@ -687,19 +687,20 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
-    public Mono<ResponseEntity<String>> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return studyService.getSecurityAnalysisStatus(nodeUuid)
-                .map(result -> ResponseEntity.ok().body(result))
-                .defaultIfEmpty(ResponseEntity.noContent().build());
+        String result = studyService.getSecurityAnalysisStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop")
     @Operation(summary = "stop security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
-    public ResponseEntity<Mono<Void>> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid, nodeUuid));
+        studyService.stopSecurityAnalysis(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -720,8 +721,8 @@ public class StudyController {
     @GetMapping(value = "/svg-component-libraries")
     @Operation(summary = "Get a list of the available svg component libraries")
     @ApiResponse(responseCode = "200", description = "The list of the available svg component libraries")
-    public ResponseEntity<Mono<List<String>>> getAvailableSvgComponentLibraries() {
-        Mono<List<String>> libraries = studyService.getAvailableSvgComponentLibraries();
+    public ResponseEntity<List<String>> getAvailableSvgComponentLibraries() {
+        List<String> libraries = studyService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
