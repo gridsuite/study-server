@@ -4,14 +4,19 @@
  */
 package org.gridsuite.study.server;
 
+import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
+import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_ALREADY_EXISTS;
+
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ServerWebInputException;
-
-import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -65,6 +70,8 @@ public class RestResponseEntityExceptionHandler {
                 cause = cause.getCause();
                 return ResponseEntity.status(serverWebInputException.getStatus()).body(cause.getMessage());
             }
+        } else if (exception instanceof TypeMismatchException) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getCause().getMessage());
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }

@@ -6,23 +6,28 @@
  */
 package org.gridsuite.study.server;
 
+import static org.gridsuite.study.server.StudyConstants.REPORT_API_VERSION;
+
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-
-import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.REPORT_API_VERSION;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -59,12 +64,21 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    public Mono<ReporterModel> getReport(UUID networkUuid) {
-        return webClient.get()
-                .uri(this.getReportServerURI() + networkUuid)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty())
-                .bodyToMono(ReporterModel.class);
+    public ReporterModel getReport(UUID networkUuid) {
+        ReporterModel result = null;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            result = restTemplate.exchange(this.getReportServerURI() + networkUuid, HttpMethod.GET, new HttpEntity<>(headers), ReporterModel.class).getBody();
+        } catch (HttpClientErrorException e) {
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        } catch (Exception e) {
+            throw e;
+        }
+
+        return result;
     }
 
     public void deleteReport(UUID networkUuid) {

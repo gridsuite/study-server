@@ -6,23 +6,23 @@
  */
 package org.gridsuite.study.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.powsybl.contingency.json.ContingencyJsonModule;
-import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
-import com.powsybl.loadflow.json.LoadFlowResultJsonModule;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.powsybl.contingency.json.ContingencyJsonModule;
+import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
+import com.powsybl.loadflow.json.LoadFlowResultJsonModule;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-@Configuration
+
 public class WebFluxConfig implements WebFluxConfigurer {
 
     @Override

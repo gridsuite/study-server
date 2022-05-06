@@ -6,37 +6,13 @@
  */
 package org.gridsuite.study.server;
 
-import com.powsybl.loadflow.LoadFlowResult;
-import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.DeleteNodeInfos;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.BuildInfos;
-import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.integration.support.MessageBuilder;
-import org.springframework.messaging.Message;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import reactor.core.publisher.Mono;
+import static org.gridsuite.study.server.StudyException.Type.BAD_NODE_TYPE;
+import static org.gridsuite.study.server.StudyException.Type.CANT_DELETE_ROOT_NODE;
+import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
+import static org.gridsuite.study.server.StudyService.HEADER_STUDY_UUID;
+import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 
-import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,9 +24,39 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.HEADER_STUDY_UUID;
-import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
+import javax.persistence.EntityNotFoundException;
+
+import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
+import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
+import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.messaging.Message;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.powsybl.loadflow.LoadFlowResult;
+
+import reactor.core.publisher.Mono;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -323,8 +329,9 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid)));
+    public Optional<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid));
+
     }
 
     @Transactional
@@ -400,8 +407,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
+    public Optional<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid));
     }
 
     private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {

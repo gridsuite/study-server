@@ -6,18 +6,70 @@
  */
 package org.gridsuite.study.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.contingency.Contingency;
-import com.powsybl.iidm.network.Country;
-import com.powsybl.iidm.network.VariantManagerConstants;
-import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
-import com.powsybl.loadflow.LoadFlowResultImpl;
-import lombok.NonNull;
+import static org.gridsuite.study.server.StudyConstants.ACTIONS_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.CASE_UUID;
+import static org.gridsuite.study.server.StudyConstants.DELIMITER;
+import static org.gridsuite.study.server.StudyConstants.GEO_DATA_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.LOADFLOW_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.NETWORK_CONVERSION_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.NETWORK_MAP_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
+import static org.gridsuite.study.server.StudyConstants.SECURITY_ANALYSIS_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_VERSION;
+import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.EQUIPMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
+import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_CREATION_FAILED;
+
+import java.io.UncheckedIOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.BasicStudyInfos;
+import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
+import org.gridsuite.study.server.dto.DeleteStudyInfos;
+import org.gridsuite.study.server.dto.DiagramParameters;
+import org.gridsuite.study.server.dto.EquipmentInfos;
+import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.gridsuite.study.server.dto.IdentifiableInfos;
+import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.Receiver;
+import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
+import org.gridsuite.study.server.dto.StudyInfos;
+import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.dto.VoltageLevelInfos;
+import org.gridsuite.study.server.dto.VoltageLevelMapData;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
@@ -28,7 +80,13 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.repository.ComponentResultEmbeddable;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.LoadFlowResultEntity;
+import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
+import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,25 +114,20 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.contingency.Contingency;
+import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.VariantManagerConstants;
+import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.loadflow.LoadFlowResultImpl;
+
+import lombok.NonNull;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import java.io.UncheckedIOException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -136,8 +189,9 @@ public class StudyService {
     NetworkModificationTreeService networkModificationTreeService;
 
     private final WebClient webClient = null;
-    // TODO: resttemplate from config file
-    private RestTemplate restTemplate = new RestTemplate();
+
+    @Autowired
+    private RestTemplate restTemplate;
     private String caseServerBaseUri;
     private String singleLineDiagramServerBaseUri;
     private String networkConversionServerBaseUri;
@@ -326,8 +380,8 @@ public class StudyService {
         return self.doGetStudy(studyUuid);
     }
 
-    Flux<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
-        return Mono.fromCallable(() -> studyInfosService.search(query)).flatMapMany(Flux::fromIterable);
+    List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
+        return studyInfosService.search(query);
     }
 
     public static String escapeLucene(String s) {
@@ -898,11 +952,14 @@ public class StudyService {
         HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<LoadFlowParameters>(getLoadFlowParameters(studyUuid), headers);
 
         try {
-            result = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity,
-                    LoadFlowResult.class).getBody();
+            ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity,
+                    LoadFlowResult.class);
+            result = resp.getBody();
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
         } catch (HttpClientErrorException e) {
             updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE);
+        } catch (Exception e) {
+            throw e;
         } finally {
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW);
         }
@@ -914,14 +971,14 @@ public class StudyService {
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
     }
 
-    public Mono<Collection<String>> getExportFormats() {
+    public Collection<String> getExportFormats() {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
                 .toUriString();
 
         ParameterizedTypeReference<Collection<String>> typeRef = new ParameterizedTypeReference<>() {
         };
 
-        return webClient.get().uri(networkConversionServerBaseUri + path).retrieve().bodyToMono(typeRef);
+        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
     public ExportNetworkInfos exportNetwork(UUID studyUuid, String format) {
@@ -997,16 +1054,26 @@ public class StudyService {
         }
     }
 
-    public Mono<Void> assertLoadFlowRunnable(UUID nodeUuid) {
-        return getLoadFlowStatus(nodeUuid).switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
-                .flatMap(lfs -> lfs.equals(LoadFlowStatus.NOT_DONE) ? Mono.empty()
-                        : Mono.error(new StudyException(LOADFLOW_NOT_RUNNABLE)));
+    public void assertLoadFlowRunnable(UUID nodeUuid) {
+        Optional<LoadFlowStatus> lfStatus = getLoadFlowStatus(nodeUuid);
+        if (lfStatus.isEmpty()) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        if (!LoadFlowStatus.NOT_DONE.equals(lfStatus.get())) {
+            throw new StudyException(LOADFLOW_NOT_RUNNABLE);
+        }
     }
 
-    private Mono<Void> assertLoadFlowNotRunning(UUID nodeUuid) {
-        return getLoadFlowStatus(nodeUuid).switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
-                .flatMap(lfs -> lfs.equals(LoadFlowStatus.RUNNING) ? Mono.error(new StudyException(LOADFLOW_RUNNING))
-                        : Mono.empty());
+    private void assertLoadFlowNotRunning(UUID nodeUuid) {
+        Optional<LoadFlowStatus> lfStatus = getLoadFlowStatus(nodeUuid);
+        if (lfStatus.isEmpty()) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        if (LoadFlowStatus.RUNNING.equals(lfStatus.get())) {
+            throw new StudyException(LOADFLOW_RUNNING);
+        }
     }
 
     private Mono<Void> assertSecurityAnalysisNotRunning(UUID nodeUuid) {
@@ -1015,13 +1082,14 @@ public class StudyService {
                 : Mono.empty());
     }
 
-    public Mono<Void> assertComputationNotRunning(UUID nodeUuid) {
-        return assertLoadFlowNotRunning(nodeUuid).and(assertSecurityAnalysisNotRunning(nodeUuid));
+    public void assertComputationNotRunning(UUID nodeUuid) {
+        assertLoadFlowNotRunning(nodeUuid);
+        assertSecurityAnalysisNotRunning(nodeUuid);
     }
 
     public void assertCanModifyNode(UUID nodeUuid) {
-        Boolean canModifyNode = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
-        if (!canModifyNode) {
+        Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
+        if (isReadOnly) {
             throw new StudyException(NOT_ALLOWED);
         }
     }
@@ -1558,7 +1626,7 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuid, voltageLevelId, "busbar-sections");
     }
 
-    public Mono<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
+    public Optional<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
         return networkModificationTreeService.getLoadFlowStatus(nodeUuid);
     }
 
@@ -1571,11 +1639,16 @@ public class StudyService {
         return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
     }
 
-    public Mono<LoadFlowInfos> getLoadFlowInfos(UUID studyUuid, UUID nodeUuid) {
+    public LoadFlowInfos getLoadFlowInfos(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
+        Optional<LoadFlowInfos> lfInfos = networkModificationTreeService.getLoadFlowInfos(nodeUuid);
+
+        if (lfInfos.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return lfInfos.get();
     }
 
     private BuildInfos getBuildInfos(UUID nodeUuid) {
