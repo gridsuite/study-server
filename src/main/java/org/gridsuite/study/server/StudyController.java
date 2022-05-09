@@ -648,7 +648,7 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/network-area-diagram")
     @Operation(summary = "get the network area diagram for the given network and voltage levels")
-    @ApiResponse(responseCode = "200", description = "The svg and metadata")
+    @ApiResponse(responseCode = "200", description = "The svg")
     public ResponseEntity<Mono<String>> getNeworkAreaDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
