@@ -320,8 +320,8 @@ public class StudyService {
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         try {
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
             String caseFormat = getCaseFormat(caseUuid);
+            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
@@ -345,12 +345,14 @@ public class StudyService {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         try {
             UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
-            String caseFormat = getCaseFormat(caseUuid);
+            if (caseUuid != null) {
+                String caseFormat = getCaseFormat(caseUuid);
+                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
-            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                    caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
+                        caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+            }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -586,7 +588,8 @@ public class StudyService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
-            multipartBodyBuilder.part("file", multipartFile.getBytes());
+            multipartBodyBuilder.part("file", multipartFile.getBytes())
+                .filename(multipartFile.getOriginalFilename());
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<MultiValueMap<String, HttpEntity<?>>>(
                     multipartBodyBuilder.build(), headers);
 
@@ -1078,7 +1081,7 @@ public class StudyService {
 
     private void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
         String sas = getSecurityAnalysisStatus(nodeUuid);
-        if (sas.equals(SecurityAnalysisStatus.RUNNING.name())) {
+        if (SecurityAnalysisStatus.RUNNING.name().equals(sas)) {
             throw new StudyException(SECURITY_ANALYSIS_RUNNING);
         }
     }
@@ -1165,17 +1168,17 @@ public class StudyService {
         return self.doGetLoadFlowParameters(studyUuid);
     }
 
-    Mono<Void> setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
-        return updateLoadFlowParameters(studyUuid,
-                toEntity(parameters != null ? parameters : LoadFlowParameters.load()))
-                .then(invalidateLoadFlowStatusOnAllNodes(studyUuid))
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS))
-                .then(invalidateSecurityAnalysisStatusOnAllNodes(studyUuid))
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS));
+    void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
+        updateLoadFlowParameters(studyUuid,
+                toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
+        invalidateLoadFlowStatusOnAllNodes(studyUuid);
+        emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS);
+        invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
+        emitStudyChanged(studyUuid, null, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
     }
 
-    public Mono<Void> invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
-        return networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
+    public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
+        networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
     }
 
     @Transactional(readOnly = true)
@@ -1193,11 +1196,10 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider));
     }
 
-    public Mono<Void> updateLoadFlowProvider(UUID studyUuid, String provider) {
-        Mono<Void> updateProvider = Mono.fromRunnable(() -> self.doUpdateLoadFlowProvider(studyUuid, provider));
-        return updateProvider
-                .then(networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE))
-                .doOnSuccess(e -> emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS));
+    public void updateLoadFlowProvider(UUID studyUuid, String provider) {
+        self.doUpdateLoadFlowProvider(studyUuid, provider);
+        networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
+        emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS);
     }
 
     public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters,
@@ -1363,25 +1365,22 @@ public class StudyService {
         return result;
     }
 
-    private Mono<Void> invalidateSaStatus(List<UUID> uuids) {
+    private void invalidateSaStatus(List<UUID> uuids) {
         if (!uuids.isEmpty()) {
             String path = UriComponentsBuilder
                     .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/invalidate-status")
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
-            return webClient.put().uri(securityAnalysisServerBaseUri + path).retrieve().bodyToMono(Void.class);
-        } else {
-            return Mono.empty();
+
+            restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
         }
     }
 
-    public Mono<Void> invalidateSecurityAnalysisStatus(UUID nodeUuid) {
-        return networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid)
-                .flatMap(this::invalidateSaStatus);
+    public void invalidateSecurityAnalysisStatus(UUID nodeUuid) {
+        invalidateSaStatus(networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid));
     }
 
-    public Mono<Void> invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        return networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid)
-                .flatMap(this::invalidateSaStatus);
+    public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
     }
 
     void setCaseServerBaseUri(String caseServerBaseUri) {
@@ -1520,8 +1519,8 @@ public class StudyService {
                 updateChildren);
     }
 
-    private Mono<Void> updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowParameters(studyUuid, loadFlowParametersEntity));
+    private void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
+        self.doUpdateLoadFlowParameters(studyUuid, loadFlowParametersEntity);
     }
 
     @Transactional
@@ -1747,8 +1746,8 @@ public class StudyService {
         return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
-    Mono<Void> invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        return networkModificationTreeService.invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
+    void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+        networkModificationTreeService.invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
     }
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid) {

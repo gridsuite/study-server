@@ -114,7 +114,6 @@ import org.springframework.cloud.stream.binder.test.TestChannelBinderConfigurati
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
@@ -126,7 +125,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.ResourceUtils;
-import org.springframework.web.reactive.function.BodyInserters;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -183,7 +181,7 @@ public class StudyTest {
 //
 //    RestTemplate restTemplate;
 
-    private static final long TIMEOUT = 200000;
+    private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_WITH_ERRORS = "testCase_with_errors.xiidm";
@@ -1565,8 +1563,12 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).contains("/v1/svg-component-libraries"));
     }
 
+    //TEST OK
     @Test
     public void testNetworkModificationSwitch() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
@@ -1578,16 +1580,12 @@ public class StudyTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         // update switch on root node (not allowed)
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, rootNodeUuid, "switchId")
-                .exchange().expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
+                studyNameUserIdUuid, rootNodeUuid, "switchId")).andExpect(status().isForbidden());
 
         // update switch on first modification node
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, modificationNode1Uuid, "switchId")
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
+                studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
 
         Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
         checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, substationsSet);
@@ -1596,16 +1594,19 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING
                 + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID)));
 
-        webTestClient.get().uri("/v1/studies").header("userId", "userId").exchange().expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(CreatedStudyBasicInfos.class)
-                .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
+        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
 
         // update switch on second modification node
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, modificationNode2Uuid, "switchId")
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
+                        studyNameUserIdUuid, modificationNode2Uuid, "switchId")).andExpect(status().isOk());
+
         checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, substationsSet);
 
         requests = getRequestsWithBodyDone(1);
@@ -1620,17 +1621,19 @@ public class StudyTest {
         networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode2);
         output.receive(TIMEOUT);
 
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, modificationNode1Uuid, "switchId")
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
+                        studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
 
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
+        try {
+            output.receive(TIMEOUT);
+        } catch (Exception e) {
+            throw e;
+        }
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING
@@ -1646,18 +1649,18 @@ public class StudyTest {
                                                                                                                        // invalid
     }
 
+    //TEST OK
     @Test
-    public void testGetLoadMapServer() {
+    public void testGetLoadMapServer() throws Exception {
         // create study
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
 
         // get the load map data info of a network
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/{loadId}", studyNameUserIdUuid,
-                        rootNodeUuid, LOAD_ID_1)
-                .exchange().expectStatus().isOk().expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBody(String.class);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/{loadId}", studyNameUserIdUuid,
+                        rootNodeUuid, LOAD_ID_1)).andExpectAll(
+                                status().isOk(),
+                                content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(
                 getRequestsDone(1).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, LOAD_ID_1)));
@@ -1766,9 +1769,12 @@ public class StudyTest {
                 .contains(String.format("/v1/networks/%s/voltage-levels/%s", NETWORK_UUID_STRING, VL_ID_1)));
     }
 
-    @SneakyThrows
+    //TEST OK
     @Test
-    public void testNetworkModificationEquipment() {
+    public void testNetworkModificationEquipment() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
@@ -1779,18 +1785,14 @@ public class StudyTest {
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
         // update equipment on root node (not allowed)
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                        rootNodeUuid)
-                .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
-                .exchange().expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
+                rootNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+            .andExpect(status().isForbidden());
 
         // update equipment
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                        modificationNodeUuid)
-                .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
+                        modificationNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+            .andExpect(status().isOk());
 
         Set<String> substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
         checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
@@ -1798,17 +1800,19 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).stream()
                 .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")));
 
-        webTestClient.get().uri("/v1/studies").header("userId", "userId").exchange().expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(CreatedStudyBasicInfos.class)
-                .value(studies -> studies.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
+        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
 
         // update equipment on second modification node
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                        modificationNodeUuid2)
-                .body(BodyInserters.fromValue("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
+                        modificationNodeUuid2).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+            .andExpect(status().isOk());
 
         checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
                 substationsSet);
@@ -1816,21 +1820,24 @@ public class StudyTest {
                 .matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*\\&variantId=" + VARIANT_ID)));
     }
 
+    //TEST OK
     @Test
-    public void testCreationWithErrorBadCaseFile() {
+    public void testCreationWithErrorBadCaseFile() throws Exception {
         // Create study with a bad case file -> error
         createStudy("userId", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, false,
                 "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
     }
 
+    //TEST OK
     @Test
-    public void testCreationWithErrorBadExistingCase() {
+    public void testCreationWithErrorBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
         createStudy("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
     }
 
+    //TEST OK
     @Test
-    public void testCreationWithErrorNoMessageBadExistingCase() {
+    public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
         // without message in response body
         createStudy("userId", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, false,
@@ -1859,8 +1866,7 @@ public class StudyTest {
         return modificationNode;
     }
 
-    @SneakyThrows
-    private UUID createStudy(String userId, UUID caseUuid, String... errorMessage) {
+    private UUID createStudy(String userId, UUID caseUuid, String... errorMessage) throws Exception {
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId))
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -1909,9 +1915,8 @@ public class StudyTest {
         return studyUuid;
     }
 
-    @SneakyThrows
     private UUID createStudy(String userId, String fileName, String caseUuid, boolean isPrivate,
-            String... errorMessage) {
+            String... errorMessage) throws Exception {
         final UUID studyUuid;
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
@@ -1925,18 +1930,6 @@ public class StudyTest {
             BasicStudyInfos infos = mapper.readValue(resultAsString, BasicStudyInfos.class);
 
             studyUuid = infos.getId();
-
-//            BasicStudyInfos infos = webTestClient.post()
-//                    .uri(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate)
-//                    .header("userId", userId)
-//                    .contentType(MediaType.MULTIPART_FORM_DATA)
-//                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-//                    .exchange()
-//                    .expectStatus().isOk()
-//                    .expectBody(BasicStudyInfos.class)
-//                    .returnResult()
-//                    .getResponseBody();
-//            studyUuid = infos.getId();
         }
 
         // assert that the broker message has been sent a study creation request message
@@ -1983,22 +1976,37 @@ public class StudyTest {
 
     @Test
     public void testGetStudyCreationRequests() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
         countDownLatch = new CountDownLatch(1);
 
         // insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("blockingCaseFile/cases/private", "testCase.xiidm",
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", "testCase.xiidm",
                     "text/xml", is);
 
-            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-            bodyBuilder.part("caseFile", mockFile.getBytes()).filename("blockingCaseFile")
-                    .contentType(MediaType.TEXT_XML);
+//            mvcResult = mockMvc.perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", "true")
+//                    .file(mockFile)
+//                    .header("userId", "userId")
+//                    .contentType(MediaType.MULTIPART_FORM_DATA))
+//                .andExpect(status().isOk())
+//                .andReturn();
 
-            webTestClient.post().uri(STUDIES_URL + "?isPrivate={isPrivate}", "true").header("userId", "userId")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(bodyBuilder.build())).exchange().expectStatus().isOk()
-                    .expectBody(BasicStudyInfos.class).value(createMatcherStudyBasicInfos(
-                            studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
+            mvcResult = mockMvc
+                    .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", "true").file(mockFile)
+                            .header("userId", "userId").contentType(MediaType.MULTIPART_FORM_DATA))
+                    .andExpect(status().isOk()).andReturn();
+
+            resultAsString = mvcResult.getResponse().getContentAsString();
+            BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
+
+            assertThat(bsiResult, createMatcherStudyBasicInfos(
+                            studyRepository.findAll().get(0).getId(), "userId"));
+//            webTestClient.post().uri(STUDIES_URL + "?isPrivate={isPrivate}", "true").header("userId", "userId")
+//                    .contentType(MediaType.MULTIPART_FORM_DATA)
+//                    .body(BodyInserters.fromMultipartData(bodyBuilder.build())).exchange().expectStatus().isOk()
+//                    .expectBody(BasicStudyInfos.class).value(createMatcherStudyBasicInfos(
+//                            studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
         }
 
         UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
@@ -2090,29 +2098,25 @@ public class StudyTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         // change line status on root node (not allowed)
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, rootNodeUuid, "line12")
-                .bodyValue("lockout").exchange().expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, rootNodeUuid, "line12").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isForbidden());
 
         // lockout line
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "line12")
-                .bodyValue("lockout").exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode1Uuid, "line12").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isOk());
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s2"));
 
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId")
-                .bodyValue("lockout").exchange().expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isInternalServerError());
 
         // trip line
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "line23")
-                .bodyValue("trip").exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                studyNameUserIdUuid, modificationNode1Uuid, "line23").content("trip").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isOk());
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2", "s3"));
 
@@ -2205,24 +2209,30 @@ public class StudyTest {
         String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
         // create load on root node (not allowed)
-        webTestClient.post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, rootNodeUuid).bodyValue(createLoadAttributes).exchange().expectStatus()
-                .isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
+                studyNameUserIdUuid, rootNodeUuid).content(createLoadAttributes))
+            .andExpect(status().isForbidden());
 
         // create load on first modification node
-        webTestClient.post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNode1Uuid).bodyValue(createLoadAttributes).exchange().expectStatus()
-                .isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
+                studyNameUserIdUuid, modificationNode1Uuid).content(createLoadAttributes))
+            .andExpect(status().isOk());
+
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
 
         // create load on second modification node
-        webTestClient.post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNode2Uuid).bodyValue(createLoadAttributes).exchange().expectStatus()
-                .isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
+                studyNameUserIdUuid, modificationNode2Uuid).content(createLoadAttributes))
+            .andExpect(status().isOk());
+
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
 
         // update load creation
         String loadAttributesUpdated = "{\"loadId\":\"loadId2\",\"loadName\":\"loadName2\",\"loadType\":\"UNDEFINED\",\"activePower\":\"50.0\",\"reactivePower\":\"25.0\",\"voltageLevelId\":\"idVL2\",\"busId\":\"idBus2\"}";
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation",
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(loadAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
         webTestClient.put().uri(
                 "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation",
                 studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).bodyValue(loadAttributesUpdated)
@@ -2599,7 +2609,7 @@ public class StudyTest {
     }
 
     @Test
-    public void testGetBusesOrBusbarSections() {
+    public void testGetBusesOrBusbarSections() throws Exception {
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);

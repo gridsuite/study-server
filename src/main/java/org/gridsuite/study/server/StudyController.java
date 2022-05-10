@@ -619,10 +619,11 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
-    public ResponseEntity<Mono<Void>> setLoadflowParameters(
+    public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) LoadFlowParameters lfParameter) {
-        return ResponseEntity.ok().body(studyService.setLoadFlowParameters(studyUuid, lfParameter));
+        studyService.setLoadFlowParameters(studyUuid, lfParameter);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")
@@ -636,9 +637,10 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
     @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
-    public ResponseEntity<Mono<Void>> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
                                                           @RequestBody(required = false) String provider) {
-        return ResponseEntity.ok().body(studyService.updateLoadFlowProvider(studyUuid, provider));
+        studyService.updateLoadFlowProvider(studyUuid, provider);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")

@@ -371,8 +371,8 @@ public class NetworkModificationTreeService {
         nodes.forEach(n -> doUpdateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
     }
 
-    public Mono<Void> updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateStudyLoadFlowStatus(studyUuid, loadFlowStatus));
+    public void updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
+        self.doUpdateStudyLoadFlowStatus(studyUuid, loadFlowStatus);
     }
 
     @Transactional(readOnly = true)
@@ -381,7 +381,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<List<UUID>> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
+    public List<UUID> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
@@ -390,7 +390,7 @@ public class NetworkModificationTreeService {
                 uuids.add(uuid);
             }
         });
-        return Mono.just(uuids);
+        return uuids;
     }
 
     private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
@@ -400,10 +400,10 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<List<UUID>> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
+    public List<UUID> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
         List<UUID> uuids = new ArrayList<>();
         getSecurityAnalysisResultUuids(nodeUuid, uuids);
-        return Mono.just(uuids);
+        return uuids;
     }
 
     @Transactional(readOnly = true)
@@ -539,8 +539,8 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public Mono<Void> invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        return Mono.fromRunnable(() -> self.doInvalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus));
+    public void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+        self.doInvalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
     }
 
     @Transactional
