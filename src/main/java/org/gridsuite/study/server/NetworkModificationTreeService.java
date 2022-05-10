@@ -473,8 +473,8 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateBuildStatus(nodeUuid, buildStatus));
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        self.doUpdateBuildStatus(nodeUuid, buildStatus);
     }
 
     @Transactional(readOnly = true)

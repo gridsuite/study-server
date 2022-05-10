@@ -49,7 +49,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.BasicStudyInfos;
@@ -111,7 +110,6 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -187,8 +185,6 @@ public class StudyService {
     StudyService self;
 
     NetworkModificationTreeService networkModificationTreeService;
-
-    private final WebClient webClient = null;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -1692,62 +1688,63 @@ public class StudyService {
         return networkModificationService.stopBuild(studyUuid, nodeUuid);
     }
 
-    @Bean
-    public Consumer<Flux<Message<String>>> consumeBuildResult() {
-        return f -> f.log(StudyService.CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                Receiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+    //TODO Corriger Beans ci dessous
+//    @Bean
+//    public Consumer<Flux<Message<String>>> consumeBuildResult() {
+//        return f -> f.log(StudyService.CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
+//            Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
+//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+//            if (receiver != null) {
+//                Receiver receiverObj;
+//                try {
+//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+//                            Receiver.class);
+//
+//                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
+//
+//                    return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT)
+//                            .then(Mono.fromRunnable(() -> {
+//                                // send notification
+//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED,
+//                                        substationsIds);
+//                            }));
+//                } catch (JsonProcessingException e) {
+//                    LOGGER.error(e.toString());
+//                }
+//            }
+//            return Mono.empty();
+//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
+//    }
+//
+//    @Bean
+//    public Consumer<Flux<Message<String>>> consumeBuildStopped() {
+//        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
+//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+//            if (receiver != null) {
+//                Receiver receiverObj;
+//                try {
+//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+//                            Receiver.class);
+//
+//                    LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
+//
+//                    return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT)
+//                            .then(Mono.fromRunnable(() -> {
+//                                // send notification
+//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
+//                            }));
+//                } catch (JsonProcessingException e) {
+//                    LOGGER.error(e.toString());
+//                }
+//            }
+//            return Mono.empty();
+//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
+//    }
 
-                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
-
-                    return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT)
-                            .then(Mono.fromRunnable(() -> {
-                                // send notification
-                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED,
-                                        substationsIds);
-                            }));
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-            return Mono.empty();
-        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-    }
-
-    @Bean
-    public Consumer<Flux<Message<String>>> consumeBuildStopped() {
-        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                Receiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
-
-                    LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT)
-                            .then(Mono.fromRunnable(() -> {
-                                // send notification
-                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
-                            }));
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-            return Mono.empty();
-        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-    }
-
-    Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        return networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
+    void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+        networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
     void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {

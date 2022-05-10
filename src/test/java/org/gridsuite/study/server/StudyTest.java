@@ -2196,6 +2196,7 @@ public class StudyTest {
                         && r.getBody().equals("switchOn")));
     }
 
+    //TEST OK
     @Test
     public void testCreateLoad() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2863,10 +2864,10 @@ public class StudyTest {
                         && r.getBody().equals(twoWindingsTransformerAttributesUpdated)));
     }
 
-    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid) {
+    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
         // build node
-        webTestClient.post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid).exchange()
-                .expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
+            .andExpect(status().isOk());
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
@@ -2884,8 +2885,9 @@ public class StudyTest {
         assertEquals(BuildStatus.BUILDING, networkModificationTreeService.getBuildStatus(nodeUuid)); // node is building
 
         // stop build
-        webTestClient.put().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid).exchange()
-                .expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
+            .andExpect(status().isOk())
+
 
         buildStatusMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
@@ -2978,6 +2980,7 @@ public class StudyTest {
                 networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
     }
 
+    //TEST OK
     @Test
     public void testChangeModificationActiveState() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
@@ -2990,15 +2993,13 @@ public class StudyTest {
         UUID nodeNotFoundUuid = UUID.randomUUID();
 
         // deactivate modification on modificationNode
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
-                        studyUuid, nodeNotFoundUuid, modificationUuid)
-                .exchange().expectStatus().isNotFound(); // node not found
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
+                studyUuid, nodeNotFoundUuid, modificationUuid))
+            .andExpect(status().isNotFound());
 
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
-                        studyUuid, modificationNode1.getId(), modificationUuid)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
+                        studyUuid, modificationNode1.getId(), modificationUuid))
+            .andExpect(status().isOk());
 
         AtomicReference<AbstractNode> node = new AtomicReference<>();
         networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()).subscribe(node::set);
@@ -3008,10 +3009,9 @@ public class StudyTest {
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
 
         // reactivate modification
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=true",
-                        studyUuid, modificationNode1.getId(), modificationUuid)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=true",
+                        studyUuid, modificationNode1.getId(), modificationUuid))
+            .andExpect(status().isOk());
 
         networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()).subscribe(node::set);
         modificationNode = (NetworkModificationNode) node.get();
@@ -3020,6 +3020,7 @@ public class StudyTest {
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
     }
 
+    //TEST OK
     @Test
     public void deleteModificationRequest() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -3032,15 +3033,15 @@ public class StudyTest {
          * root / \ node modification node \ node3 node is only there to test that when
          * we update modification node, it is not in notifications list
          */
-
-        webTestClient.delete().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
-                UUID.randomUUID(), modificationNode.getId(), node3.getId()).exchange().expectStatus().isForbidden();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
+                UUID.randomUUID(), modificationNode.getId(), node3.getId()))
+            .andExpect(status().isForbidden());
 
         UUID modificationUuid = UUID.randomUUID();
-        webTestClient.delete().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
-                studyUuid, modificationNode.getId(), modificationUuid).exchange().expectStatus().isOk();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
+                studyUuid, modificationNode.getId(), modificationUuid))
+            .andExpect(status().isOk());
+
         assertTrue(getRequestsDone(1).stream()
                 .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification()
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
