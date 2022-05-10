@@ -939,12 +939,17 @@ public class StudyService {
             .bodyToMono(typeRef);
     }
 
-    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, String format) {
-        Mono<UUID> networkUuidMono = networkStoreService.getNetworkUuid(studyUuid);
+    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
 
-        return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
-                .buildAndExpand(uuid, format)
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}");
+            if (!variantId.isEmpty()) {
+                uriComponentsBuilder.queryParam("variantId", variantId);
+            }
+            String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
                 .toUriString();
 
             Mono<ResponseEntity<byte[]>> responseEntity = webClient.get()

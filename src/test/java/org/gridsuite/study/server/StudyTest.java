@@ -928,8 +928,9 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).contains("/v1/export/formats"));
 
         //export a network
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         webTestClient.get()
-            .uri("/v1/studies/{studyUuid}/export-network/{format}", studyNameUserIdUuid, "XIIDM")
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, rootNodeUuid, "XIIDM")
             .exchange()
             .expectStatus().isOk();
 
