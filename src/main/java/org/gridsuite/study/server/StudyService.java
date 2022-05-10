@@ -1580,11 +1580,15 @@ public class StudyService {
             ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
         getModificationGroupUuid(nodeUuid);
         getVariantId(nodeUuid);
-
-        networkModificationService
-            .updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid, false);
+        try {
+            networkModificationService
+                .updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+        } catch (Exception e) {
+            throw e;
+        } finally {
+            updateStatuses(studyUuid, nodeUuid, false);
+        }
     }
 
     void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {

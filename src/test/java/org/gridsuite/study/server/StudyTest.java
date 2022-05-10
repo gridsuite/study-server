@@ -575,6 +575,8 @@ public class StudyTest {
                             "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/modifications[?]") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-creation") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
                 }
 
                 switch (path) {
@@ -2233,11 +2235,6 @@ public class StudyTest {
                 studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(loadAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
 
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).bodyValue(loadAttributesUpdated)
-                .exchange().expectStatus().isOk();
-
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*")
@@ -2255,6 +2252,7 @@ public class StudyTest {
                         && r.getBody().equals(loadAttributesUpdated)));
     }
 
+    //TEST OK
     @Test
     public void testModifyLoad() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2270,20 +2268,22 @@ public class StudyTest {
         String loadModificationAttributes = "{\"equipmentId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"AUXILIARY\",\"activePower\":\"100.0\"}";
 
         // modify load on root node (not allowed)
-        webTestClient.put().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, rootNodeUuid).bodyValue(loadModificationAttributes).exchange().expectStatus()
-                .isForbidden();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
+                studyNameUserIdUuid, rootNodeUuid).content(loadModificationAttributes))
+            .andExpect(status().isForbidden());
 
         // modify load on first modification node
-        webTestClient.put().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNodeUuid).bodyValue(loadModificationAttributes).exchange()
-                .expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
+                studyNameUserIdUuid, modificationNodeUuid).content(loadModificationAttributes))
+            .andExpect(status().isOk());
+
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         // modify load on second modification node
-        webTestClient.put().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNodeUuid2).bodyValue(loadModificationAttributes).exchange()
-                .expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
+                studyNameUserIdUuid, modificationNodeUuid2).content(loadModificationAttributes))
+            .andExpect(status().isOk());
+
         checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(2);
@@ -2315,31 +2315,29 @@ public class StudyTest {
         String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
 
         // create substation on root node (not allowed)
-        webTestClient
-                .post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .bodyValue(createSubstationAttributes).exchange().expectStatus().isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
+                        studyNameUserIdUuid, rootNodeUuid).content(createSubstationAttributes))
+            .andExpect(status().isForbidden());
 
         // create substation on first modification node
-        webTestClient
-                .post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
-                        studyNameUserIdUuid, modificationNode1Uuid)
-                .bodyValue(createSubstationAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes))
+            .andExpect(status().isOk());
+
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, new HashSet<>());
 
         // create substation on second modification node
-        webTestClient
-                .post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
-                        studyNameUserIdUuid, modificationNode2Uuid)
-                .bodyValue(createSubstationAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createSubstationAttributes))
+            .andExpect(status().isOk());
+
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, new HashSet<>());
 
         // update substation creation
         String substationAttributesUpdated = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"FR\"}";
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/substations-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).bodyValue(substationAttributesUpdated)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/substations-creation",
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(substationAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream()
