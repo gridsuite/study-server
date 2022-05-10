@@ -716,11 +716,22 @@ public class StudyController {
     @Operation(summary = "update a load creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load creation has been updated")})
     public ResponseEntity<Mono<Void>> updateLoadCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @PathVariable("modificationUuid") UUID modificationUuid,
-                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLoadAttributes) {
+                                                         @PathVariable("modificationUuid") UUID modificationUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestBody String createLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
                 .then(studyService.updateEquipmentCreation(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid, modificationUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-modification")
+    @Operation(summary = "update a load modification in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load modification has been updated")})
+    public ResponseEntity<Mono<Void>> updateLoadModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("modificationUuid") UUID modificationUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestBody String modifyLoadAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+                .then(studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid)));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification")

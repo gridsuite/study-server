@@ -277,6 +277,24 @@ public class NetworkModificationService {
                 .bodyToMono(Void.class);
     }
 
+    public Mono<Void> updateEquipmentModification(String modifyEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
+        Objects.requireNonNull(modifyEquipmentAttributes);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-modification");
+        var path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
+
+        return webClient.put()
+                .uri(getNetworkModificationServerURI(false) + path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(modifyEquipmentAttributes))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+                .bodyToMono(Void.class);
+    }
+
     public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);
