@@ -45,13 +45,11 @@ import java.util.logging.Level;
 public class StudyController {
 
     private final StudyService studyService;
-    private final ReportService reportService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkService networkStoreService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
-        this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
     }
