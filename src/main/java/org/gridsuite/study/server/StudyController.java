@@ -670,9 +670,10 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Mono<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(studyUuid, nodeUuid));
+    public ResponseEntity<Flux<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(studyUuid, nodeUuid, nodeOnlyReport));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")

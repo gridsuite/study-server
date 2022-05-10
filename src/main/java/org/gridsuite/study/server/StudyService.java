@@ -1569,10 +1569,6 @@ public class StudyService {
             });
     }
 
-    Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-    }
-
     public Mono<String> getVariantId(UUID nodeUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid);
     }
@@ -1923,19 +1919,20 @@ public class StudyService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
-    public Mono<Pair<UUID, String>> getReportUuidAndName(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuidAndName(nodeUuid);
+    public Flux<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+        return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
     }
 
-    public Mono<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid) {
-        return getReportUuidAndName(nodeUuid).flatMap(info ->
-            reportService.getReport(info.getLeft()).switchIfEmpty(Mono.just(new ReporterModel(nodeUuid.toString(), nodeUuid.toString())))
-            .map(reporter -> {
-                ReporterModel newReporter = new ReporterModel(reporter.getTaskKey(), info.getRight(), reporter.getTaskValues());
-                reporter.getReports().forEach(newReporter::report);
-                reporter.getSubReporters().forEach(newReporter::addSubReporter);
-                return newReporter;
-            })
+    public Flux<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid, boolean nodeOnlyReport) {
+        return getReportUuidsAndNames(nodeUuid, nodeOnlyReport).concatMap(info ->
+            reportService.getReport(info.getLeft()).switchIfEmpty(Mono.just(new ReporterModel(UUID.randomUUID().toString(), info.getLeft().toString())))
+                .map(reporter -> {
+                    // set reporter default name to node name
+                    ReporterModel newReporter = new ReporterModel(reporter.getTaskKey(), info.getRight(), reporter.getTaskValues());
+                    reporter.getReports().forEach(newReporter::report);
+                    reporter.getSubReporters().forEach(newReporter::addSubReporter);
+                    return newReporter;
+                })
         );
     }
 

@@ -995,8 +995,8 @@ public class StudyTest {
             .exchange()
             .expectStatus()
             .isOk()
-            .expectBody(ReporterModel.class)
-            .value(new MatcherReport(REPORT_TEST_ROOT_NODE));
+            .expectBodyList(ReporterModel.class)
+            .value(reports -> reports.get(0), new MatcherReport(REPORT_TEST_ROOT_NODE));
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 

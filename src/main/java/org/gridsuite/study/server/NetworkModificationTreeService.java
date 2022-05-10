@@ -36,6 +36,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.persistence.EntityNotFoundException;
@@ -583,13 +584,26 @@ public class NetworkModificationTreeService {
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
-    @Transactional
-    public Pair<UUID, String> doGetReportUuidAndName(UUID nodeUuid, boolean generateId) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuidAndName(nodeUuid, generateId)).orElse(null);
+    private void getParentReportUuidsAndNamesFromNode(NodeEntity nodeEntity, boolean nodeOnlyReport, List<Pair<UUID, String>> res) {
+        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
+        res.add(0, Pair.of(self.doGetReportUuid(nodeEntity.getIdNode(), true), node.getName()));
+        if (node.getType() == NodeType.NETWORK_MODIFICATION && !nodeOnlyReport) {
+            getParentReportUuidsAndNamesFromNode(nodeEntity.getParentNode(), false, res);
+        }
     }
 
-    public Mono<Pair<UUID, String>> getReportUuidAndName(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetReportUuidAndName(nodeUuid, true))
+    @Transactional
+    public List<Pair<UUID, String>> getParentReportUuidsAndNamesFromNode(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<Pair<UUID, String>> uuidsAndNames = new ArrayList<>();
+        nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> getParentReportUuidsAndNamesFromNode(entity, nodeOnlyReport, uuidsAndNames), () -> {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        });
+        return uuidsAndNames;
+    }
+
+    public Flux<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<Pair<UUID, String>> uuidsAndNames = self.getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
+        return Flux.fromIterable(uuidsAndNames)
             .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 
