@@ -2046,11 +2046,19 @@ public class StudyTest {
 //                            studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
         }
 
-        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
+        // studyRepository is now being used since studyCreationRequestRepository will be empty due to now synchroneous requests
+        UUID studyUuid = studyRepository.findAll().get(0).getId();
 
-        webTestClient.get().uri("/v1/study_creation_requests").header("userId", "userId").exchange().expectStatus()
-                .isOk().expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(BasicStudyInfos.class)
-                .value(requests -> requests.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+
+        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+
+        //result is now empty since requests are synchroneous
+        assertEquals(bsiListResult, List.of());
 
         countDownLatch.countDown();
 
@@ -2058,13 +2066,15 @@ public class StudyTest {
         // block until the study creation processing is done
         Thread.sleep(TIMEOUT);
 
-        webTestClient.get().uri("/v1/study_creation_requests").header("userId", "userId").exchange().expectStatus()
-                .isOk().expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(BasicStudyInfos.class)
-                .isEqualTo(List.of());
+        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
 
-        webTestClient.get().uri("/v1/studies").header("userId", "userId").exchange().expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(CreatedStudyBasicInfos.class)
-                .value(requests -> requests.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
+        List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);
@@ -2083,15 +2093,26 @@ public class StudyTest {
         countDownLatch = new CountDownLatch(1);
 
         // insert a study
-        webTestClient.post().uri("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", NEW_STUDY_CASE_UUID, "false")
-                .header("userId", "userId").exchange().expectStatus().isOk().expectBody(BasicStudyInfos.class)
-                .value(createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
+        mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", NEW_STUDY_CASE_UUID, "false").header("userId", "userId"))
+            .andExpect(status().isOk())
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+
+        BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
+
+        assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
 
         studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
-        webTestClient.get().uri("/v1/study_creation_requests").header("userId", "userId").exchange().expectStatus()
-                .isOk().expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(BasicStudyInfos.class)
-                .value(requests -> requests.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+
+        csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertThat(csbiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         countDownLatch.countDown();
 
@@ -2099,13 +2120,25 @@ public class StudyTest {
         // block until the study creation processing is done
         Thread.sleep(TIMEOUT);
 
-        webTestClient.get().uri("/v1/study_creation_requests").header("userId", "userId").exchange().expectStatus()
-                .isOk().expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(BasicStudyInfos.class)
-                .isEqualTo(List.of());
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
 
-        webTestClient.get().uri("/v1/studies").header("userId", "userId").exchange().expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON).expectBodyList(CreatedStudyBasicInfos.class)
-                .value(requests -> requests.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
+        csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertEquals(csbiListResult, List.of());
+
+        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+
+        csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+
+        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);

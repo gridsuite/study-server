@@ -32,7 +32,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.NoSuchIndexException;
 import org.springframework.test.context.junit4.SpringRunner;
-import reactor.core.publisher.Mono;
 
 import java.util.HashSet;
 import java.util.List;
@@ -48,6 +47,7 @@ import static org.mockito.Mockito.when;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+//TEST OK
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=true"})
 public class EquipmentInfosServiceTests {
@@ -72,8 +72,8 @@ public class EquipmentInfosServiceTests {
 
     @Before
     public void setup() {
-        when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(Mono.just(NETWORK_UUID));
-        when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(Mono.just(VariantManagerConstants.INITIAL_VARIANT_ID));
+        when(networkStoreService.getNetworkUuid(NETWORK_UUID)).thenReturn(NETWORK_UUID);
+        when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
     }
 
     @After
@@ -250,7 +250,7 @@ public class EquipmentInfosServiceTests {
     private void testNameFullAscii(String pat) {
         Set<EquipmentInfos> hits = new HashSet<>();
 
-        studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false).subscribe(hits::add);
+        hits.addAll(studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false));
         pbsc.checkThat(hits.size(), is(1));
     }
 

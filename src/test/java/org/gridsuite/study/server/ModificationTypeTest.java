@@ -18,6 +18,7 @@ import static org.junit.Assert.assertThrows;
  */
 public class ModificationTypeTest {
 
+    //TEST OK
     @Test
     public void test() {
         assertEquals("loads", ModificationType.getUriFromType(ModificationType.LOAD_CREATION));
