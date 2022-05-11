@@ -403,7 +403,10 @@ public class StudyTest {
                 VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(380)
                         .topologyKind(TopologyKind.BUS_BREAKER).build()));
 
-        String substationListAsString = mapper.writeValueAsString(List.of(
+        String substationModificationListAsString = mapper.writeValueAsString(List.of(
+                EquipmentModificationInfos.builder().substationIds(Set.of()).uuid(UUID.fromString(MODIFICATION_UUID)).build()));
+
+        String voltageLevelModificationListAsString = mapper.writeValueAsString(List.of(
                 EquipmentModificationInfos.builder().substationIds(Set.of()).uuid(UUID.fromString(MODIFICATION_UUID)).build()));
 
         String busesDataAsString = mapper
@@ -585,12 +588,14 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/substations-creation") && request.getMethod().equals("PUT")) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
                     if (body.peek().readUtf8().equals("bogus")) {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
                         return new MockResponse().setResponseCode(200)
-                            .setBody(substationListAsString)
+                            .setBody(substationModificationListAsString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels[?]group=.*") && POST.equals(request.getMethod())) {
@@ -598,7 +603,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
                         return new MockResponse().setResponseCode(200)
-                            .setBody(voltageLevelDataAsString)
+                            .setBody(voltageLevelModificationListAsString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 }
@@ -2382,6 +2387,7 @@ public class StudyTest {
                         && r.getBody().equals(substationAttributesUpdated)));
     }
 
+    //TEST OK
     @Test
     public void testCreateVoltageLevel() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2397,32 +2403,28 @@ public class StudyTest {
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
 
         // create voltage level on root node (not allowed)
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .bodyValue(createVoltageLevelAttributes).exchange().expectStatus().isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
+                        studyNameUserIdUuid, rootNodeUuid).content(createVoltageLevelAttributes))
+            .andExpect(status().isForbidden());
 
         // create voltage level
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
-                        studyNameUserIdUuid, modificationNode1Uuid)
-                .bodyValue(createVoltageLevelAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createVoltageLevelAttributes))
+            .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, new HashSet<>());
 
         // create voltage level on second modification node
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
-                        studyNameUserIdUuid, modificationNode2Uuid)
-                .bodyValue(createVoltageLevelAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createVoltageLevelAttributes))
+            .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, new HashSet<>());
 
         // update voltage level creation
         String voltageLevelAttributesUpdated = "{\"voltageLevelId\":\"voltageLevelId2\",\"voltageLevelName\":\"voltageLevelName2\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/voltage-levels-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).bodyValue(voltageLevelAttributesUpdated)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/voltage-levels-creation",
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(voltageLevelAttributesUpdated))
+            .andExpect(status().isOk());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream()
