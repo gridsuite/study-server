@@ -464,7 +464,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
                         return new MockResponse().setResponseCode(200)
-                            .setBody(voltageLevelDataAsString)
+                            .setBody(substationDataAsString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels[?]group=.*") && POST.equals(request.getMethod())) {
