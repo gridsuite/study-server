@@ -635,6 +635,10 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=variant_1":
+                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "?limitType":
                     case "/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "?limitType":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
@@ -935,6 +939,16 @@ public class StudyTest {
             .expectStatus().isOk();
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
+
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM")
+            .exchange()
+            .expectStatus().isOk();
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=variant_1", NETWORK_UUID_STRING)));
     }
 
     @Test
