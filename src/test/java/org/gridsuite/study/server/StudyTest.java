@@ -139,7 +139,6 @@ import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.Substation;
 import com.powsybl.iidm.network.TopologyKind;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
@@ -222,7 +221,6 @@ public class StudyTest {
     private static final String SHUNT_COMPENSATOR_ID_1 = "SHUNT_COMPENSATOR_ID_1";
     private static final String TWO_WINDINGS_TRANSFORMER_ID_1 = "2WT_ID_1";
     private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
-    private static final String SUBSTATION_ID_2 = "SUBSTATION_ID_2";
     private static final String VL_ID_1 = "VL_ID_1";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
@@ -449,7 +447,7 @@ public class StudyTest {
                             .setHeader("receiver",
                                     "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4)
                                             + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build());
+                            .build(), "test");
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
@@ -587,6 +585,14 @@ public class StudyTest {
                 } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-creation") && request.getMethod().equals("PUT")) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/substations-creation") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/generators-creation") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/shunt-compensators-creation") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/lines-creation") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/two-windings-transformers-creation") && request.getMethod().equals("PUT")) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation") && request.getMethod().equals("PUT")) {
                     return new MockResponse().setResponseCode(200);
@@ -2673,6 +2679,7 @@ public class StudyTest {
                 "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections")));
     }
 
+    //TEST OK
     @Test
     public void testCreateGenerator() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2688,31 +2695,27 @@ public class StudyTest {
         String createGeneratorAttributes = "{\"generatorId\":\"generatorId1\",\"generatorName\":\"generatorName1\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"100.0\",\"maxActivePower\":\"200.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
 
         // create generator on root node (not allowed)
-        webTestClient
-                .post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .bodyValue(createGeneratorAttributes).exchange().expectStatus().isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
+                        studyNameUserIdUuid, rootNodeUuid).content(createGeneratorAttributes))
+                .andExpect(status().isForbidden());
 
         // create generator on first modification node
-        webTestClient
-                .post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
-                        studyNameUserIdUuid, modificationNode1Uuid)
-                .bodyValue(createGeneratorAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes))
+            .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
 
         // create generator on second modification node
-        webTestClient
-                .post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
-                        studyNameUserIdUuid, modificationNode2Uuid)
-                .bodyValue(createGeneratorAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createGeneratorAttributes))
+                .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
 
         // update generator creation
         String generatorAttributesUpdated = "{\"generatorId\":\"generatorId2\",\"generatorName\":\"generatorName2\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"150.0\",\"maxActivePower\":\"50.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/generators-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).bodyValue(generatorAttributesUpdated)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/generators-creation",
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(generatorAttributesUpdated))
+            .andExpect(status().isOk());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream()
@@ -2731,6 +2734,7 @@ public class StudyTest {
                         && r.getBody().equals(generatorAttributesUpdated)));
     }
 
+    //TEST OK
     @Test
     public void testCreateShuntsCompensator() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2743,24 +2747,21 @@ public class StudyTest {
         String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
 
         // create suntCompensator on root node (not allowed)
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .bodyValue(createShuntCompensatorAttributes).exchange().expectStatus().isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
+                        studyNameUserIdUuid, rootNodeUuid).content(createShuntCompensatorAttributes))
+            .andExpect(status().isForbidden());
 
         // create suntCompensator on modification node child of root node
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
-                        studyNameUserIdUuid, modificationNode1Uuid)
-                .bodyValue(createShuntCompensatorAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes))
+            .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
 
         // update shunt compensator creation
         String shuntCompensatorAttributesUpdated = "{\"shuntCompensatorId\":\"shuntCompensatorId2\",\"shuntCompensatorName\":\"shuntCompensatorName2\",\"voltageLevelId\":\"idVL2\",\"busOrBusbarSectionId\":\"idBus1\"}";
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/shunt-compensators-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                .bodyValue(shuntCompensatorAttributesUpdated).exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/shunt-compensators-creation",
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(shuntCompensatorAttributesUpdated))
+            .andExpect(status().isOk());
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream()
@@ -2773,6 +2774,7 @@ public class StudyTest {
                         && r.getBody().equals(shuntCompensatorAttributesUpdated)));
     }
 
+    //TEST OK
     @Test
     public void testCreateLine() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2793,20 +2795,20 @@ public class StudyTest {
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
 
         // create line on root node (not allowed)
-        webTestClient.post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
-                studyNameUserIdUuid, rootNodeUuid).bodyValue(createLineAttributes).exchange().expectStatus()
-                .isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
+                studyNameUserIdUuid, rootNodeUuid).content(createLineAttributes))
+                .andExpect(status().isForbidden());
 
         // create line on first modification node
-        webTestClient.post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
-                studyNameUserIdUuid, modificationNode1Uuid).bodyValue(createLineAttributes).exchange().expectStatus()
-                .isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
+                studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes))
+                .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
 
         // create line on second modification node
-        webTestClient.post().uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
-                studyNameUserIdUuid, modificationNode2Uuid).bodyValue(createLineAttributes).exchange().expectStatus()
-                .isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
+                studyNameUserIdUuid, modificationNode2Uuid).content(createLineAttributes))
+            .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
 
         // update line creation
@@ -2816,10 +2818,9 @@ public class StudyTest {
                 + "\"shuntConductance2\":\"200.0\"," + "\"shuntSusceptance2\":\"200.0\","
                 + "\"voltageLevelId1\":\"idVL2\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).bodyValue(lineAttributesUpdated)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-creation",
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(lineAttributesUpdated))
+            .andExpect(status().isOk());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream()
@@ -2838,6 +2839,7 @@ public class StudyTest {
                         && r.getBody().equals(lineAttributesUpdated)));
     }
 
+    //TEST OK
     @Test
     public void testCreateTwoWindingsTransformer() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2853,31 +2855,27 @@ public class StudyTest {
         String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
         // create 2WT on root node (not allowed)
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
-                        studyNameUserIdUuid, rootNodeUuid)
-                .bodyValue(createTwoWindingsTransformerAttributes).exchange().expectStatus().isForbidden();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
+                        studyNameUserIdUuid, rootNodeUuid).content(createTwoWindingsTransformerAttributes))
+            .andExpect(status().isForbidden());
 
         // create 2WT on first modification node
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
-                        studyNameUserIdUuid, modificationNode1Uuid)
-                .bodyValue(createTwoWindingsTransformerAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes))
+            .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
 
         // create 2WT on second modification node
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
-                        studyNameUserIdUuid, modificationNode2Uuid)
-                .bodyValue(createTwoWindingsTransformerAttributes).exchange().expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createTwoWindingsTransformerAttributes))
+            .andExpect(status().isOk());
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
 
         // update Two Windings Transformer creation
         String twoWindingsTransformerAttributesUpdated = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/two-windings-transformers-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                .bodyValue(twoWindingsTransformerAttributesUpdated).exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/two-windings-transformers-creation",
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(twoWindingsTransformerAttributesUpdated))
+            .andExpect(status().isOk());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream()
