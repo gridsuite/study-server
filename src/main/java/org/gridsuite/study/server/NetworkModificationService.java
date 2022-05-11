@@ -186,7 +186,6 @@ public class NetworkModificationService {
     private Mono<? extends Throwable> handleChangeError(ClientResponse clientResponse, StudyException.Type type) {
         return clientResponse.bodyToMono(String.class)
             .switchIfEmpty(Mono.error(
-                // shouldn't we log some warning ?
                 new StudyException(type, clientResponse.statusCode().toString())
             ))
             .flatMap(body -> {
