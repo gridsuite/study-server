@@ -83,6 +83,7 @@ import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.VoltageLevelMapData;
+import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -138,6 +139,7 @@ import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.Substation;
 import com.powsybl.iidm.network.TopologyKind;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
@@ -220,6 +222,7 @@ public class StudyTest {
     private static final String SHUNT_COMPENSATOR_ID_1 = "SHUNT_COMPENSATOR_ID_1";
     private static final String TWO_WINDINGS_TRANSFORMER_ID_1 = "2WT_ID_1";
     private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
+    private static final String SUBSTATION_ID_2 = "SUBSTATION_ID_2";
     private static final String VL_ID_1 = "VL_ID_1";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
@@ -400,6 +403,9 @@ public class StudyTest {
                 VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(380)
                         .topologyKind(TopologyKind.BUS_BREAKER).build()));
 
+        String substationListAsString = mapper.writeValueAsString(List.of(
+                EquipmentModificationInfos.builder().substationIds(Set.of()).uuid(UUID.fromString(MODIFICATION_UUID)).build()));
+
         String busesDataAsString = mapper
                 .writeValueAsString(List.of(IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
                         IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build()));
@@ -577,12 +583,14 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-creation") && request.getMethod().equals("PUT")) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/substations-creation") && request.getMethod().equals("PUT")) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
                     if (body.peek().readUtf8().equals("bogus")) {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
                         return new MockResponse().setResponseCode(200)
-                            .setBody(voltageLevelDataAsString)
+                            .setBody(substationListAsString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels[?]group=.*") && POST.equals(request.getMethod())) {
@@ -594,7 +602,6 @@ public class StudyTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 }
-
 
                 switch (path) {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d":
@@ -2318,6 +2325,7 @@ public class StudyTest {
                         && r.getBody().equals(loadModificationAttributes)));
     }
 
+    // TEST OK
     @Test
     public void testCreateSubstation() throws Exception {
         createStudy("userId", CASE_UUID);
