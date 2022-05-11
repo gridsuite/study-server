@@ -385,7 +385,7 @@ public class NetworkModificationService {
         }
     }
 
-    public Mono<Void> reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
+    public void reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications" + DELIMITER + "move")
@@ -394,17 +394,14 @@ public class NetworkModificationService {
             path.queryParam("before", beforeUuid);
         }
 
-        return webClient.put()
-                .uri(getNetworkModificationServerURI(false)
-                        + path.buildAndExpand(groupUuid, modificationUuid).toUriString())
-                .retrieve().onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore
-                                                                                                          // because
-                                                                                                          // modification
-                                                                                                          // group does
-                                                                                                          // not exist
-                                                                                                          // if no
-                                                                                                          // modifications
-                .bodyToMono(Void.class);
-
+        try {
+            restTemplate.put(getNetworkModificationServerURI(false)
+                            + path.buildAndExpand(groupUuid, modificationUuid).toUriString(), null);
+        } catch (HttpClientErrorException e) {
+            //Ignore because modification group does not exist if no modifications
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
     }
 }

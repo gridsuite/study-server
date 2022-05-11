@@ -2444,6 +2444,7 @@ public class StudyTest {
                         && r.getBody().equals(voltageLevelAttributesUpdated)));
     }
 
+    //TEST OK
     @Test
     public void testReorderModification() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2456,20 +2457,17 @@ public class StudyTest {
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
 
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2).exchange().expectStatus()
-                .isNotFound();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2))
+            .andExpect(status().isNotFound());
 
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                UUID.randomUUID(), modificationNodeUuid, modification1, modification2).exchange().expectStatus()
-                .isForbidden();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                UUID.randomUUID(), modificationNodeUuid, modification1, modification2))
+            .andExpect(status().isForbidden());
 
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
-                        studyNameUserIdUuid, modificationNodeUuid, modification1, modification2)
-                .exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
+                        studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
+            .andExpect(status().isOk());
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
@@ -2477,10 +2475,9 @@ public class StudyTest {
                         + "/modifications/move[?]modificationsToMove=.*" + modification1)));
 
         // update switch on first modification node
-        webTestClient.put().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                studyNameUserIdUuid, modificationNodeUuid, modification1, modification2).exchange().expectStatus()
-                .isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
+                studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
+            .andExpect(status().isOk());
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
@@ -2491,6 +2488,7 @@ public class StudyTest {
 
     }
 
+    //TEST OK
     @Test
     public void testDeleteEquipment() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2504,22 +2502,22 @@ public class StudyTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         // delete equipment on root node (not allowed)
-        webTestClient.delete().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
-                studyNameUserIdUuid, rootNodeUuid, "LOAD", "idLoadToDelete").exchange().expectStatus().isForbidden();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
+                studyNameUserIdUuid, rootNodeUuid, "LOAD", "idLoadToDelete"))
+            .andExpect(status().isForbidden());
 
         // delete equipment on first modification node
-        webTestClient.delete().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
-                studyNameUserIdUuid, modificationNode1Uuid, "LOAD", "idLoadToDelete").exchange().expectStatus().isOk();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
+                studyNameUserIdUuid, modificationNode1Uuid, "LOAD", "idLoadToDelete"))
+            .andExpect(status().isOk());
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid,
                 HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
                 "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
 
         // delete equipment on second modification node
-        webTestClient.delete().uri(
-                "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
-                studyNameUserIdUuid, modificationNode2Uuid, "LOAD", "idLoadToDelete").exchange().expectStatus().isOk();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
+                studyNameUserIdUuid, modificationNode2Uuid, "LOAD", "idLoadToDelete"))
+            .andExpect(status().isOk());
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid,
                 HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
                 "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
@@ -2634,28 +2632,39 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
+    //TEST OK
     @Test
     public void testGetBusesOrBusbarSections() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
 
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses",
-                        studyNameUserIdUuid, rootNodeUuid, VOLTAGE_LEVEL_ID)
-                .exchange().expectStatus().isOk().expectBodyList(IdentifiableInfos.class)
-                .value(new MatcherJson<>(mapper, List.of(IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses",
+                        studyNameUserIdUuid, rootNodeUuid, VOLTAGE_LEVEL_ID))
+            .andExpect(status().isOk())
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+
+        List<IdentifiableInfos> iiList = mapper.readValue(resultAsString, new TypeReference<List<IdentifiableInfos>>() { });
+
+        assertThat(iiList, new MatcherJson<>(mapper, List.of(IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
                         IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build())));
 
         var requests = getRequestsDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.matches(
                 "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/configured-buses")));
 
-        webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/busbar-sections",
-                        studyNameUserIdUuid, rootNodeUuid, VOLTAGE_LEVEL_ID)
-                .exchange().expectStatus().isOk().expectBodyList(IdentifiableInfos.class)
-                .value(new MatcherJson<>(mapper,
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/busbar-sections",
+                studyNameUserIdUuid, rootNodeUuid, VOLTAGE_LEVEL_ID))
+                    .andExpect(status().isOk())
+                    .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+
+        iiList = mapper.readValue(resultAsString, new TypeReference<List<IdentifiableInfos>>() { });
+
+        assertThat(iiList, new MatcherJson<>(mapper,
                         List.of(IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
                                 IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build())));
 
