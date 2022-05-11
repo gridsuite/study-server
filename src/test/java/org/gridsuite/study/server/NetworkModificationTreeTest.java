@@ -472,11 +472,11 @@ public class NetworkModificationTreeTest {
         var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
         assertEquals(originalChildren, grandChildren);
 
-        networkModificationTreeService.getVariantId(node1.getId()).subscribe(variantId -> assertEquals(VARIANT_ID, variantId));
+        assertEquals(VARIANT_ID, networkModificationTreeService.getVariantId(node1.getId()));
 
         assertEquals(0, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
         AtomicReference<UUID> modificationGroupUuid = new AtomicReference<>();
-        networkModificationTreeService.getModificationGroupUuid(node1.getId()).subscribe(modificationGroupUuid::set);
+        modificationGroupUuid.set(networkModificationTreeService.getModificationGroupUuid(node1.getId()));
         assertNotNull(modificationGroupUuid.get());
         assertEquals(1, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
 
@@ -559,9 +559,9 @@ public class NetworkModificationTreeTest {
         createNode(root.getStudyId(), node4, node5);
         createNode(root.getStudyId(), node5, node6);
 
-        networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION).subscribe(node -> assertEquals(node5.getId(), node));
-        networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION).subscribe(node -> assertEquals(node3.getId(), node));
-        networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT).subscribe(node -> assertEquals(root.getId(), node));
+        assertEquals(node5.getId(), networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(node3.getId(), networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(root.getId(), networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT));
     }
 
     @Test
@@ -627,7 +627,7 @@ public class NetworkModificationTreeTest {
     private RootNode createRoot() {
         var study = insertDummyStudy();
         AtomicReference<RootNode> result = new AtomicReference<>();
-        networkModificationTreeService.getStudyTree(study.getId()).subscribe(result::set);
+        result.set(networkModificationTreeService.getStudyTree(study.getId()));
         return result.get();
     }
 

@@ -577,7 +577,24 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-creation") && request.getMethod().equals("PUT")) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(voltageLevelDataAsString)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(voltageLevelDataAsString)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
                 }
+
 
                 switch (path) {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d":
@@ -2886,8 +2903,7 @@ public class StudyTest {
 
         // stop build
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
-            .andExpect(status().isOk())
-
+            .andExpect(status().isOk());
 
         buildStatusMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
@@ -3002,7 +3018,7 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         AtomicReference<AbstractNode> node = new AtomicReference<>();
-        networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()).subscribe(node::set);
+        node.set(networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()));
         NetworkModificationNode modificationNode = (NetworkModificationNode) node.get();
         assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
 
@@ -3013,7 +3029,7 @@ public class StudyTest {
                         studyUuid, modificationNode1.getId(), modificationUuid))
             .andExpect(status().isOk());
 
-        networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()).subscribe(node::set);
+        node.set(networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()));
         modificationNode = (NetworkModificationNode) node.get();
         assertTrue(modificationNode.getModificationsToExclude().isEmpty());
 

@@ -210,38 +210,39 @@ public class StudyService {
     @Autowired
     private StreamBridge studyUpdatePublisher;
 
-    @Bean
-    public Consumer<Flux<Message<String>>> consumeSaResult() {
-        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                Receiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
-
-                    LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
-                            receiverObj.getNodeUuid());
-
-                    // update DB
-                    return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid)
-                            .then(Mono.fromCallable(() -> {
-                                // send notifications
-                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
-                                        UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
-                                        UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-                                return null;
-                            }));
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-            return Mono.empty();
-        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-    }
+    //TODO: fix consumer
+//    @Bean
+//    public Consumer<Flux<Message<String>>> consumeSaResult() {
+//        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
+//            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+//            if (receiver != null) {
+//                Receiver receiverObj;
+//                try {
+//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+//                            Receiver.class);
+//
+//                    LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
+//                            receiverObj.getNodeUuid());
+//
+//                    // update DB
+//                    return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid)
+//                            .then(Mono.fromCallable(() -> {
+//                                // send notifications
+//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
+//                                        UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
+//                                        UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+//                                return null;
+//                            }));
+//                } catch (JsonProcessingException e) {
+//                    LOGGER.error(e.toString());
+//                }
+//            }
+//            return Mono.empty();
+//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
+//    }
 
     @Autowired
     public StudyService(@Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri,
@@ -1435,34 +1436,35 @@ public class StudyService {
         restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
     }
 
-    @Bean
-    public Consumer<Flux<Message<String>>> consumeSaStopped() {
-        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                Receiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
-
-                    LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete security analysis result in database
-                    return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null)
-                            .then(Mono.fromCallable(() -> {
-                                // send notification for stopped computation
-                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
-                                        UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                                return null;
-                            }));
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-            return Mono.empty();
-        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-    }
+    //TODO: fix consumer
+//    @Bean
+//    public Consumer<Flux<Message<String>>> consumeSaStopped() {
+//        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
+//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+//            if (receiver != null) {
+//                Receiver receiverObj;
+//                try {
+//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+//                            Receiver.class);
+//
+//                    LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
+//
+//                    // delete security analysis result in database
+//                    return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null)
+//                            .then(Mono.fromCallable(() -> {
+//                                // send notification for stopped computation
+//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
+//                                        UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+//                                return null;
+//                            }));
+//                } catch (JsonProcessingException e) {
+//                    LOGGER.error(e.toString());
+//                }
+//            }
+//            return Mono.empty();
+//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
+//    }
 
     // wrappers to Mono/Flux for repositories
 
@@ -1495,8 +1497,8 @@ public class StudyService {
         return study;
     }
 
-    Mono<Void> updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        return networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
+    void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+        networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
     void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {

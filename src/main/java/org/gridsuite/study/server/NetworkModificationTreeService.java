@@ -56,8 +56,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.powsybl.loadflow.LoadFlowResult;
 
-import reactor.core.publisher.Mono;
-
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -257,12 +255,12 @@ public class NetworkModificationTreeService {
         return root;
     }
 
-    public Mono<RootNode> getStudyTree(UUID studyId) {
-        return Mono.fromCallable(() -> self.doGetStudyTree(studyId));
+    public RootNode getStudyTree(UUID studyId) {
+        return self.doGetStudyTree(studyId);
     }
 
-    public Mono<Void> updateNode(UUID studyUuid, AbstractNode node) {
-        return Mono.fromRunnable(() -> self.doUpdateNode(studyUuid, node));
+    public void updateNode(UUID studyUuid, AbstractNode node) {
+        self.doUpdateNode(studyUuid, node);
     }
 
     @Transactional
@@ -273,8 +271,8 @@ public class NetworkModificationTreeService {
     }
 
     // TODO test if studyUuid exist and have a node <nodeId>
-    public Mono<AbstractNode> getSimpleNode(UUID studyUuid, UUID nodeId) {
-        return Mono.fromCallable(() -> self.doGetSimpleNode(nodeId));
+    public AbstractNode getSimpleNode(UUID studyUuid, UUID nodeId) {
+        return self.doGetSimpleNode(nodeId);
     }
 
     @Transactional
@@ -361,8 +359,8 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
     }
 
-    public Mono<Void> updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        return Mono.fromRunnable(() -> self.doUpdateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
+    public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+        self.doUpdateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
     @Transactional
@@ -500,9 +498,13 @@ public class NetworkModificationTreeService {
     }
 
     // used only in tests
-    public Mono<UUID> getParentNode(UUID nodeUuid, NodeType nodeType) {
-        return Mono.fromCallable(() -> self.doGetParentNode(nodeUuid, nodeType).orElse(null))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
+        Optional<UUID> parentNodeUuidOpt = self.doGetParentNode(nodeUuid, nodeType);
+        if (parentNodeUuidOpt.isEmpty()) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        return parentNodeUuidOpt.get();
     }
 
     @Transactional(readOnly = true)

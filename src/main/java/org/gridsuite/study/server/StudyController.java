@@ -57,7 +57,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import reactor.core.publisher.Mono;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -831,10 +830,11 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "network modification tree"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public Mono<ResponseEntity<RootNode>> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return networkModificationTreeService.getStudyTree(studyUuid)
-            .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
-            .defaultIfEmpty(ResponseEntity.notFound().build());
+    public ResponseEntity<RootNode> getNetworkModificationTree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
+        return rootNode != null ?
+            ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
+            : ResponseEntity.notFound().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/tree/nodes")
@@ -842,9 +842,10 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "the node has been updated"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public ResponseEntity<Mono<Void>> updateNode(@RequestBody AbstractNode node,
+    public ResponseEntity<Void> updateNode(@RequestBody AbstractNode node,
                                                  @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(networkModificationTreeService.updateNode(studyUuid, node));
+        networkModificationTreeService.updateNode(studyUuid, node);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
@@ -852,11 +853,12 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "simplified nodes (without children"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
-    public Mono<ResponseEntity<AbstractNode>> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
-        return networkModificationTreeService.getSimpleNode(studyUuid, nodeId)
-            .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
-            .defaultIfEmpty(ResponseEntity.notFound().build());
+        AbstractNode node = networkModificationTreeService.getSimpleNode(studyUuid, nodeId);
+        return node != null ?
+                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
+                : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
@@ -1042,9 +1044,10 @@ public class StudyController {
     @Operation(summary = "stop a node build")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The build has been stopped"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<Mono<Void>> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        return ResponseEntity.ok().body(studyService.stopBuild(studyUuid, nodeUuid));
+        studyService.stopBuild(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}")
