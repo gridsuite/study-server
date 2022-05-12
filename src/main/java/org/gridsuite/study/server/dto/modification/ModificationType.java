@@ -7,15 +7,18 @@
 package org.gridsuite.study.server.dto.modification;
 
 import com.powsybl.commons.PowsyblException;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.gridsuite.study.server.StudyException;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+@Schema(type = "string", allowableValues = { "generators-modification" })
 public enum ModificationType {
     EQUIPMENT_ATTRIBUTE_MODIFICATION,
     LOAD_CREATION,
     LOAD_MODIFICATION,
+    GENERATOR_MODIFICATION,
     EQUIPMENT_DELETION,
     GENERATOR_CREATION,
     LINE_CREATION,
@@ -29,6 +32,7 @@ public enum ModificationType {
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
             case LOAD_CREATION:
+                return "loads-modification";
             case LOAD_MODIFICATION:
                 return "loads";
             case GENERATOR_CREATION:
@@ -43,8 +47,19 @@ public enum ModificationType {
                 return "shunt-compensators";
             case VOLTAGE_LEVEL_CREATION:
                 return "voltage-levels";
+            case GENERATOR_MODIFICATION:
+                return "generators-modification";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
+        }
+    }
+
+    public static ModificationType getTypeFromUri(String uri) {
+        switch (uri) {
+            case "generators-modification":
+                return GENERATOR_MODIFICATION;
+            default:
+                throw new IllegalArgumentException("Enum unknown entry");
         }
     }
 
@@ -66,6 +81,8 @@ public enum ModificationType {
                 return StudyException.Type.SUBSTATION_CREATION_FAILED;
             case VOLTAGE_LEVEL_CREATION:
                 return StudyException.Type.VOLTAGE_LEVEL_CREATION_FAILED;
+            case GENERATOR_MODIFICATION:
+                return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }

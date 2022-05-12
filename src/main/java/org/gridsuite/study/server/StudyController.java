@@ -75,10 +75,34 @@ public class StudyController {
         }
     }
 
+    static class MyModificationTypeConverter extends PropertyEditorSupport {
+
+        public MyModificationTypeConverter() {
+            super();
+        }
+
+        @Override
+        public String[] getTags() {
+            List<String> tags = new ArrayList<>();
+            for (var modificationType : ModificationType.values()) {
+                try {
+                    tags.add(ModificationType.getUriFromType(modificationType));
+                } catch (Exception ignored) { }
+            }
+            return tags.toArray(new String[0]);
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            setValue(ModificationType.getTypeFromUri(text));
+        }
+    }
+
     @InitBinder
     public void initBinder(WebDataBinder webdataBinder) {
         webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
             new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
+        webdataBinder.registerCustomEditor(ModificationType.class, new MyModificationTypeConverter());
     }
 
     @GetMapping(value = "/studies")
@@ -700,7 +724,7 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads")
-    @Operation(summary = "modify a load in the study network")
+    @Operation(summary = "modify an load in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been modified")})
     public ResponseEntity<Mono<Void>> modifyLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
@@ -729,6 +753,29 @@ public class StudyController {
                                                          @RequestBody String modifyLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
                 .then(studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/{typeModification}")
+    @Operation(summary = "update a generator modification in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator modification has been updated")})
+    public ResponseEntity<Mono<Void>> updateGeneratorModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                                  @PathVariable("modificationUuid") UUID modificationUuid,
+                                                                  @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                  @PathVariable("typeModification") ModificationType typeModification,
+                                                                  @RequestBody String modifyEquipmentAttributes) {
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
+            .then(studyService.updateEquipmentModification(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid, modificationUuid)));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{typeModification}")
+    @Operation(summary = "modify a generator in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been modified")})
+    public ResponseEntity<Mono<Void>> modifyGenerator(@PathVariable("studyUuid") UUID studyUuid,
+                                                      @PathVariable("nodeUuid") UUID nodeUuid,
+                                                      @PathVariable("typeModification") ModificationType typeModification,
+                                                      @RequestBody String modifyEquipmentAttributes) {
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
+            .then(studyService.modifyEquipment(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid)));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification")
