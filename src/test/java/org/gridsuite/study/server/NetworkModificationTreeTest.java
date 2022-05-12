@@ -266,7 +266,6 @@ public class NetworkModificationTreeTest {
         assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
     }
 
-    //TEST OK
     @Test
     public void testGetRoot() throws Exception {
         StudyEntity study = insertDummyStudy();
@@ -305,7 +304,6 @@ public class NetworkModificationTreeTest {
                     .getContentAsString(), new TypeReference<>() { });
     }
 
-    //TEST OK
     @Test
     public void testNodeCreation() throws Exception {
         RootNode root = createRoot();
@@ -335,7 +333,6 @@ public class NetworkModificationTreeTest {
         deleteNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)));
     }
 
-    //TEST OK
     @Test
     public void testNodeManipulation() throws Exception {
         RootNode root = createRoot();
@@ -438,7 +435,6 @@ public class NetworkModificationTreeTest {
         );
     }
 
-    //TEST OK
     @Test
     public void testNodeInsertion() throws Exception {
         RootNode root = createRoot();
@@ -476,7 +472,6 @@ public class NetworkModificationTreeTest {
             .andExpect(status().isNotFound());
     }
 
-    //TEST OK
     @Test
     public void testInsertAfter() throws Exception {
         RootNode root = createRoot();
@@ -505,7 +500,6 @@ public class NetworkModificationTreeTest {
         assertFalse(networkModificationTreeService.doGetVariantId(nodeUuid, true).isEmpty());
     }
 
-    //TEST OK
     @Test
     public void testNodeUpdate() throws Exception {
         RootNode root = createRoot();
@@ -553,7 +547,6 @@ public class NetworkModificationTreeTest {
             .andExpect(status().isNotFound());
     }
 
-    // TEST OK
     @SneakyThrows
     @Test
     public void testLightNode() {

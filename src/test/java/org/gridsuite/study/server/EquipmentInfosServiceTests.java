@@ -47,7 +47,6 @@ import static org.mockito.Mockito.when;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-//TEST OK
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=true"})
 public class EquipmentInfosServiceTests {

@@ -63,10 +63,9 @@ public class NetworkModificationService {
     private final ObjectMapper objectMapper;
 
     @Autowired
-    NetworkModificationService(
-            @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
-            NetworkService networkStoreService,
-            ObjectMapper objectMapper) {
+    NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
+                               NetworkService networkStoreService,
+                               ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.objectMapper = objectMapper;
@@ -77,12 +76,13 @@ public class NetworkModificationService {
     }
 
     private String getNetworkModificationServerURI(boolean addNetworksPart) {
-        return this.networkModificationServerBaseUri + DELIMITER + NETWORK_MODIFICATION_API_VERSION + DELIMITER
-                + (addNetworksPart ? "networks" + DELIMITER : "");
+        return this.networkModificationServerBaseUri + DELIMITER + NETWORK_MODIFICATION_API_VERSION + DELIMITER + (addNetworksPart ? "networks" + DELIMITER : "");
     }
 
     private String buildPathFrom(UUID networkUuid) {
-        return UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER).buildAndExpand(networkUuid).toUriString();
+        return UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER)
+                .buildAndExpand(networkUuid)
+                .toUriString();
     }
 
     public List<ModificationInfos> getModifications(UUID groupUuid) {

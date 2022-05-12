@@ -39,7 +39,6 @@ public class EquipmentInfosServiceMockTests {
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
-    //TEST OK
     @Test
     public void testAddDeleteEquipmentInfos() {
         List<EquipmentInfos> equipmentsInfos = List.of(

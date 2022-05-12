@@ -6,69 +6,19 @@
  */
 package org.gridsuite.study.server;
 
-import static org.gridsuite.study.server.StudyConstants.ACTIONS_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.CASE_UUID;
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.GEO_DATA_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.LOADFLOW_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.NETWORK_CONVERSION_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.NETWORK_MAP_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.SECURITY_ANALYSIS_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.EQUIPMENT_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_RUNNING;
-import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
-import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_RUNNING;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_CREATION_FAILED;
-
-import java.io.UncheckedIOException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.contingency.Contingency;
+import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.VariantManagerConstants;
+import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.loadflow.LoadFlowResultImpl;
+import lombok.NonNull;
 
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.BasicStudyInfos;
-import org.gridsuite.study.server.dto.BuildInfos;
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.DeleteNodeInfos;
-import org.gridsuite.study.server.dto.DeleteStudyInfos;
-import org.gridsuite.study.server.dto.DiagramParameters;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.Receiver;
-import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
-import org.gridsuite.study.server.dto.StudyInfos;
-import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
-import org.gridsuite.study.server.dto.VoltageLevelInfos;
-import org.gridsuite.study.server.dto.VoltageLevelMapData;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
@@ -79,13 +29,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.repository.ComponentResultEmbeddable;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.LoadFlowResultEntity;
-import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
-import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -113,17 +57,22 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.contingency.Contingency;
-import com.powsybl.iidm.network.Country;
-import com.powsybl.iidm.network.VariantManagerConstants;
-import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
-import com.powsybl.loadflow.LoadFlowResultImpl;
+import java.io.UncheckedIOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import lombok.NonNull;
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -177,8 +126,7 @@ public class StudyService {
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
-    // Self injection for @transactional support in internal calls to other methods
-    // of this service
+    // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
     StudyService self;
 
@@ -237,18 +185,22 @@ public class StudyService {
 
     @Autowired
     public StudyService(@Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri,
-            @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
-            @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
-            @Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri,
-            @Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri,
-            @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
-            @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
-            @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
-            StudyRepository studyRepository, StudyCreationRequestRepository studyCreationRequestRepository,
-            NetworkService networkStoreService, NetworkModificationService networkModificationService,
-            ReportService reportService, @Lazy StudyInfosService studyInfosService,
-            @Lazy EquipmentInfosService equipmentInfosService,
-            NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
+        @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
+        @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
+        @Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri,
+        @Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri,
+        @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
+        @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
+        @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
+        StudyRepository studyRepository,
+        StudyCreationRequestRepository studyCreationRequestRepository,
+        NetworkService networkStoreService,
+        NetworkModificationService networkModificationService,
+        ReportService reportService,
+        @Lazy StudyInfosService studyInfosService,
+        @Lazy EquipmentInfosService equipmentInfosService,
+        NetworkModificationTreeService networkModificationTreeService,
+        ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;

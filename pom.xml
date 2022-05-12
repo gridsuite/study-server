@@ -214,7 +214,6 @@
             <scope>runtime</scope>
         </dependency>
 
-
         <!-- Test dependencies -->
         <dependency>
             <groupId>com.powsybl</groupId>

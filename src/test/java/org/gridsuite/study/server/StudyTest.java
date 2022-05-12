@@ -6,90 +6,39 @@
  */
 package org.gridsuite.study.server;
 
-import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_INSERT_MODE;
-import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_NEW_NODE;
-import static org.gridsuite.study.server.NetworkModificationTreeService.NODE_UPDATED;
-import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
-import static org.gridsuite.study.server.StudyService.FIRST_VARIANT_ID;
-import static org.gridsuite.study.server.StudyService.HEADER_ERROR;
-import static org.gridsuite.study.server.StudyService.HEADER_NODE;
-import static org.gridsuite.study.server.StudyService.HEADER_STUDY_UUID;
-import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID;
-import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE;
-import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS;
-import static org.gridsuite.study.server.StudyService.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_BUILD_CANCELLED;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_BUILD_COMPLETED;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_LOADFLOW;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_LOADFLOW_STATUS;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_STUDIES;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_STUDY;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_STUDY_DELETE;
-import static org.gridsuite.study.server.StudyService.UPDATE_TYPE_SWITCH;
-import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
-import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
-import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.collect.ImmutableSet;
+import com.powsybl.commons.datasource.ReadOnlyDataSource;
+import com.powsybl.commons.datasource.ResourceDataSource;
+import com.powsybl.commons.datasource.ResourceSet;
+import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.commons.reporter.ReporterModelJsonModule;
+import com.powsybl.iidm.network.*;
+import com.powsybl.iidm.xml.XMLImporter;
+import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.loadflow.LoadFlowResultImpl;
+import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import lombok.SneakyThrows;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+import okio.Buffer;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import org.gridsuite.study.server.dto.BasicStudyInfos;
-import org.gridsuite.study.server.dto.BuildInfos;
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.StudyInfos;
-import org.gridsuite.study.server.dto.VoltageLevelInfos;
-import org.gridsuite.study.server.dto.VoltageLevelMapData;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.utils.MatcherJson;
@@ -105,7 +54,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -126,35 +74,42 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.ResourceUtils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.collect.ImmutableSet;
-import com.powsybl.commons.datasource.ReadOnlyDataSource;
-import com.powsybl.commons.datasource.ResourceDataSource;
-import com.powsybl.commons.datasource.ResourceSet;
-import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.commons.reporter.ReporterModelJsonModule;
-import com.powsybl.iidm.network.Country;
-import com.powsybl.iidm.network.Line;
-import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.TopologyKind;
-import com.powsybl.iidm.network.VariantManagerConstants;
-import com.powsybl.iidm.xml.XMLImporter;
-import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
-import com.powsybl.loadflow.LoadFlowResultImpl;
-import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
-import lombok.SneakyThrows;
-import nl.jqno.equalsverifier.EqualsVerifier;
-import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
-import okio.Buffer;
+import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_INSERT_MODE;
+import static org.gridsuite.study.server.NetworkModificationTreeService.HEADER_NEW_NODE;
+import static org.gridsuite.study.server.NetworkModificationTreeService.NODE_UPDATED;
+import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyService.*;
+import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
+import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
+import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -162,24 +117,15 @@ import okio.Buffer;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "200000")
-//@EnableWebFlux
 @AutoConfigureMockMvc
 @SpringBootTest
-@ContextHierarchy({ @ContextConfiguration(classes = { StudyApplication.class, TestChannelBinderConfiguration.class }) })
+@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class StudyTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTest.class);
 
     @Autowired
     private MockMvc mockMvc;
-
-//    @LocalServerPort
-//    private String testPort;
-//
-//    RootUriTemplateHandler uriTemplateHandler;
-//
-//    RestTemplate restTemplate;
 
     private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
@@ -227,8 +173,7 @@ public class StudyTest {
     private static final UUID CASE_LOADFLOW_ERROR_UUID = UUID.fromString(CASE_LOADFLOW_ERROR_UUID_STRING);
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final UUID NETWORK_LOADFLOW_ERROR_UUID = UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING);
-    private static final NetworkInfos NETWORK_LOADFLOW_ERROR_INFOS = new NetworkInfos(NETWORK_LOADFLOW_ERROR_UUID,
-            "20140116_0830_2D4_UX1_pst");
+    private static final NetworkInfos NETWORK_LOADFLOW_ERROR_INFOS = new NetworkInfos(NETWORK_LOADFLOW_ERROR_UUID, "20140116_0830_2D4_UX1_pst");
 
     @Autowired
     private OutputDestination output;
@@ -271,14 +216,18 @@ public class StudyTest {
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
-    // used by testGetStudyCreationRequests to control asynchronous case import
+    //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 
     @MockBean
     private NetworkStoreService networkStoreService;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
-        return EquipmentInfos.builder().networkUuid(NETWORK_UUID).id(line.getId()).name(line.getNameOrId()).type("LINE")
+        return EquipmentInfos.builder()
+                .networkUuid(NETWORK_UUID)
+                .id(line.getId())
+                .name(line.getNameOrId())
+                .type("LINE")
                 .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId())
                         .name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
                 .build();
@@ -288,24 +237,18 @@ public class StudyTest {
         linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
 
         studiesInfos = List.of(
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111"))
-                        .userId("userId1").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112"))
-                        .userId("userId1").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build());
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build());
 
         when(studyInfosService.add(any(CreatedStudyBasicInfos.class))).thenReturn(studiesInfos.get(0));
         when(studyInfosService.search(String.format("userId:%s", "userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
-        when(equipmentInfosService.searchEquipments(
-                String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentName.fullascii:(*B*)",
-                        NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
-                .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentName.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
+            .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
-        when(equipmentInfosService.searchEquipments(
-                String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentId.fullascii:(*B*)",
-                        NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
-                .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+        when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
+            .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
     }
@@ -319,7 +262,8 @@ public class StudyTest {
 
     @Before
     public void setup() throws IOException {
-        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
+        ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
+            new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
@@ -327,7 +271,6 @@ public class StudyTest {
 
         server = new MockWebServer();
 
-//        mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
         // Start the server.
@@ -359,43 +302,27 @@ public class StudyTest {
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
         String networkLoadFlowErrorInfosAsString = mapper.writeValueAsString(NETWORK_LOADFLOW_ERROR_INFOS);
 
-        LoadFlowResult loadFlowOK = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"),
-                "logs",
-                List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0,
-                        LoadFlowResult.ComponentResult.Status.CONVERGED, 10, "bus_1", 5.),
-                        new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.FAILED,
-                                20, "bus_2", 10.)));
+        LoadFlowResult loadFlowOK = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
+            List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0, LoadFlowResult.ComponentResult.Status.CONVERGED, 10, "bus_1", 5.),
+                new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.FAILED, 20, "bus_2", 10.)));
         String loadFlowOKString = mapper.writeValueAsString(loadFlowOK);
 
-        LoadFlowResult loadFlowError = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"),
-                "logs",
-                List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0,
-                        LoadFlowResult.ComponentResult.Status.MAX_ITERATION_REACHED, 10, "bus_1", 5.),
-                        new LoadFlowResultImpl.ComponentResultImpl(1, 1,
-                                LoadFlowResult.ComponentResult.Status.CONVERGED, 20, "bus_2", 10.)));
+        LoadFlowResult loadFlowError = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
+            List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0, LoadFlowResult.ComponentResult.Status.MAX_ITERATION_REACHED, 10, "bus_1", 5.),
+                new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 20, "bus_2", 10.)));
         String loadFlowErrorString = mapper.writeValueAsString(loadFlowError);
 
         String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
-                VoltageLevelMapData.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(380)
-                        .topologyKind(TopologyKind.BUS_BREAKER).build()));
+            VoltageLevelMapData.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+            VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build()));
 
         String substationModificationListAsString = mapper.writeValueAsString(List.of(
                 EquipmentModificationInfos.builder().substationIds(Set.of()).uuid(UUID.fromString(MODIFICATION_UUID)).build()));
@@ -403,28 +330,28 @@ public class StudyTest {
         String voltageLevelModificationListAsString = mapper.writeValueAsString(List.of(
                 EquipmentModificationInfos.builder().substationIds(Set.of()).uuid(UUID.fromString(MODIFICATION_UUID)).build()));
 
-        String busesDataAsString = mapper
-                .writeValueAsString(List.of(IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
-                        IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build()));
+        String busesDataAsString = mapper.writeValueAsString(List.of(
+            IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
+            IdentifiableInfos.builder().id("BUS_2").name("BUS_2").build()));
 
-        String busbarSectionsDataAsString = mapper.writeValueAsString(
-                List.of(IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
-                        IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()));
+        String busbarSectionsDataAsString = mapper.writeValueAsString(List.of(
+            IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
+            IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()));
 
-        String loadDataAsString = mapper
-                .writeValueAsString(IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
-        String lineDataAsString = mapper
-                .writeValueAsString(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
-        String generatorDataAsString = mapper
-                .writeValueAsString(IdentifiableInfos.builder().id(GENERATOR_ID_1).name("GENERATOR_NAME_1").build());
+        String loadDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
+        String lineDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
+        String generatorDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(GENERATOR_ID_1).name("GENERATOR_NAME_1").build());
         String shuntCompensatorDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(SHUNT_COMPENSATOR_ID_1).name("SHUNT_COMPENSATOR_NAME_1").build());
         String twoWindingsTransformerDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
-        String voltageLevelDataAsString = mapper
-                .writeValueAsString(IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build());
-        String substationDataAsString = mapper
-                .writeValueAsString(IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build());
+        String voltageLevelDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build());
+        String substationDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build());
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
@@ -436,14 +363,11 @@ public class StudyTest {
                 Buffer body = request.getBody();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
-                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*")
-                            ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID
-                            : SECURITY_ANALYSIS_RESULT_UUID;
-                    input.send(MessageBuilder.withPayload("").setHeader("resultUuid", resultUuid)
-                            .setHeader("receiver",
-                                    "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4)
-                                            + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build());
+                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
+                    input.send(MessageBuilder.withPayload("")
+                        .setHeader("resultUuid", resultUuid)
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .build());
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
@@ -456,8 +380,8 @@ public class StudyTest {
                                     "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4)
                                             + "%22%2C%22userId%22%3A%22userId%22%7D")
                             .build(), "sa.stopped");
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*")
                         || path.matches(
                                 "/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true")
@@ -876,7 +800,6 @@ public class StudyTest {
         return networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
     }
 
-    // TEST OK
     @Test
     public void testSearch() throws Exception {
         MvcResult mvcResult;
@@ -929,7 +852,6 @@ public class StudyTest {
                 .andReturn();
     }
 
- // TEST OK
     @Test
     public void test() throws Exception {
         MvcResult result;
@@ -1047,7 +969,6 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
     }
 
- // TEST OK
     @Test
     public void testMetadata() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
@@ -1076,7 +997,6 @@ public class StudyTest {
                 .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 
-    // TEST OK
     @Test
     public void testLogsReport() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -1097,7 +1017,6 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).contains(String.format("/v1/reports/%s", NETWORK_UUID_STRING)));
     }
 
-    //TEST OK
     @Test
     public void testLoadFlow() throws Exception {
         MvcResult mvcResult;
@@ -1237,7 +1156,6 @@ public class StudyTest {
                         LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
     }
 
-    //TEST OK
     @Test
     public void testLoadFlowError() throws Exception {
         UUID studyNameUserIdUuid = createStudy("userId", CASE_LOADFLOW_ERROR_UUID);
@@ -1338,7 +1256,6 @@ public class StudyTest {
                 + "/export\\?networkUuid=" + NETWORK_UUID_STRING + ".*")));
     }
 
-    //TEST OK
     @Test
     public void testSecurityAnalysis() throws Exception {
         // insert a study
@@ -1364,7 +1281,6 @@ public class StudyTest {
                 UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
     }
 
-    //TEST OK
     @Test
     public void testDiagramsAndGraphics() throws Exception {
         MvcResult mvcResult;
@@ -1596,7 +1512,6 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).contains("/v1/svg-component-libraries"));
     }
 
-    //TEST OK
     @Test
     public void testNetworkModificationSwitch() throws Exception {
         MvcResult mvcResult;
@@ -1682,7 +1597,6 @@ public class StudyTest {
                                                                                                                        // invalid
     }
 
-    //TEST OK
     @Test
     public void testGetLoadMapServer() throws Exception {
         // create study
@@ -1699,7 +1613,6 @@ public class StudyTest {
                 getRequestsDone(1).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, LOAD_ID_1)));
     }
 
-    // TEST OK
     @Test
     public void testGetLineMapServer() throws Exception {
         // create study
@@ -1717,7 +1630,6 @@ public class StudyTest {
                 getRequestsDone(1).contains(String.format("/v1/networks/%s/lines/%s", NETWORK_UUID_STRING, LINE_ID_1)));
     }
 
- // TEST OK
     @Test
     public void testGetGeneratorMapServer() throws Exception {
         // create study
@@ -1734,7 +1646,6 @@ public class StudyTest {
                 .contains(String.format("/v1/networks/%s/generators/%s", NETWORK_UUID_STRING, GENERATOR_ID_1)));
     }
 
- // TEST OK
     @Test
     public void testGet2wtMapServer() throws Exception {
         // create study
@@ -1751,7 +1662,6 @@ public class StudyTest {
                 NETWORK_UUID_STRING, TWO_WINDINGS_TRANSFORMER_ID_1)));
     }
 
- // TEST OK
     @Test
     public void testGetShuntCompensatorMapServer() throws Exception {
         // create study
@@ -1768,7 +1678,6 @@ public class StudyTest {
                 String.format("/v1/networks/%s/shunt-compensators/%s", NETWORK_UUID_STRING, SHUNT_COMPENSATOR_ID_1)));
     }
 
- // TEST OK
     @Test
     public void testGetSubstationMapServer() throws Exception {
         // create study
@@ -1785,7 +1694,6 @@ public class StudyTest {
                 .contains(String.format("/v1/networks/%s/substations/%s", NETWORK_UUID_STRING, SUBSTATION_ID_1)));
     }
 
- // TEST OK
     @Test
     public void testGetVoltageLevelsMapServer() throws Exception {
         // create study
@@ -1802,7 +1710,6 @@ public class StudyTest {
                 .contains(String.format("/v1/networks/%s/voltage-levels/%s", NETWORK_UUID_STRING, VL_ID_1)));
     }
 
-    //TEST OK
     @Test
     public void testNetworkModificationEquipment() throws Exception {
         MvcResult mvcResult;
@@ -1853,7 +1760,6 @@ public class StudyTest {
                 .matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*\\&variantId=" + VARIANT_ID)));
     }
 
-    //TEST OK
     @Test
     public void testCreationWithErrorBadCaseFile() throws Exception {
         // Create study with a bad case file -> error
@@ -1861,14 +1767,12 @@ public class StudyTest {
                 "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
     }
 
-    //TEST OK
     @Test
     public void testCreationWithErrorBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
         createStudy("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
     }
 
-    //TEST OK
     @Test
     public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
@@ -2007,7 +1911,6 @@ public class StudyTest {
         return studyUuid;
     }
 
-    //TEST OK
     @Test
     public void testGetStudyCreationRequests() throws Exception {
         MvcResult mvcResult;
@@ -2249,7 +2152,6 @@ public class StudyTest {
                         && r.getBody().equals("switchOn")));
     }
 
-    //TEST OK
     @Test
     public void testCreateLoad() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2306,7 +2208,6 @@ public class StudyTest {
                         && r.getBody().equals(loadAttributesUpdated)));
     }
 
-    //TEST OK
     @Test
     public void testModifyLoad() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2354,7 +2255,6 @@ public class StudyTest {
                         && r.getBody().equals(loadModificationAttributes)));
     }
 
-    // TEST OK
     @Test
     public void testCreateSubstation() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2411,7 +2311,6 @@ public class StudyTest {
                         && r.getBody().equals(substationAttributesUpdated)));
     }
 
-    //TEST OK
     @Test
     public void testCreateVoltageLevel() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2468,7 +2367,6 @@ public class StudyTest {
                         && r.getBody().equals(voltageLevelAttributesUpdated)));
     }
 
-    //TEST OK
     @Test
     public void testReorderModification() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2512,7 +2410,6 @@ public class StudyTest {
 
     }
 
-    //TEST OK
     @Test
     public void testDeleteEquipment() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2656,7 +2553,6 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
-    //TEST OK
     @Test
     public void testGetBusesOrBusbarSections() throws Exception {
         MvcResult mvcResult;
@@ -2697,7 +2593,6 @@ public class StudyTest {
                 "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections")));
     }
 
-    //TEST OK
     @Test
     public void testCreateGenerator() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2752,7 +2647,6 @@ public class StudyTest {
                         && r.getBody().equals(generatorAttributesUpdated)));
     }
 
-    //TEST OK
     @Test
     public void testCreateShuntsCompensator() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2792,7 +2686,6 @@ public class StudyTest {
                         && r.getBody().equals(shuntCompensatorAttributesUpdated)));
     }
 
-    //TEST OK
     @Test
     public void testCreateLine() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2857,7 +2750,6 @@ public class StudyTest {
                         && r.getBody().equals(lineAttributesUpdated)));
     }
 
-    //TEST OK
     @Test
     public void testCreateTwoWindingsTransformer() throws Exception {
         createStudy("userId", CASE_UUID);
@@ -2956,7 +2848,6 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/build/stop\\?receiver=.*")));
     }
 
-    //TEST OK
     @Test
     public void testBuild() throws Exception {
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
@@ -3032,7 +2923,6 @@ public class StudyTest {
                 networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
     }
 
-    //TEST OK
     @Test
     public void testChangeModificationActiveState() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
@@ -3072,7 +2962,6 @@ public class StudyTest {
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
     }
 
-    //TEST OK
     @Test
     public void deleteModificationRequest() throws Exception {
         createStudy("userId", CASE_UUID);
