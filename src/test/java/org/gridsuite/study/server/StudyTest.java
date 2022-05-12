@@ -946,6 +946,15 @@ public class StudyTest {
         webTestClient.get()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM")
             .exchange()
+            .expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        modificationNode1.setBuildStatus(BuildStatus.BUILT);
+        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode1);
+        output.receive(TIMEOUT);
+
+        webTestClient.get()
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM")
+            .exchange()
             .expectStatus().isOk();
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));

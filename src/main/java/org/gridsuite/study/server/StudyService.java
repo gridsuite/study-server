@@ -941,6 +941,10 @@ public class StudyService {
 
     public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
 
+        if (!networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
+            && networkModificationTreeService.getBuildStatus(nodeUuid) != BuildStatus.BUILT) {
+            return Mono.error(new StudyException(NODE_NOT_BUILT));
+        }
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID networkUuid = tuple.getT1();
             String variantId = tuple.getT2();
