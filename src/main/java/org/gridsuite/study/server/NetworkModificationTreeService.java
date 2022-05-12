@@ -70,6 +70,7 @@ public class NetworkModificationTreeService {
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
     private final NodeRepository nodesRepository;
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
@@ -122,6 +123,7 @@ public class NetworkModificationTreeService {
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
     ) {
         this.nodesRepository = nodesRepository;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
 
@@ -132,6 +134,10 @@ public class NetworkModificationTreeService {
     public AbstractNode doCreateNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
         Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
+            if (!networkModificationNodeInfoRepository.findByName(nodeInfo.getName()).isEmpty() &&
+                nodesRepository.findStudyByIdNode(nodeId).get().equals(studyUuid)) {
+                throw new StudyException(NODE_NAME_ALREADY_EXIST);
+            }
             if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
                 throw new StudyException(NOT_ALLOWED);
             }
@@ -262,8 +268,34 @@ public class NetworkModificationTreeService {
     @Transactional
     // TODO test if studyUuid exist and have the node
     public void doUpdateNode(UUID studyUuid, AbstractNode node) {
-        repositories.get(node.getType()).updateNode(node);
-        emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        if (!isNodeExist(studyUuid, node.getName())) {
+            repositories.get(node.getType()).updateNode(node);
+            emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        } else {
+            throw new StudyException(NODE_NAME_ALREADY_EXIST);
+        }
+    }
+
+    private boolean isNodeExist(UUID studyUuid, String nodeName) {
+        return getStudyNodesNames(studyUuid).contains(nodeName);
+    }
+
+    private List<String> getStudyNodesNames(UUID studyUuid) {
+        return nodesRepository.findAllByStudyId(studyUuid)
+                .stream()
+                .filter(nodeEntity -> nodeEntity.getType() == NodeType.NETWORK_MODIFICATION)
+                .map(nodeEntity -> networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).get().getName())
+                .collect(Collectors.toList());
+
+    }
+
+    public Mono<Boolean> isNodeNameExist(UUID studyUuid, String nodeName) {
+        return Mono.fromCallable(() -> isNodeExist(studyUuid, nodeName));
+    }
+
+    public Mono<Void> checkNodeNameExist(UUID studyUuid, String nodeName) {
+        return isNodeNameExist(studyUuid, nodeName).flatMap(exist -> exist ? Mono.empty() : Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+
     }
 
     // TODO test if studyUuid exist and have a node <nodeId>

@@ -9,8 +9,11 @@ package org.gridsuite.study.server.networkmodificationtree.repositories;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 
+import java.util.Optional;
+
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
 public interface NetworkModificationNodeInfoRepository extends NodeInfoRepository<NetworkModificationNodeInfoEntity> {
+    Optional<NetworkModificationNodeInfoEntity> findByName(String nodeName);
 }

@@ -17,6 +17,8 @@ import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -53,6 +55,7 @@ public class NetworkModificationService {
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
 
+    private final NodeRepository nodeRepository;
     private String networkModificationServerBaseUri;
 
     private final NetworkService networkStoreService;
@@ -61,15 +64,21 @@ public class NetworkModificationService {
 
     private final ObjectMapper objectMapper;
 
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkService networkStoreService,
                                WebClient.Builder webClientBuilder,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper,
+                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                               NodeRepository nodeRepository) {
+        this.nodeRepository = nodeRepository;
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
     }
 
     void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -372,17 +381,17 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH
-                + DELIMITER + "modifications" + DELIMITER + "move")
-            .queryParam("modificationsToMove", modificationUuid);
+                        + DELIMITER + "modifications" + DELIMITER + "move")
+                .queryParam("modificationsToMove", modificationUuid);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
 
         return webClient.put()
-            .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid, modificationUuid).toUriString())
-            .retrieve()
-            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
-            .bodyToMono(Void.class);
+                .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid, modificationUuid).toUriString())
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
+                .bodyToMono(Void.class);
 
     }
 }

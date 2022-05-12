@@ -55,6 +55,7 @@ public class RestResponseEntityExceptionHandler {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case DELETE_EQUIPMENT_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
+                case NODE_NAME_ALREADY_EXIST:
                 case BAD_NODE_TYPE:
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());
                 default:

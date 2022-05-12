@@ -48,12 +48,14 @@ public class StudyController {
     private final ReportService reportService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final NetworkModificationService networkModificationService;
 
-    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService, NetworkModificationService networkModificationService) {
         this.studyService = studyService;
         this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
+        this.networkModificationService = networkModificationService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
@@ -820,6 +822,17 @@ public class StudyController {
         return networkModificationTreeService.getSimpleNode(studyUuid, nodeId)
             .map(result -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result))
             .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @RequestMapping(value = "/studies/{studyUuid}/nodes/{nodeName}/", method = RequestMethod.HEAD)
+    @Operation(summary = "Get if a node name exists")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "node name exists"),
+            @ApiResponse(responseCode = "404", description = "node name doesn't exist"),
+    })
+    public ResponseEntity<Mono<Void>> nodeNameExist(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @Parameter(description = "Node name") @PathVariable("nodeName") String nodeName) {
+        return ResponseEntity.ok().body(networkModificationTreeService.checkNodeNameExist(studyUuid, nodeName));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
