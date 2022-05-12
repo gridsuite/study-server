@@ -122,7 +122,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.ResourceUtils;
@@ -236,9 +235,6 @@ public class StudyTest {
 
     @Autowired
     private InputDestination input;
-
-//    @Autowired
-    private WebTestClient webTestClient;
 
     @Autowired
     private StudyService studyService;
@@ -447,7 +443,7 @@ public class StudyTest {
                             .setHeader("receiver",
                                     "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4)
                                             + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), "test");
+                            .build());
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
@@ -1225,7 +1221,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, UPDATE_TYPE_LOADFLOW);
 
         assertTrue(getRequestsDone(1).stream().anyMatch(
-                r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING
+            r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING
                         + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID_2)));
 
         // check load flow status
@@ -2011,70 +2007,63 @@ public class StudyTest {
         return studyUuid;
     }
 
+    //TEST OK
     @Test
     public void testGetStudyCreationRequests() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         countDownLatch = new CountDownLatch(1);
 
-        // insert a study with a case (multipartfile)
+        //insert a study with a case (multipartfile)
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", "testCase.xiidm",
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", "blockingCaseFile",
                     "text/xml", is);
-
-//            mvcResult = mockMvc.perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", "true")
-//                    .file(mockFile)
-//                    .header("userId", "userId")
-//                    .contentType(MediaType.MULTIPART_FORM_DATA))
-//                .andExpect(status().isOk())
-//                .andReturn();
 
             mvcResult = mockMvc
                     .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", "true").file(mockFile)
                             .header("userId", "userId").contentType(MediaType.MULTIPART_FORM_DATA))
                     .andExpect(status().isOk()).andReturn();
-
             resultAsString = mvcResult.getResponse().getContentAsString();
             BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
 
-            assertThat(bsiResult, createMatcherStudyBasicInfos(
-                            studyRepository.findAll().get(0).getId(), "userId"));
-//            webTestClient.post().uri(STUDIES_URL + "?isPrivate={isPrivate}", "true").header("userId", "userId")
-//                    .contentType(MediaType.MULTIPART_FORM_DATA)
-//                    .body(BodyInserters.fromMultipartData(bodyBuilder.build())).exchange().expectStatus().isOk()
-//                    .expectBody(BasicStudyInfos.class).value(createMatcherStudyBasicInfos(
-//                            studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
+            assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
         }
 
-        // studyRepository is now being used since studyCreationRequestRepository will be empty due to now synchroneous requests
-        UUID studyUuid = studyRepository.findAll().get(0).getId();
+        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-
         List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
 
-        //result is now empty since requests are synchroneous
-        assertEquals(bsiListResult, List.of());
+        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         countDownLatch.countDown();
 
-        // Study import is asynchronous, we have to wait because our code doesn't allow
-        // block until the study creation processing is done
+        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
         Thread.sleep(TIMEOUT);
+
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+
+        assertEquals(bsiListResult, List.of());
 
         mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
+
         resultAsString = mvcResult.getResponse().getContentAsString();
+        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
-        List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-
-        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
+        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);
@@ -2087,13 +2076,13 @@ public class StudyTest {
         var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.contains("/v1/cases/private"));
         assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
-        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s",
-                IMPORTED_BLOCKING_CASE_UUID_STRING, FIRST_VARIANT_ID)));
+        assertTrue(httpRequests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", IMPORTED_BLOCKING_CASE_UUID_STRING, FIRST_VARIANT_ID)));
 
         countDownLatch = new CountDownLatch(1);
 
-        // insert a study
-        mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", NEW_STUDY_CASE_UUID, "false").header("userId", "userId"))
+        //insert a study
+        mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", NEW_STUDY_CASE_UUID, "false")
+                .header("userId", "userId"))
             .andExpect(status().isOk())
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
@@ -2104,41 +2093,42 @@ public class StudyTest {
 
         studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
-        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests", NEW_STUDY_CASE_UUID, "false")
+                .header("userId", "userId")).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
 
-        assertThat(csbiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
+        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         countDownLatch.countDown();
 
-        // Study import is asynchronous, we have to wait because our code doesn't allow
-        // block until the study creation processing is done
+        // Study import is asynchronous, we have to wait because our code doesn't allow block until the study creation processing is done
         Thread.sleep(TIMEOUT);
 
-        mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
+        mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
+            .header("userId", "userId")).andExpectAll(
+                    status().isOk(),
+                    content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
-        csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
+        bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
 
-        assertEquals(csbiListResult, List.of());
+        assertEquals(bsiListResult, List.of());
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
+        mvcResult = mockMvc.perform(get("/v1/studies")
+                .header("userId", "userId")).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
+        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
-        csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-
-        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
+        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);
@@ -2151,8 +2141,7 @@ public class StudyTest {
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.contains(
-                String.format("/v1/networks?caseUuid=%s&variantId=%s", NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID)));
+        assertTrue(requests.contains(String.format("/v1/networks?caseUuid=%s&variantId=%s", NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID)));
     }
 
     @Test
@@ -2190,56 +2179,52 @@ public class StudyTest {
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2", "s3"));
 
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId")
-                .bodyValue("trip").exchange().expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("trip").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isInternalServerError());
 
         // energise line end
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "line13")
-                .bodyValue("energiseEndOne").exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode1Uuid, "line13").content("energiseEndOne").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isOk());
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s3"));
 
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId")
-                .bodyValue("energiseEndTwo").exchange().expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("energiseEndTwo").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isInternalServerError());
 
         // switch on line
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "line13")
-                .bodyValue("switchOn").exchange().expectStatus().isOk();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode1Uuid, "line13").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isOk());
 
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s3"));
 
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId")
-                .bodyValue("switchOn").exchange().expectStatus().isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isInternalServerError());
 
         // switch on line on second modification node
-        webTestClient.put()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode2Uuid, "line13")
-                .bodyValue("switchOn").exchange().expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
+                        studyNameUserIdUuid, modificationNode2Uuid, "line13").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE))
+            .andExpect(status().isOk());
+
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s1", "s3"));
 
         var requests = getRequestsWithBodyDone(9);
         assertTrue(requests.stream().anyMatch(
-                r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status\\?group=.*")
+            r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status\\?group=.*")
                         && r.getBody().equals("lockout")));
         assertTrue(requests.stream().anyMatch(
-                r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/status\\?group=.*")
+            r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line23/status\\?group=.*")
                         && r.getBody().equals("trip")));
         assertTrue(requests.stream().anyMatch(
-                r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status\\?group=.*")
+            r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status\\?group=.*")
                         && r.getBody().equals("energiseEndOne")));
         assertTrue(requests.stream().anyMatch(
-                r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status\\?group=.*")
+            r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line13/status\\?group=.*")
                         && r.getBody().equals("switchOn")));
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath()
@@ -2479,7 +2464,7 @@ public class StudyTest {
                                 + "/voltage-levels\\?group=.*\\&variantId=" + VARIANT_ID_2)
                         && r.getBody().equals(createVoltageLevelAttributes)));
         assertTrue(requests.stream().anyMatch(
-                r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation")
+            r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation")
                         && r.getBody().equals(voltageLevelAttributesUpdated)));
     }
 
@@ -2803,7 +2788,7 @@ public class StudyTest {
                                 + "/shunt-compensators[?]group=.*&variantId=" + VARIANT_ID)
                         && r.getBody().equals(createShuntCompensatorAttributes)));
         assertTrue(requests.stream().anyMatch(
-                r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/shunt-compensators-creation")
+            r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/shunt-compensators-creation")
                         && r.getBody().equals(shuntCompensatorAttributesUpdated)));
     }
 
@@ -2971,6 +2956,7 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/build/stop\\?receiver=.*")));
     }
 
+    //TEST OK
     @Test
     public void testBuild() throws Exception {
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);

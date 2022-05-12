@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,18 +38,14 @@ public class ReportService {
 
     private String reportServerBaseUri;
 
-    private final WebClient webClient = null;
-
     @Autowired
     private RestTemplate restTemplate;
 
     @Autowired
     public ReportService(
-//            WebClient.Builder webClientBuilder,
                          ObjectMapper objectMapper,
                          @Value("${backing-services.report-server.base-uri:http://report-server/}") String reportServerBaseUri) {
         this.reportServerBaseUri = reportServerBaseUri;
-//        this.webClient = webClientBuilder.build();
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
         objectMapper.registerModule(reporterModelJsonModule);

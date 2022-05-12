@@ -16,7 +16,6 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
 import java.util.Collection;
 import java.util.List;
@@ -66,7 +65,7 @@ public class NetworkService {
         }
     }
 
-    Mono<Void> deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
+    void deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
         try {
             Network network = networkStoreService.getNetwork(networkUuid);
             network.addListener(new NetworkVariantsListener(networkUuid, equipmentInfosService));
@@ -81,6 +80,5 @@ public class NetworkService {
         } catch (PowsyblException e) {
             throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
         }
-        return Mono.empty();
     }
 }

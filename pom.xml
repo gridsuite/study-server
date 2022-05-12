@@ -198,11 +198,11 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!--<dependency>
+        <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-config-classic</artifactId>
             <scope>runtime</scope>
-        </dependency>-->
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -213,10 +213,6 @@
             <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <dependency>
-   		 	<groupId>org.springframework</groupId>
-		    <artifactId>spring-webflux</artifactId>
-		</dependency>
 
 
         <!-- Test dependencies -->

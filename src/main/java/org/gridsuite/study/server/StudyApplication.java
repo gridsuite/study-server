@@ -8,7 +8,6 @@ package org.gridsuite.study.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.web.reactive.config.EnableWebFlux;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -16,7 +15,6 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @SpringBootApplication
-//@EnableWebFlux
 public class StudyApplication {
 
     public static void main(String[] args) {

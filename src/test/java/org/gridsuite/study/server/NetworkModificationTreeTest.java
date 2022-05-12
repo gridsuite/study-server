@@ -124,7 +124,7 @@ public class NetworkModificationTreeTest {
 
     private ObjectWriter objectWriter;
 
-    ObjectMapper objectMapper = WebFluxConfig.createObjectMapper();
+    ObjectMapper objectMapper = RestTemplateConfig.createObjectMapper();
 
     private LoadFlowResult loadFlowResult;
     private LoadFlowResult loadFlowResult2;

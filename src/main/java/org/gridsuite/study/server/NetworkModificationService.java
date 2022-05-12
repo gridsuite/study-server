@@ -29,10 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -61,8 +58,6 @@ public class NetworkModificationService {
 
     private final NetworkService networkStoreService;
 
-    private final WebClient webClient = null;
-
     private final RestTemplate restTemplate = new RestTemplate();
 
     private final ObjectMapper objectMapper;
@@ -71,11 +66,9 @@ public class NetworkModificationService {
     NetworkModificationService(
             @Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
             NetworkService networkStoreService,
-//                               WebClient.Builder webClientBuilder,
             ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
-//        this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
 
@@ -92,12 +85,11 @@ public class NetworkModificationService {
         return UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER).buildAndExpand(networkUuid).toUriString();
     }
 
-    public Flux<ModificationInfos> getModifications(UUID groupUuid) {
+    public List<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH).buildAndExpand(groupUuid).toUriString();
-        return webClient.get().uri(getNetworkModificationServerURI(false) + path).retrieve()
-                .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
-                });
+
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() { }).getBody();
     }
 
     public void deleteModifications(UUID groupUUid) {
@@ -186,7 +178,7 @@ public class NetworkModificationService {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
                     new ParameterizedTypeReference<List<ModificationInfos>>() {
                     }).getBody();
-        } catch (HttpClientErrorException e) {
+        } catch (HttpStatusCodeException e) {
             if (!HttpStatus.OK.equals(e.getStatusCode())) {
                 handleChangeError(e.getResponseBodyAsString(), LINE_MODIFICATION_FAILED);
             }
@@ -196,7 +188,7 @@ public class NetworkModificationService {
         return result;
     }
 
-    private Mono<? extends Throwable> handleChangeError(String responseBody, StudyException.Type type) {
+    private void handleChangeError(String responseBody, StudyException.Type type) {
         String message = null;
         try {
             JsonNode node = new ObjectMapper().readTree(responseBody).path("message");
@@ -208,7 +200,7 @@ public class NetworkModificationService {
                 message = responseBody;
             }
         }
-        return Mono.error(new StudyException(type, message));
+        throw new StudyException(type, message);
     }
 
     public List<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes,
@@ -356,7 +348,7 @@ public class NetworkModificationService {
         restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
@@ -367,7 +359,7 @@ public class NetworkModificationService {
         var path = UriComponentsBuilder.fromPath("build/stop").queryParam(QUERY_PARAM_RECEIVER, receiver).build()
                 .toUriString();
 
-        return webClient.put().uri(getNetworkModificationServerURI(false) + path).retrieve().bodyToMono(Void.class);
+        restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
 
     public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {

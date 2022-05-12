@@ -47,8 +47,8 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.BasicStudyInfos;
@@ -124,8 +124,6 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 
 import lombok.NonNull;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -210,39 +208,32 @@ public class StudyService {
     @Autowired
     private StreamBridge studyUpdatePublisher;
 
-    //TODO: fix consumer
-//    @Bean
-//    public Consumer<Flux<Message<String>>> consumeSaResult() {
-//        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-//            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-//            if (receiver != null) {
-//                Receiver receiverObj;
-//                try {
-//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-//                            Receiver.class);
-//
-//                    LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
-//                            receiverObj.getNodeUuid());
-//
-//                    // update DB
-//                    return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid)
-//                            .then(Mono.fromCallable(() -> {
-//                                // send notifications
-//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
-//                                        UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
-//                                        UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-//                                return null;
-//                            }));
-//                } catch (JsonProcessingException e) {
-//                    LOGGER.error(e.toString());
-//                }
-//            }
-//            return Mono.empty();
-//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-//    }
+    @Bean
+    public Consumer<Message<String>> consumeSaResult() {
+        return message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            Receiver.class);
+
+                    LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
+                            receiverObj.getNodeUuid());
+
+                    // update DB
+                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                                // send notifications
+                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
 
     @Autowired
     public StudyService(@Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri,
@@ -257,7 +248,6 @@ public class StudyService {
             NetworkService networkStoreService, NetworkModificationService networkModificationService,
             ReportService reportService, @Lazy StudyInfosService studyInfosService,
             @Lazy EquipmentInfosService equipmentInfosService,
-//        WebClient.Builder webClientBuilder,
             NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
@@ -275,7 +265,6 @@ public class StudyService {
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkModificationTreeService = networkModificationTreeService;
-//        this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
 
@@ -314,23 +303,23 @@ public class StudyService {
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        try {
-            String caseFormat = getCaseFormat(caseUuid);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
+        new Thread(() -> {
+            try {
+                String caseFormat = getCaseFormat(caseUuid);
+                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
-            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                    caseFormat, caseUuid, false, toEntity(loadFlowParameters));
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        } finally {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
-
+                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
+                        caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            } finally {
+                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+            }
+        }).start();
         return basicStudyInfos;
         // TODO: gérer le subscribeOn(Schedulers.boundedElastic())
     }
@@ -340,23 +329,26 @@ public class StudyService {
         startTime.set(System.nanoTime());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        try {
-            UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
-            if (caseUuid != null) {
-                String caseFormat = getCaseFormat(caseUuid);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
-                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                        caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+        new Thread(() -> {
+            try {
+                UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
+                if (caseUuid != null) {
+                    String caseFormat = getCaseFormat(caseUuid);
+                    NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
+
+                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                    insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
+                            networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+                }
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            } finally {
+                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        } finally {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
+        }).start();
 
         return basicStudyInfos;
         // TODO: gérer le subscribeOn(Schedulers.boundedElastic())
@@ -413,7 +405,7 @@ public class StudyService {
                     sb.append('\\');
                     break;
                 default:
-                // do nothing but appease sonarlint
+                    // do nothing but appease sonarlint
             }
 
             sb.append(c);
@@ -585,8 +577,7 @@ public class StudyService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
-            multipartBodyBuilder.part("file", multipartFile.getBytes())
-                .filename(multipartFile.getOriginalFilename());
+            multipartBodyBuilder.part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<MultiValueMap<String, HttpEntity<?>>>(
                     multipartBodyBuilder.build(), headers);
 
@@ -949,11 +940,12 @@ public class StudyService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<LoadFlowParameters>(getLoadFlowParameters(studyUuid), headers);
+        HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<LoadFlowParameters>(getLoadFlowParameters(studyUuid),
+                headers);
 
         try {
-            ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity,
-                    LoadFlowResult.class);
+            ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT,
+                    httpEntity, LoadFlowResult.class);
             result = resp.getBody();
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
         } catch (HttpClientErrorException e) {
@@ -963,7 +955,7 @@ public class StudyService {
         } finally {
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW);
         }
-        //TODO: traiter oncancel ?
+        // TODO: traiter oncancel ?
     }
 
     private void setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
@@ -988,7 +980,8 @@ public class StudyService {
                 .fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
                 .buildAndExpand(networkUuid, format).toUriString();
 
-        ResponseEntity<byte[]> responseEntity = restTemplate.getForEntity(networkConversionServerBaseUri + path, byte[].class);
+        ResponseEntity<byte[]> responseEntity = restTemplate.getForEntity(networkConversionServerBaseUri + path,
+                byte[].class);
 
         byte[] bytes = responseEntity.getBody();
         String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
@@ -1000,7 +993,8 @@ public class StudyService {
         UUID groupUuid = getModificationGroupUuid(nodeUuid);
         String variantId = getVariantId(nodeUuid);
 
-        List<ModificationInfos> modificationInfosList = networkModificationService.changeLineStatus(studyUuid, lineId, status, groupUuid, variantId);
+        List<ModificationInfos> modificationInfosList = networkModificationService.changeLineStatus(studyUuid, lineId,
+                status, groupUuid, variantId);
 
         Set<String> substationIds = getSubstationIds(modificationInfosList);
 
@@ -1166,8 +1160,7 @@ public class StudyService {
     }
 
     void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
-        updateLoadFlowParameters(studyUuid,
-                toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
+        updateLoadFlowParameters(studyUuid, toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
@@ -1217,8 +1210,8 @@ public class StudyService {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(
-                DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save");
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save");
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
@@ -1233,8 +1226,8 @@ public class StudyService {
 
         HttpEntity<String> httpEntity = new HttpEntity<String>(parameters, headers);
 
-        UUID result = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity,
-                UUID.class).getBody();
+        UUID result = restTemplate
+                .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         emitStudyChanged(studyUuid, nodeUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1250,8 +1243,7 @@ public class StudyService {
             return null;
         }
 
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
                 .queryParam("limitType", limitTypes).buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
@@ -1283,8 +1275,9 @@ public class StudyService {
             }
             var path = uriComponentsBuilder.buildAndExpand(contingencyListName).toUriString();
 
-            List<Contingency> contingencies = restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<Contingency>>() { })
-                    .getBody();
+            List<Contingency> contingencies = restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null,
+                    new ParameterizedTypeReference<List<Contingency>>() {
+                    }).getBody();
 
             return contingencies.size();
         }).reduce(0, Integer::sum);
@@ -1296,8 +1289,7 @@ public class StudyService {
         String variantId = getVariantId(nodeUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                        + "/substation-svg/{networkUuid}/{substationId}")
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
                 .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
                 .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isLabelCentered())
@@ -1436,37 +1428,30 @@ public class StudyService {
         restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
     }
 
-    //TODO: fix consumer
-//    @Bean
-//    public Consumer<Flux<Message<String>>> consumeSaStopped() {
-//        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-//            if (receiver != null) {
-//                Receiver receiverObj;
-//                try {
-//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-//                            Receiver.class);
-//
-//                    LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
-//
-//                    // delete security analysis result in database
-//                    return updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null)
-//                            .then(Mono.fromCallable(() -> {
-//                                // send notification for stopped computation
-//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(),
-//                                        UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-//                                return null;
-//                            }));
-//                } catch (JsonProcessingException e) {
-//                    LOGGER.error(e.toString());
-//                }
-//            }
-//            return Mono.empty();
-//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-//    }
+    @Bean
+    public Consumer<Message<String>> consumeSaStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            Receiver.class);
 
-    // wrappers to Mono/Flux for repositories
+                    LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete security analysis result in database
+                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+                    // send notification for stopped computation
+                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
             String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters) {
@@ -1536,7 +1521,9 @@ public class StudyService {
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries").toUriString();
 
-        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() { }).getBody();
+        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.GET, null,
+                new ParameterizedTypeReference<List<String>>() {
+                }).getBody();
     }
 
     UUID getModificationGroupUuid(UUID nodeUuid) {
@@ -1547,12 +1534,13 @@ public class StudyService {
         return networkModificationTreeService.getVariantId(nodeUuid);
     }
 
-    public void createEquipment(UUID studyUuid, String createEquipmentAttributes,
-            ModificationType modificationType, UUID nodeUuid) {
+    public void createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType,
+            UUID nodeUuid) {
         UUID groupUuid = getModificationGroupUuid(nodeUuid);
         String variantId = getVariantId(nodeUuid);
 
-        List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId);
+        List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
+                .createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId);
         Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
 
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
@@ -1560,8 +1548,8 @@ public class StudyService {
         updateStatuses(studyUuid, nodeUuid);
     }
 
-    public void modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
-            ModificationType modificationType, UUID nodeUuid) {
+    public void modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType,
+            UUID nodeUuid) {
         UUID groupUuid = getModificationGroupUuid(nodeUuid);
         String variantId = getVariantId(nodeUuid);
 
@@ -1579,8 +1567,8 @@ public class StudyService {
         getModificationGroupUuid(nodeUuid);
         getVariantId(nodeUuid);
         try {
-            networkModificationService
-                .updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid);
+            networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType,
+                    modificationUuid);
             networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
         } catch (Exception e) {
             throw e;
@@ -1593,13 +1581,12 @@ public class StudyService {
         UUID groupUuid = getModificationGroupUuid(nodeUuid);
         String variantId = getVariantId(nodeUuid);
 
-        List<EquipmentDeletionInfos> equipmentDeletionInfosList = networkModificationService
-            .deleteEquipment(studyUuid, equipmentType, equipmentId, groupUuid, variantId);
+        List<EquipmentDeletionInfos> equipmentDeletionInfosList = networkModificationService.deleteEquipment(studyUuid,
+                equipmentType, equipmentId, groupUuid, variantId);
 
         equipmentDeletionInfosList.forEach(deletionInfo -> {
-            emitStudyEquipmentDeleted(studyUuid,
-                  nodeUuid, UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
-                  deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId());
+            emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
+                    deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId());
         });
 
         networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
@@ -1617,19 +1604,16 @@ public class StudyService {
         }
         String path = builder.buildAndExpand(networkUuid).toUriString();
 
-        List<VoltageLevelMapData> voltageLevelsMapData = restTemplate.exchange(networkMapServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<VoltageLevelMapData>>() { }).getBody();
+        List<VoltageLevelMapData> voltageLevelsMapData = restTemplate.exchange(networkMapServerBaseUri + path,
+                HttpMethod.GET, null, new ParameterizedTypeReference<List<VoltageLevelMapData>>() {
+                }).getBody();
 
-        return voltageLevelsMapData.stream().map(e ->
-            VoltageLevelInfos.builder()
-                .id(e.getId())
-                .name(e.getName())
-                .substationId(e.getSubstationId())
-                .build())
-            .collect(Collectors.toList());
+        return voltageLevelsMapData.stream().map(e -> VoltageLevelInfos.builder().id(e.getId()).name(e.getName())
+                .substationId(e.getSubstationId()).build()).collect(Collectors.toList());
     }
 
-    List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid,
-            String voltageLevelId, String busPath) {
+    List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId,
+            String busPath) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
 
@@ -1640,7 +1624,9 @@ public class StudyService {
         }
         String path = builder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
 
-        return restTemplate.exchange(networkMapServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<IdentifiableInfos>>() { }).getBody();
+        return restTemplate.exchange(networkMapServerBaseUri + path, HttpMethod.GET, null,
+                new ParameterizedTypeReference<List<IdentifiableInfos>>() {
+                }).getBody();
     }
 
     List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId) {
@@ -1686,64 +1672,58 @@ public class StudyService {
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
     }
 
-    public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        return networkModificationService.stopBuild(studyUuid, nodeUuid);
+    public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        networkModificationService.stopBuild(studyUuid, nodeUuid);
     }
 
-    //TODO Corriger Beans ci dessous
-//    @Bean
-//    public Consumer<Flux<Message<String>>> consumeBuildResult() {
-//        return f -> f.log(StudyService.CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-//            Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
-//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-//            if (receiver != null) {
-//                Receiver receiverObj;
-//                try {
-//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-//                            Receiver.class);
-//
-//                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
-//
-//                    return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT)
-//                            .then(Mono.fromRunnable(() -> {
-//                                // send notification
-//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED,
-//                                        substationsIds);
-//                            }));
-//                } catch (JsonProcessingException e) {
-//                    LOGGER.error(e.toString());
-//                }
-//            }
-//            return Mono.empty();
-//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-//    }
-//
-//    @Bean
-//    public Consumer<Flux<Message<String>>> consumeBuildStopped() {
-//        return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-//            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-//            if (receiver != null) {
-//                Receiver receiverObj;
-//                try {
-//                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-//                            Receiver.class);
-//
-//                    LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
-//
-//                    return updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT)
-//                            .then(Mono.fromRunnable(() -> {
-//                                // send notification
-//                                UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-//                                emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
-//                            }));
-//                } catch (JsonProcessingException e) {
-//                    LOGGER.error(e.toString());
-//                }
-//            }
-//            return Mono.empty();
-//        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
-//    }
+    @Bean
+    public Consumer<Message<String>> consumeBuildResult() {
+        return message -> {
+            Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            Receiver.class);
+
+                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
+
+                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
+
+                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+            return;
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeBuildStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            Receiver.class);
+
+                    LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
+                    // send notification
+                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+            return;
+        };
+    }
 
     void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
@@ -1782,8 +1762,7 @@ public class StudyService {
 
         UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
         networkModificationService.deleteModifications(groupId, modificationsUuids);
-        networkModificationTreeService
-            .removeModificationsToExclude(nodeUuid, modificationsUuids);
+        networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
         networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
         updateStatuses(studyUuid, nodeUuid, false);
     }
@@ -1825,8 +1804,7 @@ public class StudyService {
     public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
         checkStudyContainsNode(studyUuid, nodeUuid);
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        networkModificationService.reorderModification(groupUuid, modificationUuid,
-                beforeUuid);
+        networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
         updateStatuses(studyUuid, nodeUuid);
         networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
     }
@@ -1838,7 +1816,7 @@ public class StudyService {
     }
 
     private Set<String> getSubstationIds(List<? extends ModificationInfos> modificationInfosList) {
-        return modificationInfosList.stream()
-            .flatMap(modification -> modification.getSubstationIds().stream()).collect(Collectors.toSet());
+        return modificationInfosList.stream().flatMap(modification -> modification.getSubstationIds().stream())
+                .collect(Collectors.toSet());
     }
 }
