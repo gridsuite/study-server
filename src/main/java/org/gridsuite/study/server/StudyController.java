@@ -756,10 +756,10 @@ public class StudyController {
             .then(studyService.updateEquipmentModification(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid, modificationUuid)));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{typeModification}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{typeModification}")
     @Operation(summary = "modify a generator in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been modified")})
-    public ResponseEntity<Mono<Void>> modifyGenerator(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Mono<Void>> modifyEquipment(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @PathVariable("typeModification") ModificationType typeModification,
                                                       @RequestBody String modifyEquipmentAttributes) {
