@@ -32,9 +32,9 @@ public enum ModificationType {
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
             case LOAD_CREATION:
-                return "loads-modification";
-            case LOAD_MODIFICATION:
                 return "loads";
+            case LOAD_MODIFICATION:
+                return "loads-modification";
             case GENERATOR_CREATION:
                 return "generators";
             case LINE_CREATION:
