@@ -82,17 +82,6 @@ public class StudyController {
         }
 
         @Override
-        public String[] getTags() {
-            List<String> tags = new ArrayList<>();
-            for (var modificationType : ModificationType.values()) {
-                try {
-                    tags.add(ModificationType.getUriFromType(modificationType));
-                } catch (Exception ignored) { }
-            }
-            return tags.toArray(new String[0]);
-        }
-
-        @Override
         public void setAsText(final String text) throws IllegalArgumentException {
             setValue(ModificationType.getTypeFromUri(text));
         }
