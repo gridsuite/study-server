@@ -49,7 +49,6 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -550,6 +549,8 @@ public class StudyService {
                 throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
                         "case-server");
             }
+            //TODO: vérifier que publishOn ne servait pas ici
+            //Voir si on doit throw l'exception IOException
         } catch (Exception e) {
             if (!(e instanceof StudyException)) {
                 emitStudyCreationError(studyUuid, userId, e.getMessage());
@@ -622,6 +623,11 @@ public class StudyService {
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
                     "network-conversion-server");
+        } catch (Exception e) {
+            if (!(e instanceof StudyException)) {
+                emitStudyCreationError(studyUuid, userId, e.getMessage());
+            }
+            throw e;
         }
 
         return networkInfosResponse.getBody();
@@ -677,7 +683,7 @@ public class StudyService {
         String equipmentMapData;
         try {
             equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
-        } catch (HttpClientErrorException e) {
+        } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(EQUIPMENT_NOT_FOUND);
             } else {
@@ -899,8 +905,9 @@ public class StudyService {
                     httpEntity, LoadFlowResult.class);
             result = resp.getBody();
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
-        } catch (HttpClientErrorException e) {
+        } catch (Exception e) {
             updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE);
+            throw e;
         } finally {
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW);
         }
@@ -1234,7 +1241,7 @@ public class StudyService {
                 .queryParam("limitType", limitTypes).buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpClientErrorException e) {
+        } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
             } else {
@@ -1331,7 +1338,7 @@ public class StudyService {
 
         try {
             result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpClientErrorException e) {
+        } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
             }

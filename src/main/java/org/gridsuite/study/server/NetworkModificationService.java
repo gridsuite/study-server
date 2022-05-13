@@ -26,7 +26,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -137,7 +136,7 @@ public class NetworkModificationService {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, null,
                     new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
                     }).getBody();
-        } catch (HttpClientErrorException e) {
+        } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(ELEMENT_NOT_FOUND);
             }
@@ -190,16 +189,13 @@ public class NetworkModificationService {
                     new ParameterizedTypeReference<List<ModificationInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
-            if (!HttpStatus.OK.equals(e.getStatusCode())) {
-                handleChangeError(e.getResponseBodyAsString(), LINE_MODIFICATION_FAILED);
-            }
-            throw e;
+            throw handleChangeError(e.getResponseBodyAsString(), LINE_MODIFICATION_FAILED);
         }
 
         return result;
     }
 
-    private void handleChangeError(String responseBody, StudyException.Type type) {
+    private StudyException handleChangeError(String responseBody, StudyException.Type type) {
         String message = null;
         try {
             JsonNode node = new ObjectMapper().readTree(responseBody).path("message");
@@ -211,7 +207,7 @@ public class NetworkModificationService {
                 message = responseBody;
             }
         }
-        throw new StudyException(type, message);
+        return new StudyException(type, message);
     }
 
     public List<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes,
@@ -241,11 +237,8 @@ public class NetworkModificationService {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity,
                     new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
                     }).getBody();
-        } catch (HttpClientErrorException e) {
-            if (!HttpStatus.OK.equals(e.getStatusCode())) {
-                handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
-            }
-            throw e;
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
         }
 
         return result;
@@ -278,11 +271,8 @@ public class NetworkModificationService {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
                     new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
                     }).getBody();
-        } catch (HttpClientErrorException e) {
-            if (!HttpStatus.OK.equals(e.getStatusCode())) {
-                handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
-            }
-            throw e;
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
         }
 
         return result;
@@ -306,11 +296,8 @@ public class NetworkModificationService {
         try {
             restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity,
                     Void.class);
-        } catch (HttpClientErrorException e) {
-            if (!HttpStatus.OK.equals(e.getStatusCode())) {
-                handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
-            }
-            throw e;
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
         }
     }
 
@@ -325,10 +312,7 @@ public class NetworkModificationService {
         try {
             restTemplate.put(getNetworkModificationServerURI(false) + path, modifyEquipmentAttributes);
         } catch (HttpStatusCodeException e) {
-            if (!HttpStatus.OK.equals(e.getStatusCode())) {
-                handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
-            }
-            throw e;
+            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
         }
     }
 
@@ -353,11 +337,8 @@ public class NetworkModificationService {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.DELETE, null,
                     new ParameterizedTypeReference<List<EquipmentDeletionInfos>>() {
                     }).getBody();
-        } catch (HttpClientErrorException e) {
-            if (!HttpStatus.OK.equals(e.getStatusCode())) {
-                handleChangeError(e.getResponseBodyAsString(), DELETE_EQUIPMENT_FAILED);
-            }
-            throw e;
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e.getResponseBodyAsString(), DELETE_EQUIPMENT_FAILED);
         }
 
         return result;
@@ -382,7 +363,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<BuildInfos> httpEntity = new HttpEntity<BuildInfos>(buildInfos, headers);
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(buildInfos, headers);
 
         restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
     }
@@ -410,7 +391,7 @@ public class NetworkModificationService {
         path.queryParam("modificationsUuids", modificationsUuids);
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
-        } catch (HttpClientErrorException e) {
+        } catch (HttpStatusCodeException e) {
             // Ignore 404 because modification group does not exist if no modifications
             if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw e;
@@ -431,7 +412,7 @@ public class NetworkModificationService {
         try {
             restTemplate.put(getNetworkModificationServerURI(false)
                             + path.buildAndExpand(groupUuid, modificationUuid).toUriString(), null);
-        } catch (HttpClientErrorException e) {
+        } catch (HttpStatusCodeException e) {
             //Ignore because modification group does not exist if no modifications
             if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw e;
