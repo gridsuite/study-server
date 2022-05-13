@@ -1606,8 +1606,10 @@ public class StudyService {
                 HttpMethod.GET, null, new ParameterizedTypeReference<List<VoltageLevelMapData>>() {
                 }).getBody();
 
-        return voltageLevelsMapData.stream().map(e -> VoltageLevelInfos.builder().id(e.getId()).name(e.getName())
-                .substationId(e.getSubstationId()).build()).collect(Collectors.toList());
+        return voltageLevelsMapData != null ?
+                voltageLevelsMapData.stream().map(e -> VoltageLevelInfos.builder().id(e.getId()).name(e.getName())
+                        .substationId(e.getSubstationId()).build()).collect(Collectors.toList())
+                : null;
     }
 
     List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId,

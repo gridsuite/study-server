@@ -69,8 +69,6 @@ public class ReportService {
             if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw e;
             }
-        } catch (Exception e) {
-            throw e;
         }
 
         return result;
