@@ -16,7 +16,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.NonNull;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
@@ -221,23 +220,34 @@ public class StudyService {
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
-        return StudyInfos.builder().id(entity.getId())
+        return StudyInfos.builder()
+                .id(entity.getId())
                 .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC))
-                .userId(entity.getUserId()).caseFormat(entity.getCaseFormat()).build();
+                .userId(entity.getUserId())
+                .caseFormat(entity.getCaseFormat())
+                .build();
     }
 
     private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
-        return BasicStudyInfos.builder().creationDate(ZonedDateTime.now(ZoneOffset.UTC)).userId(entity.getUserId())
-                .id(entity.getId()).build();
+        return BasicStudyInfos.builder()
+                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
+                .userId(entity.getUserId())
+                .id(entity.getId())
+                .build();
     }
 
     private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
-        return CreatedStudyBasicInfos.builder().creationDate(ZonedDateTime.now(ZoneOffset.UTC))
-                .userId(entity.getUserId()).id(entity.getId()).caseFormat(entity.getCaseFormat()).build();
+        return CreatedStudyBasicInfos.builder()
+                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
+                .userId(entity.getUserId())
+                .id(entity.getId())
+                .caseFormat(entity.getCaseFormat())
+                .build();
     }
 
     public List<CreatedStudyBasicInfos> getStudies() {
-        return studyRepository.findAll().stream().map(StudyService::toCreatedStudyBasicInfos)
+        return studyRepository.findAll().stream()
+                .map(StudyService::toCreatedStudyBasicInfos)
                 .sorted(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed())
                 .collect(Collectors.toList());
     }
@@ -248,7 +258,8 @@ public class StudyService {
     }
 
     List<BasicStudyInfos> getStudiesCreationRequests() {
-        return studyCreationRequestRepository.findAll().stream().map(StudyService::toBasicStudyInfos)
+        return studyCreationRequestRepository.findAll().stream()
+                .map(StudyService::toBasicStudyInfos)
                 .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
     }
 
@@ -273,7 +284,6 @@ public class StudyService {
             }
         }).start();
         return basicStudyInfos;
-        // TODO: gérer le subscribeOn(Schedulers.boundedElastic())
     }
 
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
@@ -303,7 +313,6 @@ public class StudyService {
         }).start();
 
         return basicStudyInfos;
-        // TODO: gérer le subscribeOn(Schedulers.boundedElastic())
     }
 
     public StudyInfos getStudyInfos(UUID studyUuid) {
@@ -367,8 +376,8 @@ public class StudyService {
     }
 
     List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-            @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
-            boolean inUpstreamBuiltParentNode) {
+                                          @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
+                                          boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
@@ -390,32 +399,33 @@ public class StudyService {
     }
 
     private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
-            EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant,
-            String equipmentType) {
+                                                                  EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant,
+                                                                  String equipmentType) {
         String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
-        Set<String> removedEquipmentIdsInVariant = equipmentInfosService
-                .searchTombstonedEquipments(queryTombstonedEquipments).stream().map(TombstonedEquipmentInfos::getId)
+        Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
+                .stream()
+                .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
         String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId,
                 equipmentType);
         List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
 
-        List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant.stream()
-                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId())).collect(Collectors.toList());
+        List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
+                .stream()
+                .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
+                .collect(Collectors.toList());
 
         equipmentInfos.addAll(addedEquipmentInfosInVariant);
 
         return equipmentInfos;
     }
 
-    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector,
-            UUID networkUuid, String variantId, String equipmentType) {
+    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         String query = "networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s:(*%s*)"
                 + (equipmentType == null ? "" : " AND equipmentType.keyword:(%s)");
         return String.format(query, networkUuid, variantId,
-                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii"
-                        : "equipmentId.fullascii",
+                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
                 escapeLucene(userInput), equipmentType);
     }
 
@@ -425,8 +435,7 @@ public class StudyService {
 
     @Transactional
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
-        Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository
-                .findById(studyUuid);
+        Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         UUID networkUuid = null;
         List<UUID> groupsUuids = new ArrayList<>();
         if (studyCreationRequestEntity.isEmpty()) {
@@ -461,8 +470,7 @@ public class StudyService {
                 networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid());
 
                 if (startTime.get() != null) {
-                    LOGGER.trace("Delete study '{}' : {} seconds", studyUuid,
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
             }
         } catch (Exception e) {
@@ -474,8 +482,7 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         equipmentInfosService.deleteAll(networkUuid);
-        LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid,
-                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
     private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, UUID networkUuid, String networkId,
@@ -497,7 +504,8 @@ public class StudyService {
 
     private String getCaseFormat(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
-                .buildAndExpand(caseUuid).toUriString();
+            .buildAndExpand(caseUuid)
+            .toUriString();
 
         return restTemplate.getForObject(caseServerBaseUri + path, String.class);
     }
@@ -567,7 +575,9 @@ public class StudyService {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand(networkUuid, voltageLevelId)
+            .toUriString();
 
         return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
     }
@@ -590,7 +600,9 @@ public class StudyService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand(networkUuid, voltageLevelId)
+            .toUriString();
 
         return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
     }
@@ -611,46 +623,33 @@ public class StudyService {
         }
 
         NetworkInfos networkInfos = networkInfosResponse.getBody();
-        // TODO: add logs (.log(ROOT_CATEGORY_REACTOR, Level.FINE))
         return networkInfos;
-
-//        return webClient.post()
-//            .uri(networkConversionServerBaseUri + path)
-//            .retrieve()
-//            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, clientResponse ->
-//                handleStudyCreationError(studyUuid, userId, clientResponse, "network-conversion-server")
-//            )
-//            .bodyToMono(NetworkInfos.class)
-//            .publishOn(Schedulers.boundedElastic())
-//            .log(ROOT_CATEGORY_REACTOR, Level.FINE)
-//            .doOnError(t -> !(t instanceof StudyException), t -> emitStudyCreationError(studyUuid, userId, t.getMessage()))
-//            .block();
     }
 
     String getLinesGraphics(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
-                .queryParam(NETWORK_UUID, networkUuid).buildAndExpand().toUriString();
+            .queryParam(NETWORK_UUID, networkUuid)
+            .buildAndExpand()
+            .toUriString();
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
 
     String getSubstationsGraphics(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
-                .queryParam(NETWORK_UUID, networkUuid).buildAndExpand().toUriString();
+            .queryParam(NETWORK_UUID, networkUuid)
+            .buildAndExpand()
+            .toUriString();
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
 
     Boolean caseExists(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/exists")
-                .buildAndExpand(caseUuid).toUriString();
+            .buildAndExpand(caseUuid)
+            .toUriString();
 
         return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, Boolean.class, caseUuid).getBody();
-//        return webClient.get()
-//            .uri(caseServerBaseUri + path)
-//            .retrieve()
-//            .bodyToMono(Boolean.class)
-//            .block();
     }
 
     String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentPath) {
@@ -668,8 +667,7 @@ public class StudyService {
     }
 
     String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
-                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentUuid}");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentUuid}");
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -902,8 +900,6 @@ public class StudyService {
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
         } catch (HttpClientErrorException e) {
             updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE);
-        } catch (Exception e) {
-            throw e;
         } finally {
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW);
         }
@@ -917,7 +913,7 @@ public class StudyService {
 
     public Collection<String> getExportFormats() {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
-                .toUriString();
+            .toUriString();
 
         ParameterizedTypeReference<Collection<String>> typeRef = new ParameterizedTypeReference<>() {
         };
@@ -957,40 +953,55 @@ public class StudyService {
     }
 
     private void emitStudiesChanged(UUID studyUuid, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_STUDY_UUID, studyUuid).setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES).build());
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
+            .build());
     }
 
     private void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType) {
-        sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_NODE, nodeUuid).setHeader(HEADER_UPDATE_TYPE, updateType).build());
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_NODE, nodeUuid)
+            .setHeader(HEADER_UPDATE_TYPE, updateType)
+            .build());
     }
 
     private void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
-        sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_USER_ID, userId).setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
-                .setHeader(HEADER_ERROR, errorMessage).build());
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
+            .setHeader(HEADER_ERROR, errorMessage)
+            .build());
     }
 
     private void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds) {
-        sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_NODE, nodeUuid).setHeader(HEADER_UPDATE_TYPE, updateType)
-                .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds).build());
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_NODE, nodeUuid)
+            .setHeader(HEADER_UPDATE_TYPE, updateType)
+            .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
+            .build());
     }
 
     private void emitStudyDelete(UUID studyUuid, String userId) {
-        sendUpdateMessage(
-                MessageBuilder.withPayload("").setHeader(HEADER_USER_ID, userId).setHeader(HEADER_STUDY_UUID, studyUuid)
-                        .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE).build());
+        sendUpdateMessage(MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE)
+            .build());
     }
 
-    private void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds,
-            String equipmentType, String equipmentId) {
+    private void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
         sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_NODE, nodeUuid).setHeader(HEADER_UPDATE_TYPE, updateType)
-                .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
-                .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, equipmentType)
-                .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, equipmentId).build());
+            .setHeader(HEADER_NODE, nodeUuid)
+            .setHeader(HEADER_UPDATE_TYPE, updateType)
+            .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
+            .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, equipmentType)
+            .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, equipmentId)
+            .build());
     }
 
     public void assertCaseExists(UUID caseUuid) {
@@ -1043,44 +1054,58 @@ public class StudyService {
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
         Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(), parameters.isTransformerVoltageControlOn(),
-                parameters.isNoGeneratorReactiveLimits(), parameters.isPhaseShifterRegulationOn(),
-                parameters.isTwtSplitShuntAdmittance(), parameters.isShuntCompensatorVoltageControlOn(),
-                parameters.isReadSlackBus(), parameters.isWriteSlackBus(), parameters.isDc(),
-                parameters.isDistributedSlack(), parameters.getBalanceType());
+        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
+                parameters.isTransformerVoltageControlOn(),
+                parameters.isNoGeneratorReactiveLimits(),
+                parameters.isPhaseShifterRegulationOn(),
+                parameters.isTwtSplitShuntAdmittance(),
+                parameters.isShuntCompensatorVoltageControlOn(),
+                parameters.isReadSlackBus(),
+                parameters.isWriteSlackBus(),
+                parameters.isDc(),
+                parameters.isDistributedSlack(),
+                parameters.getBalanceType());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
-        return new LoadFlowParameters(entity.getVoltageInitMode(), entity.isTransformerVoltageControlOn(),
-                entity.isNoGeneratorReactiveLimits(), entity.isPhaseShifterRegulationOn(),
-                entity.isTwtSplitShuntAdmittance(), entity.isSimulShunt(), entity.isReadSlackBus(),
-                entity.isWriteSlackBus(), entity.isDc(), entity.isDistributedSlack(), entity.getBalanceType(), true, // FIXME
-                                                                                                                     // to
-                                                                                                                     // persist
+        return new LoadFlowParameters(entity.getVoltageInitMode(),
+                entity.isTransformerVoltageControlOn(),
+                entity.isNoGeneratorReactiveLimits(),
+                entity.isPhaseShifterRegulationOn(),
+                entity.isTwtSplitShuntAdmittance(),
+                entity.isSimulShunt(),
+                entity.isReadSlackBus(),
+                entity.isWriteSlackBus(),
+                entity.isDc(),
+                entity.isDistributedSlack(),
+                entity.getBalanceType(),
+                true, // FIXME to persist
                 EnumSet.noneOf(Country.class), // FIXME to persist
                 LoadFlowParameters.ConnectedComponentMode.MAIN); // FIXME to persist
     }
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
         return result != null
-                ? new LoadFlowResultEntity(result.isOk(), result.getMetrics(), result.getLogs(),
-                        result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList()))
-                : null;
+                ? new LoadFlowResultEntity(result.isOk(),
+                      result.getMetrics(),
+                      result.getLogs(),
+                      result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList())) : null;
     }
 
     public static LoadFlowResult fromEntity(LoadFlowResultEntity entity) {
         LoadFlowResult result = null;
         if (entity != null) {
-            // This is a workaround to prepare the componentResultEmbeddables which will be
-            // used later in the webflux pipeline
+            // This is a workaround to prepare the componentResultEmbeddables which will be used later in the webflux pipeline
             // The goal is to avoid LazyInitializationException
             @SuppressWarnings("unused")
             int ignoreSize = entity.getComponentResults().size();
             @SuppressWarnings("unused")
             int ignoreSize2 = entity.getMetrics().size();
 
-            result = new LoadFlowResultImpl(entity.isOk(), entity.getMetrics(), entity.getLogs(),
+            result = new LoadFlowResultImpl(entity.isOk(),
+                    entity.getMetrics(),
+                    entity.getLogs(),
                     entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
         }
         return result;
@@ -1089,22 +1114,28 @@ public class StudyService {
     public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
         return new ComponentResultEmbeddable(componentResult.getConnectedComponentNum(),
-                componentResult.getSynchronousComponentNum(), componentResult.getStatus(),
-                componentResult.getIterationCount(), componentResult.getSlackBusId(),
-                componentResult.getSlackBusActivePowerMismatch());
+            componentResult.getSynchronousComponentNum(),
+            componentResult.getStatus(),
+            componentResult.getIterationCount(),
+            componentResult.getSlackBusId(),
+            componentResult.getSlackBusActivePowerMismatch());
     }
 
     public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowResultImpl.ComponentResultImpl(entity.getConnectedComponentNum(),
-                entity.getSynchronousComponentNum(), entity.getStatus(), entity.getIterationCount(),
-                entity.getSlackBusId(), entity.getSlackBusActivePowerMismatch());
+            entity.getSynchronousComponentNum(),
+            entity.getStatus(),
+            entity.getIterationCount(),
+            entity.getSlackBusId(),
+            entity.getSlackBusActivePowerMismatch());
     }
 
     @Transactional(readOnly = true)
     public LoadFlowParameters doGetLoadFlowParameters(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
-                .orElse(null);
+        return studyRepository.findById(studyUuid)
+            .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
+            .orElse(null);
     }
 
     public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
@@ -1125,7 +1156,9 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public String doGetLoadFlowProvider(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).map(StudyEntity::getLoadFlowProvider).orElse("");
+        return studyRepository.findById(studyUuid)
+            .map(StudyEntity::getLoadFlowProvider)
+            .orElse("");
     }
 
     public String getLoadFlowProvider(UUID studyUuid) {
@@ -1425,11 +1458,14 @@ public class StudyService {
         var study = studyRepository.save(studyEntity);
         // create 2 nodes : root node, modification node 0
         NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
-        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name("modification node 0")
-                .variantId(FIRST_VARIANT_ID).loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatus(BuildStatus.BUILT)
-                .build();
-        networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode,
-                InsertMode.AFTER);
+        NetworkModificationNode modificationNode = NetworkModificationNode
+            .builder()
+            .name("modification node 0")
+            .variantId(FIRST_VARIANT_ID)
+            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+            .buildStatus(BuildStatus.BUILT)
+            .build();
+        networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode,InsertMode.AFTER);
 
         return study;
     }
@@ -1721,7 +1757,8 @@ public class StudyService {
 
     private void deleteSaResult(UUID uuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-                .buildAndExpand(uuid).toUriString();
+            .buildAndExpand(uuid)
+            .toUriString();
 
         restTemplate.delete(securityAnalysisServerBaseUri + path);
     }

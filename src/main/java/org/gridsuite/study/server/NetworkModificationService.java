@@ -87,7 +87,9 @@ public class NetworkModificationService {
 
     public List<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH).buildAndExpand(groupUuid).toUriString();
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+            .buildAndExpand(groupUuid)
+            .toUriString();
 
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() { }).getBody();
     }
@@ -99,7 +101,9 @@ public class NetworkModificationService {
 
     private void deleteNetworkModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH).buildAndExpand(groupUuid).toUriString();
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+            .buildAndExpand(groupUuid)
+            .toUriString();
 
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path);
@@ -124,7 +128,9 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(switchId).toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand(switchId)
+            .toUriString();
 
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, null,
@@ -151,7 +157,9 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand().toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
 
         HttpEntity<String> httpEntity = new HttpEntity<String>(groovyScript);
 
@@ -170,7 +178,9 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(lineId).toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand(lineId)
+            .toUriString();
 
         HttpEntity<String> httpEntity = new HttpEntity<String>(status);
 
@@ -217,7 +227,9 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand().toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -252,7 +264,9 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand().toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -279,7 +293,9 @@ public class NetworkModificationService {
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid
                 + DELIMITER + ModificationType.getUriFromType(modificationType) + "-creation");
-        var path = uriComponentsBuilder.buildAndExpand().toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -311,7 +327,9 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(equipmentType, equipmentId).toUriString();
+        var path = uriComponentsBuilder
+            .buildAndExpand(equipmentType, equipmentId)
+            .toUriString();
 
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.DELETE, null,
@@ -338,7 +356,10 @@ public class NetworkModificationService {
         }
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
-        var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).build().toUriString();
+        var path = uriComponentsBuilder
+            .queryParam(QUERY_PARAM_RECEIVER, receiver)
+            .build()
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -356,8 +377,10 @@ public class NetworkModificationService {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        var path = UriComponentsBuilder.fromPath("build/stop").queryParam(QUERY_PARAM_RECEIVER, receiver).build()
-                .toUriString();
+        var path = UriComponentsBuilder.fromPath("build/stop")
+            .queryParam(QUERY_PARAM_RECEIVER, receiver)
+            .build()
+            .toUriString();
 
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
@@ -380,7 +403,8 @@ public class NetworkModificationService {
     public void reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications" + DELIMITER + "move")
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH
+                + DELIMITER + "modifications" + DELIMITER + "move")
                 .queryParam("modificationsToMove", modificationUuid);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);

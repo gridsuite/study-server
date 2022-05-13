@@ -8,8 +8,6 @@ package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowResult;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
@@ -38,6 +36,7 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
