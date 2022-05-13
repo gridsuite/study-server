@@ -313,8 +313,25 @@ public class NetworkModificationService {
         }
     }
 
-    public List<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId,
-            UUID groupUuid, String variantId) {
+    public void updateEquipmentModification(String modifyEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
+        Objects.requireNonNull(modifyEquipmentAttributes);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-modification");
+        var path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            restTemplate.put(getNetworkModificationServerURI(false) + path, modifyEquipmentAttributes);
+        } catch (HttpStatusCodeException e) {
+            if (!HttpStatus.OK.equals(e.getStatusCode())) {
+                handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+            }
+            throw e;
+        }
+    }
+
+    public List<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId) {
         List<EquipmentDeletionInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);

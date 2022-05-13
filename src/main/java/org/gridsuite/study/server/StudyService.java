@@ -141,6 +141,7 @@ public class StudyService {
     private String loadFlowServerBaseUri;
     private String securityAnalysisServerBaseUri;
     private String actionsServerBaseUri;
+    private String defaultLoadflowProvider;
 
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
@@ -191,6 +192,7 @@ public class StudyService {
         @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
         @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
+        @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
         NetworkService networkStoreService,
@@ -216,6 +218,7 @@ public class StudyService {
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.objectMapper = objectMapper;
     }
 
@@ -1070,19 +1073,21 @@ public class StudyService {
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowParameters(entity.getVoltageInitMode(),
-                entity.isTransformerVoltageControlOn(),
-                entity.isNoGeneratorReactiveLimits(),
-                entity.isPhaseShifterRegulationOn(),
-                entity.isTwtSplitShuntAdmittance(),
-                entity.isSimulShunt(),
-                entity.isReadSlackBus(),
-                entity.isWriteSlackBus(),
-                entity.isDc(),
-                entity.isDistributedSlack(),
-                entity.getBalanceType(),
-                true, // FIXME to persist
-                EnumSet.noneOf(Country.class), // FIXME to persist
-                LoadFlowParameters.ConnectedComponentMode.MAIN); // FIXME to persist
+            entity.isTransformerVoltageControlOn(),
+            entity.isNoGeneratorReactiveLimits(),
+            entity.isPhaseShifterRegulationOn(),
+            entity.isTwtSplitShuntAdmittance(),
+            entity.isSimulShunt(),
+            entity.isReadSlackBus(),
+            entity.isWriteSlackBus(),
+            entity.isDc(),
+            entity.isDistributedSlack(),
+            entity.getBalanceType(),
+            true, // FIXME to persist
+            EnumSet.noneOf(Country.class), // FIXME to persist
+            LoadFlowParameters.ConnectedComponentMode.MAIN, // FIXME to persist
+            true// FIXME to persist
+            );
     }
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
@@ -1168,7 +1173,7 @@ public class StudyService {
     @Transactional
     public void doUpdateLoadFlowProvider(UUID studyUuid, String provider) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider));
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
     }
 
     public void updateLoadFlowProvider(UUID studyUuid, String provider) {
@@ -1448,8 +1453,7 @@ public class StudyService {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid,
-                networkId, caseFormat, caseUuid, casePrivate, null, loadFlowParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
         return insertStudy(studyEntity);
     }
 
@@ -1465,7 +1469,7 @@ public class StudyService {
             .loadFlowStatus(LoadFlowStatus.NOT_DONE)
             .buildStatus(BuildStatus.BUILT)
             .build();
-        networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode,InsertMode.AFTER);
+        networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER);
 
         return study;
     }
@@ -1552,17 +1556,19 @@ public class StudyService {
 
     public void updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes,
             ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-        getModificationGroupUuid(nodeUuid);
-        getVariantId(nodeUuid);
         try {
             networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType,
                     modificationUuid);
             networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        } catch (Exception e) {
-            throw e;
         } finally {
             updateStatuses(studyUuid, nodeUuid, false);
         }
+    }
+
+    public void updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+        networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid);
+        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+        updateStatuses(studyUuid, nodeUuid, false);
     }
 
     void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
@@ -1790,6 +1796,35 @@ public class StudyService {
         }
     }
 
+    public void reindexStudy(UUID studyUuid) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        if (studyEntity.isPresent()) {
+            StudyEntity study = studyEntity.get();
+
+            CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
+            UUID networkUuid = study.getNetworkUuid();
+
+            // reindex study in elasticsearch
+            studyInfosService.recreateStudyInfos(studyInfos);
+
+            // reindex study network equipments in elasticsearch
+            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+            try {
+                restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
+            } catch (HttpStatusCodeException e) {
+                LOGGER.error(e.toString(), e);
+                throw e;
+            }
+            invalidateBuildStatus(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+            LOGGER.info("Study with id = '{}' has been reindexed", studyUuid);
+        } else {
+            throw new StudyException(STUDY_NOT_FOUND);
+        }
+    }
+
     public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
         checkStudyContainsNode(studyUuid, nodeUuid);
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
@@ -1802,6 +1837,10 @@ public class StudyService {
         if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public String getDefaultLoadflowProviderValue() {
+        return defaultLoadflowProvider;
     }
 
     private Set<String> getSubstationIds(List<? extends ModificationInfos> modificationInfosList) {

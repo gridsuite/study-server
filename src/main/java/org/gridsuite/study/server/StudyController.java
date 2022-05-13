@@ -737,6 +737,18 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-modification")
+    @Operation(summary = "update a load modification in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load modification has been updated")})
+    public ResponseEntity<Void> updateLoadModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("modificationUuid") UUID modificationUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestBody String modifyLoadAttributes) {
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification")
     @Operation(summary = "delete network modifications")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications have been deleted")})
@@ -1034,6 +1046,21 @@ public class StudyController {
         studyService.assertCanModifyNode(nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
         studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/loadflow-default-provider")
+    @Operation(summary = "get load flow default provider value")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider value has been found"))
+    public ResponseEntity<String> getDefaultLoadflowProvider() {
+        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProviderValue());
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/reindex-all")
+    @Operation(summary = "reindex the study")
+    @ApiResponse(responseCode = "200", description = "Study reindexed")
+    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.reindexStudy(studyUuid);
         return ResponseEntity.ok().build();
     }
 }

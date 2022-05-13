@@ -32,6 +32,8 @@ public interface StudyInfosService {
 
     List<CreatedStudyBasicInfos> search(@NonNull final String query);
 
+    void recreateStudyInfos(@NonNull final CreatedStudyBasicInfos studyInfos);
+
     static String getDateSearchTerm(@NonNull final ZonedDateTime... dates) {
         return Arrays.stream(dates).map(date -> "\"" + date.toString() + "\"").collect(Collectors.joining(" OR ", "creationDate:", ""));
     }

@@ -63,6 +63,10 @@ public class StudyInfosServiceTests {
 
         studyInfosService.deleteByUuid(matcher2.getReference().getId());
         assertEquals(0, Iterables.size(studyInfosService.findAll()));
+
+        studyInfosService.recreateStudyInfos(matcher1.getReference());
+        studyInfosService.recreateStudyInfos(matcher2.getReference());
+        assertEquals(2, Iterables.size(studyInfosService.findAll()));
     }
 
     @Test

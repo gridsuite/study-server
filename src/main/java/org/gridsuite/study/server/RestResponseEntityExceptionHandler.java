@@ -51,6 +51,7 @@ public class RestResponseEntityExceptionHandler {
                 case SUBSTATION_CREATION_FAILED:
                 case VOLTAGE_LEVEL_CREATION_FAILED:
                 case NETWORK_NOT_FOUND:
+                case NETWORK_INDEXATION_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case DELETE_EQUIPMENT_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
