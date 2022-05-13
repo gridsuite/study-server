@@ -1353,7 +1353,7 @@ public class StudyTest {
 
         // get the network area diagram
         webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, rootNodeUuid)
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, rootNodeUuid)
                 .exchange()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectStatus().isOk()
@@ -1364,7 +1364,7 @@ public class StudyTest {
 
         // get the network area diagram from a study that doesn't exist
         webTestClient.get()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", randomUuid, rootNodeUuid)
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", randomUuid, rootNodeUuid)
                 .exchange()
                 .expectStatus().isNotFound();
 
