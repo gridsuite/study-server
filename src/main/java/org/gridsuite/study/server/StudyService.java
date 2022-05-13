@@ -37,6 +37,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -129,6 +130,9 @@ public class StudyService {
     StudyService self;
 
     NetworkModificationTreeService networkModificationTreeService;
+
+    @Autowired
+    TaskExecutor studyServerTaskExecutor;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -269,7 +273,7 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        new Thread(() -> {
+        Thread createStudyThread = new Thread(() -> {
             try {
                 String caseFormat = getCaseFormat(caseUuid);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
@@ -284,7 +288,8 @@ public class StudyService {
                 LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
-        }).start();
+        });
+        studyServerTaskExecutor.execute(createStudyThread);
         return basicStudyInfos;
     }
 
@@ -294,7 +299,7 @@ public class StudyService {
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
 
-        new Thread(() -> {
+        Thread createStudyThread = new Thread(() -> {
             try {
                 UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
                 if (caseUuid != null) {
@@ -312,7 +317,8 @@ public class StudyService {
                 LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
-        }).start();
+        });
+        studyServerTaskExecutor.execute(createStudyThread);
 
         return basicStudyInfos;
     }
