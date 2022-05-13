@@ -224,13 +224,13 @@ public class StudyTest {
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
-                .networkUuid(NETWORK_UUID)
-                .id(line.getId())
-                .name(line.getNameOrId())
-                .type("LINE")
-                .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId())
-                        .name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
-                .build();
+            .networkUuid(NETWORK_UUID)
+            .id(line.getId())
+            .name(line.getNameOrId())
+            .type("LINE")
+            .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId())
+                    .name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
+            .build();
     }
 
     private void initMockBeans(Network network) {
@@ -238,7 +238,8 @@ public class StudyTest {
 
         studiesInfos = List.of(
                 CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build());
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build()
+        );
 
         when(studyInfosService.add(any(CreatedStudyBasicInfos.class))).thenReturn(studiesInfos.get(0));
         when(studyInfosService.search(String.format("userId:%s", "userId")))
@@ -369,30 +370,24 @@ public class StudyTest {
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build());
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
-                        || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
-                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*")
-                            ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID
-                            : SECURITY_ANALYSIS_RESULT_UUID;
-                    input.send(MessageBuilder.withPayload("").setHeader("resultUuid", resultUuid)
-                            .setHeader("receiver",
-                                    "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4)
-                                            + "%22%2C%22userId%22%3A%22userId%22%7D")
-                            .build(), "sa.stopped");
+                          || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
+                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
+                    input.send(MessageBuilder.withPayload("")
+                        .setHeader("resultUuid", resultUuid)
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .build(), "sa.stopped");
                     return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/groups/.*")
-                        || path.matches(
-                                "/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true")
-                        || path.matches("/v1/networks/" + NETWORK_UUID_STRING
-                                + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID)
-                        || path.matches("/v1/networks/" + NETWORK_UUID_STRING
-                                + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID_2)) {
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/.*") ||
+                    path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true") ||
+                    path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID) ||
+                    path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*\\&open=true\\&variantId=" + VARIANT_ID_2)) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status\\?group=.*")) {
                     if (Objects.nonNull(body) && body.peek().readUtf8().equals("lockout")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
@@ -406,8 +401,8 @@ public class StudyTest {
                     if (Objects.nonNull(body) && body.peek().readUtf8().equals("trip")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2", "s3")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else {
                         return new MockResponse().setResponseCode(500);
                     }
@@ -416,53 +411,49 @@ public class StudyTest {
                     if (bodyStr.equals("switchOn") || bodyStr.equals("energiseEndOne")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s3")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else {
                         return new MockResponse().setResponseCode(500);
                     }
-                } else if (path
-                        .matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*")) {
                     return new MockResponse().setResponseCode(500).setBody(LINE_MODIFICATION_FAILED.name());
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s4", "s5", "s6", "s7")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*")) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")
-                        && POST.equals(request.getMethod())) {
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && POST.equals(request.getMethod())) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches(
-                        "/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/LOAD/id/idLoadToDelete\\?group=.*")) {
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/LOAD/id/idLoadToDelete\\?group=.*")) {
                     JSONObject jsonObject = new JSONObject(Map.of("equipmentId", "idLoadToDelete", "equipmentType",
                             "LOAD", "substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*")) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators[?]group=.*")
-                        && POST.equals(request.getMethod())) {
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators[?]group=.*") && POST.equals(request.getMethod())) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path
                         .matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING
                                 + "\\&reportName=loadflow\\&overwrite=true")
@@ -470,21 +461,16 @@ public class StudyTest {
                                 + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
                     return new MockResponse().setResponseCode(200).setBody(loadFlowOKString).addHeader("Content-Type",
                             "application/json; charset=utf-8");
-                } else if (path
-                        .matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId="
-                                + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true")
-                        || path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId="
-                                + NETWORK_LOADFLOW_ERROR_UUID_STRING
-                                + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(loadFlowErrorString)
+                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true") ||
+                           path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(loadFlowErrorString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path
-                        .matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid="
-                                + NETWORK_UUID_STRING)
-                        || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid="
-                                + NETWORK_UUID_STRING + "\\&variantId=.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
+                } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING) ||
+                    path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "\\&variantId=.*")) {
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(CONTINGENCIES_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build.*")
                         && request.getMethod().equals("POST")) {
                     // variant build

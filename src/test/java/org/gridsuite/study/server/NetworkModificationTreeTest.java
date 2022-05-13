@@ -120,11 +120,9 @@ public class NetworkModificationTreeTest {
     private OutputDestination output;
 
     @Autowired
-    private ObjectMapper mapper;
+    private ObjectMapper objectMapper;
 
     private ObjectWriter objectWriter;
-
-    ObjectMapper objectMapper = RestTemplateConfig.createObjectMapper();
 
     private LoadFlowResult loadFlowResult;
     private LoadFlowResult loadFlowResult2;
@@ -158,11 +156,11 @@ public class NetworkModificationTreeTest {
     public void setUp() throws IOException {
         Configuration.defaultConfiguration();
         MockitoAnnotations.initMocks(this);
-        mapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
-        mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
-        mapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
+        objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
+        objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+        objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
 
-        objectWriter = mapper.writer().withDefaultPrettyPrinter();
+        objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         given(networkStoreService.getNetwork(NETWORK_UUID)).willReturn(network);
         given(network.getVariantManager()).willReturn(variantManager);
