@@ -449,10 +449,7 @@ public class NetworkModificationTreeService {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
-        nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes);
-            invalidateChildrenBuildStatus(n, changedNodes, false);
-        });
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes));
 
         if (!changedNodes.isEmpty()) {
             emitNodesChanged(studyId, changedNodes);
