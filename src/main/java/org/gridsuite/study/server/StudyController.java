@@ -537,7 +537,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format) {
 
-        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyUuid, nodeUuid, format);
+        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid).then(studyService.exportNetwork(studyUuid, nodeUuid, format));
         return exportNetworkInfosMono.map(exportNetworkInfos -> {
             HttpHeaders header = new HttpHeaders();
             header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());

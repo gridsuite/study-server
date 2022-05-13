@@ -940,11 +940,6 @@ public class StudyService {
     }
 
     public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
-
-        if (!networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
-            && networkModificationTreeService.getBuildStatus(nodeUuid) != BuildStatus.BUILT) {
-            return Mono.error(new StudyException(NODE_NOT_BUILT));
-        }
         return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID networkUuid = tuple.getT1();
             String variantId = tuple.getT2();
@@ -1073,7 +1068,17 @@ public class StudyService {
 
     public Mono<Void> assertCanModifyNode(UUID nodeUuid) {
         return networkModificationTreeService.isReadOnly(nodeUuid).switchIfEmpty(Mono.just(Boolean.FALSE))
-                .flatMap(ro -> ro ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+                .flatMap(ro -> Boolean.TRUE.equals(ro) ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+    }
+
+    public Mono<Void> assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
+
+        if (Boolean.TRUE.equals(!networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
+            && networkModificationTreeService.getBuildStatus(nodeUuid) != BuildStatus.BUILT)) {
+            return Mono.error(new StudyException(NODE_NOT_BUILT));
+        } else {
+            return Mono.empty();
+        }
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
