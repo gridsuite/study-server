@@ -386,51 +386,48 @@ public class NetworkModificationService {
 
     }
 
-    public Flux<ModificationInfos> lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
-        UUID groupUuid, ModificationType modificationType, String variantId, UUID modificationUuid) {
+    public Flux<ModificationInfos> updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
+        ModificationType modificationType, UUID modificationUuid) {
+        UriComponentsBuilder uriComponentsBuilder;
+        uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
+            modificationType));
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
 
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
+        return webClient.put()
+            .uri(getNetworkModificationServerURI(false) + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+            .bodyToFlux(new ParameterizedTypeReference<>() {
+            });
+    }
 
-        if (modificationUuid == null) {
-            return networkStoreService.getNetworkUuid(studyUuid)
-                .flatMapMany(networkUuid -> {
-                    UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
-                            buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                        .queryParam(GROUP, groupUuid);
-                    if (!StringUtils.isBlank(variantId)) {
-                        uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-                    }
-                    var path = uriComponentsBuilder
-                        .buildAndExpand()
-                        .toUriString();
-                    return webClient.post()
-                        .uri(getNetworkModificationServerURI(true) + path)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
-                        .retrieve()
-                        .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                            handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                        .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
-                        });
-                });
-        } else {
-
-            UriComponentsBuilder uriComponentsBuilder;
-            uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType));
-            var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
-
-            return webClient.put()
-                .uri(getNetworkModificationServerURI(false) + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                    handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                .bodyToFlux(new ParameterizedTypeReference<>() {
-                });
-        }
+    public Flux<ModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
+        UUID groupUuid, ModificationType modificationType, String variantId) {
+        return networkStoreService.getNetworkUuid(studyUuid)
+            .flatMapMany(networkUuid -> {
+                UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
+                        buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+                    .queryParam(GROUP, groupUuid);
+                if (!StringUtils.isBlank(variantId)) {
+                    uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+                }
+                var path = uriComponentsBuilder
+                    .buildAndExpand()
+                    .toUriString();
+                return webClient.post()
+                    .uri(getNetworkModificationServerURI(true) + path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
+                    .retrieve()
+                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                    });
+            });
     }
 }

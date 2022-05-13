@@ -1913,13 +1913,27 @@ public class StudyService {
 
     public Mono<Void> lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
         ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
+
         return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
             UUID groupUuid = tuple.getT1();
             String variantId = tuple.getT2();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
 
-            return networkModificationService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, groupUuid, modificationType, variantId, modificationUuid)
+            Flux<ModificationInfos> modificationInfosFlux;
+            if (modificationUuid == null) {
+                modificationInfosFlux = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
+                    groupUuid, modificationType, variantId);
+            } else {
+
+                modificationInfosFlux = networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
+                    modificationType, modificationUuid);
+            }
+
+            return modificationInfosFlux
                 .collect(Collectors.toSet())
                 .doOnSuccess(modifications -> {
                     Set<String> allImpactedSubstationIds = modifications.stream()
