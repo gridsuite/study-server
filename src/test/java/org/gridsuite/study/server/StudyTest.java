@@ -228,8 +228,7 @@ public class StudyTest {
             .id(line.getId())
             .name(line.getNameOrId())
             .type("LINE")
-            .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId())
-                    .name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
+            .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId()).name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
             .build();
     }
 
@@ -372,7 +371,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
-                          || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
+                           || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
@@ -392,8 +391,8 @@ public class StudyTest {
                     if (Objects.nonNull(body) && body.peek().readUtf8().equals("lockout")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else {
                         return new MockResponse().setResponseCode(500);
                     }
@@ -431,11 +430,11 @@ public class StudyTest {
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && POST.equals(request.getMethod())) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/LOAD/id/idLoadToDelete\\?group=.*")) {
-                    JSONObject jsonObject = new JSONObject(Map.of("equipmentId", "idLoadToDelete", "equipmentType",
-                            "LOAD", "substationIds", List.of("s2")));
+                    JSONObject jsonObject = new JSONObject(Map.of("equipmentId", "idLoadToDelete",
+                            "equipmentType", "LOAD", "substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -444,23 +443,21 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators[?]group=.*") && POST.equals(request.getMethod())) {
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators[?]group=.*") && POST.equals(request.getMethod())) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*")) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                        JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true") ||
+                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .setBody(loadFlowOKString)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path
-                        .matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING
-                                + "\\&reportName=loadflow\\&overwrite=true")
-                        || path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING
-                                + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(loadFlowOKString).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true") ||
                            path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*")) {
                         return new MockResponse().setResponseCode(200)
@@ -469,10 +466,9 @@ public class StudyTest {
                 } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING) ||
                     path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "\\&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
-                            .setBody(CONTINGENCIES_JSON)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build.*")
-                        && request.getMethod().equals("POST")) {
+                        .setBody(CONTINGENCIES_JSON)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build.*") && request.getMethod().equals("POST")) {
                     // variant build
                     input.send(MessageBuilder.withPayload("s1,s2").setHeader("receiver", "%7B%22nodeUuid%22%3A%22"
                             + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
@@ -526,101 +522,83 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody(voltageLevelsMapDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/studies/cases/{caseUuid}":
-                        return new MockResponse().setResponseCode(200).setBody("CGMES").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("CGMES")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/studies/newStudy/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING:
-                        return new MockResponse().setResponseCode(200).setBody("XIIDM").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/exists":
                     case "/v1/cases/11111111-0000-0000-0000-000000000000/exists":
                     case "/v1/cases/88888888-0000-0000-0000-000000000000/exists":
                     case "/v1/cases/11888888-0000-0000-0000-000000000000/exists":
                     case "/v1/cases/11a91c11-2c2d-83bb-b45f-20b83e4ef00c/exists":
-                        return new MockResponse().setResponseCode(200).setBody("true").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("true")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/00000000-8cf0-11bd-b23e-10b96e4ef00d/format":
-                        return new MockResponse().setResponseCode(200).setBody("UCTE").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("UCTE")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
                     case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/format":
-                        return new MockResponse().setResponseCode(200).setBody("XIIDM").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("XIIDM")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
-                        return new MockResponse().setResponseCode(200).setBody("false").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("false")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/" + CASE_API_VERSION + "/cases/private": {
                         String bodyStr = body.readUtf8();
-                        if (bodyStr.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) { // import file with errors
+                        if (bodyStr.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
                             return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) { // import file with
-                                                                                                       // errors during
-                                                                                                       // import in the case
-                                                                                                       // server
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
                             return new MockResponse().setResponseCode(500)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8").setBody(
-                                            "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                        } else if (bodyStr
-                                .contains("filename=\"" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) { // import
-                                                                                                                         // file
-                                                                                                                         // with
-                                                                                                                         // errors
-                                                                                                                         // during
-                                                                                                                         // import
-                                                                                                                         // in
-                                                                                                                         // the
-                                                                                                                         // case
-                                                                                                                         // server
-                                                                                                                         // without
-                                                                                                                         // message
-                                                                                                                         // in
-                                                                                                                         // response
-                                                                                                                         // body
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
                             return new MockResponse().setResponseCode(500)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8").setBody(
-                                            "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                                .addHeader("Content-Type", "application/json; charset=utf-8")
+                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
                         } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
                             return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                         } else {
                             return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                         }
                     }
 
                     case "/" + CASE_API_VERSION + "/cases/11111111-0000-0000-0000-000000000000":
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                         return new MockResponse().setResponseCode(200)
-                                .setBody(new JSONArray(List.of(jsonObject)).toString())
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .setBody(new JSONArray(List.of(jsonObject)).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID:
                     case "/v1/networks?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         countDownLatch.await(2, TimeUnit.SECONDS);
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId="
                             + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8").setBody(
-                                        "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
+                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                            .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
 
                     case "/v1/networks?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(networkLoadFlowErrorInfosAsString))
-                                .setResponseCode(200).addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse().setBody(String.valueOf(networkLoadFlowErrorInfosAsString)).setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/lines?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
                     case "/v1/substations?networkUuid=38400000-8cf0-11bd-b23e-10b96e4ef00d":
@@ -638,78 +616,76 @@ public class StudyTest {
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/shunt-compensators":
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/static-var-compensators":
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/all":
-                        return new MockResponse().setBody(" ").setResponseCode(200).addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setBody(" ").setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/reports/38400000-8cf0-11bd-b23e-10b96e4ef00d":
-                        return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(REPORT_TEST))
-                                .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                        return new MockResponse().setResponseCode(200)
+                            .setBody(mapper.writeValueAsString(REPORT_TEST))
+                            .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
 
                     case "/v1/svg/" + NETWORK_UUID_STRING
                             + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                        return new MockResponse().setResponseCode(200).setBody("byte").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("byte")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
                             + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                        return new MockResponse().setResponseCode(200).setBody("svgandmetadata").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING
                             + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                        return new MockResponse().setResponseCode(200).setBody("substation-byte").addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("substation-byte")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING
                             + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
                         return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/svg-component-libraries":
-                        return new MockResponse().setResponseCode(200)
-                                .setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/38400000-8cf0-11bd-b23e-10b96e4ef00d/export/XIIDM":
-                        return new MockResponse().setResponseCode(200)
-                                .addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "?limitType":
                     case "/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "?limitType":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_RESULT_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status":
                     case "/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status":
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_RESULT_UUID:
                     case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID:
                         return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                                 "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID
-                            + "/configured-buses":
-                        return new MockResponse().setResponseCode(200).setBody(busesDataAsString).addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/configured-buses":
+                        return new MockResponse().setResponseCode(200).setBody(busesDataAsString)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections":
                         return new MockResponse().setResponseCode(200).setBody(busbarSectionsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/loads/" + LOAD_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(loadDataAsString).addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody(loadDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/" + LINE_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(lineDataAsString).addHeader("Content-Type",
-                                "application/json; charset=utf-8");
+                        return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/" + GENERATOR_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(generatorDataAsString)
@@ -719,8 +695,7 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody(shuntCompensatorDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers/"
-                            + TWO_WINDINGS_TRANSFORMER_ID_1:
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers/" + TWO_WINDINGS_TRANSFORMER_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(twoWindingsTransformerDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -2855,8 +2830,17 @@ public class StudyTest {
                 modificationNode4.getId(), modificationGroupUuid5, "variant_5");
 
         /*
-         * root | modificationNode1 | modificationNode2 | modificationNode3 |
-         * modificationNode4 | modificationNode5
+            root
+             |
+          modificationNode1
+             |
+          modificationNode2
+             |
+          modificationNode3
+             |
+          modificationNode4
+             |
+          modificationNode5
          */
 
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(modificationNode5.getId());
@@ -2956,10 +2940,13 @@ public class StudyTest {
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid);
         createNetworkModificationNode(studyUuid, rootNodeUuid);
         NetworkModificationNode node3 = createNetworkModificationNode(studyUuid, modificationNode.getId());
-        /*
-         * root / \ node modification node \ node3 node is only there to test that when
-         * we update modification node, it is not in notifications list
-         */
+        /*  root
+           /   \
+         node  modification node
+                 \
+                node3
+            node is only there to test that when we update modification node, it is not in notifications list
+
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
                 UUID.randomUUID(), modificationNode.getId(), node3.getId()))
             .andExpect(status().isForbidden());
