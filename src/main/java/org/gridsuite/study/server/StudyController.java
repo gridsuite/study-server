@@ -109,7 +109,6 @@ public class StudyController {
                                                                              @RequestHeader("userId") String userId) {
         studyService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid);
-        //TODO: add logs like before
         return ResponseEntity.ok().body(createStudy);
     }
 
@@ -123,7 +122,6 @@ public class StudyController {
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestHeader("userId") String userId) {
         BasicStudyInfos createStudy = studyService.createStudy(caseFile, userId, studyUuid);
-        //TODO: add logs like before
         return ResponseEntity.ok().body(createStudy);
     }
 

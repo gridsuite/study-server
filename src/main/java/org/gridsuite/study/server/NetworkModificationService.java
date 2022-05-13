@@ -53,6 +53,7 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
+    private static final String MODIFICATIONS_PATH = "modifications";
 
     private String networkModificationServerBaseUri;
 
@@ -161,7 +162,7 @@ public class NetworkModificationService {
             .buildAndExpand()
             .toUriString();
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(groovyScript);
+        HttpEntity<String> httpEntity = new HttpEntity<>(groovyScript);
 
         return restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
                 new ParameterizedTypeReference<List<ModificationInfos>>() {
@@ -182,7 +183,7 @@ public class NetworkModificationService {
             .buildAndExpand(lineId)
             .toUriString();
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(status);
+        HttpEntity<String> httpEntity = new HttpEntity<>(status);
 
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
@@ -234,7 +235,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(createEquipmentAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
 
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity,
@@ -271,7 +272,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(modifyEquipmentAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(modifyEquipmentAttributes, headers);
 
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
@@ -291,7 +292,7 @@ public class NetworkModificationService {
             UUID modificationUuid) {
         Objects.requireNonNull(createEquipmentAttributes);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid
                 + DELIMITER + ModificationType.getUriFromType(modificationType) + "-creation");
         var path = uriComponentsBuilder
             .buildAndExpand()
@@ -300,7 +301,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(createEquipmentAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
 
         try {
             restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity,
@@ -316,7 +317,7 @@ public class NetworkModificationService {
     public void updateEquipmentModification(String modifyEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
         Objects.requireNonNull(modifyEquipmentAttributes);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-modification");
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-modification");
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
@@ -405,7 +406,7 @@ public class NetworkModificationService {
     public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationsUuids);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications");
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH);
         path.queryParam("modificationsUuids", modificationsUuids);
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
@@ -421,7 +422,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH
-                + DELIMITER + "modifications" + DELIMITER + "move")
+                + DELIMITER + MODIFICATIONS_PATH + DELIMITER + "move")
                 .queryParam("modificationsToMove", modificationUuid);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);

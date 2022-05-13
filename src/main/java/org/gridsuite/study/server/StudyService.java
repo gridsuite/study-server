@@ -466,7 +466,6 @@ public class StudyService {
                 DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
                 startTime.set(System.nanoTime());
 
-                // TODO : gérer parallélisation
                 deleteStudyInfos.getGroupsUuids().forEach(networkModificationService::deleteModifications);
                 deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid());
                 reportService.deleteReport(deleteStudyInfos.getNetworkUuid());
@@ -541,7 +540,7 @@ public class StudyService {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
             multipartBodyBuilder.part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
-            HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<MultiValueMap<String, HttpEntity<?>>>(
+            HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
 
             try {
@@ -625,8 +624,7 @@ public class StudyService {
                     "network-conversion-server");
         }
 
-        NetworkInfos networkInfos = networkInfosResponse.getBody();
-        return networkInfos;
+        return networkInfosResponse.getBody();
     }
 
     String getLinesGraphics(UUID networkUuid) {
@@ -893,7 +891,7 @@ public class StudyService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<LoadFlowParameters>(getLoadFlowParameters(studyUuid),
+        HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<>(getLoadFlowParameters(studyUuid),
                 headers);
 
         try {
@@ -906,7 +904,6 @@ public class StudyService {
         } finally {
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW);
         }
-        // TODO: traiter oncancel ?
     }
 
     private void setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
@@ -1050,7 +1047,7 @@ public class StudyService {
 
     public void assertCanModifyNode(UUID nodeUuid) {
         Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
-        if (isReadOnly) {
+        if (!Boolean.FALSE.equals(isReadOnly)) {
             throw new StudyException(NOT_ALLOWED);
         }
     }
@@ -1214,7 +1211,7 @@ public class StudyService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(parameters, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         UUID result = restTemplate
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
@@ -1578,10 +1575,10 @@ public class StudyService {
         List<EquipmentDeletionInfos> equipmentDeletionInfosList = networkModificationService.deleteEquipment(studyUuid,
                 equipmentType, equipmentId, groupUuid, variantId);
 
-        equipmentDeletionInfosList.forEach(deletionInfo -> {
+        equipmentDeletionInfosList.forEach(deletionInfo ->
             emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
-                    deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId());
-        });
+                    deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
+        );
 
         networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
         updateStatuses(studyUuid, nodeUuid);
