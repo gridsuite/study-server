@@ -2903,20 +2903,19 @@ public class StudyTest {
         // build modificationNode2 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId());
 
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode2.getId()));
-        assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
         assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
-        assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
 
-        modificationNode5.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode5 as built
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode5);
+        modificationNode3.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode3 as built
+        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode3);
         output.receive(TIMEOUT);
 
         // build modificationNode3 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId());
 
         assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
-        assertEquals(BuildStatus.BUILT_INVALID, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
     }
 
     @Test
