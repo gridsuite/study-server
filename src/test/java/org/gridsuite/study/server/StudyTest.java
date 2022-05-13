@@ -474,13 +474,17 @@ public class StudyTest {
                            path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*") ||
                            path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&provider=(Hades2|OpenLoadFlow)\\&variantId=.*")) {
                         return new MockResponse().setResponseCode(200)
-                            .setBody(loadFlowErrorString)
+                            .setBody(loadFlowOKString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true") ||
                     path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=.*") ||
                     path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&provider=(Hades2|OpenLoadFlow)\\&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
-                        .setBody(CONTINGENCIES_JSON)
+                        .setBody(loadFlowErrorString)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING)
+                        || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "\\&variantId=.*")) {
+                    return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build.*") && request.getMethod().equals("POST")) {
                     // variant build
@@ -498,19 +502,7 @@ public class StudyTest {
                             "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/modifications[?]") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-creation") && request.getMethod().equals("PUT")) {
-                    return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/substations-creation") && request.getMethod().equals("PUT")) {
-                    return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/generators-creation") && request.getMethod().equals("PUT")) {
-                    return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/shunt-compensators-creation") && request.getMethod().equals("PUT")) {
-                    return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/lines-creation") && request.getMethod().equals("PUT")) {
-                    return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/two-windings-transformers-creation") && request.getMethod().equals("PUT")) {
-                    return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation") && request.getMethod().equals("PUT")) {
+                } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/") && request.getMethod().equals("PUT")) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
                     if (body.peek().readUtf8().equals("bogus")) {
@@ -1089,9 +1081,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId="
-                        + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&variantId=" + VARIANT_ID)));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=" + NETWORK_UUID_STRING + "\\&reportName=loadflow\\&overwrite=true\\&provider=" + defaultLoadflowProvider + "\\&variantId=" + VARIANT_ID)));
 
         // get default load flow provider
         mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)).andExpectAll(
