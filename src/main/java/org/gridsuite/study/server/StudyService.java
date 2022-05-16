@@ -1975,16 +1975,17 @@ public class StudyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
 
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
-            UUID groupUuid = tuple.getT1();
-            String variantId = tuple.getT2();
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
 
             Flux<ModificationInfos> modificationInfosFlux;
             if (modificationUuid == null) {
                 modificationInfosFlux = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
-                    groupUuid, modificationType, variantId);
+                    groupUuid, modificationType, variantId, reportUuid);
             } else {
 
                 modificationInfosFlux = networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,

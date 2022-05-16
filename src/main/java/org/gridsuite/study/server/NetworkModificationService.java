@@ -413,12 +413,13 @@ public class NetworkModificationService {
     }
 
     public Flux<ModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
-        UUID groupUuid, ModificationType modificationType, String variantId) {
+        UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
         return networkStoreService.getNetworkUuid(studyUuid)
             .flatMapMany(networkUuid -> {
                 UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
                         buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                    .queryParam(GROUP, groupUuid);
+                    .queryParam(GROUP, groupUuid)
+                    .queryParam(REPORT_UUID, reportUuid);
                 if (!StringUtils.isBlank(variantId)) {
                     uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
                 }
