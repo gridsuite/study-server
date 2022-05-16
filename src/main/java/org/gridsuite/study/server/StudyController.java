@@ -529,14 +529,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsMono);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/export-network/{format}")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
     public Mono<ResponseEntity<byte[]>> exportNetwork(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format) {
 
-        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyUuid, format);
+        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid).then(studyService.exportNetwork(studyUuid, nodeUuid, format));
         return exportNetworkInfosMono.map(exportNetworkInfos -> {
             HttpHeaders header = new HttpHeaders();
             header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());

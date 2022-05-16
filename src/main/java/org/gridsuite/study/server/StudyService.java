@@ -941,12 +941,16 @@ public class StudyService {
             .bodyToMono(typeRef);
     }
 
-    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, String format) {
-        Mono<UUID> networkUuidMono = networkStoreService.getNetworkUuid(studyUuid);
+    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String variantId = tuple.getT2();
 
-        return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
-                .buildAndExpand(uuid, format)
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}");
+            if (!variantId.isEmpty()) {
+                uriComponentsBuilder.queryParam("variantId", variantId);
+            }
+            String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
                 .toUriString();
 
             Mono<ResponseEntity<byte[]>> responseEntity = webClient.get()
@@ -1066,7 +1070,13 @@ public class StudyService {
 
     public Mono<Void> assertCanModifyNode(UUID nodeUuid) {
         return networkModificationTreeService.isReadOnly(nodeUuid).switchIfEmpty(Mono.just(Boolean.FALSE))
-                .flatMap(ro -> ro ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+                .flatMap(ro -> Boolean.TRUE.equals(ro) ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+    }
+
+    public Mono<Void> assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
+        return Mono.fromCallable(() -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
+            || networkModificationTreeService.getBuildStatus(nodeUuid) == BuildStatus.BUILT)
+        .flatMap(p -> Boolean.TRUE.equals(p) ? Mono.empty() : Mono.error(new StudyException(NODE_NOT_BUILT)));
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {

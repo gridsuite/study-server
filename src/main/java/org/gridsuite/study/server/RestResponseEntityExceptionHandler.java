@@ -53,7 +53,7 @@ public class RestResponseEntityExceptionHandler {
                 case LINE_SPLIT_FAILED:
                 case NETWORK_NOT_FOUND:
                 case NETWORK_INDEXATION_FAILED:
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
+                case NODE_NOT_BUILT:
                 case DELETE_EQUIPMENT_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case BAD_NODE_TYPE:
