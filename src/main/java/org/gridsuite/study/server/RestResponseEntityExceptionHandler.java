@@ -50,6 +50,7 @@ public class RestResponseEntityExceptionHandler {
                 case TWO_WINDINGS_TRANSFORMER_CREATION_FAILED:
                 case SUBSTATION_CREATION_FAILED:
                 case VOLTAGE_LEVEL_CREATION_FAILED:
+                case LINE_SPLIT_FAILED:
                 case NETWORK_NOT_FOUND:
                 case NETWORK_INDEXATION_FAILED:
                 case NODE_NOT_BUILT:
