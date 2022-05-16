@@ -1072,13 +1072,9 @@ public class StudyService {
     }
 
     public Mono<Void> assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
-
-        if (Boolean.TRUE.equals(!networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
-            && networkModificationTreeService.getBuildStatus(nodeUuid) != BuildStatus.BUILT)) {
-            return Mono.error(new StudyException(NODE_NOT_BUILT));
-        } else {
-            return Mono.empty();
-        }
+        return Mono.fromCallable(() -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
+            || networkModificationTreeService.getBuildStatus(nodeUuid) == BuildStatus.BUILT)
+        .flatMap(p -> Boolean.TRUE.equals(p) ? Mono.empty() : Mono.error(new StudyException(NODE_NOT_BUILT)));
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
