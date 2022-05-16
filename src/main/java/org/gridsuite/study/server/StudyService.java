@@ -21,9 +21,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -310,6 +308,33 @@ public class StudyService {
                             LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                         })
                         .subscribe()
+                );
+    }
+
+    public Mono<BasicStudyInfos> createStudy(UUID parentStudyUuid, UUID studyUuid, String userId) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        UUID newNetworkUuid = UUID.randomUUID();
+        StudyEntity parentStudy = doGetStudy(parentStudyUuid);
+        RootNode rootNode = networkModificationTreeService.doGetStudyTree(parentStudyUuid);
+
+        return insertStudyCreationRequest(userId, studyUuid)
+                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
+                .map(StudyService::toBasicStudyInfos)
+                .doOnSuccess(ns -> {
+                            networkStoreService.duplicateNetwork(newNetworkUuid, parentStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
+                                LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
+                                insertStudy(studyUuid, userId, newNetworkUuid, parentStudy.getNetworkId(),
+                                        parentStudy.getCaseFormat(), parentStudy.getCaseUuid(), true, toEntity(loadFlowParameters)).doOnSuccess(s -> {
+                                            networkModificationTreeService.doDeleteTree(s.getId());
+                                            networkModificationTreeService.copyStudyTree(rootNode, null, s.getId());
+                                        }).subscribe();
+                            }).subscribeOn(Schedulers.boundedElastic())
+                                    .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                                    .doFinally(r -> {
+                                        deleteStudyIfNotCreationInProgress(studyUuid, userId).subscribe();  // delete the study if the creation has been canceled
+                                        LOGGER.trace("Create study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                                    }).subscribe();
+                        }
                 );
     }
 

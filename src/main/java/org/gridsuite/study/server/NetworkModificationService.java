@@ -91,7 +91,7 @@ public class NetworkModificationService {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUuid)
             .toUriString();
-        return webClient.get().uri(getNetworkModificationServerURI(false) + path)
+        return webClient.get().uri(getNetworkModificationServerURI(false) + path + "/modifications")
             .retrieve()
             .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() { });
     }
@@ -383,6 +383,21 @@ public class NetworkModificationService {
             .retrieve()
             .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
             .bodyToMono(Void.class);
+
+    }
+
+    public Mono<Void> duplicateModifications(UUID parentGroupUuid, UUID groupUuid) {
+        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(parentGroupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+                .queryParam("duplicateFrom", parentGroupUuid)
+                .buildAndExpand(groupUuid);
+
+        return webClient.post()
+                .uri(getNetworkModificationServerURI(false) + path.toUriString())
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
+                .bodyToMono(Void.class);
 
     }
 }

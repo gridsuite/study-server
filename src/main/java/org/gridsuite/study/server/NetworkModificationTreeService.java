@@ -81,6 +81,9 @@ public class NetworkModificationTreeService {
     @Autowired
     private NetworkModificationTreeService self;
 
+    @Autowired
+    private NetworkModificationService networkModificationService;
+
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         treeUpdatePublisher.send("publishStudyUpdate-out-0", message);
@@ -249,6 +252,36 @@ public class NetworkModificationTreeService {
             root.setStudyId(studyId);
         }
         return root;
+    }
+
+    @Transactional
+    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, UUID studyId) {
+        UUID rootId = null;
+        if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
+            StudyEntity tempStudy = new StudyEntity();
+            tempStudy.setId(studyId);
+            rootId = createRoot(tempStudy).getIdNode();
+        }
+        UUID referenceParentNodeId = rootId == null ? nodeParentId : rootId;
+
+        nodeToDuplicate.getChildren().stream().forEach(n -> {
+            UUID newModificationGroupId = UUID.randomUUID();
+            UUID nextParentId = null;
+
+            if (n instanceof NetworkModificationNode) {
+                NetworkModificationNode model = (NetworkModificationNode) n;
+                UUID modificationGroupToDuplicateId = model.getNetworkModification();
+                model.setNetworkModification(newModificationGroupId);
+                model.setBuildStatus(BuildStatus.BUILT_INVALID);
+
+                nextParentId = doCreateNode(studyId, referenceParentNodeId, model, InsertMode.CHILD).getId();
+
+                networkModificationService.duplicateModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
+            }
+            if (nextParentId != null) {
+                copyStudyTree(n, nextParentId, studyId);
+            }
+        });
     }
 
     public Mono<RootNode> getStudyTree(UUID studyId) {

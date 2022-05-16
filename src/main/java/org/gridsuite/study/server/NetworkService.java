@@ -18,10 +18,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
@@ -79,6 +76,23 @@ public class NetworkService {
         } catch (PowsyblException e) {
             throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
         }
+        return Mono.empty();
+    }
+
+    HashSet<String> doGetVariantsIds(UUID networkUuid) {
+        try {
+            Network network = networkStoreService.getNetwork(networkUuid);
+            VariantManager variantManager = network.getVariantManager();
+            Collection<String> allVariants = variantManager.getVariantIds();
+            return (HashSet<String>) allVariants;
+
+        } catch (PowsyblException e) {
+            throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
+        }
+    }
+
+    Mono<Void> duplicateNetwork(UUID networkId, UUID parentNetworkId, int targetVariantNum) {
+        networkStoreService.duplicateNetwork(networkId, parentNetworkId, targetVariantNum);
         return Mono.empty();
     }
 }

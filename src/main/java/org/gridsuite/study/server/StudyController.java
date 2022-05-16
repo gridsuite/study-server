@@ -130,6 +130,20 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
+    @PostMapping(value = "/studies")
+    @Operation(summary = "create a study from an existing one")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The id of the network imported"),
+            @ApiResponse(responseCode = "409", description = "The study already exist"),
+            @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
+    public ResponseEntity<Mono<BasicStudyInfos>> createStudy(@RequestParam("duplicateFrom") UUID parentStudyUuid,
+                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
+                                                             @RequestHeader("userId") String userId) {
+        Mono<BasicStudyInfos> createStudy = studyService.createStudy(parentStudyUuid, studyUuid, userId)
+                .log(StudyService.ROOT_CATEGORY_REACTOR, Level.FINE);
+        return ResponseEntity.ok().body(createStudy);
+    }
+
     @GetMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "get a study")
     @ApiResponses(value = {

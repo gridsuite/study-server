@@ -2980,6 +2980,16 @@ public class StudyTest {
         assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
     }
 
+    @Test
+    public void testDuplicateStudy() {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        webTestClient.post()
+                .uri(STUDIES_URL + "?duplicateFrom={parentStudyUuid}&studyUuid={studyUuid}", study1Uuid, UUID.randomUUID())
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk();
+    }
+
     @Test public void getDefaultLoadflowProvider() {
         String defaultLoadflowProviderResponse = webTestClient.get()
             .uri("/v1/loadflow-default-provider")
