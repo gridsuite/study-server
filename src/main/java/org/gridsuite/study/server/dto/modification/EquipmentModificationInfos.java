@@ -27,4 +27,8 @@ public class EquipmentModificationInfos extends ModificationInfos {
 
     @Schema(description = "Equipment ID")
     private String equipmentId;
+
+    // for reading network-modification-server deletions as well as more upbuilding modifications
+    @Schema(description = "Equipment type")
+    private String equipmentType;
 }
