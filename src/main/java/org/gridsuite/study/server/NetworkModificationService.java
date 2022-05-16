@@ -188,20 +188,24 @@ public class NetworkModificationService {
     }
 
     private Mono<? extends Throwable> handleChangeError(ClientResponse clientResponse, StudyException.Type type) {
-        return clientResponse.bodyToMono(String.class).flatMap(body -> {
-            String message = null;
-            try {
-                JsonNode node = new ObjectMapper().readTree(body).path("message");
-                if (!node.isMissingNode()) {
-                    message = node.asText();
+        return clientResponse.bodyToMono(String.class)
+            .switchIfEmpty(Mono.error(
+                new StudyException(type, clientResponse.statusCode().toString())
+            ))
+            .flatMap(body -> {
+                String message = null;
+                try {
+                    JsonNode node = new ObjectMapper().readTree(body).path("message");
+                    if (!node.isMissingNode()) {
+                        message = node.asText();
+                    }
+                } catch (JsonProcessingException e) {
+                    if (!body.isEmpty()) {
+                        message = body;
+                    }
                 }
-            } catch (JsonProcessingException e) {
-                if (!body.isEmpty()) {
-                    message = body;
-                }
-            }
-            return Mono.error(new StudyException(type, message));
-        });
+                return Mono.error(new StudyException(type, message));
+            });
     }
 
     public Flux<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes, UUID groupUuid,
