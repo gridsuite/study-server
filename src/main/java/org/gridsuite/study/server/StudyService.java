@@ -273,23 +273,25 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        Thread createStudyThread = new Thread(() -> {
-            try {
-                String caseFormat = getCaseFormat(caseUuid);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
+        studyServerTaskExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String caseFormat = getCaseFormat(caseUuid);
+                    NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
-                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                        caseFormat, caseUuid, false, toEntity(loadFlowParameters));
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            } finally {
-                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                    insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
+                            caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+                } catch (Exception e) {
+                    LOGGER.error(e.toString(), e);
+                } finally {
+                    deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+                    LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                }
             }
         });
-        studyServerTaskExecutor.execute(createStudyThread);
         return basicStudyInfos;
     }
 
@@ -299,26 +301,28 @@ public class StudyService {
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
 
-        Thread createStudyThread = new Thread(() -> {
-            try {
-                UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
-                if (caseUuid != null) {
-                    String caseFormat = getCaseFormat(caseUuid);
-                    NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
+        studyServerTaskExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
+                    if (caseUuid != null) {
+                        String caseFormat = getCaseFormat(caseUuid);
+                        NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
-                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
-                            networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                        insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
+                                networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+                    }
+                } catch (Exception e) {
+                    LOGGER.error(e.toString(), e);
+                } finally {
+                    deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+                    LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            } finally {
-                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
         });
-        studyServerTaskExecutor.execute(createStudyThread);
 
         return basicStudyInfos;
     }
