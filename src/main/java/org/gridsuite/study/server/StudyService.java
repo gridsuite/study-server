@@ -18,6 +18,8 @@ import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -939,12 +941,16 @@ public class StudyService {
             .bodyToMono(typeRef);
     }
 
-    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, String format) {
-        Mono<UUID> networkUuidMono = networkStoreService.getNetworkUuid(studyUuid);
+    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String variantId = tuple.getT2();
 
-        return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
-                .buildAndExpand(uuid, format)
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}");
+            if (!variantId.isEmpty()) {
+                uriComponentsBuilder.queryParam("variantId", variantId);
+            }
+            String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
                 .toUriString();
 
             Mono<ResponseEntity<byte[]>> responseEntity = webClient.get()
@@ -1064,7 +1070,13 @@ public class StudyService {
 
     public Mono<Void> assertCanModifyNode(UUID nodeUuid) {
         return networkModificationTreeService.isReadOnly(nodeUuid).switchIfEmpty(Mono.just(Boolean.FALSE))
-                .flatMap(ro -> ro ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+                .flatMap(ro -> Boolean.TRUE.equals(ro) ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+    }
+
+    public Mono<Void> assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
+        return Mono.fromCallable(() -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
+            || networkModificationTreeService.getBuildStatus(nodeUuid) == BuildStatus.BUILT)
+        .flatMap(p -> Boolean.TRUE.equals(p) ? Mono.empty() : Mono.error(new StudyException(NODE_NOT_BUILT)));
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
@@ -1596,11 +1608,12 @@ public class StudyService {
     }
 
     public Mono<Void> updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+
         Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, false);
 
         return networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid)
-                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
-                .then(monoUpdateStatusResult);
+            .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+            .then(monoUpdateStatusResult);
     }
 
     public Mono<Void> updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
@@ -1906,6 +1919,44 @@ public class StudyService {
 
     public String getDefaultLoadflowProviderValue() {
         return defaultLoadflowProvider;
+    }
+
+    public Mono<Void> lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
+        ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
+
+        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID groupUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
+
+            Flux<ModificationInfos> modificationInfosFlux;
+            if (modificationUuid == null) {
+                modificationInfosFlux = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
+                    groupUuid, modificationType, variantId);
+            } else {
+
+                modificationInfosFlux = networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
+                    modificationType, modificationUuid);
+            }
+
+            return modificationInfosFlux
+                .collect(Collectors.toSet())
+                .doOnSuccess(modifications -> {
+                    Set<String> allImpactedSubstationIds = modifications.stream()
+                        .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
+                    List<EquipmentModificationInfos> deletions = modifications.stream()
+                        .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
+                        .map(EquipmentModificationInfos.class::cast)
+                        .collect(Collectors.toList());
+                    deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
+                        allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
+                }).doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                .then(monoUpdateStatusResult);
+        });
     }
 }
 
