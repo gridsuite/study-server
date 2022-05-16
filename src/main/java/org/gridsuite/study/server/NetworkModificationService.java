@@ -389,8 +389,9 @@ public class NetworkModificationService {
     public Mono<Void> duplicateModifications(UUID parentGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(parentGroupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+        var path = UriComponentsBuilder.fromPath("groups")
                 .queryParam("duplicateFrom", parentGroupUuid)
+                .queryParam("groupUuid", groupUuid)
                 .buildAndExpand(groupUuid);
 
         return webClient.post()
