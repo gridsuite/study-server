@@ -667,6 +667,10 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&voltageLevelsIds=vlFr1A":
+                        return new MockResponse().setResponseCode(200).setBody("nad-svg")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/svg-component-libraries":
                         return new MockResponse().setResponseCode(200).setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1414,6 +1418,23 @@ public class StudyTest {
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata", randomUuid, rootNodeUuid, "substationId")
             .exchange()
             .expectStatus().isNotFound();
+
+        // get the network area diagram
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, rootNodeUuid)
+                .exchange()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .isEqualTo("nad-svg");
+
+        assertTrue(getRequestsDone(1).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&voltageLevelsIds=vlFr1A")));
+
+        // get the network area diagram from a study that doesn't exist
+        webTestClient.get()
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", randomUuid, rootNodeUuid)
+                .exchange()
+                .expectStatus().isNotFound();
 
         //get voltage levels
         EqualsVerifier.simple().forClass(VoltageLevelMapData.class).verify();

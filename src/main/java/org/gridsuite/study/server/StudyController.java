@@ -648,6 +648,17 @@ public class StudyController {
             new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram")
+    @Operation(summary = "get the network area diagram for the given network and voltage levels")
+    @ApiResponse(responseCode = "200", description = "The svg")
+    public ResponseEntity<Mono<String>> getNeworkAreaDiagram(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds", required = true) List<String> voltageLevelsIds,
+            @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNeworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
