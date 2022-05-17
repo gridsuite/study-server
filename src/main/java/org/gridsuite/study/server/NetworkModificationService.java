@@ -184,20 +184,24 @@ public class NetworkModificationService {
     }
 
     private Mono<? extends Throwable> handleChangeError(ClientResponse clientResponse, StudyException.Type type) {
-        return clientResponse.bodyToMono(String.class).flatMap(body -> {
-            String message = null;
-            try {
-                JsonNode node = new ObjectMapper().readTree(body).path("message");
-                if (!node.isMissingNode()) {
-                    message = node.asText();
+        return clientResponse.bodyToMono(String.class)
+            .switchIfEmpty(Mono.error(
+                new StudyException(type, clientResponse.statusCode().toString())
+            ))
+            .flatMap(body -> {
+                String message = null;
+                try {
+                    JsonNode node = new ObjectMapper().readTree(body).path("message");
+                    if (!node.isMissingNode()) {
+                        message = node.asText();
+                    }
+                } catch (JsonProcessingException e) {
+                    if (!body.isEmpty()) {
+                        message = body;
+                    }
                 }
-            } catch (JsonProcessingException e) {
-                if (!body.isEmpty()) {
-                    message = body;
-                }
-            }
-            return Mono.error(new StudyException(type, message));
-        });
+                return Mono.error(new StudyException(type, message));
+            });
     }
 
     public Flux<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes, UUID groupUuid,
@@ -384,5 +388,50 @@ public class NetworkModificationService {
             .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
             .bodyToMono(Void.class);
 
+    }
+
+    public Flux<ModificationInfos> updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
+        ModificationType modificationType, UUID modificationUuid) {
+        UriComponentsBuilder uriComponentsBuilder;
+        uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
+            modificationType));
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
+
+        return webClient.put()
+            .uri(getNetworkModificationServerURI(false) + path)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
+            .retrieve()
+            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+            .bodyToFlux(new ParameterizedTypeReference<>() {
+            });
+    }
+
+    public Flux<ModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
+        UUID groupUuid, ModificationType modificationType, String variantId) {
+        return networkStoreService.getNetworkUuid(studyUuid)
+            .flatMapMany(networkUuid -> {
+                UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
+                        buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+                    .queryParam(GROUP, groupUuid);
+                if (!StringUtils.isBlank(variantId)) {
+                    uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+                }
+                var path = uriComponentsBuilder
+                    .buildAndExpand()
+                    .toUriString();
+                return webClient.post()
+                    .uri(getNetworkModificationServerURI(true) + path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
+                    .retrieve()
+                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
+                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
+                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
+                    });
+            });
     }
 }

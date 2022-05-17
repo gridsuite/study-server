@@ -35,11 +35,13 @@ public class StudyException extends RuntimeException {
         TWO_WINDINGS_TRANSFORMER_CREATION_FAILED,
         SUBSTATION_CREATION_FAILED,
         VOLTAGE_LEVEL_CREATION_FAILED,
+        LINE_SPLIT_FAILED,
         UNKNOWN_EQUIPMENT_TYPE,
         BAD_NODE_TYPE,
         NETWORK_NOT_FOUND,
         EQUIPMENT_NOT_FOUND,
-        NETWORK_INDEXATION_FAILED
+        NETWORK_INDEXATION_FAILED,
+        NODE_NOT_BUILT,
     }
 
     private final Type type;
