@@ -1179,17 +1179,14 @@ public class StudyTest {
         Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         String updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)
-                || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
+        assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS) || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
 
         Message<byte[]> securityAnalysisUpdateMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, securityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)
-                || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
+        assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS) || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING
-                + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "\\&receiver=.*nodeUuid.*")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "\\&receiver=.*nodeUuid.*")));
 
         // get security analysis result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result", studyUuid, nodeUuid)).andExpectAll(
@@ -1211,11 +1208,9 @@ public class StudyTest {
         securityAnalysisStatusMessage = output.receive(TIMEOUT);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS)
-                || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
+        assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS) || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
 
-        assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/stop\\?receiver=.*nodeUuid.*")));
 
         // get contingency count
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}",
@@ -1225,8 +1220,7 @@ public class StudyTest {
         Integer integerResponse = Integer.parseInt(resultAsString);
         assertEquals(integerResponse, Integer.valueOf(1));
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME
-                + "/export\\?networkUuid=" + NETWORK_UUID_STRING + ".*")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + ".*")));
     }
 
     @Test
@@ -1234,24 +1228,19 @@ public class StudyTest {
         // insert a study
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
         UUID modificationNode1Uuid = modificationNode1.getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID);
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID);
         UUID modificationNode2Uuid = modificationNode2.getId();
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2);
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         // run security analysis on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
                 studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)).andExpect(status().isForbidden());
 
-        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid,
-                UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
-        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid,
-                UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
+        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
+        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
     }
 
     @Test
