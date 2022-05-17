@@ -495,15 +495,15 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true") ||
-                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=.*") ||
-                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&provider=(Hades2|OpenLoadFlow)\\&variantId=.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&overwrite=true") ||
+                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&overwrite=true&variantId=.*") ||
+                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&overwrite=true&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
                         return new MockResponse().setResponseCode(200)
                             .setBody(loadFlowOKString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true") ||
-                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&variantId=.*") ||
-                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*\\&reportName=loadflow\\&overwrite=true\\&provider=(Hades2|OpenLoadFlow)\\&variantId=.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&overwrite=true") ||
+                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&overwrite=true&variantId=.*") ||
+                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&overwrite=true&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
                         .setBody(loadFlowErrorString)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -529,17 +529,17 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     return new MockResponse().setBody(String.valueOf(networkLoadFlowErrorInfosAsString)).setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     countDownLatch.await(2, TimeUnit.SECONDS);
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                     .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -547,8 +547,8 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(mapper.writeValueAsString(REPORT_TEST))
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")
-                           || path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")) {
+                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")
+                           || path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 }
@@ -1970,7 +1970,7 @@ public class StudyTest {
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
         return studyUuid;
     }
@@ -2034,7 +2034,7 @@ public class StudyTest {
         assertTrue(requests.contains("/v1/cases/private"));
         if (caseUuid != null) {
             assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
-            assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
+            assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         }
         return studyUuid;
     }
@@ -2110,7 +2110,7 @@ public class StudyTest {
         var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.contains("/v1/cases/private"));
         assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
+        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
         countDownLatch = new CountDownLatch(1);
 
@@ -2170,7 +2170,7 @@ public class StudyTest {
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "\\&variantId=" + FIRST_VARIANT_ID + "\\&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
     @Test
