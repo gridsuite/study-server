@@ -272,11 +272,12 @@ public class NetworkModificationTreeService {
                 NetworkModificationNode model = (NetworkModificationNode) n;
                 UUID modificationGroupToDuplicateId = model.getNetworkModification();
                 model.setNetworkModification(newModificationGroupId);
-                model.setBuildStatus(BuildStatus.BUILT_INVALID);
-
+                model.setBuildStatus(modificationGroupToDuplicateId != null ? BuildStatus.BUILT_INVALID : BuildStatus.NOT_BUILT);
                 nextParentId = doCreateNode(studyId, referenceParentNodeId, model, InsertMode.CHILD).getId();
 
-                networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
+                if (modificationGroupToDuplicateId != null) {
+                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
+                } 
             }
             if (nextParentId != null) {
                 copyStudyTree(n, nextParentId, studyId);
