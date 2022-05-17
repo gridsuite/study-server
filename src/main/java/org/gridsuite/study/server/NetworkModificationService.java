@@ -386,11 +386,11 @@ public class NetworkModificationService {
 
     }
 
-    public Mono<Void> createModifications(UUID parentGroupUuid, UUID groupUuid) {
+    public Mono<Void> createModifications(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        Objects.requireNonNull(parentGroupUuid);
+        Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups")
-                .queryParam("duplicateFrom", parentGroupUuid)
+                .queryParam("duplicateFrom", sourceGroupUuid)
                 .queryParam("groupUuid", groupUuid)
                 .buildAndExpand(groupUuid);
 
