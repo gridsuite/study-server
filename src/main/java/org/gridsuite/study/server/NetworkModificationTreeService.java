@@ -277,7 +277,7 @@ public class NetworkModificationTreeService {
 
                 if (modificationGroupToDuplicateId != null) {
                     networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
-                } 
+                }
             }
             if (nextParentId != null) {
                 copyStudyTree(n, nextParentId, studyId);

@@ -314,20 +314,20 @@ public class StudyService {
                 );
     }
 
-    public Mono<BasicStudyInfos> createStudy(UUID parentStudyUuid, UUID studyUuid, String userId) {
+    public Mono<BasicStudyInfos> createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         UUID newNetworkUuid = UUID.randomUUID();
-        StudyEntity parentStudy = doGetStudy(parentStudyUuid);
-        RootNode rootNode = networkModificationTreeService.doGetStudyTree(parentStudyUuid);
+        StudyEntity sourceStudy = doGetStudy(sourceStudyUuid);
+        RootNode rootNode = networkModificationTreeService.doGetStudyTree(sourceStudyUuid);
 
         return insertStudyCreationRequest(userId, studyUuid)
                 .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(ns -> {
-                            networkStoreService.createNetwork(newNetworkUuid, parentStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
+                            networkStoreService.createNetwork(newNetworkUuid, sourceStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
                                 LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-                                insertStudy(studyUuid, userId, newNetworkUuid, parentStudy.getNetworkId(),
-                                        parentStudy.getCaseFormat(), parentStudy.getCaseUuid(), true, toEntity(loadFlowParameters)).doOnSuccess(s -> {
+                                insertStudy(studyUuid, userId, newNetworkUuid, sourceStudy.getNetworkId(),
+                                        sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters)).doOnSuccess(s -> {
                                             networkModificationTreeService.doDeleteTree(s.getId());
                                             networkModificationTreeService.copyStudyTree(rootNode, null, s.getId());
                                         }).subscribe();
