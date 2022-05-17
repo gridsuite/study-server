@@ -482,6 +482,9 @@ public class StudyService {
                 }
             }
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             LOGGER.error(e.toString(), e);
         }
     }
@@ -1804,6 +1807,9 @@ public class StudyService {
         try {
             executeInParallel.get();
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             LOGGER.error(e.toString(), e);
         }
 
