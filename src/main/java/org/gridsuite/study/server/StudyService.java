@@ -441,12 +441,10 @@ public class StudyService {
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         UUID networkUuid = null;
-        List<UUID> groupUuids = new ArrayList<>();
-        List<UUID> reportUuids = new ArrayList<>();
+        List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         if (studyCreationRequestEntity.isEmpty()) {
             networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
-            groupUuids = networkModificationTreeService.getAllModificationGroupUuids(studyUuid);
-            reportUuids = networkModificationTreeService.getAllReportUuids(studyUuid);
+            nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyRepository.findById(studyUuid).ifPresent(s -> {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
@@ -457,7 +455,7 @@ public class StudyService {
         }
         emitStudyDelete(studyUuid, userId);
 
-        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupUuids, reportUuids)) : Optional.empty();
+        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, nodesModificationInfos)) : Optional.empty();
     }
 
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
@@ -470,9 +468,9 @@ public class StudyService {
             })
             .publish(deleteStudyInfosMono ->
                 Mono.when(// in parallel
-                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getGroupUuids())).flatMap(networkModificationService::deleteModifications),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).collect(Collectors.toList()))).flatMap(networkModificationService::deleteModifications),
                     deleteStudyInfosMono.flatMap(infos -> deleteEquipmentIndexes(infos.getNetworkUuid())),
-                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getReportUuids())).flatMap(reportService::deleteReport),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).collect(Collectors.toList()))).flatMap(reportService::deleteReport),
                     deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid()))
                 )
             )

@@ -313,29 +313,16 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
-        List<UUID> uuids = new ArrayList<>();
+    public List<NodeModificationInfos> getAllNodesModificationInfos(UUID studyUuid) {
+        List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            UUID modificationUuid = repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false);
-            if (modificationUuid != null) {
-                uuids.add(modificationUuid);
+            NodeModificationInfos nodeModificationInfos = repositories.get(n.getType()).getNodeModificationInfos(n.getIdNode(), false);
+            if (nodeModificationInfos != null) {
+                nodesModificationInfos.add(nodeModificationInfos);
             }
         });
-        return uuids;
-    }
-
-    @Transactional(readOnly = true)
-    public List<UUID> getAllReportUuids(UUID studyUuid) {
-        List<UUID> uuids = new ArrayList<>();
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> {
-            UUID reportUuid = repositories.get(n.getType()).getReportUuid(n.getIdNode(), false);
-            if (reportUuid != null) {
-                uuids.add(reportUuid);
-            }
-        });
-        return uuids;
+        return nodesModificationInfos;
     }
 
     @Transactional(readOnly = true)
