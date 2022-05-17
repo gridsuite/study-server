@@ -64,6 +64,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -131,8 +132,7 @@ public class StudyService {
 
     NetworkModificationTreeService networkModificationTreeService;
 
-    @Autowired
-    TaskExecutor studyServerTaskExecutor;
+    StudyServerExecutionService studyServerExecutionService;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -204,7 +204,8 @@ public class StudyService {
         @Lazy StudyInfosService studyInfosService,
         @Lazy EquipmentInfosService equipmentInfosService,
         NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper) {
+        ObjectMapper objectMapper,
+        StudyServerExecutionService studyServerExecutionService) {
         this.caseServerBaseUri = caseServerBaseUri;
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
@@ -223,6 +224,7 @@ public class StudyService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.objectMapper = objectMapper;
+        this.studyServerExecutionService = studyServerExecutionService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -273,23 +275,20 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerTaskExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String caseFormat = getCaseFormat(caseUuid);
-                    NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
+        studyServerExecutionService.runAsync(() -> {
+            try {
+                String caseFormat = getCaseFormat(caseUuid);
+                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
-                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                            caseFormat, caseUuid, false, toEntity(loadFlowParameters));
-                } catch (Exception e) {
-                    LOGGER.error(e.toString(), e);
-                } finally {
-                    deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                    LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                }
+                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
+                        caseFormat, caseUuid, false, toEntity(loadFlowParameters));
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            } finally {
+                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
         });
         return basicStudyInfos;
@@ -301,29 +300,25 @@ public class StudyService {
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
 
-        studyServerTaskExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
-                    if (caseUuid != null) {
-                        String caseFormat = getCaseFormat(caseUuid);
-                        NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
+        studyServerExecutionService.runAsync(() -> {
+            try {
+                UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
+                if (caseUuid != null) {
+                    String caseFormat = getCaseFormat(caseUuid);
+                    NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId);
 
-                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                        insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
-                                networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters));
-                    }
-                } catch (Exception e) {
-                    LOGGER.error(e.toString(), e);
-                } finally {
-                    deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                    LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                    insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
+                            networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters));
                 }
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            } finally {
+                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
         });
-
         return basicStudyInfos;
     }
 
@@ -475,11 +470,14 @@ public class StudyService {
                 DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
                 startTime.set(System.nanoTime());
 
-                deleteStudyInfos.getGroupsUuids().forEach(networkModificationService::deleteModifications);
-                deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid());
-                reportService.deleteReport(deleteStudyInfos.getNetworkUuid());
-                networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid());
+                CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getGroupsUuids().forEach(networkModificationService::deleteModifications)),
+                    studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
+                    studyServerExecutionService.runAsync(() -> reportService.deleteReport(deleteStudyInfos.getNetworkUuid())),
+                    studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
+                );
 
+                executeInParallel.get();
                 if (startTime.get() != null) {
                     LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
                 }
@@ -1798,10 +1796,14 @@ public class StudyService {
         startTime.set(System.nanoTime());
         DeleteNodeInfos deleteNodeInfos = self.doDeleteNode(studyUuid, nodeId, deleteChildren);
 
+        CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
+            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
+            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult)),
+            studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
+        );
+
         try {
-            deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications);
-            deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult);
-            networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds());
+            executeInParallel.get();
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         }
