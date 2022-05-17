@@ -2368,12 +2368,6 @@ public class StudyTest {
 
         String equipmentModificationAttribute = "{\"equipmentId\":\"equipmentId\"}";
 
-        var plop = webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, rootNodeUuid, modificationTypeUrl)
-            .bodyValue(equipmentModificationAttribute)
-            .exchange().returnResult(new ParameterizedTypeReference<>() {
-            });
-        System.err.println(plop.getResponseBody().blockFirst());
         // modify generator on root node (not allowed)
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, rootNodeUuid, modificationTypeUrl)
