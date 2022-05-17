@@ -88,10 +88,10 @@ public class NetworkModificationService {
 
     public Flux<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications")
             .buildAndExpand(groupUuid)
             .toUriString();
-        return webClient.get().uri(getNetworkModificationServerURI(false) + path + "/modifications")
+        return webClient.get().uri(getNetworkModificationServerURI(false) + path)
             .retrieve()
             .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() { });
     }
@@ -386,7 +386,7 @@ public class NetworkModificationService {
 
     }
 
-    public Mono<Void> duplicateModifications(UUID parentGroupUuid, UUID groupUuid) {
+    public Mono<Void> createModifications(UUID parentGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(parentGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups")

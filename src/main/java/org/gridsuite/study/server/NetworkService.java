@@ -91,8 +91,8 @@ public class NetworkService {
         }
     }
 
-    Mono<Void> duplicateNetwork(UUID networkId, UUID parentNetworkId, int targetVariantNum) {
-        networkStoreService.duplicateNetwork(networkId, parentNetworkId, targetVariantNum);
+    Mono<Void> createNetwork(UUID networkId, UUID parentNetworkId, int targetVariantNum) {
+        networkStoreService.createNetwork(networkId, parentNetworkId, targetVariantNum);
         return Mono.empty();
     }
 }

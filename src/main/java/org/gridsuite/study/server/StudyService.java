@@ -21,7 +21,10 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
@@ -321,7 +324,7 @@ public class StudyService {
                 .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(ns -> {
-                            networkStoreService.duplicateNetwork(newNetworkUuid, parentStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
+                            networkStoreService.createNetwork(newNetworkUuid, parentStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
                                 LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
                                 insertStudy(studyUuid, userId, newNetworkUuid, parentStudy.getNetworkId(),
                                         parentStudy.getCaseFormat(), parentStudy.getCaseUuid(), true, toEntity(loadFlowParameters)).doOnSuccess(s -> {

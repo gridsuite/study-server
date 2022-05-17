@@ -276,7 +276,7 @@ public class NetworkModificationTreeService {
 
                 nextParentId = doCreateNode(studyId, referenceParentNodeId, model, InsertMode.CHILD).getId();
 
-                networkModificationService.duplicateModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
+                networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
             }
             if (nextParentId != null) {
                 copyStudyTree(n, nextParentId, studyId);
