@@ -116,6 +116,8 @@ public class StudyService {
     static final String QUERY_PARAM_DIAGONAL_LABEL = "diagonalLabel";
     static final String QUERY_PARAM_TOPOLOGICAL_COLORING = "topologicalColoring";
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
+    static final String QUERY_PARAM_DEPTH = "depth";
+    static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String RESULT_UUID = "resultUuid";
 
     static final String QUERY_PARAM_RECEIVER = "receiver";
@@ -1355,6 +1357,29 @@ public class StudyService {
                 .uri(singleLineDiagramServerBaseUri + path)
                 .retrieve()
                 .bodyToMono(String.class);
+        });
+    }
+
+    Mono<String> getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                            "/network-area-diagram/{networkUuid}")
+                    .queryParam(QUERY_PARAM_DEPTH, depth)
+                    .queryParam(QUERY_PARAM_VOLTAGE_LEVELS_IDS, voltageLevelsIds);
+            if (!StringUtils.isBlank(variantId)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
+                    .buildAndExpand(networkUuid)
+                    .toUriString();
+
+            return webClient.get()
+                    .uri(singleLineDiagramServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(String.class);
         });
     }
 
