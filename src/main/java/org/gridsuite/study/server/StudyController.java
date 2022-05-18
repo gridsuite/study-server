@@ -45,13 +45,11 @@ import java.util.logging.Level;
 public class StudyController {
 
     private final StudyService studyService;
-    private final ReportService reportService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkService networkStoreService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
-        this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
     }
@@ -679,18 +677,21 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get study report")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report for study"), @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Mono<ReporterModel>> getReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(reportService::getReport));
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get node report")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Flux<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(studyUuid, nodeUuid, nodeOnlyReport));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/report")
-    @Operation(summary = "Delete study report")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report for study deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Mono<Void>> deleteReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(reportService::deleteReport));
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
+    @Operation(summary = "Delete node report")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Mono<Void>> deleteNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteNodeReport(studyUuid, nodeUuid));
     }
 
     @GetMapping(value = "/svg-component-libraries")

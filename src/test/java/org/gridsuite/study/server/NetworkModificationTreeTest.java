@@ -28,6 +28,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -474,15 +475,21 @@ public class NetworkModificationTreeTest {
 
         networkModificationTreeService.getVariantId(node1.getId()).subscribe(variantId -> assertEquals(VARIANT_ID, variantId));
 
-        assertEquals(0, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
+        assertEquals(0, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getModificationGroupUuid).filter(m -> m != null).collect(Collectors.toList()).size());
         AtomicReference<UUID> modificationGroupUuid = new AtomicReference<>();
         networkModificationTreeService.getModificationGroupUuid(node1.getId()).subscribe(modificationGroupUuid::set);
         assertNotNull(modificationGroupUuid.get());
-        assertEquals(1, networkModificationTreeService.getAllModificationGroupUuids(root.getStudyId()).size());
+        assertEquals(1, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getModificationGroupUuid).filter(m -> m != null).collect(Collectors.toList()).size());
 
         UUID nodeUuid = node2.getId();
         assertNotNull(networkModificationTreeService.doGetModificationGroupUuid(nodeUuid, true));
         assertFalse(networkModificationTreeService.doGetVariantId(nodeUuid, true).isEmpty());
+
+        assertEquals(0, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getReportUuid).filter(m -> m != null).collect(Collectors.toList()).size());
+        AtomicReference<UUID> reportUuid = new AtomicReference<>();
+        networkModificationTreeService.getReportUuid(node1.getId()).subscribe(reportUuid::set);
+        assertNotNull(reportUuid.get());
+        assertEquals(1, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getReportUuid).filter(m -> m != null).collect(Collectors.toList()).size());
     }
 
     @Test
@@ -620,7 +627,7 @@ public class NetworkModificationTreeTest {
     private StudyEntity insertDummyStudy() {
         StudyEntity studyEntity = createDummyStudy(NETWORK_UUID);
         var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity, null);
         return study;
     }
 
