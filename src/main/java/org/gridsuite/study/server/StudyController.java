@@ -1113,6 +1113,18 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach")
+    @Operation(summary = "attach a line to a voltage level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was attached to the voltage level")})
+    public ResponseEntity<Void> lineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @RequestBody String lineAttachToVoltageLevelAttributes) {
+        studyService.assertCanModifyNode(nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.lineAttachToVoltageLevel(studyUuid, lineAttachToVoltageLevelAttributes, nodeUuid, null);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
     @Operation(summary = "get the load flow information (status and result) on study")
     @ApiResponses(value = {

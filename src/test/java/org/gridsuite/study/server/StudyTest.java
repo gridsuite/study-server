@@ -2490,15 +2490,15 @@ public class StudyTest {
         UUID modificationNodeUuid = modificationNode.getId();
 
         VoltageLevelCreationInfos vl1 = VoltageLevelCreationInfos.builder()
-            .equipmentId("vl1")
-            .equipmentName("NewVoltageLevel")
-            .nominalVoltage(379.3)
-            .substationId("s1")
-            .busbarSections(Collections.singletonList(new BusbarSectionCreationInfos("v1bbs", "BBS1", 1, 1)))
-            .busbarConnections(Collections.emptyList())
-            .build();
+                .equipmentId("vl1")
+                .equipmentName("NewVoltageLevel")
+                .nominalVoltage(379.3)
+                .substationId("s1")
+                .busbarSections(Collections.singletonList(new BusbarSectionCreationInfos("v1bbs", "BBS1", 1, 1)))
+                .busbarConnections(Collections.emptyList())
+                .build();
         LineSplitWithVoltageLevelInfos lineSplitWoVL = new LineSplitWithVoltageLevelInfos("line3", 10.0, vl1, null, "1.A",
-            "nl1", "NewLine1", "nl2", "NewLine2");
+                "nl1", "NewLine1", "nl2", "NewLine2");
         String lineSplitWoVLasJSON = mapper.writeValueAsString(lineSplitWoVL);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",

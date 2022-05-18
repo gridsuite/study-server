@@ -26,6 +26,7 @@ public enum ModificationType {
     SUBSTATION_CREATION,
     VOLTAGE_LEVEL_CREATION,
     LINE_SPLIT_WITH_VOLTAGE_LEVEL,
+    LINE_ATTACH_TO_VOLTAGE_LEVEL,
     GROOVY_SCRIPT,
     BRANCH_STATUS,
     SHUNT_COMPENSATOR_CREATION;
@@ -50,6 +51,8 @@ public enum ModificationType {
                 return "voltage-levels";
             case LINE_SPLIT_WITH_VOLTAGE_LEVEL:
                 return "line-splits";
+            case LINE_ATTACH_TO_VOLTAGE_LEVEL:
+                return "line-attach";
             case GENERATOR_MODIFICATION:
                 return "generators-modification";
             default:
@@ -86,6 +89,8 @@ public enum ModificationType {
                 return StudyException.Type.VOLTAGE_LEVEL_CREATION_FAILED;
             case LINE_SPLIT_WITH_VOLTAGE_LEVEL:
                 return StudyException.Type.LINE_SPLIT_FAILED;
+            case LINE_ATTACH_TO_VOLTAGE_LEVEL:
+                return StudyException.Type.LINE_ATTACH_FAILED;
             case GENERATOR_MODIFICATION:
                 return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
             default:

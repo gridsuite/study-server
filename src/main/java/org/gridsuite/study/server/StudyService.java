@@ -2063,4 +2063,29 @@ public class StudyService {
 
         updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
     }
+
+    public void lineAttachToVoltageLevel(UUID studyUuid, String lineAttachToVoltageLevelAttributes, UUID nodeUuid, UUID modificationUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(lineAttachToVoltageLevelAttributes);
+
+        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+
+        UUID groupUuid = nodeInfos.getModificationGroupUuid();
+        String variantId = nodeInfos.getVariantId();
+        UUID reportUuid = nodeInfos.getReportUuid();
+
+        List<EquipmentModificationInfos> modifications = networkModificationService.lineAttachToVoltageLevel(studyUuid, lineAttachToVoltageLevelAttributes,
+                    groupUuid, variantId, reportUuid);
+
+        Set<String> allImpactedSubstationIds = modifications.stream()
+                .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
+        List<EquipmentModificationInfos> deletions = modifications.stream()
+                .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
+                .collect(Collectors.toList());
+        deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
+                allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
+        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+
+        updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
+    }
 }
