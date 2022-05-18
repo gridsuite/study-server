@@ -468,9 +468,9 @@ public class StudyService {
             })
             .publish(deleteStudyInfosMono ->
                 Mono.when(// in parallel
-                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(m -> m != null).collect(Collectors.toList()))).flatMap(networkModificationService::deleteModifications),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).collect(Collectors.toList()))).flatMap(networkModificationService::deleteModifications),
                     deleteStudyInfosMono.flatMap(infos -> deleteEquipmentIndexes(infos.getNetworkUuid())),
-                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(r -> r != null).collect(Collectors.toList()))).flatMap(reportService::deleteReport),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).collect(Collectors.toList()))).flatMap(reportService::deleteReport),
                     deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid()))
                 )
             )
