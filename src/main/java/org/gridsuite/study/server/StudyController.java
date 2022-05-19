@@ -758,9 +758,9 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{typeModification}/{modificationUuid}")
-    @Operation(summary = "update a generator modification in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator modification has been updated")})
-    public ResponseEntity<Mono<Void>> updateGeneratorModification(@PathVariable("studyUuid") UUID studyUuid,
+    @Operation(summary = "update an equipment modification in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment modification has been updated")})
+    public ResponseEntity<Mono<Void>> updateEquipmentModification(@PathVariable("studyUuid") UUID studyUuid,
                                                                   @PathVariable("modificationUuid") UUID modificationUuid,
                                                                   @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @PathVariable("typeModification") ModificationType typeModification,
