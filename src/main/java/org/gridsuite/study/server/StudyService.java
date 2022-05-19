@@ -265,6 +265,18 @@ public class StudyService {
             .sort(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed());
     }
 
+    public Mono<String> getStudyCaseName(UUID studyUuid) {
+        UUID caseUuid = studyRepository.findById(studyUuid).get().getCaseUuid();
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/name")
+                .buildAndExpand(caseUuid)
+                .toUriString();
+
+        return webClient.get()
+                .uri(caseServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(String.class);
+    }
+
     public Flux<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return Flux.fromStream(() -> studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos));
     }
