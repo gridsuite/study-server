@@ -22,6 +22,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -67,6 +68,7 @@ public class NetworkModificationTreeService {
     public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
     public static final String HEADER_INSERT_MODE = "insertMode";
+    public static final String ROOT_NODE_NAME = "Root";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -75,6 +77,8 @@ public class NetworkModificationTreeService {
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
+
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @Autowired
     private StreamBridge treeUpdatePublisher;
@@ -126,6 +130,7 @@ public class NetworkModificationTreeService {
                                           NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
     ) {
         this.nodesRepository = nodesRepository;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
 
@@ -136,6 +141,8 @@ public class NetworkModificationTreeService {
     public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
         Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
+            assertNodeNameNotExist(studyUuid, nodeInfo.getName());
+
             if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
                 throw new StudyException(NOT_ALLOWED);
             }
@@ -230,7 +237,7 @@ public class NetworkModificationTreeService {
         var root = RootNode.builder()
             .studyId(study.getId())
             .id(node.getIdNode())
-            .name("Root")
+            .name(ROOT_NODE_NAME)
             .readOnly(true)
             .reportUuid(importReportUuid)
             .build();
@@ -304,8 +311,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    // TODO test if studyUuid exist and have the node
     public void updateNode(UUID studyUuid, AbstractNode node) {
+        NetworkModificationNodeInfoEntity networkModificationNode = networkModificationNodeInfoRepository.findById(node.getId()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+        if (!networkModificationNode.getName().equals(node.getName())) {
+            assertNodeNameNotExist(studyUuid, node.getName());
+        }
         repositories.get(node.getType()).updateNode(node);
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
@@ -320,6 +330,38 @@ public class NetworkModificationTreeService {
 
     public UUID getStudyRootNodeUuid(UUID studyId) {
         return nodesRepository.findByStudyIdAndType(studyId, NodeType.ROOT).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getIdNode();
+    }
+
+    @Transactional(readOnly = true)
+    public void assertNodeNameNotExist(UUID studyUuid, String nodeName) {
+        if (isNodeNameExists(studyUuid, nodeName)) {
+            throw new StudyException(NODE_NAME_ALREADY_EXIST);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
+        return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).isEmpty();
+    }
+
+    private List<String> getStudyNodesNames(UUID studyUuid) {
+        return networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
+                .stream()
+                .map(node -> node.getName())
+                .collect(Collectors.toList());
+    }
+
+    public String getUniqueNodeName(UUID studyUuid) {
+        int counter = 1;
+        List<String> studyNodeNames = getStudyNodesNames(studyUuid);
+        String namePrefix = "New node ";
+        String uniqueName = StringUtils.EMPTY;
+        while (StringUtils.EMPTY.equals(uniqueName) || studyNodeNames.contains(uniqueName)) {
+            uniqueName = namePrefix + counter;
+            ++counter;
+        }
+
+        return uniqueName;
     }
 
     @Transactional
