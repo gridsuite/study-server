@@ -757,7 +757,7 @@ public class StudyController {
                 .then(studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid)));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/{typeModification}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{typeModification}/{modificationUuid}")
     @Operation(summary = "update a generator modification in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator modification has been updated")})
     public ResponseEntity<Mono<Void>> updateGeneratorModification(@PathVariable("studyUuid") UUID studyUuid,

@@ -2423,7 +2423,7 @@ public class StudyTest {
         // update generator modification
         String generatorAttributesUpdated = "{\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
         webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/{modificationType}", studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID, modificationTypeUrl)
+            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}/{modificationUuid}/", studyNameUserIdUuid, modificationNodeUuid, modificationTypeUrl, MODIFICATION_UUID)
             .bodyValue(generatorAttributesUpdated)
             .exchange()
             .expectStatus().isOk();
