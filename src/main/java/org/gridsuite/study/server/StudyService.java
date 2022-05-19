@@ -904,11 +904,11 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(UUID studyUuid, UUID nodeUuid) {
-        return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getNodeModificationInfos(nodeUuid))).flatMap(tuple3 -> {
-            UUID networkUuid = tuple3.getT1();
-            String provider = tuple3.getT2();
-            String variantId = tuple3.getT3().getVariantId();
-            UUID reportUuid = tuple3.getT3().getReportUuid();
+        return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid), getReportUuid(nodeUuid))).flatMap(tuple4 -> {
+            UUID networkUuid = tuple4.getT1();
+            String provider = tuple4.getT2();
+            String variantId = tuple4.getT3();
+            UUID reportUuid = tuple4.getT4();
 
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", reportUuid.toString())
