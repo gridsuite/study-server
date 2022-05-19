@@ -726,7 +726,7 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads")
-    @Operation(summary = "modify an load in the study network")
+    @Operation(summary = "modify a load in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been modified")})
     public ResponseEntity<Mono<Void>> modifyLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,

@@ -65,7 +65,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -2391,12 +2390,6 @@ public class StudyTest {
 
         String equipmentModificationAttribute = "{\"equipmentId\":\"equipmentId\"}";
 
-        var plop = webTestClient.put()
-            .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, rootNodeUuid, modificationTypeUrl)
-            .bodyValue(equipmentModificationAttribute)
-            .exchange().returnResult(new ParameterizedTypeReference<>() {
-            });
-        System.err.println(plop.getResponseBody().blockFirst());
         // modify generator on root node (not allowed)
         webTestClient.put()
             .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, rootNodeUuid, modificationTypeUrl)
