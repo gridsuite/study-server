@@ -8,10 +8,7 @@ package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowResult;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.DeleteNodeInfos;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -255,12 +252,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, UUID studyId) {
+    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
         UUID rootId = null;
+        if (study == null) {
+            throw new StudyException(STUDY_CREATION_FAILED, "Couln't retrieve study for modification tree duplication");
+        }
+
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
-            StudyEntity tempStudy = new StudyEntity();
-            tempStudy.setId(studyId);
-            rootId = createRoot(tempStudy).getIdNode();
+            rootId = createRoot(study).getIdNode();
         }
         UUID referenceParentNodeId = rootId == null ? nodeParentId : rootId;
 
@@ -274,13 +273,13 @@ public class NetworkModificationTreeService {
                 model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
                 model.setBuildStatus(modificationGroupToDuplicateId != null ? BuildStatus.BUILT_INVALID : BuildStatus.NOT_BUILT);
 
-                nextParentId = doCreateNode(studyId, referenceParentNodeId, model, InsertMode.CHILD).getId();
+                nextParentId = doCreateNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 if (modificationGroupToDuplicateId != null) {
                     networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
                 }
             }
             if (nextParentId != null) {
-                copyStudyTree(n, nextParentId, studyId);
+                copyStudyTree(n, nextParentId, study);
             }
         });
     }

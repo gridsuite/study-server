@@ -13,6 +13,7 @@ import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
+import com.powsybl.iidm.modification.NetworkModification;
 import com.powsybl.iidm.network.*;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -32,10 +33,7 @@ import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -2981,13 +2979,60 @@ public class StudyTest {
     }
 
     @Test
-    public void testDuplicateStudy() {
+    public void testDuplicateStudy() throws InterruptedException {
         UUID study1Uuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(study1Uuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(study1Uuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
+        UUID modificationNode1Uuid = modificationNode1.getId();
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(study1Uuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID);
+        UUID modificationNode2Uuid = modificationNode2.getId();
+
+        BuildInfos buildInfos1 = networkModificationTreeService.getBuildInfos(modificationNode1Uuid);
+        BuildInfos buildInfos2 = networkModificationTreeService.getBuildInfos(modificationNode2Uuid);
+        UUID modificationNode1GroupUuid = buildInfos1.getModificationGroups().get(0);
+        UUID modificationNode2GroupUuid = buildInfos2.getModificationGroups().size() > 1 ? buildInfos2.getModificationGroups().get(1) : buildInfos2.getModificationGroups().get(0);
+
+        String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         webTestClient.post()
-                .uri(STUDIES_URL + "?duplicateFrom={parentStudyUuid}&studyUuid={studyUuid}", study1Uuid, UUID.randomUUID())
+                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers", study1Uuid, modificationNode2Uuid)
+                .bodyValue(createTwoWindingsTransformerAttributes)
+                .exchange()
+                .expectStatus().isOk();
+        checkEquipmentCreationMessagesReceived(study1Uuid, modificationNode2Uuid, ImmutableSet.of("s2"));
+
+        webTestClient.post()
+                .uri(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", study1Uuid, "11888888-0000-0000-0000-111111111111")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk();
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+
+        StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
+        assertNotEquals(study1Uuid, duplicatedStudy.getId());
+
+        Thread.sleep(TIMEOUT);
+        RootNode duplicatedRootNode = networkModificationTreeService.doGetStudyTree(duplicatedStudy.getId());
+
+        assertEquals(2, duplicatedRootNode.getChildren().size());
+        NetworkModificationNode duplicatedModificationNode1 = (NetworkModificationNode) duplicatedRootNode.getChildren().get(1);
+        assertEquals(1, duplicatedModificationNode1.getChildren().size());
+        NetworkModificationNode duplicatedModificationNode2 = (NetworkModificationNode) duplicatedModificationNode1.getChildren().get(0);
+        assertEquals(0, duplicatedModificationNode2.getChildren().size());
+
+        assertNotEquals(duplicatedRootNode.getId(), rootNodeUuid);
+        assertNotEquals(duplicatedModificationNode1.getId(), modificationNode1Uuid);
+        assertNotEquals(duplicatedModificationNode2.getId(), modificationNode2Uuid);
+
+        BuildInfos duplicatedBuildInfos1 = networkModificationTreeService.getBuildInfos(duplicatedModificationNode1.getId());
+        BuildInfos duplicatedBuildInfos2 = networkModificationTreeService.getBuildInfos(duplicatedModificationNode2.getId());
+        UUID duplicatedModificationNode1GroupUuid = duplicatedBuildInfos1.getModificationGroups().get(0);
+        UUID duplicatedModificationNode2GroupUuid = duplicatedBuildInfos2.getModificationGroups().size() > 1 ? duplicatedBuildInfos2.getModificationGroups().get(1) : duplicatedBuildInfos2.getModificationGroups().get(0);
+
+        var requests = getRequestsWithBodyDone(3);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode1GroupUuid + "&groupUuid=" + duplicatedModificationNode1GroupUuid)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode2GroupUuid + "&groupUuid=" + duplicatedModificationNode2GroupUuid)));
     }
 
     @Test public void getDefaultLoadflowProvider() {

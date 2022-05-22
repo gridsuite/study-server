@@ -315,8 +315,11 @@ public class StudyService {
     }
 
     public Mono<BasicStudyInfos> createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
+        Objects.requireNonNull(sourceStudyUuid);
+
         AtomicReference<Long> startTime = new AtomicReference<>();
         UUID newNetworkUuid = UUID.randomUUID();
+
         StudyEntity sourceStudy = doGetStudy(sourceStudyUuid);
         RootNode rootNode = networkModificationTreeService.doGetStudyTree(sourceStudyUuid);
 
@@ -329,7 +332,7 @@ public class StudyService {
                                 insertStudy(studyUuid, userId, newNetworkUuid, sourceStudy.getNetworkId(),
                                         sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters)).doOnSuccess(s -> {
                                             networkModificationTreeService.doDeleteTree(s.getId());
-                                            networkModificationTreeService.copyStudyTree(rootNode, null, s.getId());
+                                            networkModificationTreeService.copyStudyTree(rootNode, null, toEntity(s));
                                         }).subscribe();
                             }).subscribeOn(Schedulers.boundedElastic())
                                     .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -1093,6 +1096,15 @@ public class StudyService {
     public Mono<Void> assertCanModifyNode(UUID nodeUuid) {
         return networkModificationTreeService.isReadOnly(nodeUuid).switchIfEmpty(Mono.just(Boolean.FALSE))
                 .flatMap(ro -> ro ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+    }
+
+    public static StudyEntity toEntity(CreatedStudyBasicInfos study) {
+        Objects.requireNonNull(study);
+        return StudyEntity.builder()
+                .id(study.getId())
+                .caseFormat(study.getCaseFormat())
+                .date(study.getCreationDate().toLocalDateTime())
+                .userId(study.getUserId()).build();
     }
 
     public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
