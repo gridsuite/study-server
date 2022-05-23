@@ -1121,7 +1121,19 @@ public class StudyController {
                                                                @RequestBody String lineAttachToVoltageLevelAttributes) {
         studyService.assertCanModifyNode(nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
-        studyService.lineAttachToVoltageLevel(studyUuid, lineAttachToVoltageLevelAttributes, nodeUuid, null);
+        studyService.createEquipment(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach")
+    @Operation(summary = "update a line attach to a voltage level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line attach to a voltage level has been updated.")})
+    public ResponseEntity<Void> updateLineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
+                                                                      @PathVariable("modificationUuid") UUID modificationUuid,
+                                                                      @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                      @RequestBody String lineSplitWithVoltageLevelAttributes) {
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.updateEquipmentCreation(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid, modificationUuid);
         return ResponseEntity.ok().build();
     }
 
