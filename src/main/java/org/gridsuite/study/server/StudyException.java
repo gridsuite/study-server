@@ -42,6 +42,7 @@ public class StudyException extends RuntimeException {
         EQUIPMENT_NOT_FOUND,
         NETWORK_INDEXATION_FAILED,
         NODE_NOT_BUILT,
+        GENERATOR_MODIFICATION_FAILED,
     }
 
     private final Type type;
