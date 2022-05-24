@@ -54,17 +54,17 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    public Mono<ReporterModel> getReport(UUID networkUuid) {
+    public Mono<ReporterModel> getReport(UUID reportUuid) {
         return webClient.get()
-                .uri(this.getReportServerURI() + networkUuid)
+                .uri(this.getReportServerURI() + reportUuid)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty())
                 .bodyToMono(ReporterModel.class);
     }
 
-    public Mono<Void> deleteReport(UUID networkUuid) {
+    public Mono<Void> deleteReport(UUID reportUuid) {
         return webClient.delete()
-                .uri(this.getReportServerURI() + networkUuid)
+                .uri(this.getReportServerURI() + reportUuid)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because report may not exist
                 .bodyToMono(Void.class);

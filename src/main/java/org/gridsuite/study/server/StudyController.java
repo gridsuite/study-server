@@ -45,13 +45,11 @@ import java.util.logging.Level;
 public class StudyController {
 
     private final StudyService studyService;
-    private final ReportService reportService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public StudyController(StudyService studyService, NetworkService networkStoreService, ReportService reportService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService, NetworkService networkStoreService, NetworkModificationTreeService networkModificationTreeService) {
         this.studyService = studyService;
-        this.reportService = reportService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
     }
@@ -75,10 +73,23 @@ public class StudyController {
         }
     }
 
+    static class MyModificationTypeConverter extends PropertyEditorSupport {
+
+        public MyModificationTypeConverter() {
+            super();
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            setValue(ModificationType.getTypeFromUri(text));
+        }
+    }
+
     @InitBinder
     public void initBinder(WebDataBinder webdataBinder) {
         webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
             new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
+        webdataBinder.registerCustomEditor(ModificationType.class, new MyModificationTypeConverter());
     }
 
     @GetMapping(value = "/studies")
@@ -543,14 +554,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsMono);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/export-network/{format}")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
     public Mono<ResponseEntity<byte[]>> exportNetwork(
             @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format) {
 
-        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.exportNetwork(studyUuid, format);
+        Mono<ExportNetworkInfos> exportNetworkInfosMono = studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid).then(studyService.exportNetwork(studyUuid, nodeUuid, format));
         return exportNetworkInfosMono.map(exportNetworkInfos -> {
             HttpHeaders header = new HttpHeaders();
             header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
@@ -661,6 +673,17 @@ public class StudyController {
             new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram")
+    @Operation(summary = "get the network area diagram for the given network and voltage levels")
+    @ApiResponse(responseCode = "200", description = "The svg")
+    public ResponseEntity<Mono<String>> getNeworkAreaDiagram(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds", required = true) List<String> voltageLevelsIds,
+            @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNeworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
@@ -681,18 +704,21 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.stopSecurityAnalysis(studyUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get study report")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report for study"), @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Mono<ReporterModel>> getReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(reportService::getReport));
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get node report")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Flux<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                             @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(studyUuid, nodeUuid, nodeOnlyReport));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/report")
-    @Operation(summary = "Delete study report")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report for study deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Mono<Void>> deleteReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkStoreService.getNetworkUuid(studyUuid).flatMap(reportService::deleteReport));
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
+    @Operation(summary = "Delete node report")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Mono<Void>> deleteNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.deleteNodeReport(studyUuid, nodeUuid));
     }
 
     @GetMapping(value = "/svg-component-libraries")
@@ -743,6 +769,29 @@ public class StudyController {
                                                          @RequestBody String modifyLoadAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
                 .then(studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{typeModification}/{modificationUuid}")
+    @Operation(summary = "update an equipment modification in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment modification has been updated")})
+    public ResponseEntity<Mono<Void>> updateEquipmentModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                                  @PathVariable("modificationUuid") UUID modificationUuid,
+                                                                  @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                  @PathVariable("typeModification") ModificationType typeModification,
+                                                                  @RequestBody String modifyEquipmentAttributes) {
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
+            .then(studyService.updateEquipmentModification(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid, modificationUuid)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{typeModification}")
+    @Operation(summary = "modify a generator in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been modified")})
+    public ResponseEntity<Mono<Void>> modifyEquipment(@PathVariable("studyUuid") UUID studyUuid,
+                                                      @PathVariable("nodeUuid") UUID nodeUuid,
+                                                      @PathVariable("typeModification") ModificationType typeModification,
+                                                      @RequestBody String modifyEquipmentAttributes) {
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
+            .then(studyService.modifyEquipment(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid)));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification")
@@ -965,11 +1014,32 @@ public class StudyController {
     @Operation(summary = "update a voltage level creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level creation has been updated.")})
     public ResponseEntity<Mono<Void>> updateVoltageLevelCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                                 @PathVariable("modificationUuid") UUID modificationUuid,
-                                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                           @RequestBody String createVoltageLevelAttributes) {
+        @PathVariable("modificationUuid") UUID modificationUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody String createVoltageLevelAttributes) {
         return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
-                .then(studyService.updateEquipmentCreation(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid, modificationUuid)));
+            .then(studyService.updateEquipmentCreation(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid, modificationUuid)));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits")
+    @Operation(summary = "split a line at a voltage level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was split at a voltage level ok")})
+    public ResponseEntity<Mono<Void>> lineSplitWithVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody String lineSplitWithVoltageLevelAttributes) {
+        return ResponseEntity.ok().body(studyService.assertCanModifyNode(nodeUuid).then(studyService.assertComputationNotRunning(nodeUuid))
+            .then(studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, null)));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits")
+    @Operation(summary = "update a line split at a voltage level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line split at a voltage level has been updated.")})
+    public ResponseEntity<Mono<Void>> updateLineSplitWithVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("modificationUuid") UUID modificationUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid,
+        @RequestBody String lineSplitWithVoltageLevelAttributes) {
+        return ResponseEntity.ok().body(studyService.assertComputationNotRunning(nodeUuid)
+            .then(studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, modificationUuid)));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")

@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -17,7 +18,10 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -115,6 +119,8 @@ public class StudyService {
     static final String QUERY_PARAM_DIAGONAL_LABEL = "diagonalLabel";
     static final String QUERY_PARAM_TOPOLOGICAL_COLORING = "topologicalColoring";
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
+    static final String QUERY_PARAM_DEPTH = "depth";
+    static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String RESULT_UUID = "resultUuid";
 
     static final String QUERY_PARAM_RECEIVER = "receiver";
@@ -273,45 +279,49 @@ public class StudyService {
     public Mono<BasicStudyInfos> createStudy(UUID caseUuid, String userId, UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(userId, studyUuid)
-                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
-                .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> Mono.zip(persistentStore(caseUuid, s.getId(), userId), getCaseFormat(caseUuid))
-                        .flatMap(t -> {
-                            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                            return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                    t.getT2(), caseUuid, false, toEntity(loadFlowParameters));
-                        })
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(st -> {
-                            deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();
-                            LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                        })
-                        .subscribe()
-                );
+            .doOnSubscribe(x -> startTime.set(System.nanoTime()))
+            .map(StudyService::toBasicStudyInfos)
+            .doOnSuccess(s -> {
+                UUID importReportUuid = UUID.randomUUID();
+                Mono.zip(persistentStore(caseUuid, s.getId(), userId, importReportUuid), getCaseFormat(caseUuid))
+                    .flatMap(t -> {
+                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                        return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                            t.getT2(), caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                    })
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                    .doFinally(st -> {
+                        deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();
+                        LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    })
+                    .subscribe();
+            });
     }
 
     public Mono<BasicStudyInfos> createStudy(Mono<FilePart> caseFile, String userId, UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         return insertStudyCreationRequest(userId, studyUuid)
-                .doOnSubscribe(x -> startTime.set(System.nanoTime()))
-                .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(s -> importCase(caseFile, s.getId(), userId)
-                        .flatMap(uuid ->
-                                Mono.zip(persistentStore(uuid, s.getId(), userId), getCaseFormat(uuid))
-                                        .flatMap(t -> {
-                                            LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-                                            return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
-                                                    t.getT2(), uuid, true, toEntity(loadFlowParameters));
-                                        }))
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-                        .doFinally(r -> {
-                            deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();  // delete the study if the creation has been canceled
-                            LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                        })
-                        .subscribe()
-                );
+            .doOnSubscribe(x -> startTime.set(System.nanoTime()))
+            .map(StudyService::toBasicStudyInfos)
+            .doOnSuccess(s -> {
+                UUID importReportUuid = UUID.randomUUID();
+                importCase(caseFile, s.getId(), userId)
+                    .flatMap(uuid ->
+                        Mono.zip(persistentStore(uuid, s.getId(), userId, importReportUuid), getCaseFormat(uuid))
+                            .flatMap(t -> {
+                                LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
+                                return insertStudy(s.getId(), userId, t.getT1().getNetworkUuid(), t.getT1().getNetworkId(),
+                                    t.getT2(), uuid, true, toEntity(loadFlowParameters), importReportUuid);
+                            }))
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
+                    .doFinally(r -> {
+                        deleteStudyIfNotCreationInProgress(s.getId(), userId).subscribe();  // delete the study if the creation has been canceled
+                        LOGGER.trace("Create study '{}' : {} seconds", s.getId(), TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+                    })
+                    .subscribe();
+            });
     }
 
     public Mono<BasicStudyInfos> createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
@@ -319,6 +329,7 @@ public class StudyService {
 
         AtomicReference<Long> startTime = new AtomicReference<>();
         UUID newNetworkUuid = UUID.randomUUID();
+        UUID reportUuid = UUID.randomUUID();
 
         StudyEntity sourceStudy = doGetStudy(sourceStudyUuid);
         RootNode rootNode = networkModificationTreeService.doGetStudyTree(sourceStudyUuid);
@@ -330,9 +341,9 @@ public class StudyService {
                             networkStoreService.createNetwork(newNetworkUuid, sourceStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
                                 LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
                                 insertStudy(studyUuid, userId, newNetworkUuid, sourceStudy.getNetworkId(),
-                                        sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters)).doOnSuccess(s -> {
+                                        sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters), reportUuid).doOnSuccess(s -> {
                                             networkModificationTreeService.doDeleteTree(s.getId());
-                                            networkModificationTreeService.copyStudyTree(rootNode, null, toEntity(s));
+                                            networkModificationTreeService.copyStudyTree(rootNode, null, toEntity(s), reportUuid);
                                         }).subscribe();
                             }).subscribeOn(Schedulers.boundedElastic())
                                     .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -462,10 +473,10 @@ public class StudyService {
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         UUID networkUuid = null;
-        List<UUID> groupsUuids = new ArrayList<>();
+        List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         if (studyCreationRequestEntity.isEmpty()) {
             networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
-            groupsUuids = networkModificationTreeService.getAllModificationGroupUuids(studyUuid);
+            nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyRepository.findById(studyUuid).ifPresent(s -> {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
@@ -476,7 +487,7 @@ public class StudyService {
         }
         emitStudyDelete(studyUuid, userId);
 
-        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, groupsUuids)) : Optional.empty();
+        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, nodesModificationInfos)) : Optional.empty();
     }
 
     public Mono<Void> deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
@@ -489,9 +500,9 @@ public class StudyService {
             })
             .publish(deleteStudyInfosMono ->
                 Mono.when(// in parallel
-                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getGroupsUuids())).flatMap(networkModificationService::deleteModifications),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).collect(Collectors.toList()))).flatMap(networkModificationService::deleteModifications),
                     deleteStudyInfosMono.flatMap(infos -> deleteEquipmentIndexes(infos.getNetworkUuid())),
-                    deleteStudyInfosMono.flatMap(infos -> reportService.deleteReport(infos.getNetworkUuid())),
+                    deleteStudyInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).collect(Collectors.toList()))).flatMap(reportService::deleteReport),
                     deleteStudyInfosMono.flatMap(infos -> networkStoreService.deleteNetwork(infos.getNetworkUuid()))
                 )
             )
@@ -512,8 +523,10 @@ public class StudyService {
     }
 
     private Mono<CreatedStudyBasicInfos> insertStudy(UUID studyUuid, String userId, UUID networkUuid, String networkId,
-                                                     String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters) {
-        return insertStudyEntity(studyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters)
+                                                     String caseFormat, UUID caseUuid, boolean casePrivate,
+                                                     LoadFlowParametersEntity loadFlowParameters,
+                                                     UUID importReportUuid) {
+        return insertStudyEntity(studyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid)
             .map(StudyService::toCreatedStudyBasicInfos)
             .map(studyInfosService::add)
             .doOnSuccess(infos -> emitStudiesChanged(studyUuid, userId));
@@ -633,10 +646,11 @@ public class StudyService {
         });
     }
 
-    private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String userId) {
+    private Mono<NetworkInfos> persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, caseUuid)
             .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
+            .queryParam(REPORT_UUID, importReportUuid)
             .buildAndExpand()
             .toUriString();
 
@@ -876,14 +890,15 @@ public class StudyService {
     }
 
     Mono<Void> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
-            UUID groupUuid = tuple.getT1();
-            String variantId = tuple.getT2();
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH));
 
-            return networkModificationService.changeSwitchState(studyUuid, switchId, open, groupUuid, variantId)
+            return networkModificationService.changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
@@ -895,13 +910,14 @@ public class StudyService {
     }
 
     public Mono<Void> applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid) {
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
-            UUID groupUuid = tuple.getT1();
-            String variantId = tuple.getT2();
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
-            return networkModificationService.applyGroovyScript(studyUuid, groovyScript, groupUuid, variantId)
+            return networkModificationService.applyGroovyScript(studyUuid, groovyScript, groupUuid, variantId, reportUuid)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
@@ -920,13 +936,16 @@ public class StudyService {
     }
 
     Mono<Void> runLoadFlow(UUID studyUuid, UUID nodeUuid) {
-        return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid))).flatMap(tuple3 -> {
-            UUID networkUuid = tuple3.getT1();
-            String provider = tuple3.getT2();
-            String variantId = tuple3.getT3();
+        return setLoadFlowRunning(studyUuid, nodeUuid).then(Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getLoadFlowProvider(studyUuid), getVariantId(nodeUuid), getReportUuid(nodeUuid))).flatMap(tuple4 -> {
+            UUID networkUuid = tuple4.getT1();
+            String provider = tuple4.getT2();
+            String variantId = tuple4.getT3();
+            UUID reportUuid = tuple4.getT4();
 
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                .queryParam("reportId", networkUuid.toString()).queryParam("reportName", "loadflow").queryParam("overwrite", true);
+                .queryParam("reportId", reportUuid.toString())
+                .queryParam("reportName", "loadflow")
+                .queryParam("overwrite", true);
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
@@ -970,12 +989,16 @@ public class StudyService {
             .bodyToMono(typeRef);
     }
 
-    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, String format) {
-        Mono<UUID> networkUuidMono = networkStoreService.getNetworkUuid(studyUuid);
+    public Mono<ExportNetworkInfos> exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String variantId = tuple.getT2();
 
-        return networkUuidMono.flatMap(uuid -> {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}")
-                .buildAndExpand(uuid, format)
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}");
+            if (!variantId.isEmpty()) {
+                uriComponentsBuilder.queryParam("variantId", variantId);
+            }
+            String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
                 .toUriString();
 
             Mono<ResponseEntity<byte[]>> responseEntity = webClient.get()
@@ -992,14 +1015,15 @@ public class StudyService {
     }
 
     public Mono<Void> changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull  String status, @NonNull UUID nodeUuid) {
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
-            UUID groupUuid = tuple.getT1();
-            String variantId = tuple.getT2();
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid)
                 .doOnSuccess(e -> emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE));
 
-            return networkModificationService.changeLineStatus(studyUuid, lineId, status, groupUuid, variantId)
+            return networkModificationService.changeLineStatus(studyUuid, lineId, status, groupUuid, variantId, reportUuid)
                 .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                 .collect(Collectors.toSet())
                 .doOnSuccess(substationIds ->
@@ -1095,7 +1119,13 @@ public class StudyService {
 
     public Mono<Void> assertCanModifyNode(UUID nodeUuid) {
         return networkModificationTreeService.isReadOnly(nodeUuid).switchIfEmpty(Mono.just(Boolean.FALSE))
-                .flatMap(ro -> ro ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+                .flatMap(ro -> Boolean.TRUE.equals(ro) ? Mono.error(new StudyException(NOT_ALLOWED)) : Mono.empty());
+    }
+
+    public Mono<Void> assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
+        return Mono.fromCallable(() -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
+            || networkModificationTreeService.getBuildStatus(nodeUuid) == BuildStatus.BUILT)
+        .flatMap(p -> Boolean.TRUE.equals(p) ? Mono.empty() : Mono.error(new StudyException(NODE_NOT_BUILT)));
     }
 
     public static StudyEntity toEntity(CreatedStudyBasicInfos study) {
@@ -1386,6 +1416,29 @@ public class StudyService {
         });
     }
 
+    Mono<String> getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
+        return Mono.zip(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
+            UUID networkUuid = tuple.getT1();
+            String variantId = tuple.getT2();
+
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                            "/network-area-diagram/{networkUuid}")
+                    .queryParam(QUERY_PARAM_DEPTH, depth)
+                    .queryParam(QUERY_PARAM_VOLTAGE_LEVELS_IDS, voltageLevelsIds);
+            if (!StringUtils.isBlank(variantId)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder
+                    .buildAndExpand(networkUuid)
+                    .toUriString();
+
+            return webClient.get()
+                    .uri(singleLineDiagramServerBaseUri + path)
+                    .retrieve()
+                    .bodyToMono(String.class);
+        });
+    }
+
     public Mono<String> getSecurityAnalysisStatus(UUID nodeUuid) {
         return getSecurityAnalysisResultUuid(nodeUuid).flatMap(resultUuid ->
             Mono.justOrEmpty(resultUuid).flatMap(uuid -> {
@@ -1515,7 +1568,8 @@ public class StudyService {
 
     private Mono<StudyEntity> insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                                 String caseFormat, UUID caseUuid, boolean casePrivate,
-                                                LoadFlowParametersEntity loadFlowParameters) {
+                                                LoadFlowParametersEntity loadFlowParameters,
+                                                UUID importReportUuid) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1525,15 +1579,15 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         return Mono.fromCallable(() -> {
             StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
-            return insertStudy(studyEntity);
+            return insertStudy(studyEntity, importReportUuid);
         });
     }
 
     @Transactional
-    public StudyEntity insertStudy(StudyEntity studyEntity) {
+    public StudyEntity insertStudy(StudyEntity studyEntity, UUID importReportUuid) {
         var study = studyRepository.save(studyEntity);
         // create 2 nodes : root node, modification node 0
-        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity);
+        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity, importReportUuid);
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
             .name("modification node 0")
@@ -1591,22 +1645,19 @@ public class StudyService {
             });
     }
 
-    Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-    }
-
     public Mono<String> getVariantId(UUID nodeUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid);
     }
 
     public Mono<Void> createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType, UUID nodeUuid) {
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
-            UUID groupUuid = tuple.getT1();
-            String variantId = tuple.getT2();
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
-            return networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId)
+            return networkModificationService.createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid)
                     .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                     .collect(Collectors.toSet())
                     .doOnSuccess(substationIds ->
@@ -1618,13 +1669,14 @@ public class StudyService {
     }
 
     public Mono<Void> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid) {
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
-            UUID groupUuid = tuple.getT1();
-            String variantId = tuple.getT2();
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
-            return networkModificationService.modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId)
+            return networkModificationService.modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid)
                     .flatMap(modification -> Flux.fromIterable(modification.getSubstationIds()))
                     .collect(Collectors.toSet())
                     .doOnSuccess(substationIds ->
@@ -1636,11 +1688,12 @@ public class StudyService {
     }
 
     public Mono<Void> updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+
         Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, false);
 
         return networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType, modificationUuid)
-                .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
-                .then(monoUpdateStatusResult);
+            .doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+            .then(monoUpdateStatusResult);
     }
 
     public Mono<Void> updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
@@ -1652,13 +1705,14 @@ public class StudyService {
     }
 
     Mono<Void> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
-        return Mono.zip(getModificationGroupUuid(nodeUuid), getVariantId(nodeUuid)).flatMap(tuple -> {
-            UUID groupUuid = tuple.getT1();
-            String variantId = tuple.getT2();
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
             Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid);
 
-            return networkModificationService.deleteEquipment(studyUuid, equipmentType, equipmentId, groupUuid, variantId)
+            return networkModificationService.deleteEquipment(studyUuid, equipmentType, equipmentId, groupUuid, variantId, reportUuid)
                 .flatMap(modification -> Flux.fromIterable(Collections.singletonList(modification)))
                 .collect(Collectors.toList())
                 .doOnSuccess(deletionInfos -> deletionInfos.forEach(deletionInfo ->
@@ -1886,6 +1940,8 @@ public class StudyService {
                 Mono.when(// in parallel
                     // delete modifications
                     deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getModificationGroupUuids())).flatMap(networkModificationService::deleteModifications),
+                    // delete reports
+                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getReportUuids())).flatMap(reportService::deleteReport),
                     // delete security analysis result
                     deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getSecurityAnalysisResultUuids())).flatMap(this::deleteSaResult),
                     // delete network variant
@@ -1944,8 +2000,76 @@ public class StudyService {
         }
     }
 
+    public Mono<UUID> getReportUuid(UUID nodeUuid) {
+        return networkModificationTreeService.getReportUuid(nodeUuid);
+    }
+
+    public Flux<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+        return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
+    }
+
+    public Flux<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid, boolean nodeOnlyReport) {
+        return getReportUuidsAndNames(nodeUuid, nodeOnlyReport).concatMap(info ->
+            reportService.getReport(info.getLeft()).switchIfEmpty(Mono.just(new ReporterModel(UUID.randomUUID().toString(), info.getLeft().toString())))
+                .map(reporter -> {
+                    // set reporter default name to node name
+                    ReporterModel newReporter = new ReporterModel(reporter.getTaskKey(), info.getRight(), reporter.getTaskValues());
+                    reporter.getReports().forEach(newReporter::report);
+                    reporter.getSubReporters().forEach(newReporter::addSubReporter);
+                    return newReporter;
+                })
+        );
+    }
+
+    public Mono<Void> deleteNodeReport(UUID studyUuid, UUID nodeUuid) {
+        return getReportUuid(nodeUuid).flatMap(reportService::deleteReport);
+    }
+
+    private Mono<NodeModificationInfos> getNodeModificationInfos(UUID nodeUuid) {
+        return networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+    }
+
     public String getDefaultLoadflowProviderValue() {
         return defaultLoadflowProvider;
+    }
+
+    public Mono<Void> lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
+        ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
+
+        return getNodeModificationInfos(nodeUuid).flatMap(nodeInfos -> {
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
+
+            Mono<Void> monoUpdateStatusResult = updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
+
+            Flux<ModificationInfos> modificationInfosFlux;
+            if (modificationUuid == null) {
+                modificationInfosFlux = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
+                    groupUuid, modificationType, variantId, reportUuid);
+            } else {
+
+                modificationInfosFlux = networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
+                    modificationType, modificationUuid);
+            }
+
+            return modificationInfosFlux
+                .collect(Collectors.toSet())
+                .doOnSuccess(modifications -> {
+                    Set<String> allImpactedSubstationIds = modifications.stream()
+                        .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
+                    List<EquipmentModificationInfos> deletions = modifications.stream()
+                        .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
+                        .map(EquipmentModificationInfos.class::cast)
+                        .collect(Collectors.toList());
+                    deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
+                        allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
+                }).doOnSuccess(e -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid))
+                .then(monoUpdateStatusResult);
+        });
     }
 }
 

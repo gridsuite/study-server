@@ -26,12 +26,18 @@ public class DeleteNodeInfos {
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
+    private List<UUID> reportUuids = new ArrayList<>();
+
     private List<String> variantIds = new ArrayList<>();
 
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);
+    }
+
+    public void addReportUuid(UUID reportUuid) {
+        reportUuids.add(reportUuid);
     }
 
     public void addVariantId(String variantId) {

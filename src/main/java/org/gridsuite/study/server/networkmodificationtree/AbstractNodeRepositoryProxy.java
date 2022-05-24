@@ -11,6 +11,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
@@ -102,6 +103,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         node.setName(nodeInfoEntity.getName());
         node.setDescription(nodeInfoEntity.getDescription());
         node.setReadOnly(nodeInfoEntity.getReadOnly());
+        node.setReportUuid(nodeInfoEntity.getReportUuid());
         return node;
     }
 
@@ -110,6 +112,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         entity.setName(node.getName());
         entity.setDescription(node.getDescription());
         entity.setReadOnly(node.getReadOnly());
+        entity.setReportUuid(node.getReportUuid());
         return entity;
     }
 
@@ -184,5 +187,25 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public Boolean isReadOnly(UUID nodeUuid) {
         return getNode(nodeUuid).getReadOnly();
+    }
+
+    public UUID getReportUuid(AbstractNode node, boolean generateId) {
+        if (node.getReportUuid() == null && generateId) {
+            node.setReportUuid(UUID.randomUUID());
+            updateNode(node);
+        }
+        return node.getReportUuid();
+    }
+
+    public UUID getReportUuid(UUID nodeUuid, boolean generateId) {
+        return getReportUuid(getNode(nodeUuid), generateId);
+    }
+
+    public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {
+        return null;
+    }
+
+    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid, boolean generateId) {
+        return getNodeModificationInfos(getNode(nodeUuid), generateId);
     }
 }

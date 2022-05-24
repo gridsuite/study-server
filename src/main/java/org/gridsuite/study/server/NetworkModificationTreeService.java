@@ -8,7 +8,12 @@ package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowResult;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.*;
+import org.apache.commons.lang3.tuple.Pair;
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
+import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -31,6 +36,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.persistence.EntityNotFoundException;
@@ -76,10 +82,10 @@ public class NetworkModificationTreeService {
     private StreamBridge treeUpdatePublisher;
 
     @Autowired
-    private NetworkModificationTreeService self;
+    private NetworkModificationService networkModificationService;
 
     @Autowired
-    private NetworkModificationService networkModificationService;
+    private NetworkModificationTreeService self;
 
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
@@ -183,6 +189,12 @@ public class NetworkModificationTreeService {
             if (modificationGroupUuid != null) {
                 deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
             }
+
+            UUID reportUuid = repositories.get(nodeToDelete.getType()).getReportUuid(id, false);
+            if (reportUuid != null) {
+                deleteNodeInfos.addReportUuid(reportUuid);
+            }
+
             String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id, false);
             if (!StringUtils.isBlank(variantId)) {
                 deleteNodeInfos.addVariantId(variantId);
@@ -219,13 +231,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NodeEntity createRoot(StudyEntity study) {
+    public NodeEntity createRoot(StudyEntity study, UUID importReportUuid) {
         NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study));
         var root = RootNode.builder()
             .studyId(study.getId())
             .id(node.getIdNode())
             .name("Root")
             .readOnly(true)
+            .reportUuid(importReportUuid)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
         return node;
@@ -252,14 +265,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
+    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study, UUID reportUuid) {
         UUID rootId = null;
         if (study == null) {
             throw new StudyException(STUDY_CREATION_FAILED, "Couln't retrieve study for modification tree duplication");
         }
 
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
-            rootId = createRoot(study).getIdNode();
+            rootId = createRoot(study, reportUuid).getIdNode();
         }
         UUID referenceParentNodeId = rootId == null ? nodeParentId : rootId;
 
@@ -275,11 +288,11 @@ public class NetworkModificationTreeService {
 
                 nextParentId = doCreateNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 if (modificationGroupToDuplicateId != null) {
-                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId).subscribe();
+                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, reportUuid).subscribe();
                 }
             }
             if (nextParentId != null) {
-                copyStudyTree(n, nextParentId, study);
+                copyStudyTree(n, nextParentId, study, reportUuid);
             }
         });
     }
@@ -336,16 +349,16 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
-        List<UUID> uuids = new ArrayList<>();
+    public List<NodeModificationInfos> getAllNodesModificationInfos(UUID studyUuid) {
+        List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            UUID modificationUuid = repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false);
-            if (modificationUuid != null) {
-                uuids.add(modificationUuid);
+            NodeModificationInfos nodeModificationInfos = repositories.get(n.getType()).getNodeModificationInfos(n.getIdNode(), false);
+            if (nodeModificationInfos != null) {
+                nodesModificationInfos.add(nodeModificationInfos);
             }
         });
-        return uuids;
+        return nodesModificationInfos;
     }
 
     @Transactional(readOnly = true)
@@ -435,7 +448,7 @@ public class NetworkModificationTreeService {
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
-                buildInfos.insertModificationGroup(modificationNode.getNetworkModification());
+                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), self.doGetReportUuid(nodeEntity.getIdNode(), true));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
@@ -579,5 +592,48 @@ public class NetworkModificationTreeService {
 
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
         emitNodesChanged(studyUuid, List.of(nodeUuid));
+    }
+
+    @Transactional
+    public UUID doGetReportUuid(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuid(nodeUuid, generateId)).orElse(null);
+    }
+
+    public Mono<UUID> getReportUuid(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetReportUuid(nodeUuid, true))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    private void getParentReportUuidsAndNamesFromNode(NodeEntity nodeEntity, boolean nodeOnlyReport, List<Pair<UUID, String>> res) {
+        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
+        res.add(0, Pair.of(self.doGetReportUuid(nodeEntity.getIdNode(), true), node.getName()));
+        if (node.getType() == NodeType.NETWORK_MODIFICATION && !nodeOnlyReport) {
+            getParentReportUuidsAndNamesFromNode(nodeEntity.getParentNode(), false, res);
+        }
+    }
+
+    @Transactional
+    public List<Pair<UUID, String>> getParentReportUuidsAndNamesFromNode(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<Pair<UUID, String>> uuidsAndNames = new ArrayList<>();
+        nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> getParentReportUuidsAndNamesFromNode(entity, nodeOnlyReport, uuidsAndNames), () -> {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        });
+        return uuidsAndNames;
+    }
+
+    public Flux<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<Pair<UUID, String>> uuidsAndNames = self.getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
+        return Flux.fromIterable(uuidsAndNames)
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    }
+
+    @Transactional
+    public NodeModificationInfos doGetNodeModificationInfos(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid, generateId)).orElse(null);
+    }
+
+    public Mono<NodeModificationInfos> getNodeModificationInfos(UUID nodeUuid) {
+        return Mono.fromCallable(() -> self.doGetNodeModificationInfos(nodeUuid, true))
+            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
     }
 }

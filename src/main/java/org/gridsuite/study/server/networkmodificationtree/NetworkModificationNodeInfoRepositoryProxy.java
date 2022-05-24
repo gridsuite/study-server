@@ -12,6 +12,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -181,5 +182,32 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
             updateBuildStatus(modificationNode, BuildStatus.BUILT_INVALID, changedNodes);
         }
+    }
+
+    @Override
+    public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
+        boolean nodeToUpdate = false;
+        if (networkModificationNode.getNetworkModification() == null && generateId) {
+            networkModificationNode.setNetworkModification(UUID.randomUUID());
+            nodeToUpdate = true;
+        }
+        if (networkModificationNode.getVariantId() == null && generateId) {
+            networkModificationNode.setVariantId(UUID.randomUUID().toString());
+            nodeToUpdate = true;
+        }
+        if (networkModificationNode.getReportUuid() == null && generateId) {
+            networkModificationNode.setReportUuid(UUID.randomUUID());
+            nodeToUpdate = true;
+        }
+        if (nodeToUpdate) {
+            updateNode(networkModificationNode);
+        }
+
+        return NodeModificationInfos.builder()
+            .modificationGroupUuid(networkModificationNode.getNetworkModification())
+            .variantId(networkModificationNode.getVariantId())
+            .reportUuid(networkModificationNode.getReportUuid())
+            .build();
     }
 }
