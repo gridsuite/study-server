@@ -284,7 +284,7 @@ public class NetworkModificationService {
     public Mono<Void> updateEquipmentModification(String modifyEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
         Objects.requireNonNull(modifyEquipmentAttributes);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-modification");
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType));
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
