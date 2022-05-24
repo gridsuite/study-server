@@ -325,9 +325,10 @@ public class StudyController {
     public ResponseEntity<Mono<String>> getGeneratorsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getGeneratorsMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getGeneratorsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/{generatorId}")
