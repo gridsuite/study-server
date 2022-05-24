@@ -372,11 +372,18 @@ public class StudyTest {
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
         EquipmentModificationInfos lineToSplitDeletion = EquipmentModificationInfos.builder()
-            .type(ModificationType.EQUIPMENT_DELETION)
-            .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
-            .build();
+                .type(ModificationType.EQUIPMENT_DELETION)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
         List<EquipmentModificationInfos> lineSplitResponseInfos = new ArrayList<>();
         lineSplitResponseInfos.add(lineToSplitDeletion);
+
+        EquipmentModificationInfos lineToAttachToDeletion = EquipmentModificationInfos.builder()
+                .type(ModificationType.EQUIPMENT_DELETION)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> lineAttachResponseInfos = new ArrayList<>();
+        lineAttachResponseInfos.add(lineToAttachToDeletion);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -496,8 +503,16 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
                         return new MockResponse().setResponseCode(200)
-                            .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(mapper.writeValueAsString(lineAttachResponseInfos))
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
@@ -2543,6 +2558,47 @@ public class StudyTest {
             );
 
         requests = getRequestsWithBodyDone(2);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testLineAttachToVoltageLevel() {
+        createStudy("userId", CASE_UUID);
+        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String createVoltageLevelAttributes = "{\"voltageLevelId\":\"vl1\",\"voltageLevelName\":\"voltageLevelName1\""
+                + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
+
+        String createLineAttributes = "{\"seriesResistance\":\"25\",\"seriesReactance\":\"12\"}";
+
+        String createLineAttachToVoltageLevelAttributes = "{\"lineToAttachToId\": \"line3\", \"percent\":\"10\", \"mayNewVoltageLevelInfos\":" +
+                createVoltageLevelAttributes + "\"attachmentLine\":\"" + createLineAttributes + "\"}";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createLineAttachToVoltageLevelAttributes))
+                .andExpect(status().isOk());
+
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createLineAttachToVoltageLevelAttributes))
+                .andExpect(status().isOk());
+
+        var requests = getRequestsWithBodyDone(2);
+        assertEquals(2, requests.size());
+        Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach\\?group=.*")).findFirst();
+        Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/line-attach-creation")).findFirst();
+        assertTrue(creationRequest.isPresent());
+        assertTrue(updateRequest.isPresent());
+        assertEquals(createLineAttachToVoltageLevelAttributes, creationRequest.get().getBody());
+        assertEquals(createLineAttachToVoltageLevelAttributes, updateRequest.get().getBody());
     }
 
     @Test public void testReorderModification() throws Exception {
