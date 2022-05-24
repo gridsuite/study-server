@@ -3265,8 +3265,8 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode1GroupUuid + "&groupUuid=" + duplicatedModificationNode1GroupUuid)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode2GroupUuid + "&groupUuid=" + duplicatedModificationNode2GroupUuid)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode1GroupUuid + "&groupUuid=" + duplicatedModificationNode1GroupUuid + "&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode2GroupUuid + "&groupUuid=" + duplicatedModificationNode2GroupUuid + "&reportUuid=.*")));
     }
 
     @Test public void getDefaultLoadflowProvider() {
