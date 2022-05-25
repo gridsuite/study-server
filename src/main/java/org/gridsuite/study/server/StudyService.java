@@ -326,18 +326,20 @@ public class StudyService {
 
     public Mono<BasicStudyInfos> createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
-
         AtomicReference<Long> startTime = new AtomicReference<>();
         UUID newNetworkUuid = UUID.randomUUID();
         UUID reportUuid = UUID.randomUUID();
 
         StudyEntity sourceStudy = doGetStudy(sourceStudyUuid);
+        if (sourceStudy == null) {
+            return Mono.error(new StudyException(STUDY_NOT_FOUND));
+        }
         RootNode rootNode = networkModificationTreeService.doGetStudyTree(sourceStudyUuid);
 
         return insertStudyCreationRequest(userId, studyUuid)
                 .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
-                .doOnSuccess(ns -> {
+                .doOnSuccess(newStudyCreationRequest -> {
                             networkStoreService.createNetwork(newNetworkUuid, sourceStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
                                 LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
                                 insertStudy(studyUuid, userId, newNetworkUuid, sourceStudy.getNetworkId(),

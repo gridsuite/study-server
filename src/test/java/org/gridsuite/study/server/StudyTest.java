@@ -3267,6 +3267,13 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode1GroupUuid + "&groupUuid=" + duplicatedModificationNode1GroupUuid + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode2GroupUuid + "&groupUuid=" + duplicatedModificationNode2GroupUuid + "&reportUuid=.*")));
+
+        //Test duplication from a non existing source study
+        webTestClient.post()
+                .uri(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", UUID.randomUUID(), "11888888-0000-0000-0000-111111111111")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isNotFound();
     }
 
     @Test public void getDefaultLoadflowProvider() {
