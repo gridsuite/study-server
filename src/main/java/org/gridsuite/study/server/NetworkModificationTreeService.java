@@ -9,10 +9,12 @@ package org.gridsuite.study.server;
 import com.powsybl.loadflow.LoadFlowResult;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -183,6 +185,12 @@ public class NetworkModificationTreeService {
             if (modificationGroupUuid != null) {
                 deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
             }
+
+            UUID reportUuid = repositories.get(nodeToDelete.getType()).getReportUuid(id, false);
+            if (reportUuid != null) {
+                deleteNodeInfos.addReportUuid(reportUuid);
+            }
+
             String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id, false);
             if (!StringUtils.isBlank(variantId)) {
                 deleteNodeInfos.addVariantId(variantId);
@@ -219,13 +227,14 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NodeEntity createRoot(StudyEntity study) {
+    public NodeEntity createRoot(StudyEntity study, UUID importReportUuid) {
         NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study));
         var root = RootNode.builder()
             .studyId(study.getId())
             .id(node.getIdNode())
             .name("Root")
             .readOnly(true)
+            .reportUuid(importReportUuid)
             .build();
         repositories.get(node.getType()).createNodeInfo(root);
         return node;
@@ -310,16 +319,16 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<UUID> getAllModificationGroupUuids(UUID studyUuid) {
-        List<UUID> uuids = new ArrayList<>();
+    public List<NodeModificationInfos> getAllNodesModificationInfos(UUID studyUuid) {
+        List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            UUID modificationUuid = repositories.get(n.getType()).getModificationGroupUuid(n.getIdNode(), false);
-            if (modificationUuid != null) {
-                uuids.add(modificationUuid);
+            NodeModificationInfos nodeModificationInfos = repositories.get(n.getType()).getNodeModificationInfos(n.getIdNode(), false);
+            if (nodeModificationInfos != null) {
+                nodesModificationInfos.add(nodeModificationInfos);
             }
         });
-        return uuids;
+        return nodesModificationInfos;
     }
 
     @Transactional(readOnly = true)
@@ -410,7 +419,7 @@ public class NetworkModificationTreeService {
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
-                buildInfos.insertModificationGroup(modificationNode.getNetworkModification());
+                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), self.doGetReportUuid(nodeEntity.getIdNode(), true));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
@@ -558,5 +567,56 @@ public class NetworkModificationTreeService {
 
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
         emitNodesChanged(studyUuid, List.of(nodeUuid));
+    }
+
+    @Transactional
+    public UUID doGetReportUuid(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuid(nodeUuid, generateId)).orElse(null);
+    }
+
+    public UUID getReportUuid(UUID nodeUuid) {
+        UUID reportUuid = self.doGetReportUuid(nodeUuid, true);
+        if (reportUuid == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+        return reportUuid;
+    }
+
+    private void getParentReportUuidsAndNamesFromNode(NodeEntity nodeEntity, boolean nodeOnlyReport, List<Pair<UUID, String>> res) {
+        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
+        res.add(0, Pair.of(self.doGetReportUuid(nodeEntity.getIdNode(), true), node.getName()));
+        if (node.getType() == NodeType.NETWORK_MODIFICATION && !nodeOnlyReport) {
+            getParentReportUuidsAndNamesFromNode(nodeEntity.getParentNode(), false, res);
+        }
+    }
+
+    @Transactional
+    public List<Pair<UUID, String>> getParentReportUuidsAndNamesFromNode(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<Pair<UUID, String>> uuidsAndNames = new ArrayList<>();
+        nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> getParentReportUuidsAndNamesFromNode(entity, nodeOnlyReport, uuidsAndNames), () -> {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        });
+        return uuidsAndNames;
+    }
+
+    public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<Pair<UUID, String>> uuidsAndNames = self.getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
+        if (uuidsAndNames == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+        return uuidsAndNames;
+    }
+
+    @Transactional
+    public NodeModificationInfos doGetNodeModificationInfos(UUID nodeUuid, boolean generateId) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid, generateId)).orElse(null);
+    }
+
+    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
+        NodeModificationInfos nodeModificationInfos = self.doGetNodeModificationInfos(nodeUuid, true);
+        if (nodeModificationInfos == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+        return nodeModificationInfos;
     }
 }

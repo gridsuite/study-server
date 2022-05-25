@@ -39,3 +39,7 @@ databaseChangeLog:
   - include:
       file: changesets/changelog_2022-04-19T14:03:49Z.xml
       relativeToChangelogFile: true
+
+  - include:
+      file: changesets/changelog_2022-04-27T12:47:17Z.xml
+      relativeToChangelogFile: true

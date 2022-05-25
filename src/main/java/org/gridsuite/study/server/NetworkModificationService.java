@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
+import static org.gridsuite.study.server.StudyConstants.REPORT_UUID;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 
@@ -115,16 +116,17 @@ public class NetworkModificationService {
         }
     }
 
-    List<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid,
-            String variantId) {
+    List<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
         List<EquipmentModificationInfos> result;
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
-                .queryParam(GROUP, groupUuid).queryParam("open", open);
+            .fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
+            .queryParam(GROUP, groupUuid)
+            .queryParam(REPORT_UUID, reportUuid)
+            .queryParam("open", open);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -146,14 +148,14 @@ public class NetworkModificationService {
         return result;
     }
 
-    public List<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid,
-            String variantId) {
+    public List<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
-                .queryParam(GROUP, groupUuid);
+            .queryParam(GROUP, groupUuid)
+            .queryParam(REPORT_UUID, reportUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -168,13 +170,13 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
-    List<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid,
-            String variantId) {
+    List<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId, UUID reportUuid) {
         List<ModificationInfos> result;
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
-                .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -211,7 +213,7 @@ public class NetworkModificationService {
     }
 
     public List<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes,
-            UUID groupUuid, ModificationType modificationType, String variantId) {
+            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
         List<EquipmentModificationInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createEquipmentAttributes);
@@ -220,7 +222,8 @@ public class NetworkModificationService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -245,7 +248,7 @@ public class NetworkModificationService {
     }
 
     public List<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
-            UUID groupUuid, ModificationType modificationType, String variantId) {
+            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
         List<EquipmentModificationInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(modifyEquipmentAttributes);
@@ -254,13 +257,14 @@ public class NetworkModificationService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var path = uriComponentsBuilder
-            .buildAndExpand()
-            .toUriString();
+                .buildAndExpand()
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -285,8 +289,8 @@ public class NetworkModificationService {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid
                 + DELIMITER + ModificationType.getUriFromType(modificationType) + "-creation");
         var path = uriComponentsBuilder
-            .buildAndExpand()
-            .toUriString();
+                .buildAndExpand()
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -304,7 +308,7 @@ public class NetworkModificationService {
     public void updateEquipmentModification(String modifyEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
         Objects.requireNonNull(modifyEquipmentAttributes);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-modification");
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType));
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
@@ -316,7 +320,7 @@ public class NetworkModificationService {
         }
     }
 
-    public List<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId) {
+    public List<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId, UUID reportUuid) {
         List<EquipmentDeletionInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);
@@ -325,7 +329,8 @@ public class NetworkModificationService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER
                 + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
-                .queryParam(GROUP, groupUuid);
+                .queryParam(GROUP, groupUuid)
+                .queryParam(REPORT_UUID, reportUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -349,7 +354,7 @@ public class NetworkModificationService {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
-                    StandardCharsets.UTF_8);
+                StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -404,7 +409,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(modificationUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH
                 + DELIMITER + MODIFICATIONS_PATH + DELIMITER + "move")
-                .queryParam("modificationsToMove", modificationUuid);
+            .queryParam("modificationsToMove", modificationUuid);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
@@ -418,5 +423,61 @@ public class NetworkModificationService {
                 throw e;
             }
         }
+    }
+
+    public List<EquipmentModificationInfos> updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
+        ModificationType modificationType, UUID modificationUuid) {
+        List<EquipmentModificationInfos> result = null;
+        UriComponentsBuilder uriComponentsBuilder;
+        uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
+            modificationType));
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+        } catch (Exception e) {
+            throw e;
+        }
+
+        return result;
+    }
+
+    public List<EquipmentModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
+        UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+        List<EquipmentModificationInfos> result;
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
+                buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+            .queryParam(GROUP, groupUuid)
+            .queryParam(REPORT_UUID, reportUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+        }
+
+        return result;
     }
 }

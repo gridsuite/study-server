@@ -59,12 +59,12 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    public ReporterModel getReport(UUID networkUuid) {
+    public ReporterModel getReport(UUID reportUuid) {
         ReporterModel result = null;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         try {
-            result = restTemplate.exchange(this.getReportServerURI() + networkUuid, HttpMethod.GET, new HttpEntity<>(headers), ReporterModel.class).getBody();
+            result = restTemplate.exchange(this.getReportServerURI() + reportUuid, HttpMethod.GET, new HttpEntity<>(headers), ReporterModel.class).getBody();
         } catch (HttpClientErrorException e) {
             if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw e;
@@ -74,9 +74,9 @@ public class ReportService {
         return result;
     }
 
-    public void deleteReport(UUID networkUuid) {
+    public void deleteReport(UUID reportUuid) {
         try {
-            restTemplate.delete(this.getReportServerURI() + networkUuid);
+            restTemplate.delete(this.getReportServerURI() + reportUuid);
         } catch (HttpStatusCodeException e)   {
          // Ignore if 404 because report may not exist
             if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
