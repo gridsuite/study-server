@@ -1038,7 +1038,7 @@ public class StudyTest {
             .andExpect(status().isInternalServerError());
 
         modificationNode1.setBuildStatus(BuildStatus.BUILT);
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
@@ -1632,10 +1632,10 @@ public class StudyTest {
 
         // test build status on switch modification
         modificationNode1.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode1 as built
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT);
         modificationNode2.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode2 as built
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode2);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
         output.receive(TIMEOUT);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
@@ -2970,7 +2970,7 @@ public class StudyTest {
         assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
 
         modificationNode3.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode3 as built
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode3);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
         output.receive(TIMEOUT);
 
         buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
@@ -2980,13 +2980,13 @@ public class StudyTest {
         assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroupUuids());
 
         modificationNode2.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode2 as not built
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode2);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
         output.receive(TIMEOUT);
         modificationNode4.setBuildStatus(BuildStatus.BUILT_INVALID);  // mark node modificationNode4 as built invalid
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode4);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4);
         output.receive(TIMEOUT);
         modificationNode5.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode5 as built
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode5);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5);
         output.receive(TIMEOUT);
 
         // build modificationNode2 and stop build
@@ -2997,7 +2997,7 @@ public class StudyTest {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
 
         modificationNode3.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode3 as built
-        networkModificationTreeService.doUpdateNode(studyNameUserIdUuid, modificationNode3);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
         output.receive(TIMEOUT);
 
         // build modificationNode3 and stop build
@@ -3028,7 +3028,7 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         AtomicReference<AbstractNode> node = new AtomicReference<>();
-        node.set(networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()));
+        node.set(networkModificationTreeService.getSimpleNode(modificationNode1.getId()));
         NetworkModificationNode modificationNode = (NetworkModificationNode) node.get();
         assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
 
@@ -3039,7 +3039,7 @@ public class StudyTest {
                         studyUuid, modificationNode1.getId(), modificationUuid))
             .andExpect(status().isOk());
 
-        node.set(networkModificationTreeService.getSimpleNode(studyUuid, modificationNode1.getId()));
+        node.set(networkModificationTreeService.getSimpleNode(modificationNode1.getId()));
         modificationNode = (NetworkModificationNode) node.get();
         assertTrue(modificationNode.getModificationsToExclude().isEmpty());
 

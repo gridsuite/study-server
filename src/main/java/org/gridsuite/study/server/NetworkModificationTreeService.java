@@ -80,9 +80,6 @@ public class NetworkModificationTreeService {
     @Autowired
     private StreamBridge treeUpdatePublisher;
 
-    @Autowired
-    private NetworkModificationTreeService self;
-
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         treeUpdatePublisher.send("publishStudyUpdate-out-0", message);
@@ -131,7 +128,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public AbstractNode doCreateNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
         Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
             if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
@@ -152,10 +149,6 @@ public class NetworkModificationTreeService {
             emitNodeInserted(getStudyUuidForNodeId(nodeId), parent.getIdNode(), node.getIdNode(), insertMode);
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-    }
-
-    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
-        return self.doCreateNode(studyUuid, nodeId, nodeInfo, insertMode);
     }
 
     @Transactional
@@ -241,7 +234,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public RootNode doGetStudyTree(UUID studyId) {
+    public RootNode getStudyTree(UUID studyId) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
         if (nodes.isEmpty()) {
             throw new StudyException(ELEMENT_NOT_FOUND);
@@ -260,28 +253,16 @@ public class NetworkModificationTreeService {
         return root;
     }
 
-    public RootNode getStudyTree(UUID studyId) {
-        return self.doGetStudyTree(studyId);
-    }
-
-    public void updateNode(UUID studyUuid, AbstractNode node) {
-        self.doUpdateNode(studyUuid, node);
-    }
-
     @Transactional
     // TODO test if studyUuid exist and have the node
-    public void doUpdateNode(UUID studyUuid, AbstractNode node) {
+    public void updateNode(UUID studyUuid, AbstractNode node) {
         repositories.get(node.getType()).updateNode(node);
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
 
     // TODO test if studyUuid exist and have a node <nodeId>
-    public AbstractNode getSimpleNode(UUID studyUuid, UUID nodeId) {
-        return self.doGetSimpleNode(nodeId);
-    }
-
     @Transactional
-    public AbstractNode doGetSimpleNode(UUID nodeId) {
+    public AbstractNode getSimpleNode(UUID nodeId) {
         AbstractNode node = nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
         return node;
@@ -297,7 +278,7 @@ public class NetworkModificationTreeService {
     }
 
     public String getVariantId(UUID nodeUuid) {
-        String variantId = self.doGetVariantId(nodeUuid, true);
+        String variantId = doGetVariantId(nodeUuid, true);
         if (variantId == null) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
@@ -311,7 +292,7 @@ public class NetworkModificationTreeService {
     }
 
     public UUID getModificationGroupUuid(UUID nodeUuid) {
-        UUID modificationGroupUuid = self.doGetModificationGroupUuid(nodeUuid, true);
+        UUID modificationGroupUuid = doGetModificationGroupUuid(nodeUuid, true);
         if (modificationGroupUuid == null) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
@@ -338,44 +319,28 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void doUpdateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
+    public void updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus));
         if (updateChildren) {
             nodesRepository.findAllByParentNodeIdNode(nodeUuid)
-                .forEach(child -> doUpdateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
+                .forEach(child -> updateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
         }
     }
 
-    public void updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
-        self.doUpdateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren);
-    }
-
     @Transactional
-    public void doUpdateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
+    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowStatus(nodeUuid, loadFlowStatus));
     }
 
-    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        self.doUpdateLoadFlowStatus(nodeUuid, loadFlowStatus);
-    }
-
     @Transactional
-    public void doUpdateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+    public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
     }
 
-    public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        self.doUpdateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
-    }
-
     @Transactional
-    public void doUpdateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> doUpdateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
-    }
-
     public void updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
-        self.doUpdateStudyLoadFlowStatus(studyUuid, loadFlowStatus);
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> updateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
     }
 
     @Transactional(readOnly = true)
@@ -419,7 +384,7 @@ public class NetworkModificationTreeService {
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
-                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), self.doGetReportUuid(nodeEntity.getIdNode(), true));
+                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), doGetReportUuid(nodeEntity.getIdNode(), true));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
@@ -427,7 +392,7 @@ public class NetworkModificationTreeService {
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
                 getBuildInfos(nodeEntity.getParentNode(), buildInfos);
             } else {
-                buildInfos.setOriginVariantId(self.doGetVariantId(nodeEntity.getIdNode(), true));
+                buildInfos.setOriginVariantId(doGetVariantId(nodeEntity.getIdNode(), true));
             }
         }
     }
@@ -440,7 +405,7 @@ public class NetworkModificationTreeService {
             if (entity.getType() != NodeType.NETWORK_MODIFICATION) {  // nodeUuid must be a modification node
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
-                buildInfos.setDestinationVariantId(self.doGetVariantId(nodeUuid, true));
+                buildInfos.setDestinationVariantId(doGetVariantId(nodeUuid, true));
                 getBuildInfos(entity, buildInfos);
             }
         }, () -> {
@@ -462,7 +427,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void doUpdateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
@@ -473,17 +438,9 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        self.doUpdateBuildStatus(nodeUuid, buildStatus);
-    }
-
     @Transactional(readOnly = true)
-    public BuildStatus doGetBuildStatus(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
-    }
-
     public BuildStatus getBuildStatus(UUID nodeUuid) {
-        return self.doGetBuildStatus(nodeUuid);
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
     }
 
     @Transactional(readOnly = true)
@@ -501,7 +458,7 @@ public class NetworkModificationTreeService {
 
     // used only in tests
     public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
-        Optional<UUID> parentNodeUuidOpt = self.doGetParentNode(nodeUuid, nodeType);
+        Optional<UUID> parentNodeUuidOpt = doGetParentNode(nodeUuid, nodeType);
         if (parentNodeUuidOpt.isEmpty()) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
@@ -514,7 +471,7 @@ public class NetworkModificationTreeService {
         NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         if (nodeEntity.getType() == NodeType.ROOT) {
             return nodeEntity.getIdNode();
-        } else if (doGetBuildStatus(nodeEntity.getIdNode()) == BuildStatus.BUILT) {
+        } else if (getBuildStatus(nodeEntity.getIdNode()) == BuildStatus.BUILT) {
             return nodeEntity.getIdNode();
         } else {
             return doGetLastParentNodeBuilt(nodeEntity.getParentNode().getIdNode());
@@ -527,7 +484,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void doInvalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+    public void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
@@ -543,26 +500,14 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        self.doInvalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
-    }
-
     @Transactional
-    public void doHandleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
+    public void handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).handleExcludeModification(nodeUuid, modificationUUid, active));
     }
 
-    public void handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
-        self.doHandleExcludeModification(nodeUuid, modificationUUid, active);
-    }
-
     @Transactional
-    public void doRemoveModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
+    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationsToExclude(nodeUuid, modificationUUid));
-    }
-
-    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
-        self.doRemoveModificationsToExclude(nodeUuid, modificationUuid);
     }
 
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
@@ -575,7 +520,7 @@ public class NetworkModificationTreeService {
     }
 
     public UUID getReportUuid(UUID nodeUuid) {
-        UUID reportUuid = self.doGetReportUuid(nodeUuid, true);
+        UUID reportUuid = doGetReportUuid(nodeUuid, true);
         if (reportUuid == null) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
@@ -584,7 +529,7 @@ public class NetworkModificationTreeService {
 
     private void getParentReportUuidsAndNamesFromNode(NodeEntity nodeEntity, boolean nodeOnlyReport, List<Pair<UUID, String>> res) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
-        res.add(0, Pair.of(self.doGetReportUuid(nodeEntity.getIdNode(), true), node.getName()));
+        res.add(0, Pair.of(doGetReportUuid(nodeEntity.getIdNode(), true), node.getName()));
         if (node.getType() == NodeType.NETWORK_MODIFICATION && !nodeOnlyReport) {
             getParentReportUuidsAndNamesFromNode(nodeEntity.getParentNode(), false, res);
         }
@@ -600,7 +545,7 @@ public class NetworkModificationTreeService {
     }
 
     public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<Pair<UUID, String>> uuidsAndNames = self.getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
+        List<Pair<UUID, String>> uuidsAndNames = getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
         if (uuidsAndNames == null) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
@@ -613,7 +558,7 @@ public class NetworkModificationTreeService {
     }
 
     public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        NodeModificationInfos nodeModificationInfos = self.doGetNodeModificationInfos(nodeUuid, true);
+        NodeModificationInfos nodeModificationInfos = doGetNodeModificationInfos(nodeUuid, true);
         if (nodeModificationInfos == null) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }

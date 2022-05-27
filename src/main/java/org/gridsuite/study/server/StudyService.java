@@ -129,10 +129,6 @@ public class StudyService {
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
-    // Self injection for @transactional support in internal calls to other methods of this service
-    @Autowired
-    StudyService self;
-
     NetworkModificationTreeService networkModificationTreeService;
 
     StudyServerExecutionService studyServerExecutionService;
@@ -179,7 +175,7 @@ public class StudyService {
                     // update DB
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
                                 // send notifications
-                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                 } catch (JsonProcessingException e) {
@@ -275,56 +271,63 @@ public class StudyService {
     }
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> {
-            try {
-                UUID importReportUuid = UUID.randomUUID();
-                String caseFormat = getCaseFormat(caseUuid);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-
-                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                        caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            } finally {
-                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-            }
+            createStudyAsync(caseUuid, userId, basicStudyInfos);
         });
         return basicStudyInfos;
     }
 
-    public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
+    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
+        try {
+            UUID importReportUuid = UUID.randomUUID();
+            String caseFormat = getCaseFormat(caseUuid);
+            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
 
+            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+            insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
+                    caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        } finally {
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+    }
+
+    public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
 
         studyServerExecutionService.runAsync(() -> {
-            try {
-                UUID importReportUuid = UUID.randomUUID();
-                UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
-                if (caseUuid != null) {
-                    String caseFormat = getCaseFormat(caseUuid);
-                    NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-
-                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
-                            networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
-                }
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            } finally {
-                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-            }
+            createStudyAsync(caseFile, userId, basicStudyInfos);
         });
         return basicStudyInfos;
+    }
+
+    private void createStudyAsync(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        try {
+            UUID importReportUuid = UUID.randomUUID();
+            UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
+            if (caseUuid != null) {
+                String caseFormat = getCaseFormat(caseUuid);
+                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+
+                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
+                        networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            }
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        } finally {
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
     }
 
     public StudyInfos getStudyInfos(UUID studyUuid) {
@@ -336,12 +339,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public StudyEntity doGetStudy(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElse(null);
-    }
-
     public StudyEntity getStudy(UUID studyUuid) {
-        return self.doGetStudy(studyUuid);
+        return studyRepository.findById(studyUuid).orElse(null);
     }
 
     List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -469,7 +468,7 @@ public class StudyService {
     public void deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         try {
-            Optional<DeleteStudyInfos> deleteStudyInfosOpt = self.doDeleteStudyIfNotCreationInProgress(studyUuid,
+            Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid,
                     userId);
             if (deleteStudyInfosOpt.isPresent()) {
                 DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
@@ -565,7 +564,6 @@ public class StudyService {
                 throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
                         "case-server");
             }
-            //TODO: vérifier que publishOn ne servait pas ici
             //Voir si on doit throw l'exception IOException
         } catch (Exception e) {
             if (!(e instanceof StudyException)) {
@@ -1183,14 +1181,10 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public LoadFlowParameters doGetLoadFlowParameters(UUID studyUuid) {
+    public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
             .orElse(null);
-    }
-
-    public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
-        return self.doGetLoadFlowParameters(studyUuid);
     }
 
     void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
@@ -1206,14 +1200,10 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public String doGetLoadFlowProvider(UUID studyUuid) {
+    public String getLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(StudyEntity::getLoadFlowProvider)
             .orElse("");
-    }
-
-    public String getLoadFlowProvider(UUID studyUuid) {
-        return self.doGetLoadFlowProvider(studyUuid);
     }
 
     @Transactional
@@ -1223,7 +1213,7 @@ public class StudyService {
     }
 
     public void updateLoadFlowProvider(UUID studyUuid, String provider) {
-        self.doUpdateLoadFlowProvider(studyUuid, provider);
+        doUpdateLoadFlowProvider(studyUuid, provider);
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
         emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS);
     }
@@ -1497,7 +1487,7 @@ public class StudyService {
                     // delete security analysis result in database
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
                     // send notification for stopped computation
-                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
 
                 } catch (JsonProcessingException e) {
@@ -1559,12 +1549,8 @@ public class StudyService {
                 updateChildren);
     }
 
-    private void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
-        self.doUpdateLoadFlowParameters(studyUuid, loadFlowParametersEntity);
-    }
-
     @Transactional
-    public void doUpdateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
+    public void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowParameters(loadFlowParametersEntity));
     }
@@ -1754,7 +1740,7 @@ public class StudyService {
 
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
 
-                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -1778,7 +1764,7 @@ public class StudyService {
 
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
                     // send notification
-                    UUID studyUuid = self.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -1810,7 +1796,7 @@ public class StudyService {
 
     public void changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid,
             @NonNull UUID modificationUuid, boolean active) {
-        if (!self.getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active);
@@ -1849,26 +1835,14 @@ public class StudyService {
     public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
-        DeleteNodeInfos deleteNodeInfos = self.doDeleteNode(studyUuid, nodeId, deleteChildren);
+        DeleteNodeInfos deleteNodeInfos = doDeleteNode(studyUuid, nodeId, deleteChildren);
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
+            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult)),
             studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
         );
-
-/* TODO: to include
- Mono.when(// in parallel
-                    // delete modifications
-                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getModificationGroupUuids())).flatMap(networkModificationService::deleteModifications),
-                    // delete reports
-                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getReportUuids())).flatMap(reportService::deleteReport),
-                    // delete security analysis result
-                    deleteNodeInfosMono.flatMapMany(infos -> Flux.fromIterable(infos.getSecurityAnalysisResultUuids())).flatMap(this::deleteSaResult),
-                    // delete network variant
-                    deleteNodeInfosMono.flatMap(infos -> networkStoreService.deleteVariants(infos.getNetworkUuid(), infos.getVariantIds()))
-                )
-*/
 
         try {
             executeInParallel.get();
