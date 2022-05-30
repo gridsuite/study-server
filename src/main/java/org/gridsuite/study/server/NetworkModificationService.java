@@ -200,7 +200,7 @@ public class NetworkModificationService {
     private StudyException handleChangeError(String responseBody, StudyException.Type type) {
         String message = null;
         try {
-            JsonNode node = new ObjectMapper().readTree(responseBody).path("message");
+            JsonNode node = objectMapper.readTree(responseBody).path("message");
             if (!node.isMissingNode()) {
                 message = node.asText();
             }
@@ -444,8 +444,6 @@ public class NetworkModificationService {
             result = restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
-        } catch (Exception e) {
-            throw e;
         }
 
         return result;

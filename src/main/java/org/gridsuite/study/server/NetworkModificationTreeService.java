@@ -288,15 +288,11 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public UUID doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElse(null);
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     public UUID getModificationGroupUuid(UUID nodeUuid) {
-        UUID modificationGroupUuid = doGetModificationGroupUuid(nodeUuid, true);
-        if (modificationGroupUuid == null) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
-        return modificationGroupUuid;
+        return doGetModificationGroupUuid(nodeUuid, true);
     }
 
     @Transactional(readOnly = true)
@@ -375,8 +371,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid));
+    public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {

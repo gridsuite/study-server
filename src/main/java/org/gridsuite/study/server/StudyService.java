@@ -54,7 +54,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
@@ -332,15 +331,13 @@ public class StudyService {
 
     public StudyInfos getStudyInfos(UUID studyUuid) {
         StudyEntity study = getStudy(studyUuid);
-        if (study == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+
         return StudyService.toStudyInfos(study);
     }
 
     @Transactional(readOnly = true)
     public StudyEntity getStudy(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElse(null);
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
     }
 
     List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -450,7 +447,7 @@ public class StudyService {
         UUID networkUuid = null;
         List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         if (studyCreationRequestEntity.isEmpty()) {
-            networkUuid = networkStoreService.doGetNetworkUuid(studyUuid).orElse(null);
+            networkUuid = networkStoreService.doGetNetworkUuid(studyUuid);
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyRepository.findById(studyUuid).ifPresent(s -> {
                 networkModificationTreeService.doDeleteTree(studyUuid);
@@ -565,10 +562,11 @@ public class StudyService {
                         "case-server");
             }
             //Voir si on doit throw l'exception IOException
+        } catch (StudyException e) {
+            throw e;
         } catch (Exception e) {
-            if (!(e instanceof StudyException)) {
-                emitStudyCreationError(studyUuid, userId, e.getMessage());
-            }
+            emitStudyCreationError(studyUuid, userId, e.getMessage());
+            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
 
         return caseUuid;
@@ -1052,23 +1050,17 @@ public class StudyService {
     }
 
     public void assertLoadFlowRunnable(UUID nodeUuid) {
-        Optional<LoadFlowStatus> lfStatus = getLoadFlowStatus(nodeUuid);
-        if (lfStatus.isEmpty()) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
+        LoadFlowStatus lfStatus = getLoadFlowStatus(nodeUuid);
 
-        if (!LoadFlowStatus.NOT_DONE.equals(lfStatus.get())) {
+        if (!LoadFlowStatus.NOT_DONE.equals(lfStatus)) {
             throw new StudyException(LOADFLOW_NOT_RUNNABLE);
         }
     }
 
     private void assertLoadFlowNotRunning(UUID nodeUuid) {
-        Optional<LoadFlowStatus> lfStatus = getLoadFlowStatus(nodeUuid);
-        if (lfStatus.isEmpty()) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
+        LoadFlowStatus lfStatus = getLoadFlowStatus(nodeUuid);
 
-        if (LoadFlowStatus.RUNNING.equals(lfStatus.get())) {
+        if (LoadFlowStatus.RUNNING.equals(lfStatus)) {
             throw new StudyException(LOADFLOW_RUNNING);
         }
     }
@@ -1686,8 +1678,8 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuid, voltageLevelId, "busbar-sections");
     }
 
-    public Optional<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
-        return networkModificationTreeService.getLoadFlowStatus(nodeUuid);
+    public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid) {
+        return networkModificationTreeService.getLoadFlowStatus(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
@@ -1703,12 +1695,9 @@ public class StudyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        Optional<LoadFlowInfos> lfInfos = networkModificationTreeService.getLoadFlowInfos(nodeUuid);
+        LoadFlowInfos lfInfos = networkModificationTreeService.getLoadFlowInfos(nodeUuid);
 
-        if (lfInfos.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        return lfInfos.get();
+        return lfInfos;
     }
 
     private BuildInfos getBuildInfos(UUID nodeUuid) {
@@ -1746,7 +1735,6 @@ public class StudyService {
                     LOGGER.error(e.toString());
                 }
             }
-            return;
         };
     }
 
@@ -1770,7 +1758,6 @@ public class StudyService {
                     LOGGER.error(e.toString());
                 }
             }
-            return;
         };
     }
 
@@ -1827,7 +1814,7 @@ public class StudyService {
     @Transactional
     public DeleteNodeInfos doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
-        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid).orElse(null));
+        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
         networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
         return deleteNodeInfos;
     }

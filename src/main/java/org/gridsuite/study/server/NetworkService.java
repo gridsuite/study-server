@@ -46,15 +46,15 @@ public class NetworkService {
     }
 
     UUID getNetworkUuid(UUID studyUuid) {
-        UUID networkUuid = doGetNetworkUuid(studyUuid).orElse(null);
+        UUID networkUuid = doGetNetworkUuid(studyUuid);
         if (networkUuid == null) {
             throw new StudyException(STUDY_NOT_FOUND);
         }
         return networkUuid;
     }
 
-    Optional<UUID> doGetNetworkUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid);
+    UUID doGetNetworkUuid(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid).orElse(null);
     }
 
     void deleteNetwork(UUID networkUuid) {
