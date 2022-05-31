@@ -286,6 +286,11 @@ public class StudyService {
             String caseFormat = getCaseFormat(caseUuid);
             NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
 
+            if (networkInfos == null) {
+                emitStudyCreationError(basicStudyInfos.getId(), userId, STUDY_CREATION_FAILED.name());
+                throw new StudyException(STUDY_CREATION_FAILED);
+            }
+
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
                     caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
@@ -316,6 +321,11 @@ public class StudyService {
             if (caseUuid != null) {
                 String caseFormat = getCaseFormat(caseUuid);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+
+                if (networkInfos == null) {
+                    emitStudyCreationError(basicStudyInfos.getId(), userId, STUDY_CREATION_FAILED.name());
+                    throw new StudyException(STUDY_CREATION_FAILED);
+                }
 
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                 insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
