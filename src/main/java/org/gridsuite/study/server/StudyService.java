@@ -16,6 +16,7 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
+import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -336,11 +337,14 @@ public class StudyService {
         }
         RootNode rootNode = networkModificationTreeService.doGetStudyTree(sourceStudyUuid);
 
+        List<VariantInfos> networkVariants = networkStoreService.doGetNetworkVariants(sourceStudy.getNetworkUuid());
+        List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
+
         return insertStudyCreationRequest(userId, studyUuid)
                 .doOnSubscribe(x -> startTime.set(System.nanoTime()))
                 .map(StudyService::toBasicStudyInfos)
                 .doOnSuccess(newStudyCreationRequest -> {
-                            networkStoreService.createNetwork(newNetworkUuid, sourceStudy.getNetworkUuid(), 2).doOnSuccess(unused -> {
+                            networkStoreService.createNetwork(newNetworkUuid, sourceStudy.getNetworkUuid(), targetVariantIds).doOnSuccess(unused -> {
                                 LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
                                 insertStudy(studyUuid, userId, newNetworkUuid, sourceStudy.getNetworkId(),
                                         sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters), reportUuid).doOnSuccess(s -> {

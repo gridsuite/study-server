@@ -10,6 +10,7 @@ import com.powsybl.commons.PowsyblException;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.model.VariantInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -18,10 +19,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
@@ -82,8 +81,12 @@ public class NetworkService {
         return Mono.empty();
     }
 
-    Mono<Void> createNetwork(UUID networkId, UUID sourceNetworkId, int targetVariantNum) {
-        networkStoreService.createNetwork(networkId, sourceNetworkId, targetVariantNum);
+    Mono<Void> createNetwork(UUID networkId, UUID sourceNetworkId, List<String> targetVariantIds) {
+        networkStoreService.createNetwork(networkId, sourceNetworkId, targetVariantIds);
         return Mono.empty();
+    }
+
+    List<VariantInfos> doGetNetworkVariants(UUID networkUuid) {
+        return networkStoreService.getVariantsInfos(networkUuid).stream().sorted(Comparator.comparing(VariantInfos::getNum)).collect(Collectors.toList());
     }
 }
