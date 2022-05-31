@@ -55,6 +55,8 @@ public class RestResponseEntityExceptionHandler {
                 case NETWORK_INDEXATION_FAILED:
                 case NODE_NOT_BUILT:
                 case DELETE_EQUIPMENT_FAILED:
+                case DELETE_NODE_FAILED:
+                case DELETE_STUDY_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case BAD_NODE_TYPE:
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());

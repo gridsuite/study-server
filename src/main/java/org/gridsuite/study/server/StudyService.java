@@ -488,6 +488,7 @@ public class StudyService {
                 Thread.currentThread().interrupt();
             }
             LOGGER.error(e.toString(), e);
+            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
         }
     }
 
@@ -1838,6 +1839,7 @@ public class StudyService {
                 Thread.currentThread().interrupt();
             }
             LOGGER.error(e.toString(), e);
+            throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
         }
 
         if (startTime.get() != null) {
