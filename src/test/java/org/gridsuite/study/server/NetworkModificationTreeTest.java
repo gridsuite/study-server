@@ -10,6 +10,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
@@ -51,15 +52,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.config.EnableWebFlux;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -81,15 +83,23 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient
-@EnableWebFlux
+@AutoConfigureMockMvc
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class NetworkModificationTreeTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeTest.class);
+
+    @Autowired
+    private MockMvc mockMvc;
 
     private static final long TIMEOUT = 1000;
     @Autowired
@@ -97,9 +107,6 @@ public class NetworkModificationTreeTest {
 
     @Autowired
     private NodeRepository nodeRepository;
-
-    @Autowired
-    private WebTestClient webTestClient;
 
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
@@ -113,7 +120,10 @@ public class NetworkModificationTreeTest {
     @Autowired
     private OutputDestination output;
 
-    ObjectMapper objectMapper = WebFluxConfig.createObjectMapper();
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private ObjectWriter objectWriter;
 
     private LoadFlowResult loadFlowResult;
     private LoadFlowResult loadFlowResult2;
@@ -147,10 +157,11 @@ public class NetworkModificationTreeTest {
     public void setUp() throws IOException {
         Configuration.defaultConfiguration();
         MockitoAnnotations.initMocks(this);
-        final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
         objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
+
+        objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         given(networkStoreService.getNetwork(NETWORK_UUID)).willReturn(network);
         given(network.getVariantManager()).willReturn(variantManager);
@@ -254,9 +265,8 @@ public class NetworkModificationTreeTest {
         assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
     }
 
-    @SneakyThrows
     @Test
-    public void testGetRoot() {
+    public void testGetRoot() throws Exception {
         StudyEntity study = insertDummyStudy();
         RootNode root = getRootNode(study.getId());
 
@@ -264,33 +274,33 @@ public class NetworkModificationTreeTest {
         assertEquals(study.getId(), root.getStudyId());
         assertEquals(0, root.getChildren().size());
 
-        webTestClient.get().uri("/v1/studies/{studyUuid}/tree", UUID.randomUUID())
-            .exchange()
-            .expectStatus().isNotFound();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/tree", UUID.randomUUID()))
+            .andExpect(status().isNotFound());
 
-        webTestClient.get().uri("/v1/studies/{studyUuid}/tree", study.getId())
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/tree", study.getId()))
+            .andExpect(status().isOk());
 
-        webTestClient.delete().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", study.getId(), root.getId(), false)
-            .exchange()
-            .expectStatus().is4xxClientError();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", study.getId(), root.getId(), false))
+            .andExpect(status().is4xxClientError());
     }
 
-    private AbstractNode getNode(UUID studyUuid, UUID idNode) throws IOException {
-        return objectMapper.readValue(webTestClient.get().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, idNode)
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody().returnResult().getResponseBody(), new TypeReference<>() { }
+    private AbstractNode getNode(UUID studyUuid, UUID idNode) throws Exception {
+
+        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, idNode))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(), new TypeReference<>() { }
         );
     }
 
-    private RootNode getRootNode(UUID study) throws IOException {
-        return objectMapper.readValue(webTestClient.get().uri("/v1/studies/{uuid}/tree", study)
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody().returnResult().getResponseBody(), new TypeReference<>() {
-            });
+    private RootNode getRootNode(UUID study) throws Exception {
+
+        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{uuid}/tree", study))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString(), new TypeReference<>() { });
     }
 
     @Test
@@ -393,16 +403,17 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.doDeleteTree(root.getStudyId());
         assertEquals(0, nodeRepository.findAll().size());
 
-        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID()).bodyValue(node1)
-            .exchange()
-            .expectStatus().isNotFound();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(node1)))
+            .andExpect(status().isNotFound());
 
     }
 
-    private void deleteNode(UUID studyUuid, AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion) {
-        webTestClient.delete().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren)
-            .exchange()
-            .expectStatus().isOk();
+    private void deleteNode(UUID studyUuid, AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion) throws Exception {
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren))
+            .andExpect(status().isOk());
+
         var mess = output.receive(TIMEOUT);
         if (expectedDeletion != null) {
             Collection<UUID> deletedId = (Collection<UUID>) mess.getHeaders().get(NetworkModificationTreeService.HEADER_NODES);
@@ -428,9 +439,10 @@ public class NetworkModificationTreeTest {
         RootNode root = createRoot();
         final NetworkModificationNode networkModification = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.BUILT_INVALID);
         /* trying to insert before root */
-        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?mode=BEFORE", root.getStudyId(), root.getId()).bodyValue(networkModification)
-            .exchange()
-            .expectStatus().is4xxClientError();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode=BEFORE", root.getStudyId(), root.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(networkModification)))
+            .andExpect(status().is4xxClientError());
 
         createNode(root.getStudyId(), root, networkModification);
         createNode(root.getStudyId(), root, networkModification);
@@ -453,9 +465,10 @@ public class NetworkModificationTreeTest {
         AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
 
-        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID()).bodyValue(networkModification)
-            .exchange()
-            .expectStatus().isNotFound();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(networkModification)))
+            .andExpect(status().isNotFound());
     }
 
     @Test
@@ -473,11 +486,11 @@ public class NetworkModificationTreeTest {
         var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
         assertEquals(originalChildren, grandChildren);
 
-        networkModificationTreeService.getVariantId(node1.getId()).subscribe(variantId -> assertEquals(VARIANT_ID, variantId));
+        assertEquals(VARIANT_ID, networkModificationTreeService.getVariantId(node1.getId()));
 
         assertEquals(0, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getModificationGroupUuid).filter(m -> m != null).collect(Collectors.toList()).size());
         AtomicReference<UUID> modificationGroupUuid = new AtomicReference<>();
-        networkModificationTreeService.getModificationGroupUuid(node1.getId()).subscribe(modificationGroupUuid::set);
+        modificationGroupUuid.set(networkModificationTreeService.getModificationGroupUuid(node1.getId()));
         assertNotNull(modificationGroupUuid.get());
         assertEquals(1, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getModificationGroupUuid).filter(m -> m != null).collect(Collectors.toList()).size());
 
@@ -487,7 +500,7 @@ public class NetworkModificationTreeTest {
 
         assertEquals(0, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getReportUuid).filter(m -> m != null).collect(Collectors.toList()).size());
         AtomicReference<UUID> reportUuid = new AtomicReference<>();
-        networkModificationTreeService.getReportUuid(node1.getId()).subscribe(reportUuid::set);
+        reportUuid.set(networkModificationTreeService.getReportUuid(node1.getId()));
         assertNotNull(reportUuid.get());
         assertEquals(1, networkModificationTreeService.getAllNodesModificationInfos(root.getStudyId()).stream().map(NodeModificationInfos::getReportUuid).filter(m -> m != null).collect(Collectors.toList()).size());
     }
@@ -501,9 +514,10 @@ public class NetworkModificationTreeTest {
         node1.setNetworkModification(UUID.randomUUID());
         root = getRootNode(root.getStudyId());
         node1.setId(root.getChildren().get(0).getId());
-        webTestClient.put().uri("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId()).bodyValue(node1)
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(node1)))
+            .andExpect(status().isOk());
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().size());
         assertNodeEquals(node1, root.getChildren().get(0));
@@ -521,9 +535,10 @@ public class NetworkModificationTreeTest {
         var justeANameUpdate = NetworkModificationNode.builder()
             .name("My taylor is rich!").id(node1.getId()).build();
 
-        webTestClient.put().uri("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId()).bodyValue(justeANameUpdate)
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(justeANameUpdate)))
+            .andExpect(status().isOk());
         output.receive(TIMEOUT).getHeaders();
 
         var newNode = getNode(root.getStudyId(), node1.getId());
@@ -531,10 +546,10 @@ public class NetworkModificationTreeTest {
         assertNodeEquals(node1, newNode);
 
         node1.setId(UUID.randomUUID());
-        webTestClient.put().uri("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId()).bodyValue(node1)
-            .exchange()
-            .expectStatus().isNotFound();
-
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(node1)))
+            .andExpect(status().isNotFound());
     }
 
     @SneakyThrows
@@ -550,7 +565,7 @@ public class NetworkModificationTreeTest {
     }
 
     @Test
-    public void testGetParentNode() {
+    public void testGetParentNode() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.BUILT_INVALID);
         final NetworkModificationNode node2 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.BUILT_INVALID);
@@ -566,13 +581,13 @@ public class NetworkModificationTreeTest {
         createNode(root.getStudyId(), node4, node5);
         createNode(root.getStudyId(), node5, node6);
 
-        networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION).subscribe(node -> assertEquals(node5.getId(), node));
-        networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION).subscribe(node -> assertEquals(node3.getId(), node));
-        networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT).subscribe(node -> assertEquals(root.getId(), node));
+        assertEquals(node5.getId(), networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(node3.getId(), networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
+        assertEquals(root.getId(), networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT));
     }
 
     @Test
-    public void testGetLastParentNodeBuilt() {
+    public void testGetLastParentNodeBuilt() throws Exception {
         RootNode root = createRoot();
         final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.BUILT_INVALID);
         final NetworkModificationNode node2 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.BUILT_INVALID);
@@ -600,22 +615,25 @@ public class NetworkModificationTreeTest {
         assertEquals(node7.getId(), networkModificationTreeService.doGetLastParentNodeBuilt(node3.getId()));
     }
 
-    private void createNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode) {
+    private void createNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode) throws Exception {
         newNode.setId(null);
-        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId()).bodyValue(newNode)
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(newNode)))
+            .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
     }
 
-    private void insertNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode, InsertMode mode, AbstractNode newParentNode) {
+    private void insertNode(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode, InsertMode mode, AbstractNode newParentNode) throws Exception {
         newNode.setId(null);
-        webTestClient.post().uri("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={mode}", studyUuid, parentNode.getId(), mode).bodyValue(newNode)
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={mode}", studyUuid, parentNode.getId(), mode)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(newNode)))
+            .andExpect(status().isOk());
+
         var mess = output.receive(TIMEOUT);
         assertEquals(NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(newParentNode.getId(), mess.getHeaders().get(HEADER_PARENT_NODE));
@@ -634,7 +652,7 @@ public class NetworkModificationTreeTest {
     private RootNode createRoot() {
         var study = insertDummyStudy();
         AtomicReference<RootNode> result = new AtomicReference<>();
-        networkModificationTreeService.getStudyTree(study.getId()).subscribe(result::set);
+        result.set(networkModificationTreeService.getStudyTree(study.getId()));
         return result.get();
     }
 

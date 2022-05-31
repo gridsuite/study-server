@@ -55,6 +55,8 @@ public class RestResponseEntityExceptionHandler {
                 case NETWORK_INDEXATION_FAILED:
                 case NODE_NOT_BUILT:
                 case DELETE_EQUIPMENT_FAILED:
+                case DELETE_NODE_FAILED:
+                case DELETE_STUDY_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case BAD_NODE_TYPE:
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());
@@ -67,6 +69,8 @@ public class RestResponseEntityExceptionHandler {
                 cause = cause.getCause();
                 return ResponseEntity.status(serverWebInputException.getStatus()).body(cause.getMessage());
             }
+        } else if (exception instanceof TypeMismatchException) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getCause().getMessage());
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }

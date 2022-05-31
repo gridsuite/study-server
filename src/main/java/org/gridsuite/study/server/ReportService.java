@@ -13,10 +13,15 @@ import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
 
@@ -32,14 +37,14 @@ public class ReportService {
 
     private String reportServerBaseUri;
 
-    private final WebClient webClient;
+    @Autowired
+    private RestTemplate restTemplate;
 
     @Autowired
-    public ReportService(WebClient.Builder webClientBuilder,
+    public ReportService(
                          ObjectMapper objectMapper,
                          @Value("${backing-services.report-server.base-uri:http://report-server/}") String reportServerBaseUri) {
         this.reportServerBaseUri = reportServerBaseUri;
-        this.webClient = webClientBuilder.build();
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side
         objectMapper.registerModule(reporterModelJsonModule);
@@ -54,19 +59,29 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    public Mono<ReporterModel> getReport(UUID reportUuid) {
-        return webClient.get()
-                .uri(this.getReportServerURI() + reportUuid)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty())
-                .bodyToMono(ReporterModel.class);
+    public ReporterModel getReport(UUID reportUuid) {
+        ReporterModel result = null;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            result = restTemplate.exchange(this.getReportServerURI() + reportUuid, HttpMethod.GET, new HttpEntity<>(headers), ReporterModel.class).getBody();
+        } catch (HttpClientErrorException e) {
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
+
+        return result;
     }
 
-    public Mono<Void> deleteReport(UUID reportUuid) {
-        return webClient.delete()
-                .uri(this.getReportServerURI() + reportUuid)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because report may not exist
-                .bodyToMono(Void.class);
+    public void deleteReport(UUID reportUuid) {
+        try {
+            restTemplate.delete(this.getReportServerURI() + reportUuid);
+        } catch (HttpStatusCodeException e)   {
+         // Ignore if 404 because report may not exist
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
     }
 }
