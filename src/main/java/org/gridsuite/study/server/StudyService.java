@@ -1953,7 +1953,7 @@ public class StudyService {
         checkStudyContainsNode(studyUuid, nodeUuid);
         return networkModificationTreeService.getModificationGroupUuid(nodeUuid).flatMap(groupUuid ->
             networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid)
-        ).then(updateStatuses(studyUuid, nodeUuid))
+        ).then(updateStatuses(studyUuid, nodeUuid, false))
         .doOnSuccess(r -> networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid));
     }
 
