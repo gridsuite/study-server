@@ -371,10 +371,10 @@ public class StudyTest {
                 IdentifiableInfos.builder().id(SHUNT_COMPENSATOR_ID_1).name("SHUNT_COMPENSATOR_NAME_1").build());
         String twoWindingsTransformerDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
-        String voltageLevelDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build());
-        String substationDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build());
+        String voltageLevelDataAsString = mapper.writeValueAsString(List.of(
+                IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build()));
+        String substationDataAsString = mapper.writeValueAsString(List.of(
+                IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
@@ -962,10 +962,9 @@ public class StudyTest {
         //even with the same name should work
         studyUuid = createStudy("userId2", CASE_UUID);
 
-        result = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        resultAsString = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn().getResponse().getContentAsString();
 
-        resultAsString = result.getResponse().getContentAsString();
         createdStudyBasicInfosList = mapper.readValue(resultAsString,
                 new TypeReference<List<CreatedStudyBasicInfos>>() {
                 });
@@ -988,7 +987,9 @@ public class StudyTest {
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
         mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header("userId", "userId"))
-                .andExpectAll(status().isNotFound(), content().string(""));
+            .andExpectAll(status().isNotFound(),
+                content().contentType(MediaType.APPLICATION_JSON),
+                jsonPath("$").value(STUDY_NOT_FOUND.name()));
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
@@ -1665,8 +1666,9 @@ public class StudyTest {
                                                                                                                        // invalid
     }
 
+    @SneakyThrows
     @Test
-    public void testGetLoadMapServer() throws Exception {
+    public void testGetLoadMapServer() {
         //create study
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);

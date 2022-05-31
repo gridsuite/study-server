@@ -277,6 +277,7 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getVariantId(nodeUuid, generateId)).orElse(null);
     }
 
+    @Transactional(readOnly = false)
     public String getVariantId(UUID nodeUuid) {
         String variantId = doGetVariantId(nodeUuid, true);
         if (variantId == null) {
@@ -291,6 +292,7 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
+    @Transactional
     public UUID getModificationGroupUuid(UUID nodeUuid) {
         return doGetModificationGroupUuid(nodeUuid, true);
     }
@@ -453,6 +455,7 @@ public class NetworkModificationTreeService {
     }
 
     // used only in tests
+    @Transactional(readOnly = true)
     public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
         Optional<UUID> parentNodeUuidOpt = doGetParentNode(nodeUuid, nodeType);
         if (parentNodeUuidOpt.isEmpty()) {
@@ -515,6 +518,7 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuid(nodeUuid, generateId)).orElse(null);
     }
 
+    @Transactional
     public UUID getReportUuid(UUID nodeUuid) {
         UUID reportUuid = doGetReportUuid(nodeUuid, true);
         if (reportUuid == null) {
@@ -540,6 +544,7 @@ public class NetworkModificationTreeService {
         return uuidsAndNames;
     }
 
+    @Transactional
     public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
         List<Pair<UUID, String>> uuidsAndNames = getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
         if (uuidsAndNames == null) {
@@ -549,12 +554,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NodeModificationInfos doGetNodeModificationInfos(UUID nodeUuid, boolean generateId) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid, generateId)).orElse(null);
-    }
-
     public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        NodeModificationInfos nodeModificationInfos = doGetNodeModificationInfos(nodeUuid, true);
+        NodeModificationInfos nodeModificationInfos = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid, true)).orElse(null);
         if (nodeModificationInfos == null) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }

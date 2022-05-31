@@ -191,24 +191,29 @@ public class NetworkModificationService {
                     new ParameterizedTypeReference<List<ModificationInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), LINE_MODIFICATION_FAILED);
+            throw handleChangeError(e, LINE_MODIFICATION_FAILED);
         }
 
         return result;
     }
 
-    private StudyException handleChangeError(String responseBody, StudyException.Type type) {
-        String message = null;
+    private StudyException handleChangeError(HttpStatusCodeException httpException, StudyException.Type type) {
+
+        String responseBody = httpException.getResponseBodyAsString();
+        if (responseBody.isEmpty()) {
+            return new StudyException(type, httpException.getStatusCode().toString());
+        }
+
+        String message = responseBody;
         try {
-            JsonNode node = objectMapper.readTree(responseBody).path("message");
+            JsonNode node = new ObjectMapper().readTree(responseBody).path("message");
             if (!node.isMissingNode()) {
                 message = node.asText();
             }
         } catch (JsonProcessingException e) {
-            if (!responseBody.isEmpty()) {
-                message = responseBody;
-            }
+            // responseBody by default
         }
+
         return new StudyException(type, message);
     }
 
@@ -241,7 +246,7 @@ public class NetworkModificationService {
                     new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
         }
 
         return result;
@@ -276,7 +281,7 @@ public class NetworkModificationService {
                     new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
         }
 
         return result;
@@ -301,7 +306,7 @@ public class NetworkModificationService {
             restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity,
                     Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
         }
     }
 
@@ -316,7 +321,7 @@ public class NetworkModificationService {
         try {
             restTemplate.put(getNetworkModificationServerURI(false) + path, modifyEquipmentAttributes);
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
         }
     }
 
@@ -343,7 +348,7 @@ public class NetworkModificationService {
                     new ParameterizedTypeReference<List<EquipmentDeletionInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), DELETE_EQUIPMENT_FAILED);
+            throw handleChangeError(e, DELETE_EQUIPMENT_FAILED);
         }
 
         return result;
@@ -425,7 +430,7 @@ public class NetworkModificationService {
         }
     }
 
-    public List<EquipmentModificationInfos> updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
+    public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
         ModificationType modificationType, UUID modificationUuid) {
         List<EquipmentModificationInfos> result = null;
         UriComponentsBuilder uriComponentsBuilder;
@@ -441,12 +446,10 @@ public class NetworkModificationService {
         HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
 
         try {
-            result = restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
         }
-
-        return result;
     }
 
     public List<EquipmentModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
@@ -473,7 +476,7 @@ public class NetworkModificationService {
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e.getResponseBodyAsString(), ModificationType.getExceptionFromType(modificationType));
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
         }
 
         return result;

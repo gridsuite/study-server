@@ -158,6 +158,7 @@ public class StudyService {
     private StreamBridge studyUpdatePublisher;
 
     @Bean
+    @Transactional
     public Consumer<Message<String>> consumeSaResult() {
         return message -> {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
@@ -329,15 +330,9 @@ public class StudyService {
         }
     }
 
-    public StudyInfos getStudyInfos(UUID studyUuid) {
-        StudyEntity study = getStudy(studyUuid);
-
-        return StudyService.toStudyInfos(study);
-    }
-
     @Transactional(readOnly = true)
-    public StudyEntity getStudy(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+    public StudyInfos getStudyInfos(UUID studyUuid) {
+        return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
     List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
@@ -462,6 +457,7 @@ public class StudyService {
         return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, nodesModificationInfos)) : Optional.empty();
     }
 
+    @Transactional
     public void deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         try {
@@ -898,7 +894,8 @@ public class StudyService {
                 .collect(Collectors.toList()).isEmpty() ? LoadFlowStatus.DIVERGED : LoadFlowStatus.CONVERGED;
     }
 
-    void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
+    @Transactional
+    public void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
         LoadFlowResult result;
         setLoadFlowRunning(studyUuid, nodeUuid);
 
@@ -1200,17 +1197,14 @@ public class StudyService {
     }
 
     @Transactional
-    public void doUpdateLoadFlowProvider(UUID studyUuid, String provider) {
+    public void updateLoadFlowProvider(UUID studyUuid, String provider) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
-    }
-
-    public void updateLoadFlowProvider(UUID studyUuid, String provider) {
-        doUpdateLoadFlowProvider(studyUuid, provider);
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
         emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS);
     }
 
+    @Transactional
     public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters,
             UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
@@ -1466,6 +1460,7 @@ public class StudyService {
     }
 
     @Bean
+    @Transactional
     public Consumer<Message<String>> consumeSaStopped() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -1716,6 +1711,7 @@ public class StudyService {
     }
 
     @Bean
+    @Transactional
     public Consumer<Message<String>> consumeBuildResult() {
         return message -> {
             Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
@@ -1740,6 +1736,7 @@ public class StudyService {
     }
 
     @Bean
+    @Transactional
     public Consumer<Message<String>> consumeBuildStopped() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -1782,6 +1779,7 @@ public class StudyService {
         invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
     }
 
+    @Transactional
     public void changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid,
             @NonNull UUID modificationUuid, boolean active) {
         if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
@@ -1813,17 +1811,12 @@ public class StudyService {
     }
 
     @Transactional
-    public DeleteNodeInfos doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
-        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
-        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
-        return deleteNodeInfos;
-    }
-
     public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
-        DeleteNodeInfos deleteNodeInfos = doDeleteNode(studyUuid, nodeId, deleteChildren);
+        DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
+        deleteNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
+        networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
@@ -1942,13 +1935,12 @@ public class StudyService {
         String variantId = nodeInfos.getVariantId();
         UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<EquipmentModificationInfos> modifications;
+        List<EquipmentModificationInfos> modifications = List.of();
         if (modificationUuid == null) {
             modifications = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
                 groupUuid, modificationType, variantId, reportUuid);
         } else {
-
-            modifications = networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
+            networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
                 modificationType, modificationUuid);
         }
 
