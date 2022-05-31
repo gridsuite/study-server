@@ -1879,7 +1879,7 @@ public class StudyService {
         checkStudyContainsNode(studyUuid, nodeUuid);
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
         networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
-        updateStatuses(studyUuid, nodeUuid);
+        updateStatuses(studyUuid, nodeUuid, false);
         networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
     }
 
