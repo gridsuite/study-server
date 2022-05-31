@@ -17,10 +17,12 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.Comparator;
 import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
@@ -45,25 +47,27 @@ public class NetworkService {
         this.studyRepository = studyRepository;
     }
 
-    Mono<UUID> getNetworkUuid(UUID studyUuid) {
-        return Mono.fromCallable(() -> doGetNetworkUuid(studyUuid).orElse(null))
-                .switchIfEmpty(Mono.error(new StudyException(STUDY_NOT_FOUND)));
+    UUID getNetworkUuid(UUID studyUuid) {
+        UUID networkUuid = doGetNetworkUuid(studyUuid);
+        if (networkUuid == null) {
+            throw new StudyException(STUDY_NOT_FOUND);
+        }
+        return networkUuid;
     }
 
-    Optional<UUID> doGetNetworkUuid(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid);
+    UUID doGetNetworkUuid(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).map(StudyEntity::getNetworkUuid).orElse(null);
     }
 
-    Mono<Void> deleteNetwork(UUID networkUuid) {
+    void deleteNetwork(UUID networkUuid) {
         try {
             networkStoreService.deleteNetwork(networkUuid);
         } catch (PowsyblException e) {
             throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
         }
-        return Mono.empty();
     }
 
-    Mono<Void> deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
+    void deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
         try {
             Network network = networkStoreService.getNetwork(networkUuid);
             network.addListener(new NetworkVariantsListener(networkUuid, equipmentInfosService));
@@ -78,15 +82,13 @@ public class NetworkService {
         } catch (PowsyblException e) {
             throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
         }
-        return Mono.empty();
     }
 
-    Mono<Void> createNetwork(UUID networkId, UUID sourceNetworkId, List<String> targetVariantIds) {
+    void createNetwork(UUID networkId, UUID sourceNetworkId, List<String> targetVariantIds) {
         networkStoreService.createNetwork(networkId, sourceNetworkId, targetVariantIds);
-        return Mono.empty();
     }
 
-    List<VariantInfos> doGetNetworkVariants(UUID networkUuid) {
+    List<VariantInfos> getNetworkVariants(UUID networkUuid) {
         return networkStoreService.getVariantsInfos(networkUuid).stream().sorted(Comparator.comparing(VariantInfos::getNum)).collect(Collectors.toList());
     }
 }

@@ -20,15 +20,15 @@ import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -53,23 +53,22 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
+    private static final String MODIFICATIONS_PATH = "modifications";
 
     private String networkModificationServerBaseUri;
 
     private final NetworkService networkStoreService;
 
-    private final WebClient webClient;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     private final ObjectMapper objectMapper;
 
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkService networkStoreService,
-                               WebClient.Builder webClientBuilder,
                                ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
-        this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
     }
 
@@ -87,272 +86,303 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    public Flux<ModificationInfos> getModifications(UUID groupUuid) {
+    public List<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications")
             .buildAndExpand(groupUuid)
             .toUriString();
-        return webClient.get().uri(getNetworkModificationServerURI(false) + path)
-            .retrieve()
-            .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() { });
+
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() { }).getBody();
     }
 
-    public Mono<Void> deleteModifications(UUID groupUUid) {
+    public void deleteModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
-        return deleteNetworkModifications(groupUUid);
+        deleteNetworkModifications(groupUUid);
     }
 
-    private Mono<Void> deleteNetworkModifications(UUID groupUuid) {
+    private void deleteNetworkModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .buildAndExpand(groupUuid)
             .toUriString();
-        return webClient.delete()
-            .uri(getNetworkModificationServerURI(false) + path)
-            .retrieve()
-            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
-            .bodyToMono(Void.class);
+
+        try {
+            restTemplate.delete(getNetworkModificationServerURI(false) + path);
+        } catch (HttpStatusCodeException e) {
+            // Ignore because modification group does not exist if no modifications
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
     }
 
-    Flux<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId, UUID reportUuid) {
+    List<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
+        List<EquipmentModificationInfos> result;
 
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
-                .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid)
-                .queryParam("open", open);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        var uriComponentsBuilder = UriComponentsBuilder
+            .fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
+            .queryParam(GROUP, groupUuid)
+            .queryParam(REPORT_UUID, reportUuid)
+            .queryParam("open", open);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand(switchId)
+            .toUriString();
+
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, null,
+                    new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
+                    }).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(ELEMENT_NOT_FOUND);
             }
-            var path = uriComponentsBuilder
-                .buildAndExpand(switchId)
-                .toUriString();
+            throw e;
+        }
 
-            return webClient.put()
-                    .uri(getNetworkModificationServerURI(true) + path)
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new StudyException(ELEMENT_NOT_FOUND)))
-                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
-                    });
-        });
+        return result;
     }
 
-    public Flux<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId, UUID reportUuid) {
+    public List<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId, UUID reportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
+            .queryParam(GROUP, groupUuid)
+            .queryParam(REPORT_UUID, reportUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(groovyScript);
+
+        return restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
+                new ParameterizedTypeReference<List<ModificationInfos>>() {
+                }).getBody();
+    }
+
+    List<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId, UUID reportUuid) {
+        List<ModificationInfos> result;
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
                 .queryParam(GROUP, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand(lineId)
+            .toUriString();
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(status);
+
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
+                    new ParameterizedTypeReference<List<ModificationInfos>>() {
+                    }).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, LINE_MODIFICATION_FAILED);
+        }
+
+        return result;
+    }
+
+    private StudyException handleChangeError(HttpStatusCodeException httpException, StudyException.Type type) {
+
+        String responseBody = httpException.getResponseBodyAsString();
+        if (responseBody.isEmpty()) {
+            return new StudyException(type, httpException.getStatusCode().toString());
+        }
+
+        String message = responseBody;
+        try {
+            JsonNode node = new ObjectMapper().readTree(responseBody).path("message");
+            if (!node.isMissingNode()) {
+                message = node.asText();
             }
-            var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
+        } catch (JsonProcessingException e) {
+            // responseBody by default
+        }
 
-            return webClient.put()
-                    .uri(getNetworkModificationServerURI(true) + path)
-                    .body(BodyInserters.fromValue(groovyScript))
-                    .retrieve()
-                    .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
-                    });
-        });
+        return new StudyException(type, message);
     }
 
-    Flux<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId, UUID reportUuid) {
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
-                .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder
-                .buildAndExpand(lineId)
-                .toUriString();
-
-            return webClient.put()
-                    .uri(getNetworkModificationServerURI(true) + path)
-                    .body(BodyInserters.fromValue(status))
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                        handleChangeError(response, LINE_MODIFICATION_FAILED)
-                    )
-                    .bodyToFlux(new ParameterizedTypeReference<ModificationInfos>() {
-                    });
-        });
-    }
-
-    private Mono<? extends Throwable> handleChangeError(ClientResponse clientResponse, StudyException.Type type) {
-        return clientResponse.bodyToMono(String.class)
-            .switchIfEmpty(Mono.error(
-                new StudyException(type, clientResponse.statusCode().toString())
-            ))
-            .flatMap(body -> {
-                String message = null;
-                try {
-                    JsonNode node = new ObjectMapper().readTree(body).path("message");
-                    if (!node.isMissingNode()) {
-                        message = node.asText();
-                    }
-                } catch (JsonProcessingException e) {
-                    if (!body.isEmpty()) {
-                        message = body;
-                    }
-                }
-                return Mono.error(new StudyException(type, message));
-            });
-    }
-
-    public Flux<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes, UUID groupUuid,
-                                                            ModificationType modificationType, String variantId, UUID reportUuid) {
+    public List<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes,
+            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+        List<EquipmentModificationInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createEquipmentAttributes);
 
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
                 .queryParam(GROUP, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
-            return webClient.post()
-                .uri(getNetworkModificationServerURI(true) + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(createEquipmentAttributes))
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
-                });
-        });
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
+
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity,
+                    new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
+                    }).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+        }
+
+        return result;
     }
 
-    public Flux<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
-                                                            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+    public List<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
+            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+        List<EquipmentModificationInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(modifyEquipmentAttributes);
 
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
                 .queryParam(GROUP, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder
-                    .buildAndExpand()
-                    .toUriString();
-
-            return webClient.put()
-                    .uri(getNetworkModificationServerURI(true) + path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(BodyInserters.fromValue(modifyEquipmentAttributes))
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                            handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
-                    });
-        });
-    }
-
-    public Mono<Void> updateEquipmentCreation(String createEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
-        Objects.requireNonNull(createEquipmentAttributes);
-
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType) + "-creation");
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
 
-        return webClient.put()
-                .uri(getNetworkModificationServerURI(false) + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(createEquipmentAttributes))
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                .bodyToMono(Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(modifyEquipmentAttributes, headers);
+
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
+                    new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
+                    }).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+        }
+
+        return result;
     }
 
-    public Mono<Void> updateEquipmentModification(String modifyEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
-        Objects.requireNonNull(modifyEquipmentAttributes);
+    public void updateEquipmentCreation(String createEquipmentAttributes, ModificationType modificationType,
+            UUID modificationUuid) {
+        Objects.requireNonNull(createEquipmentAttributes);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType));
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid
+                + DELIMITER + ModificationType.getUriFromType(modificationType) + "-creation");
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
 
-        return webClient.put()
-                .uri(getNetworkModificationServerURI(false) + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(modifyEquipmentAttributes))
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                .bodyToMono(Void.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
+
+        try {
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity,
+                    Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+        }
     }
 
-    public Flux<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId, UUID reportUuid) {
+    public void updateEquipmentModification(String modifyEquipmentAttributes, ModificationType modificationType, UUID modificationUuid) {
+        Objects.requireNonNull(modifyEquipmentAttributes);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(modificationType));
+        var path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            restTemplate.put(getNetworkModificationServerURI(false) + path, modifyEquipmentAttributes);
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+        }
+    }
+
+    public List<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId, UUID reportUuid) {
+        List<EquipmentDeletionInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);
         Objects.requireNonNull(equipmentId);
 
-        return networkStoreService.getNetworkUuid(studyUuid).flatMapMany(networkUuid -> {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER
+                + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
                 .queryParam(GROUP, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder
-                .buildAndExpand(equipmentType, equipmentId)
-                .toUriString();
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand(equipmentType, equipmentId)
+            .toUriString();
 
-            return webClient.delete()
-                .uri(getNetworkModificationServerURI(true) + path)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                    handleChangeError(response, DELETE_EQUIPMENT_FAILED))
-                .bodyToFlux(new ParameterizedTypeReference<EquipmentDeletionInfos>() {
-                });
-        });
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.DELETE, null,
+                    new ParameterizedTypeReference<List<EquipmentDeletionInfos>>() {
+                    }).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, DELETE_EQUIPMENT_FAILED);
+        }
+
+        return result;
     }
 
-    Mono<Void> buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
-        return networkStoreService.getNetworkUuid(studyUuid).flatMap(networkUuid -> {
-            String receiver;
-            try {
-                receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
-            } catch (JsonProcessingException e) {
-                return Mono.error(new UncheckedIOException(e));
-            }
-
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
-            var path = uriComponentsBuilder
-                .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .build()
-                .toUriString();
-
-            return webClient.post()
-                .uri(getNetworkModificationServerURI(true) + path)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(buildInfos))
-                .retrieve()
-                .bodyToMono(Void.class);
-        });
-    }
-
-    public Mono<Void> stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+                StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
+        var path = uriComponentsBuilder
+            .queryParam(QUERY_PARAM_RECEIVER, receiver)
+            .build()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(buildInfos, headers);
+
+        restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
+    }
+
+    public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+                    StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -361,43 +391,48 @@ public class NetworkModificationService {
             .build()
             .toUriString();
 
-        return webClient.put()
-            .uri(getNetworkModificationServerURI(false) + path)
-            .retrieve()
-            .bodyToMono(Void.class);
+        restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
 
-    public Mono<Void> deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
+    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationsUuids);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications");
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH);
         path.queryParam("modificationsUuids", modificationsUuids);
-        return webClient.delete()
-            .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString())
-            .retrieve()
-            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
-            .bodyToMono(Void.class);
+        try {
+            restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
+        } catch (HttpStatusCodeException e) {
+            // Ignore 404 because modification group does not exist if no modifications
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
     }
 
-    public Mono<Void> reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
+    public void reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH
-                + DELIMITER + "modifications" + DELIMITER + "move")
+                + DELIMITER + MODIFICATIONS_PATH + DELIMITER + "move")
             .queryParam("modificationsToMove", modificationUuid);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
 
-        return webClient.put()
-            .uri(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid, modificationUuid).toUriString())
-            .retrieve()
-            .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
-            .bodyToMono(Void.class);
+        try {
+            restTemplate.put(getNetworkModificationServerURI(false)
+                            + path.buildAndExpand(groupUuid, modificationUuid).toUriString(), null);
+        } catch (HttpStatusCodeException e) {
+            //Ignore because modification group does not exist if no modifications
+            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw e;
+            }
+        }
     }
 
-    public Flux<ModificationInfos> updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
+    public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
         ModificationType modificationType, UUID modificationUuid) {
+        List<EquipmentModificationInfos> result = null;
         UriComponentsBuilder uriComponentsBuilder;
         uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
             modificationType));
@@ -405,44 +440,49 @@ public class NetworkModificationService {
             .buildAndExpand()
             .toUriString();
 
-        return webClient.put()
-            .uri(getNetworkModificationServerURI(false) + path)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
-            .retrieve()
-            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-            .bodyToFlux(new ParameterizedTypeReference<>() {
-            });
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+
+        try {
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+        }
     }
 
-    public Flux<ModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
+    public List<EquipmentModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
         UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
-        return networkStoreService.getNetworkUuid(studyUuid)
-            .flatMapMany(networkUuid -> {
-                UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
-                        buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
-                    .queryParam(GROUP, groupUuid)
-                    .queryParam(REPORT_UUID, reportUuid);
-                if (!StringUtils.isBlank(variantId)) {
-                    uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-                }
-                var path = uriComponentsBuilder
-                    .buildAndExpand()
-                    .toUriString();
-                return webClient.post()
-                    .uri(getNetworkModificationServerURI(true) + path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(BodyInserters.fromValue(lineSplitWithVoltageLevelAttributes))
-                    .retrieve()
-                    .onStatus(httpStatus -> httpStatus != HttpStatus.OK, response ->
-                        handleChangeError(response, ModificationType.getExceptionFromType(modificationType)))
-                    .bodyToFlux(new ParameterizedTypeReference<EquipmentModificationInfos>() {
-                    });
-            });
+        List<EquipmentModificationInfos> result;
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
+                buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
+            .queryParam(GROUP, groupUuid)
+            .queryParam(REPORT_UUID, reportUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+
+        try {
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+        }
+
+        return result;
     }
 
-    public Mono<Void> createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
+    public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups")
@@ -451,11 +491,8 @@ public class NetworkModificationService {
                 .queryParam("reportUuid", reportUuid)
                 .buildAndExpand(groupUuid);
 
-        return webClient.post()
-                .uri(getNetworkModificationServerURI(false) + path.toUriString())
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, r -> Mono.empty()) // Ignore because modification group does not exist if no modifications
-                .bodyToMono(Void.class);
-
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path.toUriString(), HttpMethod.POST, new HttpEntity<>(headers), Void.class);
     }
 }

@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowResult;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.DeleteNodeInfos;
@@ -36,8 +37,6 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
@@ -135,7 +134,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public AbstractNode doCreateNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
         Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
             if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
@@ -156,10 +155,6 @@ public class NetworkModificationTreeService {
             emitNodeInserted(getStudyUuidForNodeId(nodeId), parent.getIdNode(), node.getIdNode(), insertMode);
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-    }
-
-    public Mono<AbstractNode> createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
-        return Mono.fromCallable(() -> self.doCreateNode(studyUuid, nodeId, nodeInfo, insertMode));
     }
 
     @Transactional
@@ -245,7 +240,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public RootNode doGetStudyTree(UUID studyId) {
+    public RootNode getStudyTree(UUID studyId) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
         if (nodes.isEmpty()) {
             throw new StudyException(ELEMENT_NOT_FOUND);
@@ -286,9 +281,9 @@ public class NetworkModificationTreeService {
                 model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
                 model.setBuildStatus(modificationGroupToDuplicateId != null ? BuildStatus.BUILT_INVALID : BuildStatus.NOT_BUILT);
 
-                nextParentId = doCreateNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
+                nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 if (modificationGroupToDuplicateId != null) {
-                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, reportUuid).subscribe();
+                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, reportUuid);
                 }
             }
             if (nextParentId != null) {
@@ -297,28 +292,16 @@ public class NetworkModificationTreeService {
         });
     }
 
-    public Mono<RootNode> getStudyTree(UUID studyId) {
-        return Mono.fromCallable(() -> self.doGetStudyTree(studyId));
-    }
-
-    public Mono<Void> updateNode(UUID studyUuid, AbstractNode node) {
-        return Mono.fromRunnable(() -> self.doUpdateNode(studyUuid, node));
-    }
-
     @Transactional
     // TODO test if studyUuid exist and have the node
-    public void doUpdateNode(UUID studyUuid, AbstractNode node) {
+    public void updateNode(UUID studyUuid, AbstractNode node) {
         repositories.get(node.getType()).updateNode(node);
         emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
 
     // TODO test if studyUuid exist and have a node <nodeId>
-    public Mono<AbstractNode> getSimpleNode(UUID studyUuid, UUID nodeId) {
-        return Mono.fromCallable(() -> self.doGetSimpleNode(nodeId));
-    }
-
     @Transactional
-    public AbstractNode doGetSimpleNode(UUID nodeId) {
+    public AbstractNode getSimpleNode(UUID nodeId) {
         AbstractNode node = nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
         return node;
@@ -333,19 +316,24 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getVariantId(nodeUuid, generateId)).orElse(null);
     }
 
-    public Mono<String> getVariantId(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetVariantId(nodeUuid, true))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    @Transactional(readOnly = false)
+    public String getVariantId(UUID nodeUuid) {
+        String variantId = doGetVariantId(nodeUuid, true);
+        if (variantId == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        return variantId;
     }
 
     @Transactional
     public UUID doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElse(null);
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    public Mono<UUID> getModificationGroupUuid(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetModificationGroupUuid(nodeUuid, true))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    @Transactional
+    public UUID getModificationGroupUuid(UUID nodeUuid) {
+        return doGetModificationGroupUuid(nodeUuid, true);
     }
 
     @Transactional(readOnly = true)
@@ -362,58 +350,43 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid)));
+    public Optional<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid));
+
     }
 
     @Transactional
-    public void doUpdateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
+    public void updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus));
         if (updateChildren) {
             nodesRepository.findAllByParentNodeIdNode(nodeUuid)
-                .forEach(child -> doUpdateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
+                .forEach(child -> updateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
         }
     }
 
-    public Mono<Void> updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult, LoadFlowStatus loadFlowStatus, boolean updateChildren) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus, updateChildren));
-    }
-
     @Transactional
-    public void doUpdateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
+    public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowStatus(nodeUuid, loadFlowStatus));
     }
 
-    public Mono<Void> updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateLoadFlowStatus(nodeUuid, loadFlowStatus));
-    }
-
     @Transactional
-    public void doUpdateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
+    public void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
     }
 
-    public Mono<Void> updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
-        return Mono.fromRunnable(() -> self.doUpdateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid));
-    }
-
     @Transactional
-    public void doUpdateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
+    public void updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
-        nodes.forEach(n -> doUpdateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
-    }
-
-    public Mono<Void> updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateStudyLoadFlowStatus(studyUuid, loadFlowStatus));
+        nodes.forEach(n -> updateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
     }
 
     @Transactional(readOnly = true)
-    public Mono<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid)));
+    public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid));
     }
 
     @Transactional(readOnly = true)
-    public Mono<List<UUID>> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
+    public List<UUID> getStudySecurityAnalysisResultUuids(UUID studyUuid) {
         List<UUID> uuids = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
@@ -422,7 +395,7 @@ public class NetworkModificationTreeService {
                 uuids.add(uuid);
             }
         });
-        return Mono.just(uuids);
+        return uuids;
     }
 
     private void getSecurityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
@@ -432,15 +405,15 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<List<UUID>> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
+    public List<UUID> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
         List<UUID> uuids = new ArrayList<>();
         getSecurityAnalysisResultUuids(nodeUuid, uuids);
-        return Mono.just(uuids);
+        return uuids;
     }
 
     @Transactional(readOnly = true)
-    public Mono<LoadFlowInfos> getLoadFlowInfos(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)));
+    public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
@@ -448,7 +421,7 @@ public class NetworkModificationTreeService {
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
-                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), self.doGetReportUuid(nodeEntity.getIdNode(), true));
+                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), doGetReportUuid(nodeEntity.getIdNode(), true));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
@@ -456,7 +429,7 @@ public class NetworkModificationTreeService {
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
                 getBuildInfos(nodeEntity.getParentNode(), buildInfos);
             } else {
-                buildInfos.setOriginVariantId(self.doGetVariantId(nodeEntity.getIdNode(), true));
+                buildInfos.setOriginVariantId(doGetVariantId(nodeEntity.getIdNode(), true));
             }
         }
     }
@@ -469,7 +442,7 @@ public class NetworkModificationTreeService {
             if (entity.getType() != NodeType.NETWORK_MODIFICATION) {  // nodeUuid must be a modification node
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
-                buildInfos.setDestinationVariantId(self.doGetVariantId(nodeUuid, true));
+                buildInfos.setDestinationVariantId(doGetVariantId(nodeUuid, true));
                 getBuildInfos(entity, buildInfos);
             }
         }, () -> {
@@ -491,7 +464,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void doUpdateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
@@ -502,17 +475,9 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public Mono<Void> updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        return Mono.fromRunnable(() -> self.doUpdateBuildStatus(nodeUuid, buildStatus));
-    }
-
     @Transactional(readOnly = true)
-    public BuildStatus doGetBuildStatus(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
-    }
-
     public BuildStatus getBuildStatus(UUID nodeUuid) {
-        return self.doGetBuildStatus(nodeUuid);
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
     }
 
     @Transactional(readOnly = true)
@@ -529,9 +494,14 @@ public class NetworkModificationTreeService {
     }
 
     // used only in tests
-    public Mono<UUID> getParentNode(UUID nodeUuid, NodeType nodeType) {
-        return Mono.fromCallable(() -> self.doGetParentNode(nodeUuid, nodeType).orElse(null))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    @Transactional(readOnly = true)
+    public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
+        Optional<UUID> parentNodeUuidOpt = doGetParentNode(nodeUuid, nodeType);
+        if (parentNodeUuidOpt.isEmpty()) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+
+        return parentNodeUuidOpt.get();
     }
 
     @Transactional(readOnly = true)
@@ -539,7 +509,7 @@ public class NetworkModificationTreeService {
         NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         if (nodeEntity.getType() == NodeType.ROOT) {
             return nodeEntity.getIdNode();
-        } else if (doGetBuildStatus(nodeEntity.getIdNode()) == BuildStatus.BUILT) {
+        } else if (getBuildStatus(nodeEntity.getIdNode()) == BuildStatus.BUILT) {
             return nodeEntity.getIdNode();
         } else {
             return doGetLastParentNodeBuilt(nodeEntity.getParentNode().getIdNode());
@@ -547,12 +517,12 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Mono<Boolean> isReadOnly(UUID nodeUuid) {
-        return Mono.justOrEmpty(nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid)));
+    public Optional<Boolean> isReadOnly(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid));
     }
 
     @Transactional
-    public void doInvalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+    public void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
@@ -568,26 +538,14 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public Mono<Void> invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        return Mono.fromRunnable(() -> self.doInvalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus));
-    }
-
     @Transactional
-    public void doHandleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
+    public void handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).handleExcludeModification(nodeUuid, modificationUUid, active));
     }
 
-    public Mono<Void> handleExcludeModification(UUID nodeUuid, UUID modificationUUid, boolean active) {
-        return Mono.fromRunnable(() -> self.doHandleExcludeModification(nodeUuid, modificationUUid, active));
-    }
-
     @Transactional
-    public void doRemoveModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
+    public void removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUUid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).removeModificationsToExclude(nodeUuid, modificationUUid));
-    }
-
-    public Mono<Void> removeModificationsToExclude(UUID nodeUuid, List<UUID> modificationUuid) {
-        return Mono.fromRunnable(() -> self.doRemoveModificationsToExclude(nodeUuid, modificationUuid));
     }
 
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
@@ -599,14 +557,18 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getReportUuid(nodeUuid, generateId)).orElse(null);
     }
 
-    public Mono<UUID> getReportUuid(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetReportUuid(nodeUuid, true))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    @Transactional
+    public UUID getReportUuid(UUID nodeUuid) {
+        UUID reportUuid = doGetReportUuid(nodeUuid, true);
+        if (reportUuid == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+        return reportUuid;
     }
 
     private void getParentReportUuidsAndNamesFromNode(NodeEntity nodeEntity, boolean nodeOnlyReport, List<Pair<UUID, String>> res) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
-        res.add(0, Pair.of(self.doGetReportUuid(nodeEntity.getIdNode(), true), node.getName()));
+        res.add(0, Pair.of(doGetReportUuid(nodeEntity.getIdNode(), true), node.getName()));
         if (node.getType() == NodeType.NETWORK_MODIFICATION && !nodeOnlyReport) {
             getParentReportUuidsAndNamesFromNode(nodeEntity.getParentNode(), false, res);
         }
@@ -621,19 +583,21 @@ public class NetworkModificationTreeService {
         return uuidsAndNames;
     }
 
-    public Flux<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<Pair<UUID, String>> uuidsAndNames = self.getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
-        return Flux.fromIterable(uuidsAndNames)
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    @Transactional
+    public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<Pair<UUID, String>> uuidsAndNames = getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
+        if (uuidsAndNames == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+        return uuidsAndNames;
     }
 
     @Transactional
-    public NodeModificationInfos doGetNodeModificationInfos(UUID nodeUuid, boolean generateId) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid, generateId)).orElse(null);
-    }
-
-    public Mono<NodeModificationInfos> getNodeModificationInfos(UUID nodeUuid) {
-        return Mono.fromCallable(() -> self.doGetNodeModificationInfos(nodeUuid, true))
-            .switchIfEmpty(Mono.error(new StudyException(ELEMENT_NOT_FOUND)));
+    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
+        NodeModificationInfos nodeModificationInfos = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid, true)).orElse(null);
+        if (nodeModificationInfos == null) {
+            throw new StudyException(ELEMENT_NOT_FOUND);
+        }
+        return nodeModificationInfos;
     }
 }
