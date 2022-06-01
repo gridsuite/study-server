@@ -40,6 +40,8 @@ import org.gridsuite.study.server.dto.modification.VoltageLevelCreationInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -76,6 +78,7 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.util.ResourceUtils;
 
 import java.io.FileInputStream;
@@ -226,6 +229,9 @@ public class StudyTest {
 
     @Autowired
     private StudyRepository studyRepository;
+
+    @Autowired
+    private NodeRepository nodeRepository;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -3086,69 +3092,57 @@ public class StudyTest {
         assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
     }
 
-    /*@Test
+    @Test
     public void testDuplicateStudy() throws Exception {
         UUID study1Uuid = createStudy("userId", CASE_UUID);
-        UUID rootNodeUuid = getRootNodeUuid(study1Uuid);
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(study1Uuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
-        UUID modificationNode1Uuid = modificationNode1.getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(study1Uuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID);
-        UUID modificationNode2Uuid = modificationNode2.getId();
-
-        BuildInfos buildInfos1 = networkModificationTreeService.getBuildInfos(modificationNode1Uuid);
-        BuildInfos buildInfos2 = networkModificationTreeService.getBuildInfos(modificationNode2Uuid);
-        UUID modificationNode1GroupUuid = buildInfos1.getModificationGroupUuids().get(0);
-        UUID modificationNode2GroupUuid = buildInfos2.getModificationGroupUuids().size() > 1 ? buildInfos2.getModificationGroupUuids().get(1) : buildInfos2.getModificationGroupUuids().get(0);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
 
         String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-        webTestClient.post()
-                .uri("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers", study1Uuid, modificationNode2Uuid)
-                .bodyValue(createTwoWindingsTransformerAttributes)
-                .exchange()
-                .expectStatus().isOk();
-        checkEquipmentCreationMessagesReceived(study1Uuid, modificationNode2Uuid, ImmutableSet.of("s2"));
 
-        webTestClient.post()
-                .uri(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", study1Uuid, "11888888-0000-0000-0000-111111111111")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk();
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers", study1Uuid, modificationNodeUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createTwoWindingsTransformerAttributes))
+                .andExpect(status().isOk());
+
+        checkEquipmentCreationMessagesReceived(study1Uuid, modificationNodeUuid, ImmutableSet.of("s2"));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
+
+        ResultActions resultActions = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", study1Uuid, "11888888-0000-0000-0000-111111111111")
+                .header("userId", "userId"))
+                .andExpect(status().isOk());
+
+        var mess = output.receive(TIMEOUT);
+        mess = output.receive(TIMEOUT);
+        mess = output.receive(TIMEOUT);
+        mess = output.receive(TIMEOUT);
+        mess = output.receive(TIMEOUT);
+
+        requests = getRequestsWithBodyDone(1);
 
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
-        assertNotEquals(study1Uuid, duplicatedStudy.getId());
+        networkModificationTreeService.copyStudyTree(rootNode,null, duplicatedStudy, UUID.randomUUID());
+        Thread.sleep(3000);
 
-        Thread.sleep(TIMEOUT);
         RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(duplicatedStudy.getId());
 
-        assertEquals(2, duplicatedRootNode.getChildren().size());
-        NetworkModificationNode duplicatedModificationNode1 = (NetworkModificationNode) duplicatedRootNode.getChildren().get(1);
-        assertEquals(1, duplicatedModificationNode1.getChildren().size());
-        NetworkModificationNode duplicatedModificationNode2 = (NetworkModificationNode) duplicatedModificationNode1.getChildren().get(0);
-        assertEquals(0, duplicatedModificationNode2.getChildren().size());
+        assertEquals(1, duplicatedRootNode.getChildren().size());
+        NetworkModificationNode duplicatedModificationNode = (NetworkModificationNode) duplicatedRootNode.getChildren().get(0);
+        assertEquals(0, duplicatedModificationNode.getChildren().size());
 
-        assertNotEquals(duplicatedRootNode.getId(), rootNodeUuid);
-        assertNotEquals(duplicatedModificationNode1.getId(), modificationNode1Uuid);
-        assertNotEquals(duplicatedModificationNode2.getId(), modificationNode2Uuid);
+        assertNotEquals(duplicatedRootNode.getId(), rootNode.getId());
+        assertNotEquals(duplicatedModificationNode.getId(), modificationNodeUuid);
 
-        BuildInfos duplicatedBuildInfos1 = networkModificationTreeService.getBuildInfos(duplicatedModificationNode1.getId());
-        BuildInfos duplicatedBuildInfos2 = networkModificationTreeService.getBuildInfos(duplicatedModificationNode2.getId());
-        UUID duplicatedModificationNode1GroupUuid = duplicatedBuildInfos1.getModificationGroupUuids().get(0);
-        UUID duplicatedModificationNode2GroupUuid = duplicatedBuildInfos2.getModificationGroupUuids().size() > 1 ? duplicatedBuildInfos2.getModificationGroupUuids().get(1) : duplicatedBuildInfos2.getModificationGroupUuids().get(0);
-
-        var requests = getRequestsWithBodyDone(3);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode1GroupUuid + "&groupUuid=" + duplicatedModificationNode1GroupUuid + "&reportUuid=.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=" + modificationNode2GroupUuid + "&groupUuid=" + duplicatedModificationNode2GroupUuid + "&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         //Test duplication from a non existing source study
-        webTestClient.post()
-                .uri(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", UUID.randomUUID(), "11888888-0000-0000-0000-111111111111")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isNotFound();
-    }*/
+        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", UUID.randomUUID(), "11888888-0000-0000-0000-111111111111")
+                .header("userId", "userId"))
+                .andExpect(status().isNotFound());
+    }
 
     public void getDefaultLoadflowProvider() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(

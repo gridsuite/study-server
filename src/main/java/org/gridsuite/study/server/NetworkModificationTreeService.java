@@ -51,8 +51,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.HEADER_STUDY_UUID;
-import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.StudyService.*;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -261,22 +260,22 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study, UUID reportUuid) {
-        UUID rootId = null;
         if (study == null) {
             throw new StudyException(STUDY_CREATION_FAILED, "Couln't retrieve study for modification tree duplication");
         }
 
+        UUID rootId = null;
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
-            rootId = createRoot(study, reportUuid).getIdNode();
+            rootId = getStudyRootNodeUuid(study.getId());
         }
-        UUID referenceParentNodeId = rootId == null ? nodeParentId : rootId;
+        UUID referenceParentNodeId = rootId != null ? rootId : nodeParentId;
 
-        nodeToDuplicate.getChildren().stream().forEach(n -> {
+        nodeToDuplicate.getChildren().stream().forEach(sourceNode -> {
             UUID newModificationGroupId = UUID.randomUUID();
             UUID nextParentId = null;
 
-            if (n instanceof NetworkModificationNode) {
-                NetworkModificationNode model = (NetworkModificationNode) n;
+            if (sourceNode instanceof NetworkModificationNode) {
+                NetworkModificationNode model = (NetworkModificationNode) sourceNode;
                 UUID modificationGroupToDuplicateId = model.getNetworkModification();
                 model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
                 model.setBuildStatus(modificationGroupToDuplicateId != null ? BuildStatus.BUILT_INVALID : BuildStatus.NOT_BUILT);
@@ -287,9 +286,22 @@ public class NetworkModificationTreeService {
                 }
             }
             if (nextParentId != null) {
-                copyStudyTree(n, nextParentId, study, reportUuid);
+                copyStudyTree(sourceNode, nextParentId, study, reportUuid);
             }
         });
+    }
+
+    public void createBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
+        // create 2 nodes : root node, modification node 0
+        NodeEntity rootNodeEntity = createRoot(studyEntity, importReportUuid);
+        NetworkModificationNode modificationNode = NetworkModificationNode
+                .builder()
+                .name("modification node 0")
+                .variantId(FIRST_VARIANT_ID)
+                .loadFlowStatus(LoadFlowStatus.NOT_DONE)
+                .buildStatus(BuildStatus.BUILT)
+                .build();
+        createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER);
     }
 
     @Transactional

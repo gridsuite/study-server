@@ -139,14 +139,14 @@ public class StudyController {
     @PostMapping(value = "/studies")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-            @ApiResponse(responseCode = "409", description = "The study already exist"),
-            @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
+            @ApiResponse(responseCode = "200", description = "The study was successfully created"),
+            @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
     public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("duplicateFrom") UUID sourceStudyUuid,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestHeader("userId") String userId) {
         BasicStudyInfos createStudy = studyService.createStudy(sourceStudyUuid, studyUuid, userId);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(createStudy);
+        return createStudy != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(createStudy) :
+                ResponseEntity.notFound().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}")

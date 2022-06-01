@@ -489,10 +489,11 @@ public class NetworkModificationService {
                 .queryParam("duplicateFrom", sourceGroupUuid)
                 .queryParam("groupUuid", groupUuid)
                 .queryParam("reportUuid", reportUuid)
-                .buildAndExpand(groupUuid);
+                .buildAndExpand(groupUuid)
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        restTemplate.exchange(getNetworkModificationServerURI(false) + path.toUriString(), HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+        restTemplate.postForEntity(getNetworkModificationServerURI(false) + path, null, Void.class);
     }
 }
