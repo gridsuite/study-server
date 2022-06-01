@@ -49,6 +49,7 @@ import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -127,6 +128,10 @@ public class StudyService {
     static final String HEADER_RECEIVER = "receiver";
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
+
+    // Self injection for @transactional support in internal calls to other methods of this service
+    @Autowired
+    StudyService self;
 
     NetworkModificationTreeService networkModificationTreeService;
 
@@ -272,9 +277,7 @@ public class StudyService {
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> {
-            createStudyAsync(caseUuid, userId, basicStudyInfos);
-        });
+        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
@@ -285,12 +288,6 @@ public class StudyService {
             UUID importReportUuid = UUID.randomUUID();
             String caseFormat = getCaseFormat(caseUuid);
             NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-
-            if (networkInfos == null) {
-                emitStudyCreationError(basicStudyInfos.getId(), userId, STUDY_CREATION_FAILED.name());
-                throw new StudyException(STUDY_CREATION_FAILED);
-            }
-
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
                     caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
@@ -306,9 +303,7 @@ public class StudyService {
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
 
-        studyServerExecutionService.runAsync(() -> {
-            createStudyAsync(caseFile, userId, basicStudyInfos);
-        });
+        studyServerExecutionService.runAsync(() -> createStudyAsync(caseFile, userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
@@ -321,12 +316,6 @@ public class StudyService {
             if (caseUuid != null) {
                 String caseFormat = getCaseFormat(caseUuid);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-
-                if (networkInfos == null) {
-                    emitStudyCreationError(basicStudyInfos.getId(), userId, STUDY_CREATION_FAILED.name());
-                    throw new StudyException(STUDY_CREATION_FAILED);
-                }
-
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                 insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
                         networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
@@ -568,7 +557,6 @@ public class StudyService {
                 throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
                         "case-server");
             }
-            //Voir si on doit throw l'exception IOException
         } catch (StudyException e) {
             throw e;
         } catch (Exception e) {
@@ -637,11 +625,14 @@ public class StudyService {
             .buildAndExpand()
             .toUriString();
 
-        ResponseEntity<NetworkInfos> networkInfosResponse;
-
         try {
-            networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null,
+            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null,
                     NetworkInfos.class);
+            NetworkInfos networkInfos = networkInfosResponse.getBody();
+            if (networkInfos == null) {
+                throw handleStudyCreationError(studyUuid, userId, null, HttpStatus.BAD_REQUEST, "network-conversion-server");
+            }
+            return networkInfos;
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
                     "network-conversion-server");
@@ -652,7 +643,6 @@ public class StudyService {
             throw e;
         }
 
-        return networkInfosResponse.getBody();
     }
 
     String getLinesGraphics(UUID networkUuid) {
@@ -907,7 +897,6 @@ public class StudyService {
     @Transactional
     public void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
         LoadFlowResult result;
-        setLoadFlowRunning(studyUuid, nodeUuid);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String provider = getLoadFlowProvider(studyUuid);
@@ -934,6 +923,7 @@ public class StudyService {
                 headers);
 
         try {
+            self.setLoadFlowRunning(studyUuid, nodeUuid);
             ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT,
                     httpEntity, LoadFlowResult.class);
             result = resp.getBody();
@@ -946,7 +936,8 @@ public class StudyService {
         }
     }
 
-    private void setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW) // Need to commit the status 'running' in db with state into update the front
+    public void setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
         updateLoadFlowStatus(nodeUuid, LoadFlowStatus.RUNNING);
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
     }
