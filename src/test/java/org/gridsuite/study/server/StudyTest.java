@@ -40,7 +40,6 @@ import org.gridsuite.study.server.dto.modification.VoltageLevelCreationInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -3123,7 +3122,7 @@ public class StudyTest {
         requests = getRequestsWithBodyDone(1);
 
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
-        networkModificationTreeService.copyStudyTree(rootNode,null, duplicatedStudy, UUID.randomUUID());
+        networkModificationTreeService.copyStudyTree(rootNode, null, duplicatedStudy, UUID.randomUUID());
         Thread.sleep(3000);
 
         RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(duplicatedStudy.getId());
