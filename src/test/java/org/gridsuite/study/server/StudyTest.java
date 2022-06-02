@@ -1490,14 +1490,14 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
 
         //get the lines-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/geo-data/lines/", studyNameUserIdUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/lines?networkUuid=%s", NETWORK_UUID_STRING)));
 
         //get the substation-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/geo-data/substations/", studyNameUserIdUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 

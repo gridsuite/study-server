@@ -765,20 +765,37 @@ public class StudyService {
 
     }
 
-    String getLinesGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
-            .queryParam(NETWORK_UUID, networkUuid)
+    String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
+
+        String variantId = getVariantId(nodeUuid);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
+            .queryParam(NETWORK_UUID, networkUuid);
+
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        var path = uriComponentsBuilder
             .buildAndExpand()
             .toUriString();
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
 
-    String getSubstationsGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
-            .queryParam(NETWORK_UUID, networkUuid)
-            .buildAndExpand()
-            .toUriString();
+    String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
+        String variantId = getVariantId(nodeUuid);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
+                .queryParam(NETWORK_UUID, networkUuid);
+
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        var path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
