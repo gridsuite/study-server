@@ -550,6 +550,8 @@ public class StudyService {
                 studyInfos.getId(), sourceStudyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
+        emitStudiesChanged(studyInfos.getId(), userId);
+
         return createdStudyBasicInfos;
     }
 
@@ -1551,7 +1553,7 @@ public class StudyService {
 
     private StudyEntity insertDuplicatedStudyEntity(UUID uuid, UUID sourceStudyUuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID importReportUuid) {
+                                          UUID reportUuid) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(sourceStudyUuid);
         Objects.requireNonNull(userId);
@@ -1562,7 +1564,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
-        return insertDuplicatedStudy(studyEntity, sourceStudyUuid, importReportUuid);
+        return insertDuplicatedStudy(studyEntity, sourceStudyUuid, reportUuid);
     }
 
     @Transactional
@@ -1579,7 +1581,7 @@ public class StudyService {
 
         networkModificationTreeService.createRoot(study, importReportUuid);
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(sourceStudyUuid);
-        networkModificationTreeService.copyStudyTree(rootNode, null, studyEntity, importReportUuid);
+        networkModificationTreeService.copyStudyTree(rootNode, null, studyEntity);
         return study;
     }
 

@@ -259,7 +259,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study, UUID reportUuid) {
+    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
         if (study == null) {
             throw new StudyException(STUDY_CREATION_FAILED, "Couln't retrieve study for modification tree duplication");
         }
@@ -272,6 +272,7 @@ public class NetworkModificationTreeService {
 
         nodeToDuplicate.getChildren().stream().forEach(sourceNode -> {
             UUID newModificationGroupId = UUID.randomUUID();
+            UUID newReportUuid = UUID.randomUUID();
             UUID nextParentId = null;
 
             if (sourceNode instanceof NetworkModificationNode) {
@@ -279,14 +280,15 @@ public class NetworkModificationTreeService {
                 UUID modificationGroupToDuplicateId = model.getNetworkModification();
                 model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
                 model.setBuildStatus(modificationGroupToDuplicateId != null ? BuildStatus.BUILT_INVALID : BuildStatus.NOT_BUILT);
+                model.setReportUuid(newReportUuid);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 if (modificationGroupToDuplicateId != null) {
-                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, reportUuid);
+                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
                 }
             }
             if (nextParentId != null) {
-                copyStudyTree(sourceNode, nextParentId, study, reportUuid);
+                copyStudyTree(sourceNode, nextParentId, study);
             }
         });
     }
