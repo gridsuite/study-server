@@ -84,8 +84,12 @@ public class NetworkService {
         }
     }
 
-    void createNetwork(UUID networkId, UUID sourceNetworkId, List<String> targetVariantIds) {
-        networkStoreService.createNetwork(networkId, sourceNetworkId, targetVariantIds);
+    Network cloneNetwork(UUID sourceNetworkId, List<String> targetVariantIds) {
+        return networkStoreService.cloneNetwork(sourceNetworkId, targetVariantIds);
+    }
+
+    UUID getNetworkUuid(Network network) {
+        return networkStoreService.getNetworkUuid(network);
     }
 
     List<VariantInfos> getNetworkVariants(UUID networkUuid) {

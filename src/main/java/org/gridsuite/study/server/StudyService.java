@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
@@ -341,7 +342,6 @@ public class StudyService {
     public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
         AtomicReference<Long> startTime = new AtomicReference<>();
-        UUID newNetworkUuid = UUID.randomUUID();
 
         StudyEntity sourceStudy = getStudy(sourceStudyUuid);
         if (sourceStudy == null) {
@@ -355,9 +355,11 @@ public class StudyService {
 
                 List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getNetworkUuid());
                 List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
-                networkStoreService.createNetwork(newNetworkUuid, sourceStudy.getNetworkUuid(), targetVariantIds);
+                Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
+                UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
+
                 LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-                duplicateStudy(basicStudyInfos, sourceStudyUuid, userId, newNetworkUuid, sourceStudy.getNetworkId(),
+                duplicateStudy(basicStudyInfos, sourceStudyUuid, userId, clonedNetworkUuid, sourceStudy.getNetworkId(),
                         sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters));
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);

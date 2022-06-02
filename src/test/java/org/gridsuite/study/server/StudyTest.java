@@ -3112,18 +3112,20 @@ public class StudyTest {
         ResultActions resultActions = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", study1Uuid, "11888888-0000-0000-0000-111111111111")
                 .header("userId", "userId"))
                 .andExpect(status().isOk());
+        Thread.sleep(3000);
+        Thread.sleep(3000);
+        Thread.sleep(3000);
 
-        var mess = output.receive(TIMEOUT);
-        mess = output.receive(TIMEOUT);
-        mess = output.receive(TIMEOUT);
-        mess = output.receive(TIMEOUT);
-        mess = output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
 
-        requests = getRequestsWithBodyDone(1);
+        //requests = getRequestsWithBodyDone(1);
 
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
         networkModificationTreeService.copyStudyTree(rootNode, null, duplicatedStudy, UUID.randomUUID());
-        Thread.sleep(3000);
 
         RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(duplicatedStudy.getId());
 
