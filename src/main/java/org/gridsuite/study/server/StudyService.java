@@ -1581,7 +1581,7 @@ public class StudyService {
 
         networkModificationTreeService.createRoot(study, importReportUuid);
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(sourceStudyUuid);
-        networkModificationTreeService.copyStudyTree(rootNode, null, studyEntity);
+        networkModificationTreeService.cloneStudyTree(rootNode, null, studyEntity);
         return study;
     }
 

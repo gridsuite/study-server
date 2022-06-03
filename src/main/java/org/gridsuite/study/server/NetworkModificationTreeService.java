@@ -259,7 +259,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void copyStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
+    public void cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
         if (study == null) {
             throw new StudyException(STUDY_CREATION_FAILED, "Couln't retrieve study for modification tree duplication");
         }
@@ -288,7 +288,7 @@ public class NetworkModificationTreeService {
                 }
             }
             if (nextParentId != null) {
-                copyStudyTree(sourceNode, nextParentId, study);
+                cloneStudyTree(sourceNode, nextParentId, study);
             }
         });
     }
