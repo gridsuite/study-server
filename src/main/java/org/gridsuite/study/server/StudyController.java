@@ -97,10 +97,10 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/case/name", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get study case infos")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case uuid")})
+    @Operation(summary = "Get study case name")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name")})
     public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyCaseName(studyUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getCaseName(studyUuid));
     }
 
     @GetMapping(value = "/study_creation_requests")

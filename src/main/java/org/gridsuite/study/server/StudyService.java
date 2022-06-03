@@ -259,10 +259,10 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public String getStudyCaseName(UUID studyUuid) {
-        UUID caseUuid = studyRepository.findById(studyUuid).get().getCaseUuid();
+    public String getCaseName(UUID studyUuid) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/name")
-                .buildAndExpand(caseUuid)
+                .buildAndExpand(study.getCaseUuid())
                 .toUriString();
 
         return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
