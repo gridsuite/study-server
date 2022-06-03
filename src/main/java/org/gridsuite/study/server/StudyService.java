@@ -1102,7 +1102,11 @@ public class StudyService {
                 parameters.isWriteSlackBus(),
                 parameters.isDc(),
                 parameters.isDistributedSlack(),
-                parameters.getBalanceType());
+                parameters.getBalanceType(),
+                parameters.isDcUseTransformerRatio(),
+                parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
+                parameters.getConnectedComponentMode(),
+                parameters.isHvdcAcEmulation());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
@@ -1112,16 +1116,16 @@ public class StudyService {
             entity.isNoGeneratorReactiveLimits(),
             entity.isPhaseShifterRegulationOn(),
             entity.isTwtSplitShuntAdmittance(),
-            entity.isSimulShunt(),
+            entity.isShuntCompensatorVoltageControlOn(),
             entity.isReadSlackBus(),
             entity.isWriteSlackBus(),
             entity.isDc(),
             entity.isDistributedSlack(),
             entity.getBalanceType(),
-            true, // FIXME to persist
-            EnumSet.noneOf(Country.class), // FIXME to persist
-            LoadFlowParameters.ConnectedComponentMode.MAIN, // FIXME to persist
-            true// FIXME to persist
+            entity.isDcUseTransformerRatio(),
+            entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
+            entity.getConnectedComponentMode(),
+            entity.isHvdcAcEmulation()
             );
     }
 

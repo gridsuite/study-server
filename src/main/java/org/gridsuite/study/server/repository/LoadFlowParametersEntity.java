@@ -11,6 +11,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -31,10 +32,12 @@ public class LoadFlowParametersEntity {
     public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
                                     boolean transformerVoltageControlOn, boolean noGeneratorReactiveLimits,
                                     boolean phaseShifterRegulationOn, boolean twtSplitShuntAdmittance,
-                                    boolean simulShunt, boolean readSlackBus, boolean writeSlackBus, boolean dc,
-                                    boolean distributedSlack, LoadFlowParameters.BalanceType balanceType) {
+                                    boolean shuntCompensatorVoltageControlOn, boolean readSlackBus, boolean writeSlackBus, boolean dc,
+                                    boolean distributedSlack, LoadFlowParameters.BalanceType balanceType, boolean dcUseTransformerRatio,
+                                    Set<String> countriesToBalance, LoadFlowParameters.ConnectedComponentMode connectedComponentMode,
+                                    boolean hvdcAcEmulation) {
         this(null, voltageInitMode, transformerVoltageControlOn, noGeneratorReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
-                simulShunt, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType);
+                shuntCompensatorVoltageControlOn, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType, dcUseTransformerRatio, countriesToBalance, connectedComponentMode, hvdcAcEmulation);
     }
 
     @Id
@@ -46,34 +49,51 @@ public class LoadFlowParametersEntity {
     @Enumerated(EnumType.STRING)
     private LoadFlowParameters.VoltageInitMode voltageInitMode;
 
-    @Column(name = "transformerVoltageControlOn")
+    @Column(name = "transformerVoltageControlOn", columnDefinition = "boolean default false")
     private boolean transformerVoltageControlOn;
 
-    @Column(name = "noGeneratorReactiveLimits")
+    @Column(name = "noGeneratorReactiveLimits", columnDefinition = "boolean default false")
     private boolean noGeneratorReactiveLimits;
 
-    @Column(name = "phaseShifterRegulationOn")
+    @Column(name = "phaseShifterRegulationOn", columnDefinition = "boolean default false")
     private boolean phaseShifterRegulationOn;
 
-    @Column(name = "twtSplitShuntAdmittance")
+    @Column(name = "twtSplitShuntAdmittance", columnDefinition = "boolean default false")
     private boolean twtSplitShuntAdmittance;
 
-    @Column(name = "simulShunt")
-    private boolean simulShunt;
+    @Column(name = "shuntCompensatorVoltageControlOn", columnDefinition = "boolean default false")
+    private boolean shuntCompensatorVoltageControlOn;
 
-    @Column(name = "readSlackBus")
+    @Column(name = "readSlackBus", columnDefinition = "boolean default true")
     private boolean readSlackBus;
 
-    @Column(name = "writeSlackBus")
+    @Column(name = "writeSlackBus", columnDefinition = "boolean default false")
     private boolean writeSlackBus;
 
-    @Column(name = "dc")
+    @Column(name = "dc", columnDefinition = "boolean default false")
     private boolean dc;
 
-    @Column(name = "distributedSlack")
+    @Column(name = "distributedSlack", columnDefinition = "boolean default true")
     private boolean distributedSlack;
 
     @Column(name = "balanceType")
     @Enumerated(EnumType.STRING)
     private LoadFlowParameters.BalanceType balanceType;
+
+    @Column(name = "dcUseTransformerRatio", columnDefinition = "boolean default true")
+    private boolean dcUseTransformerRatio;
+
+    @Column(name = "countriesToBalance")
+    @ElementCollection
+    @CollectionTable(foreignKey = @ForeignKey(name = "loadFlowParametersEntity_countriesToBalance_fk1"),
+            indexes = {@Index(name = "loadFlowParametersEntity_countriesToBalance_idx1",
+                    columnList = "load_flow_parameters_entity_id")})
+    private Set<String> countriesToBalance;
+
+    @Column(name = "connectedComponentMode")
+    @Enumerated(EnumType.STRING)
+    private LoadFlowParameters.ConnectedComponentMode connectedComponentMode;
+
+    @Column(name = "hvdcAcEmulation", columnDefinition = "boolean default true")
+    private boolean hvdcAcEmulation;
 }

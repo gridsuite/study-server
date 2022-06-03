@@ -1,0 +1,80 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="boutiercha (generated)" id="1654087630098-9">
+        <createTable tableName="load_flow_parameters_entity_countries_to_balance">
+            <column name="load_flow_parameters_entity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="countries_to_balance" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="boutiercha" id="1654087630098-10">
+        <addColumn tableName="load_flow_parameters">
+            <column name="connected_component_mode" type="varchar(255)"/>
+        </addColumn>
+        <sql splitStatements="true" stripComments="true">
+            UPDATE load_flow_parameters SET connected_component_mode = 'MAIN'
+        </sql>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-11">
+        <addColumn tableName="load_flow_parameters">
+            <column defaultValueBoolean="true" name="dc_use_transformer_ratio" type="boolean"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-12">
+        <addColumn tableName="load_flow_parameters">
+            <column defaultValueBoolean="true" name="hvdc_ac_emulation" type="boolean"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="boutiercha" id="1654087630098-13">
+        <addColumn tableName="load_flow_parameters">
+            <column defaultValueBoolean="false" name="shunt_compensator_voltage_control_on" type="boolean"/>
+        </addColumn>
+        <sql splitStatements="true" stripComments="true">
+            UPDATE load_flow_parameters SET shunt_compensator_voltage_control_on = simul_shunt
+        </sql>
+        <dropColumn columnName="simul_shunt" tableName="load_flow_parameters"/>
+
+        <rollback>
+            <addColumn tableName="load_flow_parameters">
+                <column name="simul_shunt" type="boolean"/>
+            </addColumn>
+            <sql splitStatements="true" stripComments="true">
+                UPDATE load_flow_parameters SET simul_shunt = shunt_compensator_voltage_control_on
+            </sql>
+            <dropColumn columnName="shunt_compensator_voltage_control_on" tableName="load_flow_parameters"/>
+        </rollback>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-14">
+        <createIndex indexName="loadFlowParametersEntity_countriesToBalance_idx1" tableName="load_flow_parameters_entity_countries_to_balance">
+            <column name="load_flow_parameters_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-15">
+        <addForeignKeyConstraint baseColumnNames="load_flow_parameters_entity_id" baseTableName="load_flow_parameters_entity_countries_to_balance" constraintName="loadFlowParametersEntity_countriesToBalance_fk1" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="load_flow_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-1">
+        <addDefaultValue columnDataType="boolean" columnName="dc" defaultValueBoolean="false" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-2">
+        <addDefaultValue columnDataType="boolean" columnName="distributed_slack" defaultValueBoolean="true" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-3">
+        <addDefaultValue columnDataType="boolean" columnName="no_generator_reactive_limits" defaultValueBoolean="false" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-4">
+        <addDefaultValue columnDataType="boolean" columnName="phase_shifter_regulation_on" defaultValueBoolean="false" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-5">
+        <addDefaultValue columnDataType="boolean" columnName="read_slack_bus" defaultValueBoolean="true" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-6">
+        <addDefaultValue columnDataType="boolean" columnName="transformer_voltage_control_on" defaultValueBoolean="false" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-7">
+        <addDefaultValue columnDataType="boolean" columnName="twt_split_shunt_admittance" defaultValueBoolean="false" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="boutiercha (generated)" id="1654087630098-8">
+        <addDefaultValue columnDataType="boolean" columnName="write_slack_bus" defaultValueBoolean="false" tableName="load_flow_parameters"/>
+    </changeSet>
+</databaseChangeLog>

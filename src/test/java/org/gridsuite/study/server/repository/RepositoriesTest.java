@@ -19,9 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -81,17 +79,20 @@ public class RepositoriesTest {
         LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
-                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                Set.of("FR"), LoadFlowParameters.ConnectedComponentMode.MAIN, false);
 
         LoadFlowParametersEntity loadFlowParametersEntity2 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
-                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                Set.of("FR"), LoadFlowParameters.ConnectedComponentMode.MAIN, false);
 
         LoadFlowParametersEntity loadFlowParametersEntity3 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
-                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                Set.of("FR"), LoadFlowParameters.ConnectedComponentMode.MAIN, false);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
