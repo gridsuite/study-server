@@ -310,6 +310,10 @@ public class NetworkModificationTreeService {
         return nodesModificationInfos;
     }
 
+    public List<NodeEntity> getAllNodes(UUID studyUuid) {
+        return nodesRepository.findAllByStudyId(studyUuid);
+    }
+
     @Transactional(readOnly = true)
     public Optional<LoadFlowStatus> getLoadFlowStatus(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowStatus(nodeUuid));
