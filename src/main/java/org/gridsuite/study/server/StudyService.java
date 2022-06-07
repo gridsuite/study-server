@@ -361,11 +361,6 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public StudyEntity getStudy(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElse(null);
-    }
-
-    @Transactional(readOnly = true)
     public StudyInfos getStudyInfos(UUID studyUuid) {
         return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
