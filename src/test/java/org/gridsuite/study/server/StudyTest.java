@@ -3094,7 +3094,7 @@ public class StudyTest {
         UUID study1Uuid = createStudy("userId", CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid);
+        createNetworkModificationNode(study1Uuid, modificationNodeUuid);
 
         String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
@@ -3121,9 +3121,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", studyUuid, "11888888-0000-0000-0000-111111111111")
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
-
-        Thread.sleep(3000);
-
+        
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
         output.receive(TIMEOUT);

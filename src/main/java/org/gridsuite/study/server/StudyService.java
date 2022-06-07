@@ -354,7 +354,7 @@ public class StudyService {
                 LOGGER.error(e.toString(), e);
             } finally {
                 deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudyUuid,
                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
         });
