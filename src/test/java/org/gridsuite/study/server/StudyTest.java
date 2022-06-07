@@ -2244,14 +2244,6 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode3Uuid).content(createLoadAttributes2))
                 .andExpect(status().is4xxClientError());
 
-//        // update load creation
-//        modificationNode1.setBuildStatus(BuildStatus.BUILDING);
-//        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-//        String loadAttributesUpdated2 = "{\"loadId\":\"loadId2\",\"loadName\":\"loadName2\",\"loadType\":\"UNDEFINED\",\"activePower\":\"50.0\",\"reactivePower\":\"25.0\",\"voltageLevelId\":\"idVL2\",\"busId\":\"idBus2\"}";
-//        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation",
-//                        studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(loadAttributesUpdated2).contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().is4xxClientError());
-
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createLoadAttributes)));
