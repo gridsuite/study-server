@@ -330,35 +330,36 @@ public class StudyService {
 
     public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
-        AtomicReference<Long> startTime = new AtomicReference<>();
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
         if (sourceStudy == null) {
             return null;
         }
-
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> {
-            try {
-                startTime.set(System.nanoTime());
-
-                List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getNetworkUuid());
-                List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
-                Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
-                UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
-
-                LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-                duplicateStudy(basicStudyInfos, sourceStudyUuid, userId, clonedNetworkUuid, sourceStudy.getNetworkId(),
-                        sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters));
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            } finally {
-                deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-                LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudyUuid,
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-            }
-        });
+        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, userId));
         return basicStudyInfos;
+    }
+
+    public void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, String userId) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        try {
+            startTime.set(System.nanoTime());
+
+            List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getNetworkUuid());
+            List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
+            Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
+            UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
+
+            LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
+            duplicateStudy(basicStudyInfos, sourceStudy.getId(), userId, clonedNetworkUuid, sourceStudy.getNetworkId(),
+                    sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters));
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        } finally {
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudy.getId(),
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
     }
 
     @Transactional(readOnly = true)
