@@ -293,6 +293,7 @@ public class NetworkModificationTreeService {
         });
     }
 
+    @Transactional
     public void createBasicTree(StudyEntity studyEntity, UUID importReportUuid) {
         // create 2 nodes : root node, modification node 0
         NodeEntity rootNodeEntity = createRoot(studyEntity, importReportUuid);

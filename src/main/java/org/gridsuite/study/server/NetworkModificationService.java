@@ -88,7 +88,7 @@ public class NetworkModificationService {
 
     public List<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "modifications")
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
             .buildAndExpand(groupUuid)
             .toUriString();
 
