@@ -10,11 +10,8 @@
     </changeSet>
     <changeSet author="boutiercha" id="1654087630098-10">
         <addColumn tableName="load_flow_parameters">
-            <column name="connected_component_mode" type="varchar(255)"/>
+            <column name="connected_component_mode" type="varchar(255)" defaultValue="MAIN"/>
         </addColumn>
-        <sql splitStatements="true" stripComments="true">
-            UPDATE load_flow_parameters SET connected_component_mode = 'MAIN'
-        </sql>
     </changeSet>
     <changeSet author="boutiercha (generated)" id="1654087630098-11">
         <addColumn tableName="load_flow_parameters">
