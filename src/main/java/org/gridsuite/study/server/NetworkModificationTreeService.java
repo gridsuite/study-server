@@ -260,10 +260,6 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
-        if (study == null) {
-            throw new StudyException(STUDY_CREATION_FAILED, "Couln't retrieve study for modification tree duplication");
-        }
-
         UUID rootId = null;
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
             rootId = getStudyRootNodeUuid(study.getId());

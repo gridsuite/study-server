@@ -3094,6 +3094,7 @@ public class StudyTest {
         UUID study1Uuid = createStudy("userId", CASE_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid);
 
         String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
@@ -3132,7 +3133,7 @@ public class StudyTest {
         //Check tree node has been duplicated
         assertEquals(1, rootNode.getChildren().size());
         NetworkModificationNode duplicatedModificationNode = (NetworkModificationNode) rootNode.getChildren().get(0);
-        assertEquals(0, duplicatedModificationNode.getChildren().size());
+        assertEquals(1, duplicatedModificationNode.getChildren().size());
 
         //Check requests to duplicate modification has been emitted
         var requests = getRequestsWithBodyDone(1);
