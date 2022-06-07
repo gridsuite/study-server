@@ -340,7 +340,7 @@ public class StudyService {
         return basicStudyInfos;
     }
 
-    public void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, String userId) {
+    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         try {
             startTime.set(System.nanoTime());
