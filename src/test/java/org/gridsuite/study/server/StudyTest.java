@@ -378,12 +378,12 @@ public class StudyTest {
         List<EquipmentModificationInfos> lineSplitResponseInfos = new ArrayList<>();
         lineSplitResponseInfos.add(lineToSplitDeletion);
 
-        EquipmentModificationInfos lineToAttachToDeletion = EquipmentModificationInfos.builder()
-                .type(ModificationType.EQUIPMENT_DELETION)
+        EquipmentModificationInfos lineToAttachTo = EquipmentModificationInfos.builder()
+                .type(ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL)
                 .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
                 .build();
         List<EquipmentModificationInfos> lineAttachResponseInfos = new ArrayList<>();
-        lineAttachResponseInfos.add(lineToAttachToDeletion);
+        lineAttachResponseInfos.add(lineToAttachTo);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -2563,8 +2563,7 @@ public class StudyTest {
     @SneakyThrows
     @Test
     public void testLineAttachToVoltageLevel() {
-        createStudy("userId", CASE_UUID);
-        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
         UUID modificationNodeUuid = modificationNode.getId();
@@ -2590,6 +2589,8 @@ public class StudyTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLineAttachToVoltageLevelAttributes))
                 .andExpect(status().isOk());
+
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         var requests = getRequestsWithBodyDone(2);
         assertEquals(2, requests.size());
