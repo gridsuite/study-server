@@ -542,8 +542,7 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    @Transactional
-    CreatedStudyBasicInfos duplicateStudy(BasicStudyInfos studyInfos, UUID sourceStudyUuid, String userId, UUID networkUuid, String networkId,
+    private CreatedStudyBasicInfos duplicateStudy(BasicStudyInfos studyInfos, UUID sourceStudyUuid, String userId, UUID networkUuid, String networkId,
                                                String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters) {
         UUID importReportUuid = UUID.randomUUID();
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudyEntity(
