@@ -332,7 +332,7 @@ public class StudyService {
         Objects.requireNonNull(sourceStudyUuid);
         AtomicReference<Long> startTime = new AtomicReference<>();
 
-        StudyEntity sourceStudy = getStudy(sourceStudyUuid);
+        StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
         if (sourceStudy == null) {
             return null;
         }

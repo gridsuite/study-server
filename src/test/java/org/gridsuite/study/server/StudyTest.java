@@ -3121,7 +3121,7 @@ public class StudyTest {
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={sourceStudyUuid}&studyUuid={studyUuid}", studyUuid, "11888888-0000-0000-0000-111111111111")
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
-        
+
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
         output.receive(TIMEOUT);
