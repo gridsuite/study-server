@@ -350,9 +350,7 @@ public class StudyService {
             Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
-            LoadFlowParameters loadFlowParameters = new LoadFlowParameters();
-            duplicateStudy(basicStudyInfos, sourceStudy.getId(), userId, clonedNetworkUuid, sourceStudy.getNetworkId(),
-                    sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), true, toEntity(loadFlowParameters));
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, userId, clonedNetworkUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -543,17 +541,29 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    private CreatedStudyBasicInfos duplicateStudy(BasicStudyInfos studyInfos, UUID sourceStudyUuid, String userId, UUID networkUuid, String networkId,
-                                               String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters) {
-        UUID importReportUuid = UUID.randomUUID();
-        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudyEntity(
-                studyInfos.getId(), sourceStudyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
+    private CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, String userId, UUID clonedNetworkUuid) {
+        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudyEntity(studyInfos, sourceStudy, userId, clonedNetworkUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
         emitStudiesChanged(studyInfos.getId(), userId);
 
         return createdStudyBasicInfos;
     }
+
+    private StudyEntity insertDuplicatedStudyEntity(BasicStudyInfos studyInfos, StudyEntity sourceStudy, String userId, UUID clonedNetworkUuid) {
+        Objects.requireNonNull(studyInfos.getId());
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(clonedNetworkUuid);
+        Objects.requireNonNull(sourceStudy.getNetworkId());
+        Objects.requireNonNull(sourceStudy.getCaseFormat());
+        Objects.requireNonNull(sourceStudy.getCaseUuid());
+        Objects.requireNonNull(sourceStudy.getLoadFlowParameters());
+
+        UUID reportUuid = UUID.randomUUID();
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), defaultLoadflowProvider, new LoadFlowParametersEntity());
+        return insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid);
+    }
+
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
         StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(userId, studyUuid);
@@ -1551,22 +1561,6 @@ public class StudyService {
         return insertStudy(studyEntity, importReportUuid);
     }
 
-    private StudyEntity insertDuplicatedStudyEntity(UUID uuid, UUID sourceStudyUuid, String userId, UUID networkUuid, String networkId,
-                                          String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID reportUuid) {
-        Objects.requireNonNull(uuid);
-        Objects.requireNonNull(sourceStudyUuid);
-        Objects.requireNonNull(userId);
-        Objects.requireNonNull(networkUuid);
-        Objects.requireNonNull(networkId);
-        Objects.requireNonNull(caseFormat);
-        Objects.requireNonNull(caseUuid);
-        Objects.requireNonNull(loadFlowParameters);
-
-        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
-        return insertDuplicatedStudy(studyEntity, sourceStudyUuid, reportUuid);
-    }
-
     @Transactional
     public StudyEntity insertStudy(StudyEntity studyEntity, UUID importReportUuid) {
         var study = studyRepository.save(studyEntity);
@@ -1576,10 +1570,10 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity insertDuplicatedStudy(StudyEntity studyEntity, UUID sourceStudyUuid, UUID importReportUuid) {
+    public StudyEntity insertDuplicatedStudy(StudyEntity studyEntity, UUID sourceStudyUuid, UUID reportUuid) {
         var study = studyRepository.save(studyEntity);
 
-        networkModificationTreeService.createRoot(study, importReportUuid);
+        networkModificationTreeService.createRoot(study, reportUuid);
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(sourceStudyUuid);
         networkModificationTreeService.cloneStudyTree(rootNode, null, studyEntity);
         return study;
