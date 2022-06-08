@@ -19,9 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -78,20 +76,27 @@ public class RepositoriesTest {
         loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable5);
         loadFlowResultEntity3.getComponentResults().add(componentResultEmbeddable6);
 
+        Set<String> countriesTemp = new HashSet<>();
+        countriesTemp.add("FR");
         LoadFlowParametersEntity loadFlowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
-                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
 
+        countriesTemp.add("IT");
         LoadFlowParametersEntity loadFlowParametersEntity2 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
-                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
 
+        countriesTemp.add("DE");
         LoadFlowParametersEntity loadFlowParametersEntity3 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
                 true, false, true, false, true,
                 false, true, false,
-                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
+                true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
