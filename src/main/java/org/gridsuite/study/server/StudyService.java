@@ -335,12 +335,15 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
+        LoadFlowParameters sourceLoadFlowParameters = getLoadFlowParameters(sourceStudyUuid);
+        LoadFlowParameters loadFlowParametersCopy = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : null;
+
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, userId));
+        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, toEntity(loadFlowParametersCopy), userId));
         return basicStudyInfos;
     }
 
-    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, String userId) {
+    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity sourceLoadFlowParameters, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         try {
             startTime.set(System.nanoTime());
@@ -350,7 +353,8 @@ public class StudyService {
             Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, userId, clonedNetworkUuid);
+            LoadFlowParametersEntity newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters : toEntity(new LoadFlowParameters());
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, newLoadFlowParameters, userId, clonedNetworkUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -536,17 +540,18 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    private CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, String userId, UUID clonedNetworkUuid) {
+    @Transactional
+    public CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, String userId, UUID clonedNetworkUuid) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
         Objects.requireNonNull(clonedNetworkUuid);
         Objects.requireNonNull(sourceStudy.getNetworkId());
         Objects.requireNonNull(sourceStudy.getCaseFormat());
         Objects.requireNonNull(sourceStudy.getCaseUuid());
-        Objects.requireNonNull(sourceStudy.getLoadFlowParameters());
+        Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), defaultLoadflowProvider, new LoadFlowParametersEntity());
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), defaultLoadflowProvider, newLoadFlowParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
