@@ -494,6 +494,11 @@ public class NetworkModificationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        restTemplate.postForEntity(getNetworkModificationServerURI(false) + path, null, Void.class);
+
+        try {
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, STUDY_CREATION_FAILED);
+        }
     }
 }

@@ -418,6 +418,9 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")) {
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/line12/status\\?group=.*")) {
                     if (body.peek().readUtf8().equals("lockout")) {
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2")));
@@ -3127,6 +3130,7 @@ public class StudyTest {
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
 
         //Check tree node has been duplicated
         assertEquals(1, rootNode.getChildren().size());
@@ -3134,7 +3138,7 @@ public class StudyTest {
         assertEquals(1, duplicatedModificationNode.getChildren().size());
 
         //Check requests to duplicate modification has been emitted
-        var requests = getRequestsWithBodyDone(1);
+        var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
 
         return duplicatedStudy;
