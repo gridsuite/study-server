@@ -335,15 +335,14 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
-        LoadFlowParameters sourceLoadFlowParameters = getLoadFlowParameters(sourceStudyUuid);
-        LoadFlowParameters loadFlowParametersCopy = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : null;
+        LoadFlowParameters sourceLoadFlowParameters = fromEntity(sourceStudy.getLoadFlowParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, toEntity(loadFlowParametersCopy), userId));
+        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, userId));
         return basicStudyInfos;
     }
 
-    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity sourceLoadFlowParameters, String userId) {
+    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         try {
             startTime.set(System.nanoTime());
@@ -353,8 +352,8 @@ public class StudyService {
             Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
-            LoadFlowParametersEntity newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters : toEntity(new LoadFlowParameters());
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, newLoadFlowParameters, userId, clonedNetworkUuid);
+            LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, toEntity(newLoadFlowParameters), userId, clonedNetworkUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
