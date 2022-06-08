@@ -156,7 +156,8 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
-    @ApiResponse(responseCode = "200", description = "The svg")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
+        @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
     public ResponseEntity<byte[]> getVoltageLevelDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -166,13 +167,16 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid));
+        byte[] result = studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+            ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
-    @ApiResponse(responseCode = "200", description = "The svg and metadata")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
+        @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
     public ResponseEntity<String> getVoltageLevelDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -182,8 +186,10 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid));
+        String result = studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
+            ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels")
@@ -636,7 +642,8 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
     @Operation(summary = "get the substation diagram for the given network and substation")
-    @ApiResponse(responseCode = "200", description = "The svg")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
+        @ApiResponse(responseCode = "404", description = "The substation has not been found")})
     public ResponseEntity<byte[]> getSubstationDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -647,13 +654,16 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(studyService.getSubstationSvg(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid));
+        byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
+            ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
     @Operation(summary = "get the substation diagram for the given network and substation")
-    @ApiResponse(responseCode = "200", description = "The svg and metadata")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
+        @ApiResponse(responseCode = "404", description = "The substation has not been found")})
     public ResponseEntity<String> getSubstationDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -664,8 +674,10 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationSvgAndMetadata(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid));
+        String result = studyService.getSubstationSvgAndMetadata(studyUuid, substationId,
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
+            ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram")

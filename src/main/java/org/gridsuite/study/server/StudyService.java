@@ -589,7 +589,17 @@ public class StudyService {
             .buildAndExpand(networkUuid, voltageLevelId)
             .toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        byte[] result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     String getVoltageLevelSvgAndMetadata(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
@@ -614,7 +624,17 @@ public class StudyService {
             .buildAndExpand(networkUuid, voltageLevelId)
             .toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        String result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
@@ -1317,7 +1337,17 @@ public class StudyService {
         }
         var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        byte[] result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     String getSubstationSvgAndMetadata(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
@@ -1341,7 +1371,17 @@ public class StudyService {
         }
         var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        String result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     String getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
