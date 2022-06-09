@@ -547,9 +547,9 @@ public class StudyController {
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
-    public ResponseEntity<Collection<String>> getExportFormats() {
-        Collection<String> formats = studyService.getExportFormats();
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formats);
+    public ResponseEntity<String> getExportFormats() {
+        String formatsJson = studyService.getExportFormats();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}")
@@ -558,10 +558,11 @@ public class StudyController {
     public ResponseEntity<byte[]> exportNetwork(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("format") String format) {
+            @PathVariable("format") String format,
+            @RequestParam(value = "formatParameters", required = false) String parametersJson) {
 
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid);
-        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format);
+        ExportNetworkInfos exportNetworkInfos = studyService.exportNetwork(studyUuid, nodeUuid, format, parametersJson);
 
         HttpHeaders header = new HttpHeaders();
         header.setContentDisposition(ContentDisposition.builder("attachment").filename(exportNetworkInfos.getFileName(), StandardCharsets.UTF_8).build());
@@ -767,9 +768,9 @@ public class StudyController {
     @Operation(summary = "update a load creation in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load creation has been updated")})
     public ResponseEntity<Void> updateLoadCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @PathVariable("modificationUuid") UUID modificationUuid,
-                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLoadAttributes) {
+                                                         @PathVariable("modificationUuid") UUID modificationUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestBody String createLoadAttributes) {
         studyService.assertComputationNotRunning(nodeUuid);
         studyService.updateEquipmentCreation(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid, modificationUuid);
         return ResponseEntity.ok().build();
