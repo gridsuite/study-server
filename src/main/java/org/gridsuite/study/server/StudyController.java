@@ -528,7 +528,7 @@ public class StudyController {
     public ResponseEntity<Void> runLoadFlow(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.assertIsNodeReadOnly(nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertLoadFlowRunnable(nodeUuid);
         studyService.runLoadFlow(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
@@ -568,7 +568,7 @@ public class StudyController {
                                                           @RequestBody(required = false) String parameters) {
         List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         String nonNullParameters = Objects.toString(parameters, "");
-        studyService.assertIsNodeReadOnly(nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
 
         return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters, nodeUuid));
     }

@@ -1081,7 +1081,7 @@ public class StudyService {
         assertSecurityAnalysisNotRunning(nodeUuid);
     }
 
-    public void assertIsNodeReadOnly(UUID nodeUuid) {
+    public void assertIsNodeNotReadOnly(UUID nodeUuid) {
         Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
         if (Boolean.TRUE.equals(isReadOnly)) {
             throw new StudyException(NOT_ALLOWED);
@@ -1089,7 +1089,7 @@ public class StudyService {
     }
 
     public void assertCanModifyNode(UUID studyUuid, UUID nodeUuid) {
-        assertIsNodeReadOnly(nodeUuid);
+        assertIsNodeNotReadOnly(nodeUuid);
         assertNoBuildNoComputation(studyUuid, nodeUuid);
     }
 
