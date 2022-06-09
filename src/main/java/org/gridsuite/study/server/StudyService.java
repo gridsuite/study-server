@@ -942,29 +942,34 @@ public class StudyService {
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
     }
 
-    public Collection<String> getExportFormats() {
+    public String getExportFormats() {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
             .toUriString();
 
-        ParameterizedTypeReference<Collection<String>> typeRef = new ParameterizedTypeReference<>() {
+        ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
 
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
+    public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format, String paramatersJson) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}");
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
+            + "/networks/{networkUuid}/export/{format}");
         if (!variantId.isEmpty()) {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
             .toUriString();
 
-        ResponseEntity<byte[]> responseEntity = restTemplate.getForEntity(networkConversionServerBaseUri + path,
-                byte[].class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
+
+        ResponseEntity<byte[]> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST,
+            httpEntity, byte[].class);
 
         byte[] bytes = responseEntity.getBody();
         String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
@@ -1120,7 +1125,11 @@ public class StudyService {
                 parameters.isWriteSlackBus(),
                 parameters.isDc(),
                 parameters.isDistributedSlack(),
-                parameters.getBalanceType());
+                parameters.getBalanceType(),
+                parameters.isDcUseTransformerRatio(),
+                parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
+                parameters.getConnectedComponentMode(),
+                parameters.isHvdcAcEmulation());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
@@ -1130,16 +1139,16 @@ public class StudyService {
             entity.isNoGeneratorReactiveLimits(),
             entity.isPhaseShifterRegulationOn(),
             entity.isTwtSplitShuntAdmittance(),
-            entity.isSimulShunt(),
+            entity.isShuntCompensatorVoltageControlOn(),
             entity.isReadSlackBus(),
             entity.isWriteSlackBus(),
             entity.isDc(),
             entity.isDistributedSlack(),
             entity.getBalanceType(),
-            true, // FIXME to persist
-            EnumSet.noneOf(Country.class), // FIXME to persist
-            LoadFlowParameters.ConnectedComponentMode.MAIN, // FIXME to persist
-            true// FIXME to persist
+            entity.isDcUseTransformerRatio(),
+            entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
+            entity.getConnectedComponentMode(),
+            entity.isHvdcAcEmulation()
             );
     }
 
