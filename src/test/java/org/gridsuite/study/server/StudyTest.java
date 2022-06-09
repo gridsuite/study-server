@@ -2246,7 +2246,7 @@ public class StudyTest {
         // create load on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
                         studyNameUserIdUuid, modificationNode3Uuid).content(createLoadAttributes2))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
@@ -2389,7 +2389,7 @@ public class StudyTest {
         // create substation on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes2))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*") && r.getBody().equals(createSubstationAttributes)));
@@ -2449,7 +2449,7 @@ public class StudyTest {
         // create voltage level on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createVoltageLevelAttributes2))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*") && r.getBody().equals(createVoltageLevelAttributes)));
@@ -2786,7 +2786,7 @@ public class StudyTest {
         // create generator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes2))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
@@ -2829,7 +2829,7 @@ public class StudyTest {
         // create shunt compensator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes2))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream()
@@ -2900,7 +2900,7 @@ public class StudyTest {
         // create line on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes2))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
@@ -2952,7 +2952,7 @@ public class StudyTest {
         // create Two Windings Transformer on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes2))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && r.getBody().equals(createTwoWindingsTransformerAttributes)));
