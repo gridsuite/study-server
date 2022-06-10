@@ -39,12 +39,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
@@ -52,6 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -84,10 +80,6 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
-
-    public static final String ROOT_CATEGORY_REACTOR = "reactor.";
-
-    public static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
 
     private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
 
@@ -519,9 +511,10 @@ public class StudyService {
         return restTemplate.getForObject(caseServerBaseUri + path, String.class);
     }
 
-    private StudyException handleStudyCreationError(UUID studyUuid, String userId, String errorMessage,
-            HttpStatus httpStatusCode, String serverName) {
-        String errorToParse = errorMessage == null ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
+    private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
+        HttpStatus httpStatusCode = httpException.getStatusCode();
+        String errorMessage = httpException.getResponseBodyAsString();
+        String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
                 : errorMessage;
 
         try {
@@ -537,7 +530,9 @@ public class StudyService {
             }
         }
 
-        return new StudyException(STUDY_CREATION_FAILED);
+        LOGGER.error(errorToParse, httpException);
+
+        return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
     UUID importCase(MultipartFile multipartFile, UUID studyUuid, String userId) {
@@ -554,8 +549,7 @@ public class StudyService {
                 caseUuid = restTemplate.postForObject(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private",
                         request, UUID.class);
             } catch (HttpStatusCodeException e) {
-                throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
-                        "case-server");
+                throw handleStudyCreationError(studyUuid, userId, e, "case-server");
             }
         } catch (StudyException e) {
             throw e;
@@ -650,12 +644,11 @@ public class StudyService {
                     NetworkInfos.class);
             NetworkInfos networkInfos = networkInfosResponse.getBody();
             if (networkInfos == null) {
-                throw handleStudyCreationError(studyUuid, userId, null, HttpStatus.BAD_REQUEST, "network-conversion-server");
+                throw handleStudyCreationError(studyUuid, userId, new HttpClientErrorException(HttpStatus.BAD_REQUEST), "network-conversion-server");
             }
             return networkInfos;
         } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
-                    "network-conversion-server");
+            throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
         } catch (Exception e) {
             if (!(e instanceof StudyException)) {
                 emitStudyCreationError(studyUuid, userId, e.getMessage());
