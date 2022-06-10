@@ -86,7 +86,7 @@ public class NetworkModificationService {
 
     public List<ModificationInfos> getModifications(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
             .buildAndExpand(groupUuid)
             .toUriString();
 
@@ -479,5 +479,25 @@ public class NetworkModificationService {
         }
 
         return result;
+    }
+
+    public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
+        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(sourceGroupUuid);
+        var path = UriComponentsBuilder.fromPath("groups")
+                .queryParam("duplicateFrom", sourceGroupUuid)
+                .queryParam("groupUuid", groupUuid)
+                .queryParam("reportUuid", reportUuid)
+                .buildAndExpand(groupUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        try {
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, STUDY_CREATION_FAILED);
+        }
     }
 }

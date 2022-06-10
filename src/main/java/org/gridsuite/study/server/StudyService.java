@@ -12,10 +12,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
+import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -26,10 +28,7 @@ import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -256,9 +255,19 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
+    public String getCaseName(UUID studyUuid) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/name")
+                .buildAndExpand(study.getCaseUuid())
+                .toUriString();
+
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+    }
+
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
+
     }
 
     List<BasicStudyInfos> getStudiesCreationRequests() {
@@ -317,6 +326,41 @@ public class StudyService {
         } finally {
             deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+    }
+
+    public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
+        Objects.requireNonNull(sourceStudyUuid);
+
+        StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
+        if (sourceStudy == null) {
+            return null;
+        }
+        LoadFlowParameters sourceLoadFlowParameters = fromEntity(sourceStudy.getLoadFlowParameters());
+
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, userId));
+        return basicStudyInfos;
+    }
+
+    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, String userId) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        try {
+            startTime.set(System.nanoTime());
+
+            List<VariantInfos> networkVariants = networkStoreService.getNetworkVariants(sourceStudy.getNetworkUuid());
+            List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
+            Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
+            UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
+
+            LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, toEntity(newLoadFlowParameters), userId, clonedNetworkUuid);
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        } finally {
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudy.getId(),
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
@@ -493,6 +537,26 @@ public class StudyService {
         studyInfosService.add(createdStudyBasicInfos);
 
         emitStudiesChanged(studyUuid, userId);
+
+        return createdStudyBasicInfos;
+    }
+
+    @Transactional
+    public CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, String userId, UUID clonedNetworkUuid) {
+        Objects.requireNonNull(studyInfos.getId());
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(clonedNetworkUuid);
+        Objects.requireNonNull(sourceStudy.getNetworkId());
+        Objects.requireNonNull(sourceStudy.getCaseFormat());
+        Objects.requireNonNull(sourceStudy.getCaseUuid());
+        Objects.requireNonNull(newLoadFlowParameters);
+
+        UUID reportUuid = UUID.randomUUID();
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters);
+        CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
+
+        studyInfosService.add(createdStudyBasicInfos);
+        emitStudiesChanged(studyInfos.getId(), userId);
 
         return createdStudyBasicInfos;
     }
@@ -1564,17 +1628,18 @@ public class StudyService {
     @Transactional
     public StudyEntity insertStudy(StudyEntity studyEntity, UUID importReportUuid) {
         var study = studyRepository.save(studyEntity);
-        // create 2 nodes : root node, modification node 0
-        NodeEntity rootNodeEntity = networkModificationTreeService.createRoot(studyEntity, importReportUuid);
-        NetworkModificationNode modificationNode = NetworkModificationNode
-            .builder()
-            .name("modification node 0")
-            .variantId(FIRST_VARIANT_ID)
-            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .buildStatus(BuildStatus.BUILT)
-            .build();
-        networkModificationTreeService.createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER);
 
+        networkModificationTreeService.createBasicTree(study, importReportUuid);
+        return study;
+    }
+
+    @Transactional
+    public StudyEntity insertDuplicatedStudy(StudyEntity studyEntity, UUID sourceStudyUuid, UUID reportUuid) {
+        var study = studyRepository.save(studyEntity);
+
+        networkModificationTreeService.createRoot(study, reportUuid);
+        AbstractNode rootNode = networkModificationTreeService.getStudyTree(sourceStudyUuid);
+        networkModificationTreeService.cloneStudyTree(rootNode, null, studyEntity);
         return study;
     }
 

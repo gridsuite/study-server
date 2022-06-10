@@ -10,6 +10,7 @@ import com.powsybl.commons.PowsyblException;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.model.VariantInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -17,6 +18,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
+import java.util.stream.Collectors;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -79,5 +82,17 @@ public class NetworkService {
         } catch (PowsyblException e) {
             throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
         }
+    }
+
+    Network cloneNetwork(UUID sourceNetworkId, List<String> targetVariantIds) {
+        return networkStoreService.cloneNetwork(sourceNetworkId, targetVariantIds);
+    }
+
+    UUID getNetworkUuid(Network network) {
+        return networkStoreService.getNetworkUuid(network);
+    }
+
+    List<VariantInfos> getNetworkVariants(UUID networkUuid) {
+        return networkStoreService.getVariantsInfos(networkUuid).stream().sorted(Comparator.comparing(VariantInfos::getNum)).collect(Collectors.toList());
     }
 }
