@@ -17,14 +17,12 @@ import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -37,9 +35,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.NETWORK_MODIFICATION_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.REPORT_UUID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
 
@@ -49,6 +45,8 @@ import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
  */
 @Service
 public class NetworkModificationService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationService.class);
 
     private static final String DELIMITER = "/";
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
@@ -213,6 +211,8 @@ public class NetworkModificationService {
         } catch (JsonProcessingException e) {
             // responseBody by default
         }
+
+        LOGGER.error(message, httpException);
 
         return new StudyException(type, message);
     }
@@ -432,7 +432,6 @@ public class NetworkModificationService {
 
     public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
         ModificationType modificationType, UUID modificationUuid) {
-        List<EquipmentModificationInfos> result = null;
         UriComponentsBuilder uriComponentsBuilder;
         uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
             modificationType));
