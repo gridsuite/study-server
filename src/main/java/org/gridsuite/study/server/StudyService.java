@@ -38,12 +38,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
@@ -51,6 +46,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -83,10 +79,6 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
-
-    public static final String ROOT_CATEGORY_REACTOR = "reactor.";
-
-    public static final String CATEGORY_BROKER_INPUT = StudyService.class.getName() + ".input-broker-messages";
 
     private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
 
@@ -263,9 +255,19 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
+    public String getCaseName(UUID studyUuid) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/name")
+                .buildAndExpand(study.getCaseUuid())
+                .toUriString();
+
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+    }
+
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
+
     }
 
     List<BasicStudyInfos> getStudiesCreationRequests() {
@@ -573,9 +575,10 @@ public class StudyService {
         return restTemplate.getForObject(caseServerBaseUri + path, String.class);
     }
 
-    private StudyException handleStudyCreationError(UUID studyUuid, String userId, String errorMessage,
-            HttpStatus httpStatusCode, String serverName) {
-        String errorToParse = errorMessage == null ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
+    private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
+        HttpStatus httpStatusCode = httpException.getStatusCode();
+        String errorMessage = httpException.getResponseBodyAsString();
+        String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
                 : errorMessage;
 
         try {
@@ -591,7 +594,9 @@ public class StudyService {
             }
         }
 
-        return new StudyException(STUDY_CREATION_FAILED);
+        LOGGER.error(errorToParse, httpException);
+
+        return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
     UUID importCase(MultipartFile multipartFile, UUID studyUuid, String userId) {
@@ -608,8 +613,7 @@ public class StudyService {
                 caseUuid = restTemplate.postForObject(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private",
                         request, UUID.class);
             } catch (HttpStatusCodeException e) {
-                throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
-                        "case-server");
+                throw handleStudyCreationError(studyUuid, userId, e, "case-server");
             }
         } catch (StudyException e) {
             throw e;
@@ -643,7 +647,17 @@ public class StudyService {
             .buildAndExpand(networkUuid, voltageLevelId)
             .toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        byte[] result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     String getVoltageLevelSvgAndMetadata(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
@@ -668,7 +682,17 @@ public class StudyService {
             .buildAndExpand(networkUuid, voltageLevelId)
             .toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        String result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
@@ -684,12 +708,11 @@ public class StudyService {
                     NetworkInfos.class);
             NetworkInfos networkInfos = networkInfosResponse.getBody();
             if (networkInfos == null) {
-                throw handleStudyCreationError(studyUuid, userId, null, HttpStatus.BAD_REQUEST, "network-conversion-server");
+                throw handleStudyCreationError(studyUuid, userId, new HttpClientErrorException(HttpStatus.BAD_REQUEST), "network-conversion-server");
             }
             return networkInfos;
         } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e.getResponseBodyAsString(), e.getStatusCode(),
-                    "network-conversion-server");
+            throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
         } catch (Exception e) {
             if (!(e instanceof StudyException)) {
                 emitStudyCreationError(studyUuid, userId, e.getMessage());
@@ -996,29 +1019,34 @@ public class StudyService {
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
     }
 
-    public Collection<String> getExportFormats() {
+    public String getExportFormats() {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
             .toUriString();
 
-        ParameterizedTypeReference<Collection<String>> typeRef = new ParameterizedTypeReference<>() {
+        ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
 
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format) {
+    public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format, String paramatersJson) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/export/{format}");
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
+            + "/networks/{networkUuid}/export/{format}");
         if (!variantId.isEmpty()) {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
         String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
             .toUriString();
 
-        ResponseEntity<byte[]> responseEntity = restTemplate.getForEntity(networkConversionServerBaseUri + path,
-                byte[].class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
+
+        ResponseEntity<byte[]> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST,
+            httpEntity, byte[].class);
 
         byte[] bytes = responseEntity.getBody();
         String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
@@ -1156,7 +1184,11 @@ public class StudyService {
                 parameters.isWriteSlackBus(),
                 parameters.isDc(),
                 parameters.isDistributedSlack(),
-                parameters.getBalanceType());
+                parameters.getBalanceType(),
+                parameters.isDcUseTransformerRatio(),
+                parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
+                parameters.getConnectedComponentMode(),
+                parameters.isHvdcAcEmulation());
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
@@ -1166,16 +1198,16 @@ public class StudyService {
             entity.isNoGeneratorReactiveLimits(),
             entity.isPhaseShifterRegulationOn(),
             entity.isTwtSplitShuntAdmittance(),
-            entity.isSimulShunt(),
+            entity.isShuntCompensatorVoltageControlOn(),
             entity.isReadSlackBus(),
             entity.isWriteSlackBus(),
             entity.isDc(),
             entity.isDistributedSlack(),
             entity.getBalanceType(),
-            true, // FIXME to persist
-            EnumSet.noneOf(Country.class), // FIXME to persist
-            LoadFlowParameters.ConnectedComponentMode.MAIN, // FIXME to persist
-            true// FIXME to persist
+            entity.isDcUseTransformerRatio(),
+            entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
+            entity.getConnectedComponentMode(),
+            entity.isHvdcAcEmulation()
             );
     }
 
@@ -1371,7 +1403,17 @@ public class StudyService {
         }
         var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        byte[] result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     String getSubstationSvgAndMetadata(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
@@ -1395,7 +1437,17 @@ public class StudyService {
         }
         var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        String result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     String getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {

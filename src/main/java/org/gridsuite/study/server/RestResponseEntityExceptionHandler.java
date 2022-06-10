@@ -60,6 +60,8 @@ public class RestResponseEntityExceptionHandler {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case BAD_NODE_TYPE:
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());
+                case SVG_NOT_FOUND:
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getMessage());
                 default:
             }
         } else if (exception instanceof ServerWebInputException) {
