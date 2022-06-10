@@ -256,9 +256,19 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
+    public String getCaseName(UUID studyUuid) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/name")
+                .buildAndExpand(study.getCaseUuid())
+                .toUriString();
+
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+    }
+
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
+
     }
 
     List<BasicStudyInfos> getStudiesCreationRequests() {

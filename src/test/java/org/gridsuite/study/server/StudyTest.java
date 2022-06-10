@@ -163,6 +163,7 @@ public class StudyTest {
     private static final String TWO_WINDINGS_TRANSFORMER_ID_1 = "2WT_ID_1";
     private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
     private static final String VL_ID_1 = "VL_ID_1";
+    private static final String CASE_NAME = "DefaultCaseName";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
     private static final String CASE_2_UUID_STRING = "656719f3-aaaa-48be-be46-ef7b93331e32";
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
@@ -609,7 +610,6 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("UCTE")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
@@ -620,7 +620,9 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-
+                    case "/v1/cases/" + CASE_UUID_STRING + "/name":
+                        return new MockResponse().setResponseCode(200).setBody(CASE_NAME)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -3185,6 +3187,20 @@ public class StudyTest {
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    public void getCaseName() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(CASE_NAME));
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/name")));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
+                .andExpect(status().isNotFound());
     }
 
     @After
