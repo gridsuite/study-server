@@ -143,6 +143,19 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
+    @PostMapping(value = "/studies")
+    @Operation(summary = "create a study from an existing one")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The study was successfully created"),
+            @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
+    public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("duplicateFrom") UUID sourceStudyUuid,
+                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
+                                                             @RequestHeader("userId") String userId) {
+        BasicStudyInfos createStudy = studyService.createStudy(sourceStudyUuid, studyUuid, userId);
+        return createStudy != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(createStudy) :
+                ResponseEntity.notFound().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "get a study")
     @ApiResponses(value = {
