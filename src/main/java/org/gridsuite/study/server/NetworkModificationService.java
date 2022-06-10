@@ -481,36 +481,6 @@ public class NetworkModificationService {
         return result;
     }
 
-    public List<EquipmentModificationInfos> lineAttachToVoltageLevel(UUID studyUuid, String lineAttachToVoltageLevelAttributes,
-                                                            UUID groupUuid, String variantId, UUID reportUuid) {
-        List<EquipmentModificationInfos> result;
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
-                        buildPathFrom(networkUuid) + ModificationType.getUriFromType(ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL))
-                .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid);
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<String>(lineAttachToVoltageLevelAttributes, headers);
-
-        try {
-            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
-            }).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e, ModificationType.getExceptionFromType(ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL));
-        }
-
-        return result;
-    }
-
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
