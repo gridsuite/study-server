@@ -494,15 +494,15 @@ public class NetworkModificationService {
         return result;
     }
 
-    public void notifyModificationEquipment(UUID studyUuid, UUID nodeUuid, String modificationType, UUID notificationUuid) {
-        emitModificationEquipmentNotification(studyUuid, nodeUuid, modificationType, notificationUuid);
+    public void notifyModificationEquipment(UUID studyUuid, UUID nodeUuid, String modificationType) {
+        emitModificationEquipmentNotification(studyUuid, nodeUuid, modificationType);
     }
 
-    private void emitModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType, UUID notificationUuid) {
+    private void emitModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType) {
 
-        sendUpdateMessage(MessageBuilder.withPayload(notificationUuid != null ? notificationUuid.toString() : "")
-                .setHeader(HEADER_STUDY_UUID, studyUuid != null ? studyUuid : "")
-                .setHeader(HEADER_PARENT_NODE, nodeUuid != null ? nodeUuid : "")
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_PARENT_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, modificationType)
                 .build()
         );
