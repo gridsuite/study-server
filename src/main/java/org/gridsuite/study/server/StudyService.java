@@ -19,6 +19,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.*;
@@ -38,6 +39,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.integration.support.MessageBuilder;
@@ -52,6 +54,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -303,12 +307,23 @@ public class StudyService {
 
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseFile, userId, basicStudyInfos));
+        // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
+        // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
+        File tempFile;
+        try {
+            tempFile = File.createTempFile("tmp_", caseFile.getOriginalFilename());
+            caseFile.transferTo(tempFile);
+        } catch (IOException e) {
+            LOGGER.error(e.toString(), e);
+            throw new StudyException(STUDY_CREATION_FAILED);
+        }
+        studyServerExecutionService.runAsync(() -> {
+            createStudyAsync(tempFile, userId, basicStudyInfos);
+        });
         return basicStudyInfos;
     }
 
-    private void createStudyAsync(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
+    private void createStudyAsync(File caseFile, String userId, BasicStudyInfos basicStudyInfos) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
@@ -599,13 +614,16 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(MultipartFile multipartFile, UUID studyUuid, String userId) {
+    UUID importCase(File file, UUID studyUuid, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid = null;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
-            multipartBodyBuilder.part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
+            multipartBodyBuilder
+                .part("file", new FileSystemResource(file))
+                .filename(file.getName());
+
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
 
