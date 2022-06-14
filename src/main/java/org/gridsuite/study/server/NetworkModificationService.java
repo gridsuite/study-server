@@ -506,7 +506,7 @@ public class NetworkModificationService {
                 .setHeader(HEADER_UPDATE_TYPE, modificationType)
                 .build()
         );
-
+    }
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);

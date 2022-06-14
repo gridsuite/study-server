@@ -2585,7 +2585,7 @@ public class StudyTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLineAttachToVoltageLevelAttributes))
                 .andExpect(status().isOk());
-
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach",
@@ -2593,7 +2593,7 @@ public class StudyTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLineAttachToVoltageLevelAttributes))
                 .andExpect(status().isOk());
-
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         var requests = getRequestsWithBodyDone(2);
@@ -3281,7 +3281,7 @@ public class StudyTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes))
                 .andExpect(status().isOk());
-
+        checkEquipmentCreatingMessagesReceived(study1Uuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(study1Uuid, modificationNodeUuid, ImmutableSet.of("s2"));
 
         var requests = getRequestsWithBodyDone(1);
