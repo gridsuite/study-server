@@ -60,6 +60,11 @@ import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -309,21 +314,21 @@ public class StudyService {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
         // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
-        studyServerExecutionService.runAsync(() -> createStudyAsync(createTempFile(caseFile, userId, studyUuid), userId, basicStudyInfos));
+        studyServerExecutionService.runAsync(() -> createStudyAsync(createTempFile(caseFile), userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
-    private File createTempFile(MultipartFile caseFile, String userId, UUID studyUuid) {
-        File tempFile = null;
+    private File createTempFile(MultipartFile caseFile) {
+        Path tempFile = null;
         try {
-            tempFile = File.createTempFile("tmp_", caseFile.getOriginalFilename());
+            FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+            tempFile = Files.createTempFile("tmp_", caseFile.getOriginalFilename(), attr);
             caseFile.transferTo(tempFile);
-            tempFile.setReadOnly();
-            return tempFile;
+            return tempFile.toFile();
         } catch (IOException e) {
             LOGGER.error(e.toString(), e);
             if (tempFile != null) {
-                deleteFile(tempFile);
+                deleteFile(tempFile.toFile());
             }
             throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
