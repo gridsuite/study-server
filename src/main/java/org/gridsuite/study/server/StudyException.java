@@ -38,6 +38,7 @@ public class StudyException extends RuntimeException {
         SUBSTATION_CREATION_FAILED,
         VOLTAGE_LEVEL_CREATION_FAILED,
         LINE_SPLIT_FAILED,
+        LINE_ATTACH_FAILED,
         UNKNOWN_EQUIPMENT_TYPE,
         BAD_NODE_TYPE,
         NETWORK_NOT_FOUND,
@@ -45,6 +46,7 @@ public class StudyException extends RuntimeException {
         NETWORK_INDEXATION_FAILED,
         NODE_NOT_BUILT,
         GENERATOR_MODIFICATION_FAILED,
+        SVG_NOT_FOUND,
     }
 
     private final Type type;
