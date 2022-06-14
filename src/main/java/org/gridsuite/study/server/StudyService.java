@@ -309,18 +309,32 @@ public class StudyService {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
         // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
-        File tempFile;
+        studyServerExecutionService.runAsync(() -> createStudyAsync(createTempFile(caseFile, userId, studyUuid), userId, basicStudyInfos));
+        return basicStudyInfos;
+    }
+
+    private File createTempFile(MultipartFile caseFile, String userId, UUID studyUuid) {
+        File tempFile = null;
         try {
             tempFile = File.createTempFile("tmp_", caseFile.getOriginalFilename());
             caseFile.transferTo(tempFile);
+            tempFile.setReadOnly();
+            return tempFile;
         } catch (IOException e) {
             LOGGER.error(e.toString(), e);
-            throw new StudyException(STUDY_CREATION_FAILED);
+            if (tempFile != null) {
+                deleteFile(tempFile);
+            }
+            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
-        studyServerExecutionService.runAsync(() -> {
-            createStudyAsync(tempFile, userId, basicStudyInfos);
-        });
-        return basicStudyInfos;
+    }
+
+    private void deleteFile(@NonNull File file) {
+        try {
+            file.delete();
+        } catch (Throwable e) {
+            LOGGER.error(e.toString(), e);
+        }
     }
 
     private void createStudyAsync(File caseFile, String userId, BasicStudyInfos basicStudyInfos) {
@@ -339,6 +353,7 @@ public class StudyService {
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
+            deleteFile(caseFile);
             deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -616,7 +631,7 @@ public class StudyService {
 
     UUID importCase(File file, UUID studyUuid, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        UUID caseUuid = null;
+        UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
