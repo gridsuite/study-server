@@ -30,7 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class TestTempDir {
 
-    private static final String TEST_FILE = "testCase.xiidm";
+    private static final String TEST_FILE = "testTmpFileError.xiidm";
+
     private static final String STUDIES_URL = "/v1/studies";
 
     private static final long TIMEOUT = 1000;
@@ -53,13 +54,13 @@ public class TestTempDir {
 
             mockMvc
                 .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", true).file(mockFile)
-                        .header("userId", "userId").contentType(MediaType.MULTIPART_FORM_DATA))
+                    .header("userId", "userId").contentType(MediaType.MULTIPART_FORM_DATA))
                 .andExpect(status().is5xxServerError());
         }
 
-     // assert that the broker message has been sent a study creation request message
+        // assert that the broker message has been sent a study creation request message
         output.receive(TIMEOUT);
-     // assert that the broker message has been sent a study creation request deletion message
+        // assert that the broker message has been sent a study creation request deletion message
         output.receive(TIMEOUT);
     }
 }
