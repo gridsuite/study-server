@@ -651,20 +651,26 @@ public class StudyTest {
 
                     case "/" + CASE_API_VERSION + "/cases/private": {
                         String bodyStr = body.readUtf8();
-                        if (bodyStr.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
-                            return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
-                            return new MockResponse().setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
-                            return new MockResponse().setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                        } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
-                            return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        if (bodyStr.contains("filename=\"")) {
+                            String bodyFilename = bodyStr.split(System.lineSeparator())[1].split("\r")[0];
+                            if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_WITH_ERRORS + "\".*")) {  // import file with errors
+                                return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                            } else if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
+                                return new MockResponse().setResponseCode(500)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8")
+                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                            } else if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
+                                return new MockResponse().setResponseCode(500)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8")
+                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                            } else if (bodyFilename.matches(".*filename=\".*blockingCaseFile\".*")) {
+                                return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                            } else {
+                                return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                            }
                         } else {
                             return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -3261,13 +3267,14 @@ public class StudyTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
 
         //Check tree node has been duplicated
         assertEquals(1, rootNode.getChildren().size());
