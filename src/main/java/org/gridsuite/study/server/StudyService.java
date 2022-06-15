@@ -86,7 +86,7 @@ public class StudyService {
 
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
-    public static final String HEADER_PARENT_NODE = "parentNode";
+    static final String HEADER_PARENT_NODE = "parentNode";
     static final String HEADER_NODE = "node";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_STUDIES = "studies";
@@ -121,9 +121,9 @@ public class StudyService {
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
-    public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
-    public static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
-    public static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
+    static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
+    static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
+    static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
 
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired

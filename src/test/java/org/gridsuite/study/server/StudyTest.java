@@ -95,6 +95,7 @@ import static org.gridsuite.study.server.NetworkModificationTreeService.*;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.StudyService.*;
+import static org.gridsuite.study.server.StudyService.HEADER_PARENT_NODE;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -2378,7 +2379,7 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, modificationNodeUuid2, modificationTypeUrl)
                 .content(equipmentModificationAttribute))
             .andExpect(status().isOk());
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
 
         // update generator modification
@@ -2759,6 +2760,7 @@ public class StudyTest {
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
         assertEquals(MODIFICATIONS_CREATING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
@@ -2768,6 +2770,7 @@ public class StudyTest {
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
         assertEquals(MODIFICATIONS_UPDATING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
@@ -2777,6 +2780,7 @@ public class StudyTest {
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
         assertEquals(MODIFICATIONS_DELETING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
