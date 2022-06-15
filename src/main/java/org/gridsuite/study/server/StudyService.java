@@ -61,7 +61,6 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -320,15 +319,16 @@ public class StudyService {
     }
 
     private File createTempFile(MultipartFile caseFile, BasicStudyInfos basicStudyInfos) {
-        Path tempFile = null;
+        File tempFile = null;
         try {
-            tempFile = tempFileService.createTempFile(caseFile, caseFile.getOriginalFilename());
-            return tempFile.toFile();
+            tempFile = tempFileService.createTempFile(caseFile.getOriginalFilename());
+            caseFile.transferTo(tempFile);
+            return tempFile;
         } catch (IOException e) {
             LOGGER.error(e.toString(), e);
             deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), basicStudyInfos.getUserId());
             if (tempFile != null) {
-                deleteFile(tempFile.toFile());
+                deleteFile(tempFile);
             }
             throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }

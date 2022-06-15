@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class TestTempDir {
 
-    private static final String TEST_FILE = "testTmpFileError.xiidm";
+    private static final String TEST_FILE = "testTmpFile_with_error.xiidm";
 
     private static final String STUDIES_URL = "/v1/studies";
 
@@ -50,7 +50,7 @@ public class TestTempDir {
 
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
-            when(tempFileService.createTempFile(mockFile, TEST_FILE)).thenThrow(new IOException("Error when creating temp file"));
+            when(tempFileService.createTempFile(TEST_FILE)).thenThrow(new IOException("Error when creating temp file"));
 
             mockMvc
                 .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", true).file(mockFile)
