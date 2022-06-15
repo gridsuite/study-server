@@ -60,7 +60,6 @@ import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
@@ -161,6 +160,9 @@ public class StudyService {
 
     @Autowired
     private StreamBridge studyUpdatePublisher;
+
+    @Autowired
+    private TempFileService tempFileService;
 
     @Bean
     @Transactional
@@ -314,7 +316,8 @@ public class StudyService {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
         // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
-        studyServerExecutionService.runAsync(() -> createStudyAsync(createTempFile(caseFile), userId, basicStudyInfos));
+        File tempFile = createTempFile(caseFile);
+        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
@@ -322,7 +325,7 @@ public class StudyService {
         Path tempFile = null;
         try {
             FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
-            tempFile = Files.createTempFile("tmp_", caseFile.getOriginalFilename(), attr);
+            tempFile = tempFileService.createTempFile("tmp_", caseFile.getOriginalFilename(), attr);
             caseFile.transferTo(tempFile);
             return tempFile.toFile();
         } catch (IOException e) {
