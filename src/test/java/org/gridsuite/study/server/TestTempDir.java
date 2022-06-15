@@ -35,6 +35,8 @@ public class TestTempDir {
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String STUDIES_URL = "/v1/studies";
 
+    private static final long TIMEOUT = 1000;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -58,8 +60,8 @@ public class TestTempDir {
         }
 
      // assert that the broker message has been sent a study creation request message
-        output.receive(2000);
+        output.receive(TIMEOUT);
      // assert that the broker message has been sent a study creation request deletion message
-        output.receive(2000);
+        output.receive(TIMEOUT);
     }
 }
