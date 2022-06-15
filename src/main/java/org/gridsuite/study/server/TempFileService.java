@@ -1,17 +1,22 @@
 package org.gridsuite.study.server;
 
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Set;
-
-import org.springframework.stereotype.Service;
 
 @Service
 public class TempFileService {
-    public Path createTempFile(String prefix, String suffix, FileAttribute<Set<PosixFilePermission>> attr) throws IOException {
-        return Files.createTempFile(prefix, suffix, attr);
+    public Path createTempFile(MultipartFile mpFile) throws IOException {
+        FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+        Path tempFile = Files.createTempFile("tmp_", mpFile.getOriginalFilename(), attr);
+        mpFile.transferTo(tempFile);
+        return tempFile;
     }
 }
