@@ -344,16 +344,14 @@ public class NetworkModificationTreeService {
         return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).isEmpty();
     }
 
-    private List<String> getStudyNodesNames(UUID studyUuid) {
-        return networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
+    @Transactional(readOnly = true)
+    public String getUniqueNodeName(UUID studyUuid) {
+        int counter = 1;
+        List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
                 .stream()
                 .map(node -> node.getName())
                 .collect(Collectors.toList());
-    }
 
-    public String getUniqueNodeName(UUID studyUuid) {
-        int counter = 1;
-        List<String> studyNodeNames = getStudyNodesNames(studyUuid);
         String namePrefix = "New node ";
         String uniqueName = StringUtils.EMPTY;
         while (StringUtils.EMPTY.equals(uniqueName) || studyNodeNames.contains(uniqueName)) {
