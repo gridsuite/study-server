@@ -1676,7 +1676,7 @@ public class StudyService {
 
     public void createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
-        networkModificationService.notifyModificationEquipment(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
         NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
         UUID groupUuid = nodeInfos.getModificationGroupUuid();
         String variantId = nodeInfos.getVariantId();
@@ -1691,7 +1691,7 @@ public class StudyService {
 
     public void modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
-        networkModificationService.notifyModificationEquipment(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
         NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
         UUID groupUuid = nodeInfos.getModificationGroupUuid();
         String variantId = nodeInfos.getVariantId();
@@ -1708,7 +1708,7 @@ public class StudyService {
 
     public void updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes,
             ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-        networkModificationService.notifyModificationEquipment(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType,
                     modificationUuid);
@@ -1719,14 +1719,14 @@ public class StudyService {
     }
 
     public void updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-        networkModificationService.notifyModificationEquipment(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
         networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid);
         networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
         updateStatuses(studyUuid, nodeUuid, false);
     }
 
     void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
-        networkModificationService.notifyModificationEquipment(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
         NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
         UUID groupUuid = nodeInfos.getModificationGroupUuid();
         String variantId = nodeInfos.getVariantId();

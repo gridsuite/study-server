@@ -494,11 +494,7 @@ public class NetworkModificationService {
         return result;
     }
 
-    public void notifyModificationEquipment(UUID studyUuid, UUID nodeUuid, String modificationType) {
-        emitModificationEquipmentNotification(studyUuid, nodeUuid, modificationType);
-    }
-
-    private void emitModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType) {
+    public void emitModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType) {
 
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
