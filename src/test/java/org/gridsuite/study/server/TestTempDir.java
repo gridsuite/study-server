@@ -1,21 +1,11 @@
 package org.gridsuite.study.server;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
@@ -25,6 +15,14 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.util.ResourceUtils;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -43,15 +41,15 @@ public class TestTempDir {
     @Autowired
     private OutputDestination output;
 
-    @SpyBean
+    @MockBean
     private TempFileService tempFileService;
 
     @Test
     public void testCreateTmpDirException() throws Exception {
-        doThrow(new IOException("Error when creating temp file")).when(tempFileService).createTempFile(anyString(), anyString(), any());
 
         try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + TEST_FILE))) {
             MockMultipartFile mockFile = new MockMultipartFile("caseFile", TEST_FILE, "text/xml", is);
+            when(tempFileService.createTempFile(mockFile, TEST_FILE)).thenThrow(new IOException("Error when creating temp file"));
 
             mockMvc
                 .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", true).file(mockFile)

@@ -3267,13 +3267,14 @@ public class StudyTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
 
         //Check tree node has been duplicated
         assertEquals(1, rootNode.getChildren().size());

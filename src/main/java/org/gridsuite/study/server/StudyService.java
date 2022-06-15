@@ -19,7 +19,6 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.*;
@@ -29,7 +28,8 @@ import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,10 +60,8 @@ import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -316,20 +314,19 @@ public class StudyService {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
         // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
-        File tempFile = createTempFile(caseFile);
+        File tempFile = createTempFile(caseFile, basicStudyInfos);
         studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
-    private File createTempFile(MultipartFile caseFile) {
+    private File createTempFile(MultipartFile caseFile, BasicStudyInfos basicStudyInfos) {
         Path tempFile = null;
         try {
-            FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
-            tempFile = tempFileService.createTempFile("tmp_", caseFile.getOriginalFilename(), attr);
-            caseFile.transferTo(tempFile);
+            tempFile = tempFileService.createTempFile(caseFile, caseFile.getOriginalFilename());
             return tempFile.toFile();
         } catch (IOException e) {
             LOGGER.error(e.toString(), e);
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), basicStudyInfos.getUserId());
             if (tempFile != null) {
                 deleteFile(tempFile.toFile());
             }
@@ -339,8 +336,8 @@ public class StudyService {
 
     private void deleteFile(@NonNull File file) {
         try {
-            file.delete();
-        } catch (Throwable e) {
+            Files.delete(file.toPath());
+        } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         }
     }
