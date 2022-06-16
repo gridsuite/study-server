@@ -28,7 +28,8 @@ import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.integration.support.MessageBuilder;
@@ -52,10 +54,13 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -157,6 +162,9 @@ public class StudyService {
 
     @Autowired
     private StreamBridge studyUpdatePublisher;
+
+    @Autowired
+    private TempFileService tempFileService;
 
     @Bean
     @Transactional
@@ -308,12 +316,38 @@ public class StudyService {
 
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseFile, userId, basicStudyInfos));
+        // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
+        // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
+        File tempFile = createTempFile(caseFile, basicStudyInfos);
+        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
-    private void createStudyAsync(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
+    private File createTempFile(MultipartFile caseFile, BasicStudyInfos basicStudyInfos) {
+        File tempFile = null;
+        try {
+            tempFile = tempFileService.createTempFile(caseFile.getOriginalFilename());
+            caseFile.transferTo(tempFile);
+            return tempFile;
+        } catch (IOException e) {
+            LOGGER.error(e.toString(), e);
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), basicStudyInfos.getUserId());
+            if (tempFile != null) {
+                deleteFile(tempFile);
+            }
+            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
+        }
+    }
+
+    private void deleteFile(@NonNull File file) {
+        try {
+            Files.delete(file.toPath());
+        } catch (Exception e) {
+            LOGGER.error(e.toString(), e);
+        }
+    }
+
+    private void createStudyAsync(File caseFile, String userId, BasicStudyInfos basicStudyInfos) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
@@ -329,6 +363,7 @@ public class StudyService {
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
+            deleteFile(caseFile);
             deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
@@ -604,13 +639,16 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(MultipartFile multipartFile, UUID studyUuid, String userId) {
+    UUID importCase(File file, UUID studyUuid, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        UUID caseUuid = null;
+        UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
-            multipartBodyBuilder.part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
+            multipartBodyBuilder
+                .part("file", new FileSystemResource(file))
+                .filename(file.getName());
+
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
 
@@ -1163,11 +1201,29 @@ public class StudyService {
         assertSecurityAnalysisNotRunning(nodeUuid);
     }
 
-    public void assertCanModifyNode(UUID nodeUuid) {
+    public void assertIsNodeNotReadOnly(UUID nodeUuid) {
         Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
         if (Boolean.TRUE.equals(isReadOnly)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public void assertCanModifyNode(UUID studyUuid, UUID nodeUuid) {
+        assertIsNodeNotReadOnly(nodeUuid);
+        assertNoBuildNoComputation(studyUuid, nodeUuid);
+    }
+
+    public void assertNoBuildNoComputation(UUID studyUuid, UUID nodeUuid) {
+        assertComputationNotRunning(nodeUuid);
+        assertNoNodeIsBuilding(studyUuid);
+    }
+
+    public void assertNoNodeIsBuilding(UUID studyUuid) {
+        networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
+            if (networkModificationTreeService.getBuildStatus(node.getIdNode()) == BuildStatus.BUILDING) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+        });
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
