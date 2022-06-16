@@ -2270,6 +2270,9 @@ public class StudyTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2);
         UUID modificationNode2Uuid = modificationNode2.getId();
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID);
+        UUID modificationNode3Uuid = modificationNode3.getId();
 
         String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
@@ -2297,8 +2300,16 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation",
                 studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(loadAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
-
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+
+        String createLoadAttributes2 = "{\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        modificationNode3.setBuildStatus(BuildStatus.BUILDING);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
+        output.receive(TIMEOUT);
+        // create load on building node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
+                        studyNameUserIdUuid, modificationNode3Uuid).content(createLoadAttributes2))
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
@@ -2441,6 +2452,15 @@ public class StudyTest {
 
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
+        String createSubstationAttributes2 = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
+        modificationNode1.setBuildStatus(BuildStatus.BUILDING);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        output.receive(TIMEOUT);
+        // create substation on building node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes2))
+                .andExpect(status().isForbidden());
+
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*") && r.getBody().equals(createSubstationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createSubstationAttributes)));
@@ -2491,8 +2511,17 @@ public class StudyTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(voltageLevelAttributesUpdated))
             .andExpect(status().isOk());
-
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+
+        String createVoltageLevelAttributes2 = "{\"voltageLevelId\":\"voltageLevelId3\",\"voltageLevelName\":\"voltageLevelName3\""
+                + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
+        modificationNode1.setBuildStatus(BuildStatus.BUILDING);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        output.receive(TIMEOUT);
+        // create voltage level on building node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createVoltageLevelAttributes2))
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*") && r.getBody().equals(createVoltageLevelAttributes)));
@@ -2884,8 +2913,16 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/generators-creation",
                 studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(generatorAttributesUpdated))
             .andExpect(status().isOk());
-
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+
+        String createGeneratorAttributes2 = "{\"generatorId\":\"generatorId3\",\"generatorName\":\"generatorName3\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"100.0\",\"maxActivePower\":\"200.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+        modificationNode1.setBuildStatus(BuildStatus.BUILDING);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        output.receive(TIMEOUT);
+        // create generator on building node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes2))
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
@@ -2921,8 +2958,16 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/shunt-compensators-creation",
                 studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(shuntCompensatorAttributesUpdated))
             .andExpect(status().isOk());
-
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+
+        String createShuntCompensatorAttributes2 = "{\"shuntCompensatorId\":\"shuntCompensatorId3\",\"shuntCompensatorName\":\"shuntCompensatorName3\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+        modificationNode1.setBuildStatus(BuildStatus.BUILDING);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        output.receive(TIMEOUT);
+        // create shunt compensator on building node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes2))
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream()
@@ -2984,6 +3029,20 @@ public class StudyTest {
 
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
+        String createLineAttributes2 = "{" + "\"lineId\":\"lineId3\"," + "\"lineName\":\"lineName3\","
+                + "\"seriesResistance\":\"50.0\"," + "\"seriesReactance\":\"50.0\","
+                + "\"shuntConductance1\":\"100.0\"," + "\"shuntSusceptance1\":\"100.0\","
+                + "\"shuntConductance2\":\"200.0\"," + "\"shuntSusceptance2\":\"200.0\","
+                + "\"voltageLevelId1\":\"idVL1\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
+                + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
+        modificationNode1.setBuildStatus(BuildStatus.BUILDING);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        output.receive(TIMEOUT);
+        // create line on building node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes2))
+                .andExpect(status().isForbidden());
+
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createLineAttributes)));
@@ -3027,8 +3086,16 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/two-windings-transformers-creation",
                 studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(twoWindingsTransformerAttributesUpdated))
             .andExpect(status().isOk());
-
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+
+        String createTwoWindingsTransformerAttributes2 = "{\"equipmentId\":\"2wtId3\",\"equipmentName\":\"2wtName3\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        modificationNode1.setBuildStatus(BuildStatus.BUILDING);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        output.receive(TIMEOUT);
+        // create Two Windings Transformer on building node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes2))
+                .andExpect(status().isForbidden());
 
         var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && r.getBody().equals(createTwoWindingsTransformerAttributes)));

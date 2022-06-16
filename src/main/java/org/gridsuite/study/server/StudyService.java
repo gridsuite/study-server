@@ -1196,11 +1196,29 @@ public class StudyService {
         assertSecurityAnalysisNotRunning(nodeUuid);
     }
 
-    public void assertCanModifyNode(UUID nodeUuid) {
+    public void assertIsNodeNotReadOnly(UUID nodeUuid) {
         Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid).orElse(Boolean.FALSE);
         if (Boolean.TRUE.equals(isReadOnly)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public void assertCanModifyNode(UUID studyUuid, UUID nodeUuid) {
+        assertIsNodeNotReadOnly(nodeUuid);
+        assertNoBuildNoComputation(studyUuid, nodeUuid);
+    }
+
+    public void assertNoBuildNoComputation(UUID studyUuid, UUID nodeUuid) {
+        assertComputationNotRunning(nodeUuid);
+        assertNoNodeIsBuilding(studyUuid);
+    }
+
+    public void assertNoNodeIsBuilding(UUID studyUuid) {
+        networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
+            if (networkModificationTreeService.getBuildStatus(node.getIdNode()) == BuildStatus.BUILDING) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+        });
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
