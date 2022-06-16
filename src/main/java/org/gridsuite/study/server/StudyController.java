@@ -1101,7 +1101,7 @@ public class StudyController {
     public ResponseEntity<Void> lineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
                                                                @PathVariable("nodeUuid") UUID nodeUuid,
                                                                @RequestBody String lineAttachToVoltageLevelAttributes) {
-        studyService.assertCanModifyNode(nodeUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
         studyService.createEquipment(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid);
         return ResponseEntity.ok().build();
@@ -1114,7 +1114,7 @@ public class StudyController {
                                                                       @PathVariable("modificationUuid") UUID modificationUuid,
                                                                       @PathVariable("nodeUuid") UUID nodeUuid,
                                                                       @RequestBody String lineAttachToVoltageLevelAttributes) {
-        studyService.assertCanModifyNode(nodeUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
         studyService.updateEquipmentCreation(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid, modificationUuid);
         return ResponseEntity.ok().build();
