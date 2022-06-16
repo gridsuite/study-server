@@ -38,6 +38,7 @@ public class StudyException extends RuntimeException {
         SUBSTATION_CREATION_FAILED,
         VOLTAGE_LEVEL_CREATION_FAILED,
         LINE_SPLIT_FAILED,
+        LINE_ATTACH_FAILED,
         UNKNOWN_EQUIPMENT_TYPE,
         BAD_NODE_TYPE,
         NETWORK_NOT_FOUND,

@@ -1095,6 +1095,31 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach")
+    @Operation(summary = "attach a line to a voltage level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was attached to the voltage level")})
+    public ResponseEntity<Void> lineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @RequestBody String lineAttachToVoltageLevelAttributes) {
+        studyService.assertCanModifyNode(nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.createEquipment(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach")
+    @Operation(summary = "update a line attach to a voltage level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line attach to a voltage level has been updated.")})
+    public ResponseEntity<Void> updateLineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
+                                                                      @PathVariable("modificationUuid") UUID modificationUuid,
+                                                                      @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                      @RequestBody String lineAttachToVoltageLevelAttributes) {
+        studyService.assertCanModifyNode(nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.updateEquipmentCreation(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid, modificationUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
     @Operation(summary = "get the load flow information (status and result) on study")
     @ApiResponses(value = {

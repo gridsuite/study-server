@@ -372,11 +372,18 @@ public class StudyTest {
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
         EquipmentModificationInfos lineToSplitDeletion = EquipmentModificationInfos.builder()
-            .type(ModificationType.EQUIPMENT_DELETION)
-            .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
-            .build();
+                .type(ModificationType.EQUIPMENT_DELETION)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
         List<EquipmentModificationInfos> lineSplitResponseInfos = new ArrayList<>();
         lineSplitResponseInfos.add(lineToSplitDeletion);
+
+        EquipmentModificationInfos lineToAttachTo = EquipmentModificationInfos.builder()
+                .type(ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> lineAttachResponseInfos = new ArrayList<>();
+        lineAttachResponseInfos.add(lineToAttachTo);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -496,8 +503,16 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
                         return new MockResponse().setResponseCode(200)
-                            .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(mapper.writeValueAsString(lineAttachResponseInfos))
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
@@ -636,20 +651,26 @@ public class StudyTest {
 
                     case "/" + CASE_API_VERSION + "/cases/private": {
                         String bodyStr = body.readUtf8();
-                        if (bodyStr.contains("filename=\"" + TEST_FILE_WITH_ERRORS + "\"")) {  // import file with errors
-                            return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
-                            return new MockResponse().setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                        } else if (bodyStr.contains("filename=\"" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
-                            return new MockResponse().setResponseCode(500)
-                                .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                        } else if (bodyStr.contains("filename=\"blockingCaseFile\"")) {
-                            return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                        if (bodyStr.contains("filename=\"")) {
+                            String bodyFilename = bodyStr.split(System.lineSeparator())[1].split("\r")[0];
+                            if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_WITH_ERRORS + "\".*")) {  // import file with errors
+                                return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                            } else if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
+                                return new MockResponse().setResponseCode(500)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8")
+                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                            } else if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
+                                return new MockResponse().setResponseCode(500)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8")
+                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
+                            } else if (bodyFilename.matches(".*filename=\".*blockingCaseFile\".*")) {
+                                return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                            } else {
+                                return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
+                                    .addHeader("Content-Type", "application/json; charset=utf-8");
+                            }
                         } else {
                             return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -2519,15 +2540,15 @@ public class StudyTest {
         UUID modificationNodeUuid = modificationNode.getId();
 
         VoltageLevelCreationInfos vl1 = VoltageLevelCreationInfos.builder()
-            .equipmentId("vl1")
-            .equipmentName("NewVoltageLevel")
-            .nominalVoltage(379.3)
-            .substationId("s1")
-            .busbarSections(Collections.singletonList(new BusbarSectionCreationInfos("v1bbs", "BBS1", 1, 1)))
-            .busbarConnections(Collections.emptyList())
-            .build();
+                .equipmentId("vl1")
+                .equipmentName("NewVoltageLevel")
+                .nominalVoltage(379.3)
+                .substationId("s1")
+                .busbarSections(Collections.singletonList(new BusbarSectionCreationInfos("v1bbs", "BBS1", 1, 1)))
+                .busbarConnections(Collections.emptyList())
+                .build();
         LineSplitWithVoltageLevelInfos lineSplitWoVL = new LineSplitWithVoltageLevelInfos("line3", 10.0, vl1, null, "1.A",
-            "nl1", "NewLine1", "nl2", "NewLine2");
+                "nl1", "NewLine1", "nl2", "NewLine2");
         String lineSplitWoVLasJSON = mapper.writeValueAsString(lineSplitWoVL);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",
@@ -2572,6 +2593,48 @@ public class StudyTest {
             );
 
         requests = getRequestsWithBodyDone(2);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testLineAttachToVoltageLevel() {
+        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String createVoltageLevelAttributes = "{\"voltageLevelId\":\"vl1\",\"voltageLevelName\":\"voltageLevelName1\""
+                + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
+
+        String createLineAttributes = "{\"seriesResistance\":\"25\",\"seriesReactance\":\"12\"}";
+
+        String createLineAttachToVoltageLevelAttributes = "{\"lineToAttachToId\": \"line3\", \"percent\":\"10\", \"mayNewVoltageLevelInfos\":" +
+                createVoltageLevelAttributes + "\"attachmentLine\":\"" + createLineAttributes + "\"}";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createLineAttachToVoltageLevelAttributes))
+                .andExpect(status().isOk());
+
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createLineAttachToVoltageLevelAttributes))
+                .andExpect(status().isOk());
+
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        var requests = getRequestsWithBodyDone(2);
+        assertEquals(2, requests.size());
+        Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach\\?group=.*")).findFirst();
+        Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/line-attach-creation")).findFirst();
+        assertTrue(creationRequest.isPresent());
+        assertTrue(updateRequest.isPresent());
+        assertEquals(createLineAttachToVoltageLevelAttributes, creationRequest.get().getBody());
+        assertEquals(createLineAttachToVoltageLevelAttributes, updateRequest.get().getBody());
     }
 
     @Test public void testReorderModification() throws Exception {
@@ -3271,13 +3334,14 @@ public class StudyTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
 
         //Check tree node has been duplicated
         assertEquals(1, rootNode.getChildren().size());
