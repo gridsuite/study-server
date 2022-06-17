@@ -317,9 +317,12 @@ public class NetworkModificationService {
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
-
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(modifyEquipmentAttributes, headers);
         try {
-            restTemplate.put(getNetworkModificationServerURI(false) + path, modifyEquipmentAttributes);
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity,
+                    Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
         }
