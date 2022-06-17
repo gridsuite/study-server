@@ -146,8 +146,8 @@ public class StudyController {
     @PostMapping(value = "/studies")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The study was successfully created"),
-            @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
+        @ApiResponse(responseCode = "200", description = "The study was successfully created"),
+        @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
     public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("duplicateFrom") UUID sourceStudyUuid,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                              @RequestHeader("userId") String userId) {
@@ -920,6 +920,27 @@ public class StudyController {
         return node != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
+    }
+
+    @RequestMapping(value = "/studies/{studyUuid}/nodes", method = RequestMethod.HEAD)
+    @Operation(summary = "Test if a node name exists")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "node name exist"),
+        @ApiResponse(responseCode = "204", description = "node name doesn't exist"),
+    })
+    public ResponseEntity<Void> nodeNameExists(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                               @Parameter(description = "Node name") @RequestParam("nodeName") String nodeName) {
+
+        return networkModificationTreeService.isNodeNameExists(studyUuid, nodeName) ? ResponseEntity.ok().build() : ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/nextUniqueName")
+    @Operation(summary = "Get unique node name")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "unique node name generated")})
+
+    public ResponseEntity<String> getUniqueNodeName(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+
+        return ResponseEntity.ok().body(networkModificationTreeService.getUniqueNodeName(studyUuid));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")

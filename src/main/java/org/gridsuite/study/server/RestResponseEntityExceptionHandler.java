@@ -26,6 +26,7 @@ public class RestResponseEntityExceptionHandler {
             switch (studyException.getType()) {
                 case ELEMENT_NOT_FOUND:
                 case STUDY_NOT_FOUND:
+                case NODE_NOT_FOUND:
                 case SECURITY_ANALYSIS_NOT_FOUND:
                 case EQUIPMENT_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getType());
@@ -59,6 +60,7 @@ public class RestResponseEntityExceptionHandler {
                 case DELETE_STUDY_FAILED:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case BAD_NODE_TYPE:
+                case NODE_NAME_ALREADY_EXIST:
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());
                 case SVG_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getMessage());
