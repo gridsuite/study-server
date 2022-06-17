@@ -2270,7 +2270,7 @@ public class StudyTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID);
+                UUID.randomUUID(), VARIANT_ID, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
