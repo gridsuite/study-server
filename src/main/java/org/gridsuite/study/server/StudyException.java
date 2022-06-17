@@ -44,9 +44,11 @@ public class StudyException extends RuntimeException {
         NETWORK_NOT_FOUND,
         EQUIPMENT_NOT_FOUND,
         NETWORK_INDEXATION_FAILED,
+        NODE_NOT_FOUND,
         NODE_NOT_BUILT,
         GENERATOR_MODIFICATION_FAILED,
         SVG_NOT_FOUND,
+        NODE_NAME_ALREADY_EXIST,
     }
 
     private final Type type;
