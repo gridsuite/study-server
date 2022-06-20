@@ -1300,7 +1300,8 @@ public class StudyService {
             componentResult.getStatus(),
             componentResult.getIterationCount(),
             componentResult.getSlackBusId(),
-            componentResult.getSlackBusActivePowerMismatch());
+            componentResult.getSlackBusActivePowerMismatch(),
+            componentResult.getDistributedActivePower());
     }
 
     public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
@@ -1310,7 +1311,8 @@ public class StudyService {
             entity.getStatus(),
             entity.getIterationCount(),
             entity.getSlackBusId(),
-            entity.getSlackBusActivePowerMismatch());
+            entity.getSlackBusActivePowerMismatch(),
+            entity.getDistributedActivePower());
     }
 
     @Transactional(readOnly = true)
