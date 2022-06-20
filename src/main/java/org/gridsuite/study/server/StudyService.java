@@ -1216,7 +1216,7 @@ public class StudyService {
     public void assertNoNodeIsBuilding(UUID studyUuid) {
         networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
             if (networkModificationTreeService.getBuildStatus(node.getIdNode()) == BuildStatus.BUILDING) {
-                throw new StudyException(NOT_ALLOWED);
+                throw new StudyException(NOT_ALLOWED, "The modification node \"" + networkModificationTreeService.getSimpleNode(node.getIdNode()).getName() + "\" is building.");
             }
         });
     }
