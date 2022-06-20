@@ -1393,7 +1393,7 @@ public class StudyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID randomUuid = UUID.randomUUID();
 
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
 
         //get the voltage level diagram svg
