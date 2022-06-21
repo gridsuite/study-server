@@ -319,7 +319,7 @@ public class StudyService {
         // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
         // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
         File tempFile = createTempFile(caseFile, basicStudyInfos);
-        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, userId, basicStudyInfos));
+        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, caseFile.getOriginalFilename(), userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
@@ -347,12 +347,12 @@ public class StudyService {
         }
     }
 
-    private void createStudyAsync(File caseFile, String userId, BasicStudyInfos basicStudyInfos) {
+    private void createStudyAsync(File caseFile, String originalFilename, String userId, BasicStudyInfos basicStudyInfos) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
-            UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
+            UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
                 String caseFormat = getCaseFormat(caseUuid);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
@@ -639,7 +639,7 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(File file, UUID studyUuid, String userId) {
+    UUID importCase(File file, String originalFilename, UUID studyUuid, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
@@ -647,7 +647,7 @@ public class StudyService {
         try {
             multipartBodyBuilder
                 .part("file", new FileSystemResource(file))
-                .filename(file.getName());
+                .filename(originalFilename);
 
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
@@ -1221,7 +1221,7 @@ public class StudyService {
     public void assertNoNodeIsBuilding(UUID studyUuid) {
         networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
             if (networkModificationTreeService.getBuildStatus(node.getIdNode()) == BuildStatus.BUILDING) {
-                throw new StudyException(NOT_ALLOWED);
+                throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
             }
         });
     }
