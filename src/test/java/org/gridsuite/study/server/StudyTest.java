@@ -2362,7 +2362,7 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
                 studyNameUserIdUuid, modificationNodeUuid).content(loadModificationAttributes))
             .andExpect(status().isOk());
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
@@ -2370,7 +2370,7 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
                 studyNameUserIdUuid, modificationNodeUuid2).content(loadModificationAttributes))
             .andExpect(status().isOk());
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
 
@@ -2412,7 +2412,7 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, modificationNodeUuid, modificationTypeUrl)
                 .content(equipmentModificationAttribute))
             .andExpect(status().isOk());
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
@@ -2420,7 +2420,7 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, modificationNodeUuid2, modificationTypeUrl)
                 .content(equipmentModificationAttribute))
             .andExpect(status().isOk());
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
 
@@ -2743,7 +2743,7 @@ public class StudyTest {
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
                 studyNameUserIdUuid, modificationNode1Uuid, "LOAD", "idLoadToDelete"))
             .andExpect(status().isOk());
-        checkEquipmentDeletingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid,
                 HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
                 "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
@@ -2753,7 +2753,7 @@ public class StudyTest {
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
                 studyNameUserIdUuid, modificationNode2Uuid, "LOAD", "idLoadToDelete"))
             .andExpect(status().isOk());
-        checkEquipmentDeletingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid,
                 HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
                 "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
@@ -3380,10 +3380,13 @@ public class StudyTest {
                 node3
             node is only there to test that when we update modification node, it is not in notifications list
          */
-
+        UUID studyUuid1 = UUID.randomUUID();
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
-                UUID.randomUUID(), modificationNode.getId(), node3.getId()))
+                        studyUuid1, modificationNode.getId(), node3.getId()))
             .andExpect(status().isForbidden());
+
+        checkEquipmentDeletingMessagesReceived(studyUuid1, modificationNode.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid1, modificationNode.getId());
 
         UUID modificationUuid = UUID.randomUUID();
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
@@ -3393,9 +3396,11 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).stream()
                 .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification()
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
-
+        checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
+
     }
 
     @Test
