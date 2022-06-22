@@ -298,8 +298,7 @@ public class StudyService {
             String caseFormat = getCaseFormat(caseUuid);
             NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                    caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -352,8 +351,7 @@ public class StudyService {
                 String caseFormat = getCaseFormat(caseUuid);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
-                        networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -539,8 +537,8 @@ public class StudyService {
 
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)),
-                    studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)),
+                    studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                     studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
                 );
 
@@ -565,10 +563,10 @@ public class StudyService {
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, UUID networkUuid, String networkId,
+    private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
             String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
         studyInfosService.add(createdStudyBasicInfos);
 
         emitStudiesChanged(studyUuid, userId);
@@ -2034,6 +2032,7 @@ public class StudyService {
         }
     }
 
+    @Transactional
     public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
         checkStudyContainsNode(studyUuid, nodeUuid);
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);

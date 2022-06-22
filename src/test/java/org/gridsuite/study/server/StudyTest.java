@@ -1037,8 +1037,8 @@ public class StudyTest {
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
-        var httpRequests = getRequestsDone(1);
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/groups/.*")));
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
