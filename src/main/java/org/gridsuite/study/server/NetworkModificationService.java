@@ -21,8 +21,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -37,7 +40,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.StudyService.*;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -52,7 +55,6 @@ public class NetworkModificationService {
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
     private static final String MODIFICATIONS_PATH = "modifications";
-
     private String networkModificationServerBaseUri;
 
     private final NetworkService networkStoreService;
@@ -61,13 +63,25 @@ public class NetworkModificationService {
 
     private final ObjectMapper objectMapper;
 
+    private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationService.class.getName() + ".output-broker-messages";
+
+    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
+
+    private StreamBridge modificationUpdatePublisher;
+
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkService networkStoreService,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper, StreamBridge modificationUpdatePublisher) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.objectMapper = objectMapper;
+        this.modificationUpdatePublisher = modificationUpdatePublisher;
+    }
+
+    private void sendUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        modificationUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
     void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -193,7 +207,6 @@ public class NetworkModificationService {
     }
 
     private StudyException handleChangeError(HttpStatusCodeException httpException, StudyException.Type type) {
-
         String responseBody = httpException.getResponseBodyAsString();
         if (responseBody.isEmpty()) {
             return new StudyException(type, httpException.getStatusCode().toString());
@@ -464,6 +477,16 @@ public class NetworkModificationService {
         }
 
         return result;
+    }
+
+    public void emitModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType) {
+
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_PARENT_NODE, nodeUuid)
+                .setHeader(HEADER_UPDATE_TYPE, modificationType)
+                .build()
+        );
     }
 
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
