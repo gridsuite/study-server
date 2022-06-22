@@ -22,6 +22,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
+import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
@@ -282,7 +283,7 @@ public class NetworkModificationTreeService {
                 NetworkModificationNode model = (NetworkModificationNode) sourceNode;
                 UUID modificationGroupToDuplicateId = model.getNetworkModification();
                 model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
-                model.setBuildStatus(modificationGroupToDuplicateId != null ? BuildStatus.BUILT_INVALID : BuildStatus.NOT_BUILT);
+                model.setBuildStatus(BuildStatus.NOT_BUILT);
                 model.setReportUuid(newReportUuid);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
@@ -349,7 +350,7 @@ public class NetworkModificationTreeService {
         int counter = 1;
         List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
                 .stream()
-                .map(node -> node.getName())
+                .map(AbstractNodeInfoEntity::getName)
                 .collect(Collectors.toList());
 
         String namePrefix = "New node ";
