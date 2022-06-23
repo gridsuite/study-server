@@ -1766,7 +1766,7 @@ public class StudyService {
 
     public void modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1810,7 +1810,7 @@ public class StudyService {
     }
 
     void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1994,15 +1994,19 @@ public class StudyService {
 
     @Transactional
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
-            throw new StudyException(NOT_ALLOWED);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
+        try {
+            if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.deleteModifications(groupId, modificationsUuids);
+            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
         }
-
-        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        networkModificationService.deleteModifications(groupId, modificationsUuids);
-        networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid, false);
     }
 
     private void deleteSaResult(UUID uuid) {
