@@ -187,10 +187,8 @@ public class NetworkModificationTreeService {
                 throw new StudyException(CANT_DELETE_ROOT_NODE);
             }
 
-            UUID modificationGroupUuid = repositories.get(nodeToDelete.getType()).getModificationGroupUuid(id, false);
-            if (modificationGroupUuid != null) {
-                deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
-            }
+            UUID modificationGroupUuid = repositories.get(nodeToDelete.getType()).getModificationGroupUuid(id);
+            deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
 
             UUID reportUuid = repositories.get(nodeToDelete.getType()).getReportUuid(id, false);
             if (reportUuid != null) {
@@ -201,6 +199,7 @@ public class NetworkModificationTreeService {
             if (!StringUtils.isBlank(variantId)) {
                 deleteNodeInfos.addVariantId(variantId);
             }
+
             UUID securityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSecurityAnalysisResultUuid(id);
             if (securityAnalysisResultUuid != null) {
                 deleteNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
@@ -378,14 +377,9 @@ public class NetworkModificationTreeService {
         return variantId;
     }
 
-    @Transactional
-    public UUID doGetModificationGroupUuid(UUID nodeUuid, boolean generateId) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid, generateId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-    }
-
-    @Transactional
+    @Transactional(readOnly = true)
     public UUID getModificationGroupUuid(UUID nodeUuid) {
-        return doGetModificationGroupUuid(nodeUuid, true);
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
@@ -476,7 +470,7 @@ public class NetworkModificationTreeService {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-            if (modificationNode.getBuildStatus() != BuildStatus.BUILT && modificationNode.getNetworkModification() != null) {
+            if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
                 buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), doGetReportUuid(nodeEntity.getIdNode(), true));
             }
             if (modificationNode.getModificationsToExclude() != null) {

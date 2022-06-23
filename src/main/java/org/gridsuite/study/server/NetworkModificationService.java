@@ -98,33 +98,30 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    public List<ModificationInfos> getModifications(UUID groupUuid) {
-        Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
-            .buildAndExpand(groupUuid)
-            .toUriString();
-
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() { }).getBody();
-    }
-
     public void deleteModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
-        deleteNetworkModifications(groupUUid);
-    }
-
-    private void deleteNetworkModifications(UUID groupUuid) {
-        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .buildAndExpand(groupUuid)
+            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+            .buildAndExpand(groupUUid)
             .toUriString();
 
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path);
         } catch (HttpStatusCodeException e) {
-            // Ignore because modification group does not exist if no modifications
-            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw e;
-            }
+            throw handleChangeError(e, DELETE_MODIFICATIONS_FAILED);
+        }
+    }
+
+    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
+        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH);
+        path.queryParam("modificationsUuids", modificationsUuids);
+        try {
+            restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, DELETE_MODIFICATIONS_FAILED);
         }
     }
 
@@ -408,21 +405,6 @@ public class NetworkModificationService {
             .toUriString();
 
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
-    }
-
-    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
-        Objects.requireNonNull(groupUuid);
-        Objects.requireNonNull(modificationsUuids);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH);
-        path.queryParam("modificationsUuids", modificationsUuids);
-        try {
-            restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
-        } catch (HttpStatusCodeException e) {
-            // Ignore 404 because modification group does not exist if no modifications
-            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw e;
-            }
-        }
     }
 
     public void reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {

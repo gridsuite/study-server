@@ -33,4 +33,5 @@ final class StudyConstants {
     static final String DELIMITER = "/";
     static final String QUERY_PARAM_VARIANT_ID = "variantId";
     static final String REPORT_UUID = "reportUuid";
+    static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
 }
