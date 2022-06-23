@@ -1966,8 +1966,33 @@ public class StudyService {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
-    void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        networkModificationTreeService.invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
+    @Transactional
+    void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        startTime.set(System.nanoTime());
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        invalidateNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
+        networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+
+        CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
+                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
+                studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
+        );
+
+        try {
+            executeInParallel.get();
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            LOGGER.error(e.toString(), e);
+            throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
+        }
+
+        if (startTime.get() != null) {
+            LOGGER.trace("Invalidate node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
     }
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid) {
@@ -1979,7 +2004,7 @@ public class StudyService {
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatus(nodeUuid);
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        invalidateBuildStatus(nodeUuid, invalidateOnlyChildrenBuildStatus);
+        invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
     }
 
     @Transactional
@@ -2070,7 +2095,7 @@ public class StudyService {
                 LOGGER.error(e.toString(), e);
                 throw e;
             }
-            invalidateBuildStatus(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
             LOGGER.info("Study with id = '{}' has been reindexed", studyUuid);
         } else {
             throw new StudyException(STUDY_NOT_FOUND);
