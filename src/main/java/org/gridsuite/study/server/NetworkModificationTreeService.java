@@ -10,11 +10,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.gridsuite.study.server.dto.DeleteNodeInfos;
-import org.gridsuite.study.server.dto.LoadFlowInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.BuildInfos;
-import org.gridsuite.study.server.dto.NodeModificationInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.RootNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -502,14 +498,45 @@ public class NetworkModificationTreeService {
         return buildInfos;
     }
 
+    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos) {
+        UUID reportUuid = repositories.get(node.getType()).getReportUuid(node.getIdNode(), false);
+        if (reportUuid != null) {
+            invalidateNodeInfos.addReportUuid(reportUuid);
+        }
+
+        String variantId = repositories.get(node.getType()).getVariantId(node.getIdNode(), false);
+        if (!StringUtils.isBlank(variantId)) {
+            invalidateNodeInfos.addVariantId(variantId);
+        }
+    }
+
     @Transactional
-    public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus) {
+    public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+        List<UUID> changedNodes = new ArrayList<>();
+        UUID studyId = getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(n -> {
+            if (!invalidateOnlyChildrenBuildStatus) {
+                repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+                fillInvalidateNodeInfos(n, invalidateNodeInfos);
+            }
+            invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
+        });
+
+        if (!changedNodes.isEmpty()) {
+            emitNodesChanged(studyId, changedNodes);
+        }
+    }
+
+    @Transactional
+    public void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
+                    fillInvalidateNodeInfos(child, invalidateNodeInfos);
                 }
-                invalidateChildrenBuildStatus(child, changedNodes, false);
+                invalidateChildrenBuildStatus(child, changedNodes, false, invalidateNodeInfos);
             });
     }
 
@@ -569,23 +596,6 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Optional<Boolean> isReadOnly(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid));
-    }
-
-    @Transactional
-    public void invalidateBuildStatus(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        List<UUID> changedNodes = new ArrayList<>();
-        UUID studyId = getStudyUuidForNodeId(nodeUuid);
-
-        nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            if (!invalidateOnlyChildrenBuildStatus) {
-                repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
-            }
-            invalidateChildrenBuildStatus(n, changedNodes, false);
-        });
-
-        if (!changedNodes.isEmpty()) {
-            emitNodesChanged(studyId, changedNodes);
-        }
     }
 
     @Transactional
