@@ -180,7 +180,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
-            updateBuildStatus(modificationNode, BuildStatus.BUILT_INVALID, changedNodes);
+            updateBuildStatus(modificationNode, BuildStatus.NOT_BUILT, changedNodes);
         }
     }
 
