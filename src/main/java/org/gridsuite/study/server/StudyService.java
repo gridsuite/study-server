@@ -1906,8 +1906,14 @@ public class StudyService {
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
-        networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        try {
+            networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
+        } catch (Exception e) {
+            updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
+            throw e;
+        }
+
     }
 
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
