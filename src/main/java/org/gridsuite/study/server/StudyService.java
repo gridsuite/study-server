@@ -1320,7 +1320,8 @@ public class StudyService {
             componentResult.getStatus(),
             componentResult.getIterationCount(),
             componentResult.getSlackBusId(),
-            componentResult.getSlackBusActivePowerMismatch());
+            componentResult.getSlackBusActivePowerMismatch(),
+            componentResult.getDistributedActivePower());
     }
 
     public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
@@ -1330,7 +1331,8 @@ public class StudyService {
             entity.getStatus(),
             entity.getIterationCount(),
             entity.getSlackBusId(),
-            entity.getSlackBusActivePowerMismatch());
+            entity.getSlackBusActivePowerMismatch(),
+            entity.getDistributedActivePower());
     }
 
     @Transactional(readOnly = true)
@@ -1378,6 +1380,7 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String provider = getLoadFlowProvider(studyUuid);
         String variantId = getVariantId(nodeUuid);
+        UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -1387,7 +1390,8 @@ public class StudyService {
             throw new UncheckedIOException(e);
         }
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save");
+                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
+                .queryParam("reportUuid", reportUuid.toString());
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
