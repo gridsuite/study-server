@@ -23,16 +23,17 @@ public final class PropertyUtils {
     private PropertyUtils() {
     }
 
-    public static void copyNonNullProperties(Object src, Object target) {
-        BeanUtils.copyProperties(src, target, getNullPropertyNames(src));
+    public static void copyNonNullProperties(Object src, Object target, String... authorizedNullProperties) {
+        BeanUtils.copyProperties(src, target, getNullPropertyNames(src, authorizedNullProperties));
     }
 
-    public static String[] getNullPropertyNames(Object source) {
+    public static String[] getNullPropertyNames(Object source, String... authorizedNullProperties) {
         final BeanWrapper beanSource = new BeanWrapperImpl(source);
         PropertyDescriptor[] propertyDescriptors = beanSource.getPropertyDescriptors();
 
         /* we take each property names, and collect the ones pointing to null value */
-        return Arrays.stream(propertyDescriptors).map(FeatureDescriptor::getName)
-            .filter(name -> beanSource.getPropertyValue(name) == null).toArray(String[]::new);
+        return Arrays.stream(propertyDescriptors).map(FeatureDescriptor::getName).filter(name -> beanSource.getPropertyValue(name) == null)
+                .filter(name -> Arrays.stream(authorizedNullProperties).noneMatch(n -> name.equals(n)))
+                .toArray(String[]::new);
     }
 }

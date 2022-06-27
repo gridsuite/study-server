@@ -508,6 +508,11 @@ public class NetworkModificationTreeService {
         if (!StringUtils.isBlank(variantId)) {
             invalidateNodeInfos.addVariantId(variantId);
         }
+
+        UUID securityAnalysisResultUuid = repositories.get(node.getType()).getSecurityAnalysisResultUuid(node.getIdNode());
+        if (securityAnalysisResultUuid != null) {
+            invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+        }
     }
 
     @Transactional
@@ -518,6 +523,7 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             if (!invalidateOnlyChildrenBuildStatus) {
                 repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+                repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
                 fillInvalidateNodeInfos(n, invalidateNodeInfos);
             }
             invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
@@ -534,6 +540,7 @@ public class NetworkModificationTreeService {
             .forEach(child -> {
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
+                    repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
                     fillInvalidateNodeInfos(child, invalidateNodeInfos);
                 }
                 invalidateChildrenBuildStatus(child, changedNodes, false, invalidateNodeInfos);

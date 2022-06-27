@@ -116,10 +116,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return entity;
     }
 
-    public void updateNode(AbstractNode node) {
+    public void updateNode(AbstractNode node, String... authorizedNullProperties) {
         var persistedNode = getNode(node.getId());
         /* using only DTO values not jpa Entity */
-        PropertyUtils.copyNonNullProperties(node, persistedNode);
+        PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
         var entity = toEntity(persistedNode);
         entity.markNotNew();
         nodeInfoRepository.save(entity);

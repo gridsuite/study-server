@@ -28,11 +28,17 @@ public class InvalidateNodeInfos {
 
     private List<String> variantIds = new ArrayList<>();
 
+    private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
+
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
     }
 
     public void addVariantId(String variantId) {
         variantIds.add(variantId);
+    }
+
+    public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {
+        securityAnalysisResultUuids.add(securityAnalysisResultUuid);
     }
 }

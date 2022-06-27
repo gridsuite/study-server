@@ -121,7 +121,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setLoadFlowResult(loadFlowResult);
         modificationNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(modificationNode);
+        updateNode(modificationNode, "loadFlowResult");
     }
 
     @Override
