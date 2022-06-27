@@ -3249,7 +3249,7 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).stream()
                 .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is building
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is built
 
         networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
 
