@@ -2044,7 +2044,7 @@ public class StudyService {
                 Thread.currentThread().interrupt();
             }
             LOGGER.error(e.toString(), e);
-            throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
+            throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
         if (startTime.get() != null) {
