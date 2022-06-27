@@ -45,7 +45,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
-    public UUID getModificationGroupUuid(AbstractNode node, boolean generateId) {
+    public UUID getModificationGroupUuid(AbstractNode node) {
         return null;
     }
 
@@ -137,8 +137,8 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getVariantId(getNode(nodeUuid), generateId);
     }
 
-    public UUID getModificationGroupUuid(UUID nodeUuid, boolean generateId) {
-        return getModificationGroupUuid(getNode(nodeUuid), generateId);
+    public UUID getModificationGroupUuid(UUID nodeUuid) {
+        return getModificationGroupUuid(getNode(nodeUuid));
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid) {

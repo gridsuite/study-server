@@ -21,8 +21,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -37,7 +40,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.StudyService.*;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -52,7 +55,6 @@ public class NetworkModificationService {
     public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
     private static final String MODIFICATIONS_PATH = "modifications";
-
     private String networkModificationServerBaseUri;
 
     private final NetworkService networkStoreService;
@@ -61,13 +63,25 @@ public class NetworkModificationService {
 
     private final ObjectMapper objectMapper;
 
+    private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationService.class.getName() + ".output-broker-messages";
+
+    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
+
+    private StreamBridge modificationUpdatePublisher;
+
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkService networkStoreService,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper, StreamBridge modificationUpdatePublisher) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.objectMapper = objectMapper;
+        this.modificationUpdatePublisher = modificationUpdatePublisher;
+    }
+
+    private void sendUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        modificationUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
     void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -84,33 +98,30 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    public List<ModificationInfos> getModifications(UUID groupUuid) {
-        Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
-            .buildAndExpand(groupUuid)
-            .toUriString();
-
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() { }).getBody();
-    }
-
     public void deleteModifications(UUID groupUUid) {
         Objects.requireNonNull(groupUUid);
-        deleteNetworkModifications(groupUUid);
-    }
-
-    private void deleteNetworkModifications(UUID groupUuid) {
-        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .buildAndExpand(groupUuid)
+            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+            .buildAndExpand(groupUUid)
             .toUriString();
 
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path);
         } catch (HttpStatusCodeException e) {
-            // Ignore because modification group does not exist if no modifications
-            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw e;
-            }
+            throw handleChangeError(e, DELETE_MODIFICATIONS_FAILED);
+        }
+    }
+
+    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
+        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH);
+        path.queryParam("modificationsUuids", modificationsUuids);
+        try {
+            restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, DELETE_MODIFICATIONS_FAILED);
         }
     }
 
@@ -196,7 +207,6 @@ public class NetworkModificationService {
     }
 
     private StudyException handleChangeError(HttpStatusCodeException httpException, StudyException.Type type) {
-
         String responseBody = httpException.getResponseBodyAsString();
         if (responseBody.isEmpty()) {
             return new StudyException(type, httpException.getStatusCode().toString());
@@ -397,21 +407,6 @@ public class NetworkModificationService {
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
 
-    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
-        Objects.requireNonNull(groupUuid);
-        Objects.requireNonNull(modificationsUuids);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH);
-        path.queryParam("modificationsUuids", modificationsUuids);
-        try {
-            restTemplate.delete(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString());
-        } catch (HttpStatusCodeException e) {
-            // Ignore 404 because modification group does not exist if no modifications
-            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw e;
-            }
-        }
-    }
-
     public void reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationUuid);
@@ -482,6 +477,16 @@ public class NetworkModificationService {
         }
 
         return result;
+    }
+
+    public void emitModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType) {
+
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_PARENT_NODE, nodeUuid)
+                .setHeader(HEADER_UPDATE_TYPE, modificationType)
+                .build()
+        );
     }
 
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {

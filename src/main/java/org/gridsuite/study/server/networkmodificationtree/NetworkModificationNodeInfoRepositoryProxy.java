@@ -40,6 +40,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         if (Objects.isNull(networkModificationNode.getBuildStatus())) {
             networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
         }
+        if (networkModificationNode.getNetworkModification() == null) {
+            networkModificationNode.setNetworkModification(UUID.randomUUID());
+        }
         super.createNodeInfo(networkModificationNode);
     }
 
@@ -80,14 +83,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public UUID getModificationGroupUuid(AbstractNode node, boolean generateId) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getNetworkModification() == null && generateId) {
-            networkModificationNode.setNetworkModification(UUID.randomUUID());
-            updateNode(networkModificationNode);
-        }
-
-        return networkModificationNode.getNetworkModification();
+    public UUID getModificationGroupUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getNetworkModification();
     }
 
     @Override
@@ -180,7 +177,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
-            updateBuildStatus(modificationNode, BuildStatus.BUILT_INVALID, changedNodes);
+            updateBuildStatus(modificationNode, BuildStatus.NOT_BUILT, changedNodes);
         }
     }
 
@@ -188,10 +185,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         boolean nodeToUpdate = false;
-        if (networkModificationNode.getNetworkModification() == null && generateId) {
-            networkModificationNode.setNetworkModification(UUID.randomUUID());
-            nodeToUpdate = true;
-        }
+
         if (networkModificationNode.getVariantId() == null && generateId) {
             networkModificationNode.setVariantId(UUID.randomUUID().toString());
             nodeToUpdate = true;

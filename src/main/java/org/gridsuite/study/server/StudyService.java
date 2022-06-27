@@ -91,6 +91,7 @@ public class StudyService {
 
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
+    static final String HEADER_PARENT_NODE = "parentNode";
     static final String HEADER_NODE = "node";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_STUDIES = "studies";
@@ -125,6 +126,10 @@ public class StudyService {
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
+    static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
+    static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
+    static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
+    static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
     // Self injection for @transactional support in internal calls to other methods of this service
     @Autowired
     StudyService self;
@@ -298,8 +303,7 @@ public class StudyService {
             String caseFormat = getCaseFormat(caseUuid);
             NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(),
-                    caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -314,7 +318,7 @@ public class StudyService {
         // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
         // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
         File tempFile = createTempFile(caseFile, basicStudyInfos);
-        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, userId, basicStudyInfos));
+        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, caseFile.getOriginalFilename(), userId, basicStudyInfos));
         return basicStudyInfos;
     }
 
@@ -342,18 +346,17 @@ public class StudyService {
         }
     }
 
-    private void createStudyAsync(File caseFile, String userId, BasicStudyInfos basicStudyInfos) {
+    private void createStudyAsync(File caseFile, String originalFilename, String userId, BasicStudyInfos basicStudyInfos) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
-            UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
+            UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
                 String caseFormat = getCaseFormat(caseUuid);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos.getNetworkUuid(),
-                        networkInfos.getNetworkId(), caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -539,8 +542,8 @@ public class StudyService {
 
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)),
-                    studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)),
+                    studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                     studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
                 );
 
@@ -565,10 +568,10 @@ public class StudyService {
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, UUID networkUuid, String networkId,
+    private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
             String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkUuid, networkId, caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
         studyInfosService.add(createdStudyBasicInfos);
 
         emitStudiesChanged(studyUuid, userId);
@@ -634,7 +637,7 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(File file, UUID studyUuid, String userId) {
+    UUID importCase(File file, String originalFilename, UUID studyUuid, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
@@ -642,7 +645,7 @@ public class StudyService {
         try {
             multipartBodyBuilder
                 .part("file", new FileSystemResource(file))
-                .filename(file.getName());
+                .filename(originalFilename);
 
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
@@ -760,20 +763,37 @@ public class StudyService {
 
     }
 
-    String getLinesGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
-            .queryParam(NETWORK_UUID, networkUuid)
+    String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
+
+        String variantId = getVariantId(nodeUuid);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
+            .queryParam(NETWORK_UUID, networkUuid);
+
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        var path = uriComponentsBuilder
             .buildAndExpand()
             .toUriString();
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
 
-    String getSubstationsGraphics(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
-            .queryParam(NETWORK_UUID, networkUuid)
-            .buildAndExpand()
-            .toUriString();
+    String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
+        String variantId = getVariantId(nodeUuid);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
+                .queryParam(NETWORK_UUID, networkUuid);
+
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        var path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
@@ -1216,7 +1236,7 @@ public class StudyService {
     public void assertNoNodeIsBuilding(UUID studyUuid) {
         networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
             if (networkModificationTreeService.getBuildStatus(node.getIdNode()) == BuildStatus.BUILDING) {
-                throw new StudyException(NOT_ALLOWED);
+                throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
             }
         });
     }
@@ -1731,69 +1751,88 @@ public class StudyService {
 
     public void createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
-
-        List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
-                .createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
-        Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
-
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
+            List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
+                    .createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
+            Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     public void modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
-                .modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
-        Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
+            List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
+                    .modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
+            Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
 
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     public void updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes,
             ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType,
                     modificationUuid);
             networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        } finally {
             updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
         }
     }
 
     public void updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-        networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid, false);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<EquipmentDeletionInfos> equipmentDeletionInfosList = networkModificationService.deleteEquipment(studyUuid,
-                equipmentType, equipmentId, groupUuid, variantId, reportUuid);
+            List<EquipmentDeletionInfos> equipmentDeletionInfosList = networkModificationService.deleteEquipment(studyUuid,
+                    equipmentType, equipmentId, groupUuid, variantId, reportUuid);
 
-        equipmentDeletionInfosList.forEach(deletionInfo ->
-            emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
-                    deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
-        );
-
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
+            equipmentDeletionInfosList.forEach(deletionInfo ->
+                    emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
+                            deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
+            );
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     List<VoltageLevelInfos> getVoltageLevels(UUID studyUuid, UUID nodeUuid) {
@@ -1959,15 +1998,19 @@ public class StudyService {
 
     @Transactional
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
-            throw new StudyException(NOT_ALLOWED);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
+        try {
+            if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.deleteModifications(groupId, modificationsUuids);
+            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
         }
-
-        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        networkModificationService.deleteModifications(groupId, modificationsUuids);
-        networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid, false);
     }
 
     private void deleteSaResult(UUID uuid) {
@@ -2038,6 +2081,7 @@ public class StudyService {
         }
     }
 
+    @Transactional
     public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
         checkStudyContainsNode(studyUuid, nodeUuid);
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
