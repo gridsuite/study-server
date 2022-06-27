@@ -1911,7 +1911,7 @@ public class StudyService {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         } catch (Exception e) {
             updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
-            throw e;
+            throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
         }
 
     }

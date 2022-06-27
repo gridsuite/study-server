@@ -50,6 +50,7 @@ public class StudyException extends RuntimeException {
         GENERATOR_MODIFICATION_FAILED,
         SVG_NOT_FOUND,
         NODE_NAME_ALREADY_EXIST,
+        NODE_BUILD_ERROR,
     }
 
     private final Type type;

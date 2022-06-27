@@ -556,6 +556,9 @@ public class StudyTest {
                         .build(), "build.failed");
                     return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                             "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build.*") && request.getMethod().equals("POST")) {
+                    // failed build
+                    return new MockResponse().setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
                 } else if (path.matches("/v1/build/stop.*")) {
                     // stop variant build
                     input.send(MessageBuilder.withPayload("").setHeader("receiver", "%7B%22nodeUuid%22%3A%22"
@@ -595,6 +598,9 @@ public class StudyTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     return new MockResponse().setBody(String.valueOf(networkInfos2AsString)).setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_3_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
+                    return new MockResponse().setBody(String.valueOf(networkInfos3AsString)).setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
@@ -3267,7 +3273,8 @@ public class StudyTest {
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/build/stop\\?receiver=.*")));
     }
 
-    private void testBuildErrorWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
+    // builds on network 2 will fail
+    private void testBuildFailedWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
         // build node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
             .andExpect(status().isOk());
@@ -3294,9 +3301,42 @@ public class StudyTest {
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
 
+    // builds on network 3 will throw an error on networkmodificationservice call
+    private void testBuildErrorWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
+        // build node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
+            .andExpect(status().isInternalServerError());
+
+        // initial node update -> building
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        // error -> second node update -> not built
+        buildStatusMessage = output.receive(TIMEOUT);
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        assertTrue(getRequestsDone(1).stream()
+                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
+
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
+    }
+
+    @Test
+    public void testBuildFailed() throws Exception {
+        UUID studyUuid = createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        UUID modificationGroupUuid1 = UUID.randomUUID();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                modificationGroupUuid1, "variant_1", "node 1");
+
+        testBuildFailedWithNodeUuid(studyUuid, modificationNode.getId());
+    }
+
     @Test
     public void testBuildError() throws Exception {
-        UUID studyUuid = createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
+        UUID studyUuid = createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         UUID modificationGroupUuid1 = UUID.randomUUID();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid,
