@@ -40,5 +40,7 @@ public class ComponentResultEmbeddable {
 
     @Column(name = "slackBusActivePowerMismatch")
     private double slackBusActivePowerMismatch;
-}
 
+    @Column(name = "distributedActivePower")
+    private double distributedActivePower;
+}
