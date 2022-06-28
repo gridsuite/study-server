@@ -524,11 +524,14 @@ public class NetworkModificationTreeService {
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            if (!invalidateOnlyChildrenBuildStatus) {
-                repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+            // No need to invalidate a node with a status different of "BUILT"
+            if (repositories.get(n.getType()).getBuildStatus(n.getIdNode()) == BuildStatus.BUILT) {
+                if (!invalidateOnlyChildrenBuildStatus) {
+                    repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+                }
+                repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
+                fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
             }
-            repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
-            fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
             invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
         });
 
@@ -540,11 +543,14 @@ public class NetworkModificationTreeService {
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
-                if (!invalidateOnlyChildrenBuildStatus) {
-                    repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
+                // No need to invalidate a node with a status different of "BUILT"
+                if (repositories.get(child.getType()).getBuildStatus(child.getIdNode()) == BuildStatus.BUILT) {
+                    if (!invalidateOnlyChildrenBuildStatus) {
+                        repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
+                    }
+                    repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
+                    fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 }
-                repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
-                fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 invalidateChildrenBuildStatus(child, changedNodes, false, invalidateNodeInfos);
             });
     }

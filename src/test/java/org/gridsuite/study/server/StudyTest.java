@@ -2373,12 +2373,11 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode3Uuid).content(createLoadAttributes2))
                 .andExpect(status().isForbidden());
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*") && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(createLoadAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-creation") && r.getBody().equals(loadAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @Test
@@ -2424,12 +2423,11 @@ public class StudyTest {
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads-modification\\?group=.*") && r.getBody().equals(loadModificationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads-modification\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(loadModificationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads-modification\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(loadModificationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/loads-modification") && r.getBody().equals(loadAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @Test
@@ -2476,12 +2474,11 @@ public class StudyTest {
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/" + modificationTypeUrl + "\\?group=.*") && r.getBody().equals(equipmentModificationAttribute)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/" + modificationTypeUrl + "\\?group=.*\\&variantId=" + VARIANT_ID) && r.getBody().equals(equipmentModificationAttribute)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/" + modificationTypeUrl + "\\?group=.*\\&variantId=" + VARIANT_ID_2) && r.getBody().equals(equipmentModificationAttribute)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/" + modificationTypeUrl) && r.getBody().equals(generatorAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
     }
 
@@ -2538,12 +2535,11 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes2))
                 .andExpect(status().isForbidden());
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*") && r.getBody().equals(createSubstationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createSubstationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(createSubstationAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/substations-creation") && r.getBody().equals(substationAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @Test
@@ -2607,12 +2603,11 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode1Uuid).content(createVoltageLevelAttributes2))
                 .andExpect(status().isForbidden());
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*") && r.getBody().equals(createVoltageLevelAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createVoltageLevelAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(createVoltageLevelAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/voltage-levels-creation") && r.getBody().equals(voltageLevelAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @SneakyThrows
@@ -2652,15 +2647,14 @@ public class StudyTest {
 
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
-        var requests = getRequestsWithBodyDone(3);
-        assertEquals(3, requests.size());
+        var requests = getRequestsWithBodyDone(2);
+        assertEquals(2, requests.size());
         Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits\\?group=.*")).findFirst();
         Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/line-splits")).findFirst();
         assertTrue(creationRequest.isPresent());
         assertTrue(updateRequest.isPresent());
         assertEquals(lineSplitWoVLasJSON, creationRequest.get().getBody());
         assertEquals(lineSplitWoVLasJSON, updateRequest.get().getBody());
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid)
@@ -2715,15 +2709,14 @@ public class StudyTest {
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
-        var requests = getRequestsWithBodyDone(3);
-        assertEquals(3, requests.size());
+        var requests = getRequestsWithBodyDone(2);
+        assertEquals(2, requests.size());
         Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach\\?group=.*")).findFirst();
         Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/line-attach-creation")).findFirst();
         assertTrue(creationRequest.isPresent());
         assertTrue(updateRequest.isPresent());
         assertEquals(createLineAttachToVoltageLevelAttributes, creationRequest.get().getBody());
         assertEquals(createLineAttachToVoltageLevelAttributes, updateRequest.get().getBody());
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
     }
 
     @Test public void testReorderModification() throws Exception {
@@ -3063,12 +3056,11 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes2))
                 .andExpect(status().isForbidden());
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*") && r.getBody().equals(createGeneratorAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createGeneratorAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(createGeneratorAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/generators-creation") && r.getBody().equals(generatorAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @Test
@@ -3113,7 +3105,7 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes2))
                 .andExpect(status().isForbidden());
 
-        var requests = getRequestsWithBodyDone(3);
+        var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream()
                 .anyMatch(r -> r
                         .getPath().matches("/v1/networks/" + NETWORK_UUID_STRING
@@ -3122,7 +3114,6 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(
             r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/shunt-compensators-creation")
                         && r.getBody().equals(shuntCompensatorAttributesUpdated)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
     }
 
     @Test
@@ -3193,12 +3184,11 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes2))
                 .andExpect(status().isForbidden());
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*") && r.getBody().equals(createLineAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createLineAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(createLineAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/lines-creation") && r.getBody().equals(lineAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
     }
 
     @Test
@@ -3254,12 +3244,11 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes2))
                 .andExpect(status().isForbidden());
 
-        var requests = getRequestsWithBodyDone(5);
+        var requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && r.getBody().equals(createTwoWindingsTransformerAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*&variantId=" + VARIANT_ID) && r.getBody().equals(createTwoWindingsTransformerAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(createTwoWindingsTransformerAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/two-windings-transformers-creation") && r.getBody().equals(twoWindingsTransformerAttributesUpdated)));
-        assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
     }
 
@@ -3616,9 +3605,8 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().isOk());
 
-        var requests = getRequestsWithBodyDone(2);
+        var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
