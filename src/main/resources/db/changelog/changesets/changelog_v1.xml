@@ -1,0 +1,223 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="yenguised (generated)" id="1656333530670-1">
+        <createTable tableName="load_flow_result_entity_component_results">
+            <column name="load_flow_result_entity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="connected_component_num" type="INT"/>
+            <column name="iteration_count" type="INT"/>
+            <column name="slack_bus_active_power_mismatch" type="FLOAT8"/>
+            <column name="slack_bus_id" type="VARCHAR(255)"/>
+            <column name="status" type="INT"/>
+            <column name="synchronous_component_num" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-2">
+        <createTable tableName="node">
+            <column name="id_node" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="nodePK"/>
+            </column>
+            <column name="type" type="VARCHAR(255)"/>
+            <column name="parent_node" type="UUID"/>
+            <column name="study_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-3">
+        <createTable tableName="study_creation_request">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="study_creation_requestPK"/>
+            </column>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-4">
+        <createTable tableName="study">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="studyPK"/>
+            </column>
+            <column name="case_format" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_private" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="case_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creation_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="load_flow_provider" type="VARCHAR(255)"/>
+            <column name="network_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_uuid" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="load_flow_parameters_entity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-5">
+        <createTable tableName="network_modification_node_info_entity_modifications_to_exclude">
+            <column name="network_modification_node_info_entity_id_node" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modifications_to_exclude" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-6">
+        <createTable tableName="load_flow_parameters">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="load_flow_parametersPK"/>
+            </column>
+            <column name="balance_type" type="VARCHAR(255)"/>
+            <column defaultValueBoolean="false" name="dc" type="BOOLEAN"/>
+            <column defaultValueBoolean="true" name="distributed_slack" type="BOOLEAN"/>
+            <column defaultValueBoolean="false" name="no_generator_reactive_limits" type="BOOLEAN"/>
+            <column defaultValueBoolean="false" name="phase_shifter_regulation_on" type="BOOLEAN"/>
+            <column defaultValueBoolean="true" name="read_slack_bus" type="BOOLEAN"/>
+            <column defaultValueBoolean="false" name="transformer_voltage_control_on" type="BOOLEAN"/>
+            <column defaultValueBoolean="false" name="twt_split_shunt_admittance" type="BOOLEAN"/>
+            <column name="voltage_init_mode" type="VARCHAR(255)"/>
+            <column defaultValueBoolean="false" name="write_slack_bus" type="BOOLEAN"/>
+            <column defaultValue="MAIN" name="connected_component_mode" type="VARCHAR(255)"/>
+            <column defaultValueBoolean="true" name="dc_use_transformer_ratio" type="BOOLEAN"/>
+            <column defaultValueBoolean="true" name="hvdc_ac_emulation" type="BOOLEAN"/>
+            <column defaultValueBoolean="false" name="shunt_compensator_voltage_control_on" type="BOOLEAN"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-7">
+        <createTable tableName="load_flow_parameters_entity_countries_to_balance">
+            <column name="load_flow_parameters_entity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="countries_to_balance" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-8">
+        <createTable tableName="root_node_info">
+            <column name="id_node" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="root_node_infoPK"/>
+            </column>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="read_only" type="BOOLEAN"/>
+            <column name="report_uuid" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-9">
+        <createTable tableName="network_modification_node_info">
+            <column name="id_node" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="network_modification_node_infoPK"/>
+            </column>
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="network_modification_id" type="UUID"/>
+            <column name="variant_id" type="VARCHAR(255)"/>
+            <column name="read_only" type="BOOLEAN"/>
+            <column name="build_status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="load_flow_result_entity_id" type="UUID"/>
+            <column name="load_flow_status" type="VARCHAR(255)"/>
+            <column name="security_analysis_result_uuid" type="UUID"/>
+            <column name="report_uuid" type="UUID"/>
+        </createTable>
+    </changeSet>
+        <changeSet author="yenguised (generated)" id="1656333530670-11">
+        <createTable tableName="load_flow_result">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="load_flow_resultPK"/>
+            </column>
+            <column name="logs" type="CLOB"/>
+            <column name="ok" type="BOOLEAN"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-12">
+        <createTable tableName="load_flow_result_entity_metrics">
+            <column name="load_flow_result_entity_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="load_flow_result_entity_metrics_pkey"/>
+            </column>
+            <column name="metrics" type="VARCHAR(255)"/>
+            <column name="metrics_key" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="load_flow_result_entity_metrics_pkey"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-13">
+        <createIndex indexName="loadFlowResultEntity_componentResults_id_index" tableName="load_flow_result_entity_component_results">
+            <column name="load_flow_result_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-14">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="load_flow_result_entity_component_results" constraintName="loadFlowResultEntity_componentResults_fk" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id" referencedTableName="load_flow_result" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-15">
+        <createIndex indexName="nodeEntity_parentNode_idx" tableName="node">
+            <column name="parent_node"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-16">
+        <createIndex indexName="nodeEntity_studyId_idx" tableName="node">
+            <column name="study_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-17">
+        <addForeignKeyConstraint baseColumnNames="id_node" baseTableName="root_node_info" constraintName="FK4x41cf843vsqsrl1y9ao1508e" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-18">
+        <addForeignKeyConstraint baseColumnNames="id_node" baseTableName="network_modification_node_info" constraintName="FKc40g1mgugxpmbmpr4m1c8w7pv" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-19">
+        <addForeignKeyConstraint baseColumnNames="parent_node" baseTableName="node" constraintName="parent_node_id_fk_constraint" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-20">
+        <addForeignKeyConstraint baseColumnNames="study_id" baseTableName="node" constraintName="study_id_fk_constraint" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id" referencedTableName="study" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-21">
+        <createIndex indexName="studyCreationRequest_userId_index" tableName="study_creation_request">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-22">
+        <createIndex indexName="studyEntity_userId_index" tableName="study">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-23">
+        <addForeignKeyConstraint baseColumnNames="load_flow_parameters_entity_id" baseTableName="study" constraintName="loadFlowParameters_id_fk" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id" referencedTableName="load_flow_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-24">
+        <createIndex indexName="networkModificationNodeInfoEntity_modificationsToExclude_idx" tableName="network_modification_node_info_entity_modifications_to_exclude">
+            <column name="network_modification_node_info_entity_id_node"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-25">
+        <addForeignKeyConstraint baseColumnNames="network_modification_node_info_entity_id_node" baseTableName="network_modification_node_info_entity_modifications_to_exclude" constraintName="networkModificationNodeInfoEntity_modificationsToExclude_fk" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id_node" referencedTableName="network_modification_node_info" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-26">
+        <addForeignKeyConstraint baseColumnNames="load_flow_parameters_entity_id" baseTableName="load_flow_parameters_entity_countries_to_balance" constraintName="loadFlowParametersEntity_countriesToBalance_fk1" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id" referencedTableName="load_flow_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-27">
+        <createIndex indexName="loadFlowParametersEntity_countriesToBalance_idx1" tableName="load_flow_parameters_entity_countries_to_balance">
+            <column name="load_flow_parameters_entity_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-28">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="network_modification_node_info" constraintName="loadFlowResult_id_fk" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id" referencedTableName="load_flow_result" validate="true"/>
+    </changeSet>
+    <changeSet author="yenguised (generated)" id="1656333530670-29">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="load_flow_result_entity_metrics" constraintName="loadFlowResultEntity_metrics_fk" deferrable="false" initiallyDeferred="false" onDelete="NO ACTION" onUpdate="NO ACTION" referencedColumnNames="id" referencedTableName="load_flow_result" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
