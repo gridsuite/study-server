@@ -991,35 +991,45 @@ public class StudyService {
     }
 
     void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<EquipmentModificationInfos> equipmentModificationsInfos = networkModificationService
-                .changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid);
-        Set<String> substationIds = getSubstationIds(equipmentModificationsInfos);
+            List<EquipmentModificationInfos> equipmentModificationsInfos = networkModificationService
+                    .changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid);
+            Set<String> substationIds = getSubstationIds(equipmentModificationsInfos);
 
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     public void applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<ModificationInfos> modificationsInfos = networkModificationService.applyGroovyScript(studyUuid,
-                groovyScript, groupUuid, variantId, reportUuid);
+            List<ModificationInfos> modificationsInfos = networkModificationService.applyGroovyScript(studyUuid,
+                    groovyScript, groupUuid, variantId, reportUuid);
 
-        Set<String> substationIds = getSubstationIds(modificationsInfos);
+            Set<String> substationIds = getSubstationIds(modificationsInfos);
 
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     private LoadFlowStatus computeLoadFlowStatus(LoadFlowResult result) {
@@ -1113,20 +1123,25 @@ public class StudyService {
 
     public void changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull String status,
             @NonNull UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<ModificationInfos> modificationInfosList = networkModificationService.changeLineStatus(studyUuid, lineId,
-                status, groupUuid, variantId, reportUuid);
+            List<ModificationInfos> modificationInfosList = networkModificationService.changeLineStatus(studyUuid, lineId,
+                    status, groupUuid, variantId, reportUuid);
 
-        Set<String> substationIds = getSubstationIds(modificationInfosList);
+            Set<String> substationIds = getSubstationIds(modificationInfosList);
 
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     private void emitStudiesChanged(UUID studyUuid, String userId) {
