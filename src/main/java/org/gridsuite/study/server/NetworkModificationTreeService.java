@@ -498,15 +498,18 @@ public class NetworkModificationTreeService {
         return buildInfos;
     }
 
-    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos) {
-        UUID reportUuid = repositories.get(node.getType()).getReportUuid(node.getIdNode(), false);
-        if (reportUuid != null) {
-            invalidateNodeInfos.addReportUuid(reportUuid);
-        }
+    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean removeOnlyResults) {
 
-        String variantId = repositories.get(node.getType()).getVariantId(node.getIdNode(), false);
-        if (!StringUtils.isBlank(variantId)) {
-            invalidateNodeInfos.addVariantId(variantId);
+        if (!removeOnlyResults) {
+            UUID reportUuid = repositories.get(node.getType()).getReportUuid(node.getIdNode(), false);
+            if (reportUuid != null) {
+                invalidateNodeInfos.addReportUuid(reportUuid);
+            }
+
+            String variantId = repositories.get(node.getType()).getVariantId(node.getIdNode(), false);
+            if (!StringUtils.isBlank(variantId)) {
+                invalidateNodeInfos.addVariantId(variantId);
+            }
         }
 
         UUID securityAnalysisResultUuid = repositories.get(node.getType()).getSecurityAnalysisResultUuid(node.getIdNode());
@@ -523,9 +526,9 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             if (!invalidateOnlyChildrenBuildStatus) {
                 repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
-                repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
-                fillInvalidateNodeInfos(n, invalidateNodeInfos);
             }
+            repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
+            fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
             invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
         });
 
@@ -539,9 +542,9 @@ public class NetworkModificationTreeService {
             .forEach(child -> {
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
-                    repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
-                    fillInvalidateNodeInfos(child, invalidateNodeInfos);
                 }
+                repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
+                fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 invalidateChildrenBuildStatus(child, changedNodes, false, invalidateNodeInfos);
             });
     }
