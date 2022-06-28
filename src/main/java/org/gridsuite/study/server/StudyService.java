@@ -104,6 +104,7 @@ public class StudyService {
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
     static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
     static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
+    static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
     static final String HEADER_ERROR = "error";
     static final String UPDATE_TYPE_STUDY = "study";
     static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
@@ -1924,8 +1925,14 @@ public class StudyService {
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
-        networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        try {
+            networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
+        } catch (Exception e) {
+            updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
+            throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
+        }
+
     }
 
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
@@ -1974,6 +1981,30 @@ public class StudyService {
                     // send notification
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    @Transactional
+    public Consumer<Message<String>> consumeBuildFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            Receiver.class);
+
+                    LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
+
+                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
+                    // send notification
+                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_FAILED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
