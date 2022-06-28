@@ -11,6 +11,9 @@
             <column name="slack_bus_id" type="VARCHAR(255)"/>
             <column name="status" type="INT"/>
             <column name="synchronous_component_num" type="INT"/>
+            <column name="distributed_active_power" type="FLOAT8" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
     </changeSet>
     <changeSet author="yenguised (generated)" id="1656333530670-2">
