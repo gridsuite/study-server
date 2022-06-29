@@ -104,6 +104,7 @@ public class StudyService {
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
     static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
     static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
+    static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
     static final String HEADER_ERROR = "error";
     static final String UPDATE_TYPE_STUDY = "study";
     static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
@@ -991,35 +992,45 @@ public class StudyService {
     }
 
     void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<EquipmentModificationInfos> equipmentModificationsInfos = networkModificationService
-                .changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid);
-        Set<String> substationIds = getSubstationIds(equipmentModificationsInfos);
+            List<EquipmentModificationInfos> equipmentModificationsInfos = networkModificationService
+                    .changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid);
+            Set<String> substationIds = getSubstationIds(equipmentModificationsInfos);
 
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     public void applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<ModificationInfos> modificationsInfos = networkModificationService.applyGroovyScript(studyUuid,
-                groovyScript, groupUuid, variantId, reportUuid);
+            List<ModificationInfos> modificationsInfos = networkModificationService.applyGroovyScript(studyUuid,
+                    groovyScript, groupUuid, variantId, reportUuid);
 
-        Set<String> substationIds = getSubstationIds(modificationsInfos);
+            Set<String> substationIds = getSubstationIds(modificationsInfos);
 
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     private LoadFlowStatus computeLoadFlowStatus(LoadFlowResult result) {
@@ -1113,20 +1124,25 @@ public class StudyService {
 
     public void changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull String status,
             @NonNull UUID nodeUuid) {
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
 
-        List<ModificationInfos> modificationInfosList = networkModificationService.changeLineStatus(studyUuid, lineId,
-                status, groupUuid, variantId, reportUuid);
+            List<ModificationInfos> modificationInfosList = networkModificationService.changeLineStatus(studyUuid, lineId,
+                    status, groupUuid, variantId, reportUuid);
 
-        Set<String> substationIds = getSubstationIds(modificationInfosList);
+            Set<String> substationIds = getSubstationIds(modificationInfosList);
 
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
-        updateStatuses(studyUuid, nodeUuid);
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid);
+            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     private void emitStudiesChanged(UUID studyUuid, String userId) {
@@ -1917,8 +1933,14 @@ public class StudyService {
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
-        networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        try {
+            networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
+        } catch (Exception e) {
+            updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
+            throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
+        }
+
     }
 
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
@@ -1967,6 +1989,30 @@ public class StudyService {
                     // send notification
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    @Transactional
+    public Consumer<Message<String>> consumeBuildFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            Receiver.class);
+
+                    LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
+
+                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
+                    // send notification
+                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_FAILED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
