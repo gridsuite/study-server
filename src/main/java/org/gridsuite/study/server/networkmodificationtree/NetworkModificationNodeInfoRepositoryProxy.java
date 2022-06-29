@@ -43,6 +43,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         if (networkModificationNode.getNetworkModification() == null) {
             networkModificationNode.setNetworkModification(UUID.randomUUID());
         }
+        if (networkModificationNode.getVariantId() == null) {
+            networkModificationNode.setVariantId(UUID.randomUUID().toString());
+        }
         super.createNodeInfo(networkModificationNode);
     }
 
@@ -73,13 +76,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public String getVariantId(AbstractNode node, boolean generateId) {
-        NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        if (networkModificationNode.getVariantId() == null && generateId) {
-            networkModificationNode.setVariantId(UUID.randomUUID().toString());  // variant id generated with UUID format ????
-            updateNode(networkModificationNode);
-        }
-        return networkModificationNode.getVariantId();
+    public String getVariantId(AbstractNode node) {
+        return ((NetworkModificationNode) node).getVariantId();
     }
 
     @Override
@@ -182,22 +180,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {
+    public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
-        boolean nodeToUpdate = false;
-
-        if (networkModificationNode.getVariantId() == null && generateId) {
-            networkModificationNode.setVariantId(UUID.randomUUID().toString());
-            nodeToUpdate = true;
-        }
-        if (networkModificationNode.getReportUuid() == null && generateId) {
-            networkModificationNode.setReportUuid(UUID.randomUUID());
-            nodeToUpdate = true;
-        }
-        if (nodeToUpdate) {
-            updateNode(networkModificationNode);
-        }
-
         return NodeModificationInfos.builder()
             .modificationGroupUuid(networkModificationNode.getNetworkModification())
             .variantId(networkModificationNode.getVariantId())

@@ -882,7 +882,7 @@ public class StudyTest {
     private Set<String> getRequestsDone(int n) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
-                return server.takeRequest(0, TimeUnit.SECONDS).getPath();
+                return server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS).getPath();
             } catch (InterruptedException e) {
                 LOGGER.error("Error while attempting to get the request done : ", e);
             }
@@ -912,7 +912,7 @@ public class StudyTest {
     private Set<RequestWithBody> getRequestsWithBodyDone(int n) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
-                var request = server.takeRequest();
+                var request = server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS);
                 return new RequestWithBody(request.getPath(), request.getBody().readUtf8());
             } catch (InterruptedException e) {
                 LOGGER.error("Error while attempting to get the request done : ", e);
@@ -1068,9 +1068,9 @@ public class StudyTest {
         assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
-        var httpRequests = getRequestsDone(2);
+        var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/groups/.*")));
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+        assertEquals(2, httpRequests.stream().filter(p -> p.matches("/v1/reports/.*")).count());
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
@@ -3623,8 +3623,9 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/reindex-all", study1Uuid))
             .andExpect(status().isOk());
 
-        var requests = getRequestsWithBodyDone(1);
+        var requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));

@@ -542,8 +542,8 @@ public class StudyService {
                 startTime.set(System.nanoTime());
 
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)),
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)),
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                     studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                     studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
                 );
@@ -1761,7 +1761,8 @@ public class StudyService {
                 }).getBody();
     }
 
-    public String getVariantId(UUID nodeUuid) {
+    // TODO remove
+    private String getVariantId(UUID nodeUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid);
     }
 
@@ -2020,7 +2021,7 @@ public class StudyService {
         };
     }
 
-    void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
+    private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
@@ -2032,7 +2033,7 @@ public class StudyService {
         networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
+                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult)),
                 studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
@@ -2173,7 +2174,7 @@ public class StudyService {
         }
     }
 
-    public UUID getReportUuid(UUID nodeUuid) {
+    private UUID getReportUuid(UUID nodeUuid) {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 

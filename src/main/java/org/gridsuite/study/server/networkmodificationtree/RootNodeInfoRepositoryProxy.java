@@ -13,8 +13,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 
-import java.util.UUID;
-
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
  */
@@ -35,21 +33,15 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     }
 
     @Override
-    public String getVariantId(AbstractNode node, boolean generateId) {
+    public String getVariantId(AbstractNode node) {
         return "";  // we will use the network initial variant
     }
 
     @Override
-    public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {
-        RootNode rootNode = (RootNode) node;
-        if (rootNode.getReportUuid() == null && generateId) {
-            rootNode.setReportUuid(UUID.randomUUID());
-            updateNode(rootNode);
-        }
-
+    public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         return NodeModificationInfos.builder()
-            .variantId("")
-            .reportUuid(rootNode.getReportUuid())
+            .variantId("")      // we will use the network initial variant
+            .reportUuid(node.getReportUuid())
             .build();
     }
 }
