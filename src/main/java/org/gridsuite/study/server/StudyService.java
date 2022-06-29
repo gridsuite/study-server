@@ -102,6 +102,7 @@ public class StudyService {
     static final String UPDATE_TYPE_LINE = "line";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
     static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
     static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
@@ -1680,6 +1681,32 @@ public class StudyService {
                     // send notification for stopped computation
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
                     emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    @Transactional
+    public Consumer<Message<String>> consumeSaFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                Receiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            Receiver.class);
+
+                    LOGGER.info("Security analysis failed for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete security analysis result in database
+                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+                    // send notification for failed computation
+                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_FAILED);
 
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
