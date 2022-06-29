@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 
 @NoArgsConstructor
