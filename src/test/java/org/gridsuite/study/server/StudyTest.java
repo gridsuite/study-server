@@ -1763,7 +1763,6 @@ public class StudyTest {
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
         try {
             output.receive(TIMEOUT);
         } catch (Exception e) {
@@ -2833,8 +2832,6 @@ public class StudyTest {
         assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
         assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
 
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
-
         // assert that the broker message has been sent for updating load flow status
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
@@ -2876,7 +2873,6 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
@@ -2921,24 +2917,19 @@ public class StudyTest {
     }
 
     private void checkUpdateEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
     private void checkUpdateEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
-    private void checkUpdateEquipmentModificationWithInvalidationMessagesReceived(UUID studyNameUserIdUuid, UUID modifiedNodeUuid, List<UUID> invalidatedNodes) {
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modifiedNodeUuid));
+    private void checkNodesInvalidationMessagesReceived(UUID studyNameUserIdUuid, List<UUID> invalidatedNodes) {
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, invalidatedNodes);
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modifiedNodeUuid);
     }
 
     private void checkNodeModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
     }
 
     private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
@@ -3538,7 +3529,6 @@ public class StudyTest {
                 .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification()
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
-        checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 
@@ -3661,7 +3651,8 @@ public class StudyTest {
                         .content(generatorAttributesUpdated))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkUpdateEquipmentModificationWithInvalidationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, List.of(modificationNode1Uuid, modificationNode3Uuid));
+        checkNodesInvalidationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid, modificationNode3Uuid));
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         var requests = getRequestsWithBodyDone(5);

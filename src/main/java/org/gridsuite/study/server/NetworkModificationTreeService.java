@@ -35,6 +35,8 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
@@ -511,7 +513,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
-        List<UUID> changedNodes = new ArrayList<>();
+        final List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
@@ -526,7 +528,11 @@ public class NetworkModificationTreeService {
             invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
         });
 
-        emitNodesChanged(studyId, changedNodes);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            public void afterCommit() {
+                emitNodesChanged(studyId, changedNodes);
+            }
+        });
     }
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {

@@ -1004,7 +1004,6 @@ public class StudyService {
             Set<String> substationIds = getSubstationIds(equipmentModificationsInfos);
 
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid);
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH);
         } finally {
@@ -1026,7 +1025,6 @@ public class StudyService {
             Set<String> substationIds = getSubstationIds(modificationsInfos);
 
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
@@ -1137,7 +1135,6 @@ public class StudyService {
             Set<String> substationIds = getSubstationIds(modificationInfosList);
 
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid);
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE);
         } finally {
@@ -1778,7 +1775,6 @@ public class StudyService {
                     .createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
             Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
@@ -1799,7 +1795,6 @@ public class StudyService {
             Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
 
             emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
@@ -1812,7 +1807,6 @@ public class StudyService {
         try {
             networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType,
                     modificationUuid);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
@@ -1823,7 +1817,6 @@ public class StudyService {
         networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
@@ -1845,7 +1838,6 @@ public class StudyService {
                     emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
                             deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
             );
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
@@ -2084,7 +2076,6 @@ public class StudyService {
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
             networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
-            networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
@@ -2165,7 +2156,6 @@ public class StudyService {
         UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
         networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
         updateStatuses(studyUuid, nodeUuid, false);
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
@@ -2241,7 +2231,6 @@ public class StudyService {
             .collect(Collectors.toList());
         deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
             allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
-        networkModificationTreeService.notifyModificationNodeChanged(studyUuid, nodeUuid);
 
         updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
     }
