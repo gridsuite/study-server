@@ -34,4 +34,6 @@ final class StudyConstants {
     static final String QUERY_PARAM_VARIANT_ID = "variantId";
     static final String REPORT_UUID = "reportUuid";
     static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
+    static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
+    static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
 }
