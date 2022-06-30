@@ -409,6 +409,11 @@ public class StudyTest {
                         .build(), "sa.failed");
                     return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")) {
+                    input.send(MessageBuilder.withPayload("")
+                        .build(), "sa.failed");
+                    return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
                            || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID : SECURITY_ANALYSIS_RESULT_UUID;
@@ -1439,6 +1444,28 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
+
+        /**
+         *  what follows is mostly for test coverage -> a failed message without receiver is sent -> will be ignored by consumer
+         */
+        UUID studyUuid2 = createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));
+        UUID rootNodeUuid2 = getRootNodeUuid(studyUuid2);
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
+        UUID modificationNode1Uuid2 = modificationNode2.getId();
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME))
+            .andExpect(status().isOk());
+
+        // failed security analysis without receiver -> no failure message sent to frontend
+
+        // message sent by run and save controller to notify frontend security analysis is running and should update SA status
+        message = output.receive(TIMEOUT);
+        assertEquals(studyUuid2, message.getHeaders().get(HEADER_STUDY_UUID));
+        updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
     }
 
     @Test
