@@ -213,6 +213,9 @@ public class NetworkModificationTreeTest {
                 } else if (path.matches("/v1/groups/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/reports/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Path not supported: " + request.getPath());
                     return new MockResponse().setResponseCode(404);

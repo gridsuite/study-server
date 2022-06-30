@@ -2175,10 +2175,7 @@ public class StudyService {
     public List<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid, boolean nodeOnlyReport) {
         List<Pair<UUID, String>> reportUuidsAndNames = getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
         return reportUuidsAndNames.stream().map(reportInfo -> {
-            ReporterModel reporter = reportService.getReport(reportInfo.getLeft());
-            if (reporter == null) {
-                reporter = new ReporterModel(UUID.randomUUID().toString(), reportInfo.getLeft().toString());
-            }
+            ReporterModel reporter = reportService.getReport(reportInfo.getLeft(), reportInfo.getRight());
             ReporterModel newReporter = new ReporterModel(reporter.getTaskKey(), reportInfo.getRight(), reporter.getTaskValues());
             reporter.getReports().forEach(newReporter::report);
             reporter.getSubReporters().forEach(newReporter::addSubReporter);
