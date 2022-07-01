@@ -514,6 +514,7 @@ public class NetworkModificationTreeService {
     @Transactional
     public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
         final List<UUID> changedNodes = new ArrayList<>();
+        changedNodes.add(nodeUuid);
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
@@ -530,7 +531,7 @@ public class NetworkModificationTreeService {
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             public void afterCommit() {
-                emitNodesChanged(studyId, changedNodes);
+                emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
             }
         });
     }
