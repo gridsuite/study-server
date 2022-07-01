@@ -45,7 +45,6 @@ import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
@@ -131,9 +130,6 @@ public class StudyService {
     static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
     static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
     static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
-    // Self injection for @transactional support in internal calls to other methods of this service
-    @Autowired
-    StudyService self;
 
     NetworkModificationTreeService networkModificationTreeService;
 
@@ -1038,38 +1034,37 @@ public class StudyService {
                 .collect(Collectors.toList()).isEmpty() ? LoadFlowStatus.DIVERGED : LoadFlowStatus.CONVERGED;
     }
 
-    @Transactional
     public void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
-        LoadFlowResult result;
+        try {
+            LoadFlowResult result;
 
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getLoadFlowProvider(studyUuid);
-        String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
+            UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+            String provider = getLoadFlowProvider(studyUuid);
+            String variantId = getVariantId(nodeUuid);
+            UUID reportUuid = getReportUuid(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
+            var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", reportUuid.toString())
                 .queryParam("reportName", "loadflow")
                 .queryParam("overwrite", true);
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
+            if (!provider.isEmpty()) {
+                uriComponentsBuilder.queryParam("provider", provider);
+            }
+            if (!StringUtils.isBlank(variantId)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+            var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<>(getLoadFlowParameters(studyUuid),
+            HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<>(getLoadFlowParameters(studyUuid),
                 headers);
 
-        try {
-            self.setLoadFlowRunning(studyUuid, nodeUuid);
+            setLoadFlowRunning(studyUuid, nodeUuid);
             ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT,
-                    httpEntity, LoadFlowResult.class);
+                httpEntity, LoadFlowResult.class);
             result = resp.getBody();
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
         } catch (Exception e) {
@@ -1080,7 +1075,6 @@ public class StudyService {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW) // Need to commit the status 'running' in db with state into update the front
     public void setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
         updateLoadFlowStatus(nodeUuid, LoadFlowStatus.RUNNING);
         emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
@@ -1348,7 +1342,6 @@ public class StudyService {
             entity.getDistributedActivePower());
     }
 
-    @Transactional(readOnly = true)
     public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
@@ -1367,7 +1360,6 @@ public class StudyService {
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
     }
 
-    @Transactional(readOnly = true)
     public String getLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(StudyEntity::getLoadFlowProvider)
