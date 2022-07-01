@@ -227,8 +227,9 @@ public class StudyController {
     public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBuses(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("voltageLevelId") String voltageLevelId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBuses(studyUuid, nodeUuid, voltageLevelId));
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBuses(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/busbar-sections")
@@ -237,8 +238,9 @@ public class StudyController {
     public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("voltageLevelId") String voltageLevelId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusbarSections(studyUuid, nodeUuid, voltageLevelId));
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusbarSections(studyUuid, nodeUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")
