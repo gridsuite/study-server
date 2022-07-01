@@ -139,6 +139,7 @@ public class StudyTest {
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11111111-9594-4e55-8ec7-07ea965d24eb";
+    private static final String SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "22222222-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
@@ -403,6 +404,17 @@ public class StudyTest {
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
                         .build());
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")) {
+                    input.send(MessageBuilder.withPayload("")
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                        .build(), "sa.failed");
+                    return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")) {
+                    input.send(MessageBuilder.withPayload("")
+                        .build(), "sa.failed");
+                    return new MockResponse().setResponseCode(200).setBody("\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/stop.*")
                            || path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
@@ -1410,6 +1422,63 @@ public class StudyTest {
 
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
+    }
+
+    //test security analysis on network 2 will fail
+    @Test
+    public void testSecurityAnalysisFailedForNotification() throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+
+        UUID studyUuid = createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        //run failing security analysis (because in network 2)
+        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME))
+            .andExpect(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        String uuidResponse = mapper.readValue(resultAsString, String.class);
+
+        assertEquals(SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID, uuidResponse);
+
+        // failed security analysis
+        Message<byte[]> message = output.receive(TIMEOUT);
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
+        String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_FAILED, updateType);
+
+        // message sent by run and save controller to notify frontend security analysis is running and should update SA status
+        message = output.receive(TIMEOUT);
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
+        updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
+
+        /**
+         *  what follows is mostly for test coverage -> a failed message without receiver is sent -> will be ignored by consumer
+         */
+        UUID studyUuid2 = createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));
+        UUID rootNodeUuid2 = getRootNodeUuid(studyUuid2);
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
+        UUID modificationNode1Uuid2 = modificationNode2.getId();
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME))
+            .andExpect(status().isOk());
+
+        // failed security analysis without receiver -> no failure message sent to frontend
+
+        // message sent by run and save controller to notify frontend security analysis is running and should update SA status
+        message = output.receive(TIMEOUT);
+        assertEquals(studyUuid2, message.getHeaders().get(HEADER_STUDY_UUID));
+        updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
+
+        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
     }
 
     @Test
