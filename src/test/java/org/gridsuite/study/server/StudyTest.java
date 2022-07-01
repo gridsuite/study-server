@@ -2901,6 +2901,8 @@ public class StudyTest {
         assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
         assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
 
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
+
         // assert that the broker message has been sent for updating load flow status
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
@@ -2942,6 +2944,7 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
         assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
@@ -2986,10 +2989,12 @@ public class StudyTest {
     }
 
     private void checkUpdateEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
     private void checkUpdateEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
@@ -2999,6 +3004,7 @@ public class StudyTest {
 
     private void checkNodeModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
     }
 
     private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
@@ -3553,6 +3559,7 @@ public class StudyTest {
         assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
 
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
+        checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode1.getId()));
 
         // reactivate modification
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=true",
@@ -3564,6 +3571,7 @@ public class StudyTest {
         assertTrue(modificationNode.getModificationsToExclude().isEmpty());
 
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
+        checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode1.getId()));
     }
 
     @Test
@@ -3600,7 +3608,7 @@ public class StudyTest {
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
-
+        checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
     }
 
     @Test
@@ -3721,7 +3729,7 @@ public class StudyTest {
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkNodesInvalidationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid, modificationNode3Uuid));
-        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         var requests = getRequestsWithBodyDone(5);
