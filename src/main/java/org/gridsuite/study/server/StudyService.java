@@ -193,6 +193,9 @@ public class StudyService {
     }
 
     @Autowired
+    StudyService self;
+
+    @Autowired
     public StudyService(@Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri,
         @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
         @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
@@ -1716,7 +1719,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
-        return insertStudy(studyEntity, importReportUuid);
+        return self.insertStudy(studyEntity, importReportUuid);
     }
 
     @Transactional
