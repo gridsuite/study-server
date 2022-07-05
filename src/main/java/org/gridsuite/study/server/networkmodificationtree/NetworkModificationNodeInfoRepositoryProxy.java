@@ -68,7 +68,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
         return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(),
             node.getVariantId(),
-            node.getModificationsToExclude(),
+            new HashSet<>(node.getModificationsToExclude()),
             node.getLoadFlowStatus(),
             StudyService.fromEntity(node.getLoadFlowResult()),
             node.getSecurityAnalysisResultUuid(),
