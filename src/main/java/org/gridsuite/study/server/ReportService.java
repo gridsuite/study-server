@@ -11,21 +11,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
+import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.REPORT_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -59,29 +58,22 @@ public class ReportService {
         return this.reportServerBaseUri + DELIMITER + REPORT_API_VERSION + DELIMITER + "reports" + DELIMITER;
     }
 
-    public ReporterModel getReport(UUID reportUuid) {
-        ReporterModel result = null;
+    public ReporterModel getReport(@NonNull UUID reportUuid, @NonNull String defaultName) {
+        var path = UriComponentsBuilder.fromPath("{reportUuid}")
+            .queryParam(QUERY_PARAM_REPORT_DEFAULT_NAME, defaultName)
+            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
+            .buildAndExpand(reportUuid)
+            .toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        try {
-            result = restTemplate.exchange(this.getReportServerURI() + reportUuid, HttpMethod.GET, new HttpEntity<>(headers), ReporterModel.class).getBody();
-        } catch (HttpClientErrorException e) {
-            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw e;
-            }
-        }
-
-        return result;
+        return restTemplate.exchange(this.getReportServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), ReporterModel.class).getBody();
     }
 
-    public void deleteReport(UUID reportUuid) {
-        try {
-            restTemplate.delete(this.getReportServerURI() + reportUuid);
-        } catch (HttpStatusCodeException e)   {
-         // Ignore if 404 because report may not exist
-            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw e;
-            }
-        }
+    public void deleteReport(@NonNull UUID reportUuid) {
+        var path = UriComponentsBuilder.fromPath("{reportUuid}")
+            .queryParam(QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND, false)
+            .buildAndExpand(reportUuid)
+            .toUriString();
+        restTemplate.delete(this.getReportServerURI() + path);
     }
 }

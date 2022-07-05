@@ -41,7 +41,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public abstract NodeDto toDto(NodeInfoEntity node);
 
-    public String getVariantId(AbstractNode node, boolean generateId) {
+    public String getVariantId(AbstractNode node) {
         return null;
     }
 
@@ -87,6 +87,9 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
+        if (nodeInfo.getReportUuid() == null) {
+            nodeInfo.setReportUuid(UUID.randomUUID());
+        }
         nodeInfoRepository.save(toEntity(nodeInfo));
     }
 
@@ -116,10 +119,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return entity;
     }
 
-    public void updateNode(AbstractNode node) {
+    public void updateNode(AbstractNode node, String... authorizedNullProperties) {
         var persistedNode = getNode(node.getId());
         /* using only DTO values not jpa Entity */
-        PropertyUtils.copyNonNullProperties(node, persistedNode);
+        PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
         var entity = toEntity(persistedNode);
         entity.markNotNew();
         nodeInfoRepository.save(entity);
@@ -133,12 +136,16 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         nodeInfoRepository.deleteByIdNodeIn(collect);
     }
 
-    public String getVariantId(UUID nodeUuid, boolean generateId) {
-        return getVariantId(getNode(nodeUuid), generateId);
+    public String getVariantId(UUID nodeUuid) {
+        return getVariantId(getNode(nodeUuid));
     }
 
     public UUID getModificationGroupUuid(UUID nodeUuid) {
         return getModificationGroupUuid(getNode(nodeUuid));
+    }
+
+    public UUID getReportUuid(UUID nodeUuid) {
+        return getNode(nodeUuid).getReportUuid();
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid) {
@@ -189,23 +196,11 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getNode(nodeUuid).getReadOnly();
     }
 
-    public UUID getReportUuid(AbstractNode node, boolean generateId) {
-        if (node.getReportUuid() == null && generateId) {
-            node.setReportUuid(UUID.randomUUID());
-            updateNode(node);
-        }
-        return node.getReportUuid();
-    }
-
-    public UUID getReportUuid(UUID nodeUuid, boolean generateId) {
-        return getReportUuid(getNode(nodeUuid), generateId);
-    }
-
-    public NodeModificationInfos getNodeModificationInfos(AbstractNode node, boolean generateId) {
+    public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         return null;
     }
 
-    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid, boolean generateId) {
-        return getNodeModificationInfos(getNode(nodeUuid), generateId);
+    public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
+        return getNodeModificationInfos(getNode(nodeUuid));
     }
 }
