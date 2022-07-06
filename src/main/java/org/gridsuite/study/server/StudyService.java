@@ -1527,7 +1527,6 @@ public class StudyService {
         String result;
         try {
             result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build(), String.class, networkUuid, substationId).getBody();
-            //result = restTemplate.exchange(singleLineDiagramServerBaseUri + uriComponentsBuilder.build(),  HttpMethod.PUT, null, networkUuid, substationId);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");

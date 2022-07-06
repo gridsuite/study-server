@@ -143,7 +143,6 @@ public class NetworkModificationService {
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + uriComponentsBuilder.build().toUriString(), HttpMethod.PUT, null,
                     new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }, switchId).getBody();
-            //result = restTemplate.put(getNetworkModificationServerURI(true) + uriComponentsBuilder.build(), switchId).getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(ELEMENT_NOT_FOUND);
@@ -346,14 +345,11 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder
-            .buildAndExpand(equipmentType, equipmentId)
-            .toUriString();
 
         try {
-            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.DELETE, null,
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + uriComponentsBuilder.build(), HttpMethod.DELETE, null,
                     new ParameterizedTypeReference<List<EquipmentDeletionInfos>>() {
-                    }).getBody();
+                    }, equipmentType, equipmentId).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleChangeError(e, DELETE_EQUIPMENT_FAILED);
         }
