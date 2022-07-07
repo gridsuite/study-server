@@ -41,7 +41,7 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
     @JoinColumn(name = "idNode", nullable = false)
     private NodeEntity node;
 
-    @Column
+    @Column(columnDefinition = "CLOB")
     String name;
 
     @Column
