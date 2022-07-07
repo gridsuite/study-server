@@ -1050,8 +1050,7 @@ public class StudyService {
             var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", reportUuid.toString())
-                .queryParam("reportName", "loadflow")
-                .queryParam("overwrite", true);
+                .queryParam("reportName", "loadflow");
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
