@@ -46,6 +46,8 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -2090,17 +2092,19 @@ public class StudyService {
     @Transactional
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
         networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
-        try {
-            if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
-                throw new StudyException(NOT_ALLOWED);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            public void afterCompletion(int status) {
+                networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
             }
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.deleteModifications(groupId, modificationsUuids);
-            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
-            updateStatuses(studyUuid, nodeUuid, false);
-        } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        });
+
+        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
         }
+        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+        networkModificationService.deleteModifications(groupId, modificationsUuids);
+        networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+        updateStatuses(studyUuid, nodeUuid, false);
     }
 
     private void deleteSaResult(UUID uuid) {
