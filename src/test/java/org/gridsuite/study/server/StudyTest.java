@@ -3607,8 +3607,8 @@ public class StudyTest {
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
-        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
 
     @Test
