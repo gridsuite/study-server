@@ -281,8 +281,8 @@ public class NetworkModificationTreeService {
 
             if (sourceNode instanceof NetworkModificationNode) {
                 NetworkModificationNode model = (NetworkModificationNode) sourceNode;
-                UUID modificationGroupToDuplicateId = model.getNetworkModification();
-                model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
+                UUID modificationGroupToDuplicateId = model.getNetworkModificationId();
+                model.setNetworkModificationId(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
                 model.setBuildStatus(BuildStatus.NOT_BUILT);
                 model.setReportUuid(newReportUuid);
 
@@ -466,7 +466,7 @@ public class NetworkModificationTreeService {
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), getReportUuid(nodeEntity.getIdNode()));
+                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModificationId(), getReportUuid(nodeEntity.getIdNode()));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
@@ -529,6 +529,7 @@ public class NetworkModificationTreeService {
         });
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
             public void afterCommit() {
                 emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
             }

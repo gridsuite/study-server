@@ -40,8 +40,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         if (Objects.isNull(networkModificationNode.getBuildStatus())) {
             networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
         }
-        if (networkModificationNode.getNetworkModification() == null) {
-            networkModificationNode.setNetworkModification(UUID.randomUUID());
+        if (networkModificationNode.getNetworkModificationId() == null) {
+            networkModificationNode.setNetworkModificationId(UUID.randomUUID());
         }
         if (networkModificationNode.getVariantId() == null) {
             networkModificationNode.setVariantId(UUID.randomUUID().toString());
@@ -52,7 +52,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModification(),
+        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModificationId(),
             modificationNode.getVariantId(),
             modificationNode.getModificationsToExclude(),
             modificationNode.getLoadFlowStatus(),
@@ -82,7 +82,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
     @Override
     public UUID getModificationGroupUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getNetworkModification();
+        return ((NetworkModificationNode) node).getNetworkModificationId();
     }
 
     @Override
@@ -183,7 +183,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         return NodeModificationInfos.builder()
-            .modificationGroupUuid(networkModificationNode.getNetworkModification())
+            .modificationGroupUuid(networkModificationNode.getNetworkModificationId())
             .variantId(networkModificationNode.getVariantId())
             .reportUuid(networkModificationNode.getReportUuid())
             .build();

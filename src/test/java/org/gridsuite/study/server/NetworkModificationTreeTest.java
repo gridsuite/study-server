@@ -340,7 +340,7 @@ public class NetworkModificationTreeTest {
 
         node2.setName("niark");
         node1.setName("condriak");
-        node1.setNetworkModification(UUID.randomUUID());
+        node1.setNetworkModificationId(UUID.randomUUID());
         createNode(root.getStudyId(), children.get(1), node2);
         createNode(root.getStudyId(), children.get(1), node1);
 
@@ -495,7 +495,7 @@ public class NetworkModificationTreeTest {
         final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, node1);
         node1.setName("grunt");
-        node1.setNetworkModification(UUID.randomUUID());
+        node1.setNetworkModificationId(UUID.randomUUID());
         root = getRootNode(root.getStudyId());
         node1.setId(root.getChildren().get(0).getId());
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
@@ -649,7 +649,7 @@ public class NetworkModificationTreeTest {
         return NetworkModificationNode.builder()
             .name(name)
             .description(description)
-            .networkModification(idHypo)
+            .networkModificationId(idHypo)
             .variantId(variantId)
             .loadFlowStatus(loadFlowStatus)
             .loadFlowResult(loadFlowResult)
@@ -671,7 +671,7 @@ public class NetworkModificationTreeTest {
     private void assertModificationNodeEquals(AbstractNode expected, AbstractNode current) {
         NetworkModificationNode currentModificationNode = (NetworkModificationNode) current;
         NetworkModificationNode expectedModificationNode = (NetworkModificationNode) expected;
-        assertEquals(expectedModificationNode.getNetworkModification(), currentModificationNode.getNetworkModification());
+        assertEquals(expectedModificationNode.getNetworkModificationId(), currentModificationNode.getNetworkModificationId());
         assertEquals(expectedModificationNode.getVariantId(), currentModificationNode.getVariantId());
         assertEquals(expectedModificationNode.getLoadFlowStatus(), currentModificationNode.getLoadFlowStatus());
         LoadFlowResult expectedLoadFlowResult = expectedModificationNode.getLoadFlowResult();

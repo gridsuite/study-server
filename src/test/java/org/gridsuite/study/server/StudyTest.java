@@ -2053,7 +2053,7 @@ public class StudyTest {
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
             UUID networkModificationUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
-                .description("description").networkModification(networkModificationUuid).variantId(variantId)
+                .description("description").networkModificationId(networkModificationUuid).variantId(variantId)
                 .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatus(buildStatus)
                 .children(Collections.emptyList()).build();
         String mnBodyJson = objectWriter.writeValueAsString(modificationNode);
@@ -2830,7 +2830,7 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
-                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getNetworkModification()
+                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getNetworkModificationId()
             + "/modifications/move[?]modificationsToMove=.*" + modification1)));
 
         // update switch on first modification node
@@ -2843,7 +2843,7 @@ public class StudyTest {
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath()
-                        .matches("/v1/groups/" + modificationNode.getNetworkModification()
+                        .matches("/v1/groups/" + modificationNode.getNetworkModificationId()
                                 + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
                                 + modification2)));
     }
@@ -3607,7 +3607,7 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification()
+                .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getNetworkModificationId()
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());

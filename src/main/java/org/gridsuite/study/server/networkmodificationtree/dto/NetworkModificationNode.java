@@ -29,7 +29,7 @@ import java.util.UUID;
 @Setter
 public class NetworkModificationNode extends AbstractNode {
 
-    UUID networkModification;
+    UUID networkModificationId;
 
     String variantId;
 
