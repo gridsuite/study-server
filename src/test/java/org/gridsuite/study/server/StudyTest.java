@@ -2716,16 +2716,18 @@ public class StudyTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(lineSplitWoVLasJSON))
             .andExpect(status().isOk());
-
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
             .contentType(MediaType.APPLICATION_JSON)
             .content(lineSplitWoVLasJSON))
             .andExpect(status().isOk());
-
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         var requests = getRequestsWithBodyDone(2);
         assertEquals(2, requests.size());
@@ -2743,7 +2745,8 @@ public class StudyTest {
                 status().is5xxServerError(),
                 content().string("400 BAD_REQUEST")
             );
-
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
             .content("bogus"))
@@ -2751,7 +2754,8 @@ public class StudyTest {
                 status().is5xxServerError(),
                 content().string("400 BAD_REQUEST")
             );
-
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         requests = getRequestsWithBodyDone(2);
     }
 
@@ -3607,8 +3611,8 @@ public class StudyTest {
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
-        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
 
     @Test
