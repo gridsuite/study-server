@@ -232,6 +232,8 @@ public class StudyTest {
     //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 
+    int reportRequestCount;
+
     @MockBean
     private NetworkStoreService networkStoreService;
 
@@ -279,6 +281,8 @@ public class StudyTest {
 
     @Before
     public void setup() throws IOException {
+        reportRequestCount = -1;
+
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
             new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
@@ -528,6 +532,12 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(mapper.writeValueAsString(lineAttachResponseInfos))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                } else if ("DELETE".equals(request.getMethod()) && path.contains("reports")) {
+                    if (reportRequestCount < 0 || (reportRequestCount++ % 2) == 0) {
+                        return new MockResponse().setResponseCode(200);
+                    } else {
+                        return new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
                     }
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
@@ -3377,8 +3387,11 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
-        assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
+        String requestPath;
+        do {
+            requestPath = getRequestsDone(1).iterator().next();
+        } while (requestPath.contains("reports"));
+        assertTrue(requestPath.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*"));
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is built
 
@@ -3426,8 +3439,11 @@ public class StudyTest {
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*")));
+        String requestPath;
+        do {
+            requestPath = getRequestsDone(1).iterator().next();
+        } while (requestPath.contains("reports"));
+        assertTrue(requestPath.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*"));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
@@ -3448,8 +3464,11 @@ public class StudyTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
+        String requestPath;
+        do {
+            requestPath = getRequestsDone(1).iterator().next();
+        } while (requestPath.contains("reports"));
+        assertTrue(requestPath.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*"));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
@@ -3478,6 +3497,8 @@ public class StudyTest {
 
     @Test
     public void testBuild() throws Exception {
+        reportRequestCount = 0;
+
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID modificationGroupUuid1 = UUID.randomUUID();
@@ -3774,6 +3795,7 @@ public class StudyTest {
 
     @After
     public void tearDown() {
+        reportRequestCount = -1;
         cleanDB();
 
         Set<String> httpRequest = null;
