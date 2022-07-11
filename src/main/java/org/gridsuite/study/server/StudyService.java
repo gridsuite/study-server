@@ -2224,34 +2224,34 @@ public class StudyService {
     }
 
     public void lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
-        ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
-
-        NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
-
-        UUID groupUuid = nodeInfos.getModificationGroupUuid();
-        String variantId = nodeInfos.getVariantId();
-        UUID reportUuid = nodeInfos.getReportUuid();
-
-        List<EquipmentModificationInfos> modifications = List.of();
-        if (modificationUuid == null) {
-            modifications = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
-                groupUuid, modificationType, variantId, reportUuid);
-        } else {
-            networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
-                modificationType, modificationUuid);
+                                          ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            Objects.requireNonNull(studyUuid);
+            Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
+            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            UUID groupUuid = nodeInfos.getModificationGroupUuid();
+            String variantId = nodeInfos.getVariantId();
+            UUID reportUuid = nodeInfos.getReportUuid();
+            List<EquipmentModificationInfos> modifications = List.of();
+            if (modificationUuid == null) {
+                modifications = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
+                        groupUuid, modificationType, variantId, reportUuid);
+            } else {
+                networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
+                        modificationType, modificationUuid);
+            }
+            Set<String> allImpactedSubstationIds = modifications.stream()
+                                                           .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
+            List<EquipmentModificationInfos> deletions = modifications.stream()
+                                                                 .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
+                                                                 .collect(Collectors.toList());
+            deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
+                    allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
+            updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
         }
-
-        Set<String> allImpactedSubstationIds = modifications.stream()
-                .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
-        List<EquipmentModificationInfos> deletions = modifications.stream()
-            .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
-            .collect(Collectors.toList());
-        deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
-            allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
-
-        updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
     }
 }
+
