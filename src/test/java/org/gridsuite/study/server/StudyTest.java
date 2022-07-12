@@ -232,8 +232,6 @@ public class StudyTest {
     //used by testGetStudyCreationRequests to control asynchronous case import
     CountDownLatch countDownLatch;
 
-    int reportRequestCount;
-
     @MockBean
     private NetworkStoreService networkStoreService;
 
@@ -281,8 +279,6 @@ public class StudyTest {
 
     @Before
     public void setup() throws IOException {
-        reportRequestCount = -1;
-
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase",
             new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
@@ -532,12 +528,6 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(mapper.writeValueAsString(lineAttachResponseInfos))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    }
-                } else if ("DELETE".equals(request.getMethod()) && path.contains("reports")) {
-                    if (reportRequestCount < 0 || (reportRequestCount++ % 2) == 0) {
-                        return new MockResponse().setResponseCode(200);
-                    } else {
-                        return new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
                     }
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
@@ -3497,8 +3487,6 @@ public class StudyTest {
 
     @Test
     public void testBuild() throws Exception {
-        reportRequestCount = 0;
-
         UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         UUID modificationGroupUuid1 = UUID.randomUUID();
@@ -3795,7 +3783,6 @@ public class StudyTest {
 
     @After
     public void tearDown() {
-        reportRequestCount = -1;
         cleanDB();
 
         Set<String> httpRequest = null;
