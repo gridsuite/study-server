@@ -1967,11 +1967,7 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
-        try {
-            buildInfos.getReportUuids().forEach(reportService::deleteReport);
-        } catch (HttpClientErrorException.NotFound e) {
-            // already gone ? No more to do it go. Good
-        }
+        buildInfos.getReportUuids().forEach(reportService::deleteReport);
 
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
