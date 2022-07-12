@@ -3377,11 +3377,9 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
-        IntStream.range(0, nbReportExpected).forEach(i -> {
-            assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
-        });
-        assertTrue(getRequestsDone(1).iterator().next()
-            .matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*"));
+        assertTrue(getRequestsDone(nbReportExpected).stream().allMatch(r -> r.contains("reports")));
+        assertTrue(getRequestsDone(1).stream()
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is built
 
@@ -3430,8 +3428,8 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
-        assertTrue(getRequestsDone(1).iterator().next()
-            .matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*"));
+        assertTrue(getRequestsDone(1).stream()
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
@@ -3453,8 +3451,8 @@ public class StudyTest {
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
-        assertTrue(getRequestsDone(1).iterator().next()
-            .matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*"));
+        assertTrue(getRequestsDone(1).stream()
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
