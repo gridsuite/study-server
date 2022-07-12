@@ -1982,6 +1982,7 @@ public class StudyService {
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
+        LOGGER.info("Reports to remove then add under {} : {}", nodeUuid, buildInfos.getReportUuids().stream().map(UUID::toString).collect(Collectors.joining(", ")));
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
         buildInfos.getReportUuids().forEach(reportService::deleteReport);
 
@@ -2081,6 +2082,8 @@ public class StudyService {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         invalidateNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
         networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        LOGGER.info("Reports to delete under {} : {}", nodeUuid, invalidateNodeInfos.getReportUuids().stream().map(UUID::toString).collect(Collectors.joining(", ")));
+        LOGGER.info("Variants to delete under {} : {}", nodeUuid, String.join(", ", invalidateNodeInfos.getVariantIds()));
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only

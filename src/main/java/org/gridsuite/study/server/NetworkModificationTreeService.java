@@ -60,6 +60,8 @@ import static org.gridsuite.study.server.StudyService.*;
 @Service
 public class NetworkModificationTreeService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeService.class);
+
     public static final String HEADER_NODES = "nodes";
     public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_NEW_NODE = "newNode";
@@ -507,12 +509,19 @@ public class NetworkModificationTreeService {
 
     private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus) {
 
+        var repositoryProxy = repositories.get(node.getType());
+        UUID nodeUuid = node.getIdNode();
+        NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
+
+        UUID reportUuid = modificationNode.getReportUuid();
+        String variantId = modificationNode.getVariantId();
+
         if (!invalidateOnlyChildrenBuildStatus) {
-            invalidateNodeInfos.addReportUuid(repositories.get(node.getType()).getReportUuid(node.getIdNode()));
-            invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
+            invalidateNodeInfos.addReportUuid(reportUuid);
+            invalidateNodeInfos.addVariantId(variantId);
         }
 
-        UUID securityAnalysisResultUuid = repositories.get(node.getType()).getSecurityAnalysisResultUuid(node.getIdNode());
+        UUID securityAnalysisResultUuid = repositoryProxy.getSecurityAnalysisResultUuid(nodeUuid);
         if (securityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
         }
@@ -523,10 +532,13 @@ public class NetworkModificationTreeService {
         final List<UUID> changedNodes = new ArrayList<>();
         changedNodes.add(nodeUuid);
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
+        LOGGER.info("invalidate:{}", nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             // No need to invalidate a node with a status different of "BUILT"
-            if (repositories.get(n.getType()).getBuildStatus(n.getIdNode()) == BuildStatus.BUILT) {
+            BuildStatus wasBuildStatus = repositories.get(n.getType()).getBuildStatus(n.getIdNode());
+            LOGGER.info("down {} {}", nodeUuid, wasBuildStatus);
+            if (wasBuildStatus == BuildStatus.BUILT) {
                 fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
@@ -545,10 +557,13 @@ public class NetworkModificationTreeService {
     }
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+        LOGGER.info("invalidateChildren of:{}", nodeEntity.getIdNode());
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
                 // No need to invalidate a node with a status different of "BUILT"
-                if (repositories.get(child.getType()).getBuildStatus(child.getIdNode()) == BuildStatus.BUILT) {
+                BuildStatus wasBuildStatus = repositories.get(child.getType()).getBuildStatus(child.getIdNode());
+                LOGGER.info("rec down {} {}", child.getIdNode(), wasBuildStatus);
+                if (wasBuildStatus == BuildStatus.BUILT) {
                     fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                     if (!invalidateOnlyChildrenBuildStatus) {
                         repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
