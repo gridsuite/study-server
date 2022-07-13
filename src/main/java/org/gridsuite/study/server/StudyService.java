@@ -988,6 +988,15 @@ public class StudyService {
                 "voltage-levels", voltageLevelId);
     }
 
+    String getVoltageLevelsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+        }
+        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+                substationsIds, "voltage-levels");
+    }
+
     String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
                 substationsIds, "all");
