@@ -1976,15 +1976,17 @@ public class StudyService {
         return lfInfos;
     }
 
-    private BuildInfos getBuildInfos(UUID nodeUuid) {
-        return networkModificationTreeService.getBuildInfos(nodeUuid);
+    private BuildInfos fillBuildInfos(UUID nodeUuid) {
+        return networkModificationTreeService.fillBuildInfos(nodeUuid);
     }
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        BuildInfos buildInfos = getBuildInfos(nodeUuid);
-        LOGGER.info("Reports to remove then add under {} : {}", nodeUuid, buildInfos.getReportUuids().stream().map(UUID::toString).collect(Collectors.joining(", ")));
+        BuildInfos buildInfos = fillBuildInfos(nodeUuid);
+        List<UUID> reportsUuids = buildInfos.getModificationGroupAndReportUuids().stream().map(Pair::getRight).collect(Collectors.toList());
+        LOGGER.info("Reports to remove then add under {} : {}", nodeUuid,
+            reportsUuids.stream().map(UUID::toString).collect(Collectors.joining(", ")));
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
-        buildInfos.getReportUuids().forEach(reportService::deleteReport);
+        reportsUuids.forEach(reportService::deleteReport);
 
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);

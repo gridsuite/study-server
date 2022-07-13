@@ -24,15 +24,19 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "networkBuildStep", indexes = {
-    @Index(name = "networkBuildBuildNode_idx", columnList = "build_node_id"),
+@Table(name = "report_usage", indexes = {
+    @Index(name = "ReportUsage_user_idx", columnList = "build_node_id"),
+    @Index(name = "ReportUsage_used_idx", columnList = "report_id"),
 })
-public class NetworkBuildEntity {
+public class ReportUsageEntity {
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
-    @Column
+    @Column(name = "id")
     private UUID id;
+
+    @Column(name = "report_id")
+    private UUID reportId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "build_node_id", foreignKey = @ForeignKey(name = "build_node_fk_constraint"))
@@ -42,6 +46,4 @@ public class NetworkBuildEntity {
     @JoinColumn(name = "definition_node_id", foreignKey = @ForeignKey(name = "def_node_fk_constraint"))
     private NodeEntity definitionNodeId;
 
-    @Column
-    private UUID reportId;
 }

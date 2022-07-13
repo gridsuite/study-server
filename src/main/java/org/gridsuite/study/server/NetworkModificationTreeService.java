@@ -471,7 +471,7 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
+    private void fillBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
@@ -482,7 +482,7 @@ public class NetworkModificationTreeService {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                getBuildInfos(nodeEntity.getParentNode(), buildInfos);
+                fillBuildInfos(nodeEntity.getParentNode(), buildInfos);
             } else {
                 buildInfos.setOriginVariantId(getVariantId(nodeEntity.getIdNode()));
             }
@@ -490,7 +490,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public BuildInfos getBuildInfos(UUID nodeUuid) {
+    public BuildInfos fillBuildInfos(UUID nodeUuid) {
         BuildInfos buildInfos = new BuildInfos();
 
         nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> {
@@ -498,7 +498,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(getVariantId(nodeUuid));
-                getBuildInfos(entity, buildInfos);
+                fillBuildInfos(entity, buildInfos);
             }
         }, () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
