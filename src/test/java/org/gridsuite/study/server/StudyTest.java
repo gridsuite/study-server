@@ -676,6 +676,9 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_UUID_STRING + "/name":
                         return new MockResponse().setResponseCode(200).setBody(CASE_NAME)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name":
+                        return new MockResponse().setResponseCode(424).setBody("notFoundCaseName")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -3754,6 +3757,17 @@ public class StudyTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
                 .andExpect(status().isNotFound());
+
+        // change study case uuid and trying to get case name : error
+        StudyEntity study = studyRepository.findAll().get(0);
+        study.setCaseUuid(UUID.fromString(NOT_EXISTING_CASE_UUID));
+        studyRepository.save(study);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
+            status().is4xxClientError());
+
+        requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name")));
     }
 
     @After
