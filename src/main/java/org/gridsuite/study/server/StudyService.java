@@ -277,7 +277,11 @@ public class StudyService {
                 .buildAndExpand(study.getCaseUuid())
                 .toUriString();
 
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+        try {
+            return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw new StudyException(CASE_NOT_FOUND, e.getMessage());
+        }
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
@@ -1196,7 +1200,7 @@ public class StudyService {
     public void assertCaseExists(UUID caseUuid) {
         Boolean caseExists = caseExists(caseUuid);
         if (Boolean.FALSE.equals(caseExists)) {
-            throw new StudyException(CASE_NOT_FOUND);
+            throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
         }
     }
 

@@ -1015,13 +1015,13 @@ public class StudyTest {
         assertThat(infos, createMatcherStudyInfos(studyUuid, "userId", "UCTE"));
 
         //insert a study with a non existing case and except exception
-        mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
-                "00000000-0000-0000-0000-000000000000", "false").header("userId", "userId"))
-                .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$").value(CASE_NOT_FOUND.name()));
+        result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
+                NOT_EXISTING_CASE_UUID, "false").header("userId", "userId"))
+                .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
+        assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
         assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/cases/%s/exists", "00000000-0000-0000-0000-000000000000")));
+                .contains(String.format("/v1/cases/%s/exists", NOT_EXISTING_CASE_UUID)));
 
         result = mockMvc.perform(get("/v1/studies").header("userId", "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
