@@ -52,6 +52,7 @@ public class StudyException extends RuntimeException {
         NODE_NAME_ALREADY_EXIST,
         NODE_BUILD_ERROR,
         INVALIDATE_BUILD_FAILED,
+        GET_MODIFICATIONS_FAILED,
     }
 
     private final Type type;

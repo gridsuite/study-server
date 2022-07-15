@@ -59,6 +59,8 @@ public class RestResponseEntityExceptionHandler {
                 case DELETE_EQUIPMENT_FAILED:
                 case DELETE_NODE_FAILED:
                 case DELETE_STUDY_FAILED:
+                case DELETE_MODIFICATIONS_FAILED:
+                case GET_MODIFICATIONS_FAILED:
                 case NODE_BUILD_ERROR:
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(studyException.getMessage());
                 case BAD_NODE_TYPE:

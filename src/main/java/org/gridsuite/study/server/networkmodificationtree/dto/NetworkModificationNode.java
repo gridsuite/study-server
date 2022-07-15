@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,9 +30,11 @@ import java.util.UUID;
 @Setter
 public class NetworkModificationNode extends AbstractNode {
 
-    UUID networkModificationId;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore
+    private UUID networkModificationId;
 
-    String variantId;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore
+    private String variantId;
 
     Set<UUID> modificationsToExclude = new HashSet<>();
 

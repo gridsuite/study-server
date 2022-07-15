@@ -158,12 +158,15 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         return ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
     }
 
+    private void updateNode(NetworkModificationNode node, List<UUID> changedNodes) {
+        updateNode(node);
+        changedNodes.add(node.getId());
+    }
+
     @Override
     public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setBuildStatus(buildStatus);
-        updateNode(modificationNode);
-        changedNodes.add(node.getId());
+        ((NetworkModificationNode) node).setBuildStatus(buildStatus);
+        updateNode((NetworkModificationNode) node, changedNodes);
     }
 
     @Override
@@ -174,9 +177,14 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
-            updateBuildStatus(modificationNode, BuildStatus.NOT_BUILT, changedNodes);
+        if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
+            return;
         }
+
+        modificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        modificationNode.setVariantId(UUID.randomUUID().toString());
+        modificationNode.setReportUuid(UUID.randomUUID());
+        updateNode(modificationNode, changedNodes);
     }
 
     @Override
