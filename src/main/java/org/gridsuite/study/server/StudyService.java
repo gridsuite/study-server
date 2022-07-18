@@ -612,7 +612,7 @@ public class StudyService {
         return newStudy;
     }
 
-    private String getCaseFormat(UUID caseUuid, UUID studyUuid, String userId) {
+    public String getCaseFormat(UUID caseUuid, UUID studyUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
             .buildAndExpand(caseUuid)
             .toUriString();
