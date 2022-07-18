@@ -621,11 +621,6 @@ public class StudyService {
             return restTemplate.getForObject(caseServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(studyUuid, userId, e, "case-server");
-        } catch (Exception e) {
-            if (!(e instanceof StudyException)) {
-                emitStudyCreationError(studyUuid, userId, e.getMessage());
-            }
-            throw e;
         }
     }
 
