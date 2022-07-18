@@ -307,7 +307,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
-            String caseFormat = getCaseFormat(caseUuid);
+            String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
             NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
@@ -360,7 +360,7 @@ public class StudyService {
             UUID importReportUuid = UUID.randomUUID();
             UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
-                String caseFormat = getCaseFormat(caseUuid);
+                String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                 insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
@@ -612,12 +612,21 @@ public class StudyService {
         return newStudy;
     }
 
-    private String getCaseFormat(UUID caseUuid) {
+    private String getCaseFormat(UUID caseUuid, UUID studyUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
             .buildAndExpand(caseUuid)
             .toUriString();
 
-        return restTemplate.getForObject(caseServerBaseUri + path, String.class);
+        try {
+            return restTemplate.getForObject(caseServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleStudyCreationError(studyUuid, userId, e, "case-server");
+        } catch (Exception e) {
+            if (!(e instanceof StudyException)) {
+                emitStudyCreationError(studyUuid, userId, e.getMessage());
+            }
+            throw e;
+        }
     }
 
     private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
