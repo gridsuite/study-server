@@ -3779,7 +3779,8 @@ public class StudyTest {
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/format")));
 
-        assertThrows(StudyException.class, () -> studyService.getCaseFormat(UUID.fromString(NOT_EXISTING_CASE_UUID), study1Uuid, "userId"));
+        UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
+        assertThrows(StudyException.class, () -> studyService.getCaseFormat(notExistingCase, study1Uuid, "userId"));
         output.receive(TIMEOUT);
 
         requests = getRequestsWithBodyDone(1);
