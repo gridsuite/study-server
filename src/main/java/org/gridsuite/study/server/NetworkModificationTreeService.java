@@ -26,6 +26,7 @@ import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNod
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.repositories.ReportUsageRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.slf4j.Logger;
@@ -75,6 +76,8 @@ public class NetworkModificationTreeService {
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
     private final NodeRepository nodesRepository;
+
+    private final ReportUsageRepository reportsUsagesRepository;
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
@@ -132,13 +135,14 @@ public class NetworkModificationTreeService {
     @Autowired
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
-                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
+                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                                          ReportUsageRepository reportsUsagesRepository
     ) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
-
+        this.reportsUsagesRepository = reportsUsagesRepository;
     }
 
     @Transactional
@@ -481,10 +485,10 @@ public class NetworkModificationTreeService {
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
-            if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                fillBuildInfos(nodeEntity.getParentNode(), buildInfos);
-            } else {
+            if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
                 buildInfos.setOriginVariantId(getVariantId(nodeEntity.getIdNode()));
+            } else {
+                fillBuildInfos(nodeEntity.getParentNode(), buildInfos);
             }
         }
     }
