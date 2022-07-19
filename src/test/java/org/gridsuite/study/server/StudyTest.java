@@ -2825,32 +2825,37 @@ public class StudyTest {
 
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
-
+        UUID studyNameUserIdUuid1 = UUID.randomUUID();
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                UUID.randomUUID(), modificationNodeUuid, modification1, modification2))
+                        studyNameUserIdUuid1, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isForbidden());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
                         studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
-
-        checkNodeModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getNetworkModification()
             + "/modifications/move[?]modificationsToMove=.*" + modification1)));
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
 
         // update switch on first modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
-
-        checkNodeModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
@@ -2858,6 +2863,8 @@ public class StudyTest {
                         .matches("/v1/groups/" + modificationNode.getNetworkModification()
                                 + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
                                 + modification2)));
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
+
     }
 
     @Test

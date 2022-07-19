@@ -2202,10 +2202,15 @@ public class StudyService {
 
     @Transactional
     public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
-        checkStudyContainsNode(studyUuid, nodeUuid);
-        UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
-        updateStatuses(studyUuid, nodeUuid, false);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            checkStudyContainsNode(studyUuid, nodeUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
