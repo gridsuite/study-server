@@ -1726,6 +1726,15 @@ public class StudyTest {
         assertTrue(getRequestsDone(1)
                 .contains(String.format("/v1/networks/%s/static-var-compensators", NETWORK_UUID_STRING)));
 
+        //get the voltage levels map data of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(getRequestsDone(1)
+                .contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
+
         //get all map data of a network
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
