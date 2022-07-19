@@ -6,11 +6,15 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed
+      definition: consumeStudyCreate;consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
+        publishStudyCreate-out-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.create
+        consumeStudyCreate-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.create
         consumeSaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
         consumeSaStopped-in-0:
@@ -23,7 +27,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.stopped
         consumeBuildFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.failed
-      source: publishStudyUpdate
+      source: publishStudyUpdate;publishStudyCreate
 
 network-store-server:
   preloading-strategy: COLLECTION

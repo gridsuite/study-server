@@ -92,6 +92,7 @@ public class StudyService {
 
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_STUDY_UUID = "studyUuid";
+    static final String HEADER_CASE_UUID = "caseUuid";
     static final String HEADER_PARENT_NODE = "parentNode";
     static final String HEADER_NODE = "node";
     static final String HEADER_UPDATE_TYPE = "updateType";
@@ -299,20 +300,10 @@ public class StudyService {
     }
 
     private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
         try {
-            UUID importReportUuid = UUID.randomUUID();
-            String caseFormat = getCaseFormat(caseUuid);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            emitStudyCreate(basicStudyInfos.getId(), caseUuid, userId);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
-        } finally {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
 
@@ -350,25 +341,45 @@ public class StudyService {
     }
 
     private void createStudyAsync(File caseFile, String originalFilename, String userId, BasicStudyInfos basicStudyInfos) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
         try {
-            UUID importReportUuid = UUID.randomUUID();
             UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
+
             if (caseUuid != null) {
-                String caseFormat = getCaseFormat(caseUuid);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                emitStudyCreate(basicStudyInfos.getId(), caseUuid, userId);
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
             deleteFile(caseFile);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
+    }
+
+    @Bean
+    @Transactional
+    public Consumer<Message<String>> consumeStudyCreate() {
+        return message -> {
+            AtomicReference<Long> startTime = new AtomicReference<>();
+            startTime.set(System.nanoTime());
+
+            UUID caseUuid = UUID.fromString(message.getHeaders().get(HEADER_CASE_UUID, String.class));
+            UUID studyUuid = UUID.fromString(message.getHeaders().get(HEADER_STUDY_UUID, String.class));
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+
+            try {
+                UUID importReportUuid = UUID.randomUUID();
+
+                String caseFormat = getCaseFormat(caseUuid);
+                NetworkInfos networkInfos = persistentStore(caseUuid, studyUuid, userId, importReportUuid);
+                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            } finally {
+                deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                LOGGER.trace("Create study '{}' : {} seconds", studyUuid,
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+            }
+        };
     }
 
     public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
@@ -1193,6 +1204,13 @@ public class StudyService {
             .build());
     }
 
+    private void emitStudyCreate(UUID studyUuid, UUID caseUuid, String userId) {
+        sendCreateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
+            .setHeader(HEADER_CASE_UUID, caseUuid)
+            .setHeader(HEADER_USER_ID, userId)
+            .build());
+    }
+
     public void assertCaseExists(UUID caseUuid) {
         Boolean caseExists = caseExists(caseUuid);
         if (Boolean.FALSE.equals(caseExists)) {
@@ -1772,6 +1790,11 @@ public class StudyService {
         studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
+    private void sendCreateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        studyUpdatePublisher.send("publishStudyCreate-out-0", message);
+    }
+
     List<String> getAvailableSvgComponentLibraries() {
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries").toUriString();
@@ -2093,6 +2116,7 @@ public class StudyService {
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
         networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
             public void afterCompletion(int status) {
                 networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
             }
