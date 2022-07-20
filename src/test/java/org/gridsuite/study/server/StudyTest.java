@@ -3356,7 +3356,7 @@ public class StudyTest {
 
     }
 
-    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
+    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, int nbReportExpected) throws Exception {
         // build node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
             .andExpect(status().isOk());
@@ -3377,8 +3377,9 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
+        assertTrue(getRequestsDone(nbReportExpected).stream().allMatch(r -> r.contains("reports")));
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is built
 
@@ -3426,8 +3427,9 @@ public class StudyTest {
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
+        assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*")));
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
@@ -3448,8 +3450,9 @@ public class StudyTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
+        assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
@@ -3536,7 +3539,7 @@ public class StudyTest {
         output.receive(TIMEOUT);
 
         // build modificationNode2 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId());
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 2);
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
@@ -3547,7 +3550,7 @@ public class StudyTest {
         output.receive(TIMEOUT);
 
         // build modificationNode3 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId());
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 3);
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
