@@ -1975,6 +1975,8 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        buildInfos.getReportUuids().forEach(reportService::deleteReport);
+
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         } catch (Exception e) {
