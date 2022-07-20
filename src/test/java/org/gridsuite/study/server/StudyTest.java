@@ -402,7 +402,7 @@ public class StudyTest {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", resultUuid)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build());
+                        .build(), "sa.result");
                     return new MockResponse().setResponseCode(200).setBody("\"" + resultUuid + "\"")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")) {
@@ -1073,7 +1073,7 @@ public class StudyTest {
                 .andExpect(status().isOk());
 
         // assert that the broker message has been sent
-        Message<byte[]> message = output.receive(TIMEOUT);
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("userId", headers.get(HEADER_USER_ID));
@@ -1120,7 +1120,7 @@ public class StudyTest {
 
         modificationNode1.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isOk());
@@ -1352,17 +1352,17 @@ public class StudyTest {
         UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
         assertEquals(uuidResponse, resultUuid);
 
-        Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT);
+        Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         String updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
-        Message<byte[]> securityAnalysisUpdateMessage = output.receive(TIMEOUT);
+        Message<byte[]> securityAnalysisUpdateMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, securityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, updateType);
 
-        securityAnalysisStatusMessage = output.receive(TIMEOUT);
+        securityAnalysisStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
@@ -1386,7 +1386,7 @@ public class StudyTest {
         // stop security analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
 
-        securityAnalysisStatusMessage = output.receive(TIMEOUT);
+        securityAnalysisStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS) || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
@@ -1445,13 +1445,13 @@ public class StudyTest {
         assertEquals(SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID, uuidResponse);
 
         // failed security analysis
-        Message<byte[]> message = output.receive(TIMEOUT);
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_FAILED, updateType);
 
         // message sent by run and save controller to notify frontend security analysis is running and should update SA status
-        message = output.receive(TIMEOUT);
+        message = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
@@ -1473,7 +1473,7 @@ public class StudyTest {
         // failed security analysis without receiver -> no failure message sent to frontend
 
         // message sent by run and save controller to notify frontend security analysis is running and should update SA status
-        message = output.receive(TIMEOUT);
+        message = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid2, message.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
@@ -1820,20 +1820,20 @@ public class StudyTest {
         // test build status on switch modification
         modificationNode1.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode1 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         modificationNode2.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode2 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
                         studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
+        output.receive(TIMEOUT, "study.update");
+        output.receive(TIMEOUT, "study.update");
+        output.receive(TIMEOUT, "study.update");
         try {
-            output.receive(TIMEOUT);
+            output.receive(TIMEOUT, "study.update");
         } catch (Exception e) {
             throw e;
         }
@@ -2060,7 +2060,7 @@ public class StudyTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, "study.update");
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
@@ -2077,7 +2077,7 @@ public class StudyTest {
         UUID studyUuid = infos.getId();
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT);
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
@@ -2085,11 +2085,13 @@ public class StudyTest {
         assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        output.receive(TIMEOUT);  // message for first modification node creation
+        message = output.receive(TIMEOUT, "study.update");  // message for first modification node creation
+
+        message = output.receive(TIMEOUT, "study.create");
 
         // assert that the broker message has been sent a study creation message for
         // creation
-        message = output.receive(TIMEOUT);
+        message = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -2099,7 +2101,7 @@ public class StudyTest {
 
         // assert that the broker message has been sent a study creation request message
         // for deletion
-        message = output.receive(TIMEOUT);
+        message = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -2133,7 +2135,7 @@ public class StudyTest {
         }
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT);
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -2141,12 +2143,14 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         if (errorMessage.length == 0) {
-            output.receive(TIMEOUT);   // message for first modification node creation
+            output.receive(TIMEOUT, "study.update");   // message for first modification node creation
         }
+
+        message = output.receive(TIMEOUT, "study.create");
 
         // assert that the broker message has been sent a study creation message for
         // creation
-        message = output.receive(TIMEOUT);
+        message = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -2156,7 +2160,7 @@ public class StudyTest {
 
         // assert that the broker message has been sent a study creation request message
         // for deletion
-        message = output.receive(TIMEOUT);
+        message = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -2208,13 +2212,15 @@ public class StudyTest {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // drop the broker message for study creation
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // drop the broker message for node creation
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
+        // drop the broker message for study creation start
+        output.receive(TIMEOUT, "study.create");
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
                 status().isOk(),
@@ -2271,13 +2277,15 @@ public class StudyTest {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // drop the broker message for study creation
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // drop the broker message for node creation
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
+        // drop the broker message for study creation start
+        output.receive(TIMEOUT, "study.create");
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
             .header("userId", "userId")).andExpectAll(
@@ -2447,7 +2455,7 @@ public class StudyTest {
         String createLoadAttributes2 = "{\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         modificationNode3.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // create load on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
                         studyNameUserIdUuid, modificationNode3Uuid).content(createLoadAttributes2))
@@ -2609,7 +2617,7 @@ public class StudyTest {
         String createSubstationAttributes2 = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // create substation on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes2))
@@ -2677,7 +2685,7 @@ public class StudyTest {
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // create voltage level on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createVoltageLevelAttributes2))
@@ -2895,7 +2903,7 @@ public class StudyTest {
             String headerUpdateTypeEquipmentType, String equipmentType, String headerUpdateTypeEquipmentId,
             String equipmentId, String headerUpdateTypeSubstationsIds, Set<String> modifiedSubstationsIdsSet) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
@@ -2913,7 +2921,7 @@ public class StudyTest {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(StudyService.HEADER_STUDY_UUID));
@@ -2929,7 +2937,7 @@ public class StudyTest {
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(StudyService.HEADER_STUDY_UUID));
@@ -2940,7 +2948,7 @@ public class StudyTest {
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId,
             Set<String> modifiedIdsSet) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
@@ -2954,7 +2962,7 @@ public class StudyTest {
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
@@ -2964,7 +2972,7 @@ public class StudyTest {
 
     private void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
@@ -2974,7 +2982,7 @@ public class StudyTest {
 
     private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
@@ -2984,7 +2992,7 @@ public class StudyTest {
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
@@ -3029,7 +3037,7 @@ public class StudyTest {
                 modifiedSubstationsSet);
 
         // assert that the broker message has been sent
-        Message<byte[]> messageLine = output.receive(TIMEOUT);
+        Message<byte[]> messageLine = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageLine.getPayload()));
         MessageHeaders headersSwitch = messageLine.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
@@ -3043,7 +3051,7 @@ public class StudyTest {
                 modifiedSubstationsSet);
 
         // assert that the broker message has been sent
-        Message<byte[]> messageSwitch = output.receive(TIMEOUT);
+        Message<byte[]> messageSwitch = output.receive(TIMEOUT, "study.update");
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
@@ -3138,7 +3146,7 @@ public class StudyTest {
         String createGeneratorAttributes2 = "{\"generatorId\":\"generatorId3\",\"generatorName\":\"generatorName3\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"100.0\",\"maxActivePower\":\"200.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // create generator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes2))
@@ -3187,7 +3195,7 @@ public class StudyTest {
         String createShuntCompensatorAttributes2 = "{\"shuntCompensatorId\":\"shuntCompensatorId3\",\"shuntCompensatorName\":\"shuntCompensatorName3\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // create shunt compensator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes2))
@@ -3266,7 +3274,7 @@ public class StudyTest {
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // create line on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes2))
@@ -3326,7 +3334,7 @@ public class StudyTest {
         String createTwoWindingsTransformerAttributes2 = "{\"equipmentId\":\"2wtId3\",\"equipmentName\":\"2wtName3\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         // create Two Windings Transformer on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes2))
@@ -3346,16 +3354,16 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         // Initial node update -> BUILDING
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // Successful ->  Node update -> BUILT
-        buildStatusMessage = output.receive(TIMEOUT);
+        buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        buildStatusMessage = output.receive(TIMEOUT);
+        buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
@@ -3372,12 +3380,12 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
             .andExpect(status().isOk());
 
-        buildStatusMessage = output.receive(TIMEOUT);
+        buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
-        output.receive(TIMEOUT);
-        buildStatusMessage = output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
+        buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
@@ -3395,17 +3403,17 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // fail -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT);
+        buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // error message sent to frontend
-        buildStatusMessage = output.receive(TIMEOUT);
+        buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
@@ -3423,12 +3431,12 @@ public class StudyTest {
             .andExpect(status().isInternalServerError());
 
         // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // error -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT);
+        buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
@@ -3501,7 +3509,7 @@ public class StudyTest {
 
         modificationNode3.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
 
         buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
         assertEquals("variant_3", buildInfos.getOriginVariantId()); // variant to clone is variant associated to node
@@ -3511,13 +3519,13 @@ public class StudyTest {
 
         modificationNode2.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode2 as not built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         modificationNode4.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode4 as built invalid
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         modificationNode5.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode5 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
 
         // build modificationNode2 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId());
@@ -3528,7 +3536,7 @@ public class StudyTest {
 
         modificationNode3.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode3 as built
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
 
         // build modificationNode3 and stop build
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId());
@@ -3657,11 +3665,11 @@ public class StudyTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
+        output.receive(TIMEOUT, "study.update");
+        output.receive(TIMEOUT, "study.update");
+        output.receive(TIMEOUT, "study.update");
+        output.receive(TIMEOUT, "study.update");
 
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid);
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString("11888888-0000-0000-0000-111111111111")).orElse(null);
@@ -3698,7 +3706,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
+        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, "study.update");
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
     }
@@ -3721,9 +3729,9 @@ public class StudyTest {
         modificationNode3.setReportUuid(node3ReportUuid);
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, "study.update");
 
         var modificationType = ModificationType.GENERATOR_MODIFICATION;
         String modificationTypeUrl = ModificationType.getUriFromType(modificationType);

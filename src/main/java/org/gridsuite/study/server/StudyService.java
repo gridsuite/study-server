@@ -349,6 +349,7 @@ public class StudyService {
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
         } finally {
             deleteFile(caseFile);
         }
@@ -1205,8 +1206,8 @@ public class StudyService {
     }
 
     private void emitStudyCreate(UUID studyUuid, UUID caseUuid, String userId) {
-        sendCreateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_CASE_UUID, caseUuid)
+        sendCreateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid.toString())
+            .setHeader(HEADER_CASE_UUID, caseUuid.toString())
             .setHeader(HEADER_USER_ID, userId)
             .build());
     }
