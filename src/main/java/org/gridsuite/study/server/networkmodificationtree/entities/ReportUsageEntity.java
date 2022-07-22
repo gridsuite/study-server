@@ -40,10 +40,10 @@ public class ReportUsageEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "build_node_id", foreignKey = @ForeignKey(name = "build_node_fk_constraint"))
-    private NodeEntity buildNodeId;
+    private NodeEntity buildNode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "definition_node_id", foreignKey = @ForeignKey(name = "def_node_fk_constraint"))
-    private NodeEntity definitionNodeId;
+    private NodeEntity definitionNode;
 
 }

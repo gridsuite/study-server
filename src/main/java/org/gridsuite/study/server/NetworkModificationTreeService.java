@@ -21,6 +21,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.ReportUsageEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -299,6 +300,7 @@ public class NetworkModificationTreeService {
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
             }
+
             if (nextParentId != null) {
                 cloneStudyTree(sourceNode, nextParentId, study);
             }
@@ -475,20 +477,30 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    private void fillBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
+    private void fillBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos, NodeEntity toBuildNode) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                buildInfos.insertModificationGroupAndReport(modificationNode.getModificationGroupUuid(), getReportUuid(nodeEntity.getIdNode()));
+                UUID reportUuid = UUID.randomUUID();
+                buildInfos.insertModificationGroupAndReport(modificationNode.getModificationGroupUuid(), reportUuid);
+                reportsUsagesRepository.save(new ReportUsageEntity(null, reportUuid, toBuildNode, nodeEntity));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
             if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
+                List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(nodeEntity.getIdNode());
+                usages.forEach(usage -> {
+                    // avoid duplicates from children
+                    if (usage.getBuildNode().getIdNode().equals(nodeEntity.getIdNode())) {
+                        reportsUsagesRepository.save(new ReportUsageEntity(null, getReportUuid(nodeEntity.getIdNode()), toBuildNode,
+                            usage.getDefinitionNode()));
+                    }
+                });
                 buildInfos.setOriginVariantId(getVariantId(nodeEntity.getIdNode()));
             } else {
-                fillBuildInfos(nodeEntity.getParentNode(), buildInfos);
+                fillBuildInfos(nodeEntity.getParentNode(), buildInfos, toBuildNode);
             }
         }
     }
@@ -502,33 +514,14 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(getVariantId(nodeUuid));
-                fillBuildInfos(entity, buildInfos);
+                //List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(nodeUuid);
+                fillBuildInfos(entity, buildInfos, entity);
             }
         }, () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
             });
 
         return buildInfos;
-    }
-
-    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus) {
-
-        var repositoryProxy = repositories.get(node.getType());
-        UUID nodeUuid = node.getIdNode();
-        NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
-
-        UUID reportUuid = modificationNode.getReportUuid();
-        String variantId = modificationNode.getVariantId();
-
-        if (!invalidateOnlyChildrenBuildStatus) {
-            invalidateNodeInfos.addReportUuid(reportUuid);
-            invalidateNodeInfos.addVariantId(variantId);
-        }
-
-        UUID securityAnalysisResultUuid = repositoryProxy.getSecurityAnalysisResultUuid(nodeUuid);
-        if (securityAnalysisResultUuid != null) {
-            invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-        }
     }
 
     @Transactional
@@ -560,7 +553,38 @@ public class NetworkModificationTreeService {
         });
     }
 
-    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean removeOnlyResults) {
+
+        var repositoryProxy = repositories.get(node.getType());
+        UUID nodeUuid = node.getIdNode();
+        NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
+
+        if (!removeOnlyResults) {
+            List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(node.getIdNode());
+            List<UUID> ownUsagesUuids = usages.stream()
+                .filter(u -> u.getBuildNode().getIdNode().equals(node.getIdNode()))
+                .map(ReportUsageEntity::getId)
+                .collect(Collectors.toList());
+            reportsUsagesRepository.deleteAllByIdInBatch(ownUsagesUuids);
+
+            UUID reportUuid = modificationNode.getReportUuid();
+            String variantId = modificationNode.getVariantId();
+            LOGGER.info("fill u:{} v:{} inv?:{}", reportUuid, variantId, removeOnlyResults);
+
+            invalidateNodeInfos.addVariantId(variantId);
+            if (usages.size() == ownUsagesUuids.size()) {
+                usages.forEach(u -> invalidateNodeInfos.addReportUuid(u.getReportId()));
+            }
+        }
+
+        UUID securityAnalysisResultUuid = repositoryProxy.getSecurityAnalysisResultUuid(nodeUuid);
+        if (securityAnalysisResultUuid != null) {
+            invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+        }
+    }
+
+    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes,
+        boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
         LOGGER.info("invalidateChildren of:{}", nodeEntity.getIdNode());
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
