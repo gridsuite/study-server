@@ -1157,6 +1157,19 @@ public class StudyTest {
     }
 
     @Test
+    public void testNotifyStudyMetadataUpdated() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=metadata_updated", studyUuid)
+                .header("userId", "userId"))
+                .andExpect(status().isOk());
+        checkStudyMetadataUpdatedMessagesReceived(studyUuid);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=NOT_EXISTING_TYPE", UUID.randomUUID())
+                .header("userId", "userId"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     public void testLogsReport() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
@@ -2989,6 +3002,14 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
         assertEquals(MODIFICATIONS_UPDATING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkStudyMetadataUpdatedMessagesReceived(UUID studyNameUserIdUuid) {
+        // assert that the broker message has been sent for updating study type
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
