@@ -285,6 +285,9 @@ public class NetworkModificationTreeService {
                 model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
                 model.setBuildStatus(BuildStatus.NOT_BUILT);
                 model.setReportUuid(newReportUuid);
+                model.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
+                model.setLoadFlowResult(null);
+                model.setSecurityAnalysisResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 if (modificationGroupToDuplicateId != null) {
