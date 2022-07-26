@@ -1218,4 +1218,16 @@ public class StudyController {
         studyService.reindexStudy(studyUuid);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping(value = "/studies/{studyUuid}/notification")
+    @Operation(summary = "Create study related notification")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+            @ApiResponse(responseCode = "400", description = "The notification type is unknown")
+    })
+    public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid,
+                                             @RequestParam("type") String notificationType) {
+        studyService.notify(notificationType, studyUuid);
+        return ResponseEntity.ok().build();
+    }
 }
