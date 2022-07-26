@@ -40,8 +40,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
         if (Objects.isNull(networkModificationNode.getBuildStatus())) {
             networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
         }
-        if (networkModificationNode.getNetworkModificationId() == null) {
-            networkModificationNode.setNetworkModificationId(UUID.randomUUID());
+        if (networkModificationNode.getModificationGroupUuid() == null) {
+            networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
         if (networkModificationNode.getVariantId() == null) {
             networkModificationNode.setVariantId(UUID.randomUUID().toString());
@@ -52,7 +52,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public NetworkModificationNodeInfoEntity toEntity(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getNetworkModificationId(),
+        var networkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(modificationNode.getModificationGroupUuid(),
             modificationNode.getVariantId(),
             modificationNode.getModificationsToExclude(),
             modificationNode.getLoadFlowStatus(),
@@ -66,7 +66,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NetworkModificationNode toDto(NetworkModificationNodeInfoEntity node) {
         @SuppressWarnings("unused")
         int ignoreSize = node.getModificationsToExclude().size(); // to load the lazy collection
-        return completeNodeInfo(node, new NetworkModificationNode(node.getNetworkModificationId(),
+        return completeNodeInfo(node, new NetworkModificationNode(node.getModificationGroupUuid(),
             node.getVariantId(),
             node.getModificationsToExclude(),
             node.getLoadFlowStatus(),
@@ -82,7 +82,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
     @Override
     public UUID getModificationGroupUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getNetworkModificationId();
+        return ((NetworkModificationNode) node).getModificationGroupUuid();
     }
 
     @Override
@@ -191,7 +191,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         return NodeModificationInfos.builder()
-            .modificationGroupUuid(networkModificationNode.getNetworkModificationId())
+            .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
             .reportUuid(networkModificationNode.getReportUuid())
             .build();

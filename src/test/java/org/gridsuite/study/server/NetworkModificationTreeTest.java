@@ -347,7 +347,7 @@ public class NetworkModificationTreeTest {
 
         node2.setName("niark");
         node1.setName("condriak");
-        node1.setNetworkModificationId(UUID.randomUUID());
+        node1.setModificationGroupUuid(UUID.randomUUID());
         createNode(root.getStudyId(), children.get(1), node2);
         createNode(root.getStudyId(), children.get(1), node1);
 
@@ -502,7 +502,7 @@ public class NetworkModificationTreeTest {
         final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, node1);
         node1.setName("grunt");
-        node1.setNetworkModificationId(UUID.randomUUID());
+        node1.setModificationGroupUuid(UUID.randomUUID());
         root = getRootNode(root.getStudyId());
         node1.setId(root.getChildren().get(0).getId());
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
@@ -613,11 +613,11 @@ public class NetworkModificationTreeTest {
 
         // Only for tests
         String variantId = newNode.getVariantId();
-        UUID networkModificationId = newNode.getNetworkModificationId();
+        UUID modificationGroupUuid = newNode.getModificationGroupUuid();
         String newNodeBodyJson = objectWriter.writeValueAsString(newNode);
         JSONObject jsonObject = new JSONObject(newNodeBodyJson);
         jsonObject.put("variantId", variantId);
-        jsonObject.put("networkModificationId", networkModificationId);
+        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         newNodeBodyJson = jsonObject.toString();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
@@ -635,11 +635,11 @@ public class NetworkModificationTreeTest {
 
         // Only for tests
         String variantId = newNode.getVariantId();
-        UUID networkModificationId = newNode.getNetworkModificationId();
+        UUID modificationGroupUuid = newNode.getModificationGroupUuid();
         String newNodeBodyJson = objectWriter.writeValueAsString(newNode);
         JSONObject jsonObject = new JSONObject(newNodeBodyJson);
         jsonObject.put("variantId", variantId);
-        jsonObject.put("networkModificationId", networkModificationId);
+        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         newNodeBodyJson = jsonObject.toString();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={mode}", studyUuid, parentNode.getId(), mode)
@@ -675,7 +675,7 @@ public class NetworkModificationTreeTest {
         return NetworkModificationNode.builder()
             .name(name)
             .description(description)
-            .networkModificationId(idHypo)
+            .modificationGroupUuid(idHypo)
             .variantId(variantId)
             .loadFlowStatus(loadFlowStatus)
             .loadFlowResult(loadFlowResult)

@@ -31,7 +31,7 @@ import java.util.UUID;
 public class NetworkModificationNode extends AbstractNode {
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore
-    private UUID networkModificationId;
+    private UUID modificationGroupUuid;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore
     private String variantId;

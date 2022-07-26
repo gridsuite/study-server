@@ -2066,15 +2066,15 @@ public class StudyTest {
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID networkModificationUuid, String variantId, String nodeName) throws Exception {
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                networkModificationUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
+                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-            UUID networkModificationUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
+            UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
-                .description("description").networkModificationId(networkModificationUuid).variantId(variantId)
+                .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatus(buildStatus)
                 .children(Collections.emptyList()).build();
 
@@ -2082,7 +2082,7 @@ public class StudyTest {
         String mnBodyJson = objectWriter.writeValueAsString(modificationNode);
         JSONObject jsonObject = new JSONObject(mnBodyJson);
         jsonObject.put("variantId", variantId);
-        jsonObject.put("networkModificationId", networkModificationUuid);
+        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
@@ -2860,7 +2860,7 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
-                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getNetworkModificationId()
+                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
             + "/modifications/move[?]modificationsToMove=.*" + modification1)));
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
 
@@ -2875,7 +2875,7 @@ public class StudyTest {
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath()
-                        .matches("/v1/groups/" + modificationNode.getNetworkModificationId()
+                        .matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
                                 + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
                                 + modification2)));
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
@@ -3652,7 +3652,7 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getNetworkModificationId()
+                .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
