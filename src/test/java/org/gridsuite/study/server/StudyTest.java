@@ -672,6 +672,9 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_UUID_STRING + "/name":
                         return new MockResponse().setResponseCode(200).setBody(CASE_NAME)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name":
+                        return new MockResponse().setResponseCode(424).setBody("notFoundCaseName")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("false")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -1011,13 +1014,13 @@ public class StudyTest {
         assertThat(infos, createMatcherStudyInfos(studyUuid, "userId", "UCTE"));
 
         //insert a study with a non existing case and except exception
-        mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
-                "00000000-0000-0000-0000-000000000000", "false").header("userId", "userId"))
-                .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$").value(CASE_NOT_FOUND.name()));
+        result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
+                NOT_EXISTING_CASE_UUID, "false").header("userId", "userId"))
+                .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
+        assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
         assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/cases/%s/exists", "00000000-0000-0000-0000-000000000000")));
+                .contains(String.format("/v1/cases/%s/exists", NOT_EXISTING_CASE_UUID)));
 
         result = mockMvc.perform(get("/v1/studies").header("userId", "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
@@ -1150,6 +1153,19 @@ public class StudyTest {
                 .matchesSafely(createdStudyBasicInfosList.get(0)));
         assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE")
                 .matchesSafely(createdStudyBasicInfosList.get(1)));
+    }
+
+    @Test
+    public void testNotifyStudyMetadataUpdated() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=metadata_updated", studyUuid)
+                .header("userId", "userId"))
+                .andExpect(status().isOk());
+        checkStudyMetadataUpdatedMessagesReceived(studyUuid);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=NOT_EXISTING_TYPE", UUID.randomUUID())
+                .header("userId", "userId"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -1721,6 +1737,15 @@ public class StudyTest {
 
         assertTrue(getRequestsDone(1)
                 .contains(String.format("/v1/networks/%s/static-var-compensators", NETWORK_UUID_STRING)));
+
+        //get the voltage levels map data of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(getRequestsDone(1)
+                .contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
 
         //get all map data of a network
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
@@ -2815,32 +2840,37 @@ public class StudyTest {
 
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
-
+        UUID studyNameUserIdUuid1 = UUID.randomUUID();
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                UUID.randomUUID(), modificationNodeUuid, modification1, modification2))
+                        studyNameUserIdUuid1, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isForbidden());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
                         studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
-
-        checkNodeModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getNetworkModificationId()
             + "/modifications/move[?]modificationsToMove=.*" + modification1)));
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
 
         // update switch on first modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
-
-        checkNodeModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
@@ -2848,6 +2878,8 @@ public class StudyTest {
                         .matches("/v1/groups/" + modificationNode.getNetworkModificationId()
                                 + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
                                 + modification2)));
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
+
     }
 
     @Test
@@ -2982,6 +3014,14 @@ public class StudyTest {
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
         assertEquals(MODIFICATIONS_UPDATING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkStudyMetadataUpdatedMessagesReceived(UUID studyNameUserIdUuid) {
+        // assert that the broker message has been sent for updating study type
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -3342,7 +3382,7 @@ public class StudyTest {
 
     }
 
-    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
+    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, int nbReportExpected) throws Exception {
         // build node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
             .andExpect(status().isOk());
@@ -3363,8 +3403,9 @@ public class StudyTest {
         assertEquals(UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
+        assertTrue(getRequestsDone(nbReportExpected).stream().allMatch(r -> r.contains("reports")));
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is built
 
@@ -3412,8 +3453,9 @@ public class StudyTest {
         assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
+        assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*")));
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
@@ -3434,8 +3476,9 @@ public class StudyTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
+        assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
+            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
     }
@@ -3522,7 +3565,7 @@ public class StudyTest {
         output.receive(TIMEOUT);
 
         // build modificationNode2 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId());
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 2);
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
@@ -3533,7 +3576,7 @@ public class StudyTest {
         output.receive(TIMEOUT);
 
         // build modificationNode3 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId());
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 3);
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
@@ -3756,6 +3799,34 @@ public class StudyTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
                 .andExpect(status().isNotFound());
+
+        // change study case uuid and trying to get case name : error
+        StudyEntity study = studyRepository.findAll().get(0);
+        study.setCaseUuid(UUID.fromString(NOT_EXISTING_CASE_UUID));
+        studyRepository.save(study);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
+            status().is4xxClientError());
+
+        requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name")));
+    }
+
+    @Test
+    public void getCaseFormat() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        String caseFormat = studyService.getCaseFormat(CASE_UUID, study1Uuid, "userId");
+        assertEquals("UCTE", caseFormat);
+
+        var requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/format")));
+
+        UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
+        assertThrows(StudyException.class, () -> studyService.getCaseFormat(notExistingCase, study1Uuid, "userId"));
+        output.receive(TIMEOUT);
+
+        requests = getRequestsWithBodyDone(1);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/format")));
     }
 
     @After

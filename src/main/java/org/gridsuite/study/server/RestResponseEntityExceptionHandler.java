@@ -31,7 +31,7 @@ public class RestResponseEntityExceptionHandler {
                 case EQUIPMENT_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getType());
                 case CASE_NOT_FOUND:
-                    return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(CASE_NOT_FOUND);
+                    return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(studyException.getMessage());
                 case STUDY_ALREADY_EXISTS:
                     return ResponseEntity.status(HttpStatus.CONFLICT).body(STUDY_ALREADY_EXISTS);
                 case LOADFLOW_NOT_RUNNABLE:
@@ -68,6 +68,8 @@ public class RestResponseEntityExceptionHandler {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());
                 case SVG_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getMessage());
+                case UNKNOWN_NOTIFICATION_TYPE:
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION_TYPE);
                 default:
             }
         } else if (exception instanceof ServerWebInputException) {

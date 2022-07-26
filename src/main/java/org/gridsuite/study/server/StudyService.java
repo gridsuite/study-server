@@ -101,6 +101,7 @@ public class StudyService {
     static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_LINE = "line";
+    static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
@@ -277,7 +278,11 @@ public class StudyService {
                 .buildAndExpand(study.getCaseUuid())
                 .toUriString();
 
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+        try {
+            return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw new StudyException(CASE_NOT_FOUND, e.getMessage());
+        }
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
@@ -303,7 +308,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
-            String caseFormat = getCaseFormat(caseUuid);
+            String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
             NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
@@ -356,7 +361,7 @@ public class StudyService {
             UUID importReportUuid = UUID.randomUUID();
             UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
-                String caseFormat = getCaseFormat(caseUuid);
+                String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
                 NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                 insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
@@ -608,12 +613,16 @@ public class StudyService {
         return newStudy;
     }
 
-    private String getCaseFormat(UUID caseUuid) {
+    public String getCaseFormat(UUID caseUuid, UUID studyUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
             .buildAndExpand(caseUuid)
             .toUriString();
 
-        return restTemplate.getForObject(caseServerBaseUri + path, String.class);
+        try {
+            return restTemplate.getForObject(caseServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleStudyCreationError(studyUuid, userId, e, "case-server");
+        }
     }
 
     private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
@@ -843,8 +852,12 @@ public class StudyService {
         return equipmentMapData;
     }
 
-    String getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    String getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+        }
+        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
                 substationsIds, "substations");
     }
 
@@ -857,8 +870,12 @@ public class StudyService {
                 "substations", substationId);
     }
 
-    String getLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    String getLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+        }
+        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
                 substationsIds, "lines");
     }
 
@@ -986,6 +1003,15 @@ public class StudyService {
         }
         return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
                 "voltage-levels", voltageLevelId);
+    }
+
+    String getVoltageLevelsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+        }
+        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+                substationsIds, "voltage-levels");
     }
 
     String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
@@ -1193,10 +1219,17 @@ public class StudyService {
             .build());
     }
 
+    private void emitStudyMetadataChanged(UUID studyUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_METADATA_UPDATED)
+                .build());
+    }
+
     public void assertCaseExists(UUID caseUuid) {
         Boolean caseExists = caseExists(caseUuid);
         if (Boolean.FALSE.equals(caseExists)) {
-            throw new StudyException(CASE_NOT_FOUND);
+            throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
         }
     }
 
@@ -1950,6 +1983,8 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        buildInfos.getReportUuids().forEach(reportService::deleteReport);
+
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         } catch (Exception e) {
@@ -2177,10 +2212,15 @@ public class StudyService {
 
     @Transactional
     public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
-        checkStudyContainsNode(studyUuid, nodeUuid);
-        UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
-        updateStatuses(studyUuid, nodeUuid, false);
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            checkStudyContainsNode(studyUuid, nodeUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
@@ -2253,6 +2293,14 @@ public class StudyService {
             updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
+    }
+
+    public void notify(@NonNull String notificationName, @NonNull UUID studyUuid) {
+        if (notificationName.equals(UPDATE_TYPE_STUDY_METADATA_UPDATED)) {
+            emitStudyMetadataChanged(studyUuid);
+        } else {
+            throw new StudyException(UNKNOWN_NOTIFICATION_TYPE);
         }
     }
 }
