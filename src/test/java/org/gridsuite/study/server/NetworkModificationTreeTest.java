@@ -34,6 +34,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
+import org.gridsuite.study.server.networkmodificationtree.repositories.ReportUsageRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -103,6 +104,9 @@ public class NetworkModificationTreeTest {
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
+
+    @Autowired
+    private ReportUsageRepository reportsUsagesRepository;
 
     @Autowired
     private OutputDestination output;
@@ -235,6 +239,7 @@ public class NetworkModificationTreeTest {
     @After
     public void cleanDB() {
         networkModificationNodeInfoRepository.deleteAll();
+        reportsUsagesRepository.deleteAll();
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();

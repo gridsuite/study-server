@@ -1982,7 +1982,7 @@ public class StudyService {
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = fillBuildInfos(nodeUuid);
-        List<UUID> reportsUuids = buildInfos.getModificationGroupAndReportUuids().stream().map(Pair::getRight).collect(Collectors.toList());
+        List<UUID> reportsUuids = buildInfos.getModificationReportUuids();
         LOGGER.info("Reports to remove then add under {} : {}", nodeUuid,
             reportsUuids.stream().map(UUID::toString).collect(Collectors.joining(", ")));
         updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
@@ -2238,7 +2238,7 @@ public class StudyService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
-    public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+    private List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
         return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
     }
 

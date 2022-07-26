@@ -18,8 +18,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.tuple.Pair;
-
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
@@ -32,16 +30,20 @@ public class BuildInfos {
 
     private String destinationVariantId;
 
-    private List<Pair<UUID, UUID>> modificationGroupAndReportUuids = new ArrayList<>();
+    private List<GroupAndReportInfos> modificationGroupAndReportUuids = new ArrayList<>();
 
     private Set<UUID> modificationsToExclude = new HashSet<>();
 
     public void insertModificationGroupAndReport(UUID modificationGroupUuid, UUID reportUuid) {
-        modificationGroupAndReportUuids.add(Pair.of(modificationGroupUuid, reportUuid));
+        modificationGroupAndReportUuids.add(0, new GroupAndReportInfos(modificationGroupUuid, reportUuid));
     }
 
     public List<UUID> getModificationGroupUuids() {
-        return modificationGroupAndReportUuids.stream().map(Pair::getLeft).collect(Collectors.toList());
+        return modificationGroupAndReportUuids.stream().map(GroupAndReportInfos::getGroupUuid).collect(Collectors.toList());
+    }
+
+    public List<UUID> getModificationReportUuids() {
+        return modificationGroupAndReportUuids.stream().map(GroupAndReportInfos::getReportUuid).collect(Collectors.toList());
     }
 
     public void addModificationsToExclude(Set<UUID> modificationsUuid) {

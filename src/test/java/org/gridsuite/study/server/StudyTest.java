@@ -35,6 +35,7 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.repositories.ReportUsageRepository;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -224,6 +225,9 @@ public class StudyTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
+    private ReportUsageRepository reportsUsagesRepository;
+
+    @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
     //used by testGetStudyCreationRequests to control asynchronous case import
@@ -268,6 +272,7 @@ public class StudyTest {
     }
 
     private void cleanDB() {
+        reportsUsagesRepository.deleteAll();
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
@@ -925,6 +930,9 @@ public class StudyTest {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
                 var request = server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS);
+                if (request == null) {
+                    throw new AssertionError("Expected " + n + " requests, got only " + i);
+                }
                 return new RequestWithBody(request.getPath(), request.getBody().readUtf8());
             } catch (InterruptedException e) {
                 LOGGER.error("Error while attempting to get the request done : ", e);
