@@ -50,7 +50,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -717,8 +716,8 @@ public class NetworkModificationTreeService {
             AbstractNode node = repositories.get(buildNodeEntity.getType()).getNode(buildNodeEntity.getIdNode());
             uuidsAndNames.add(Pair.of(getReportUuid(buildNodeEntity.getIdNode()), node.getName()));
         }, () -> {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        });
+                throw new StudyException(ELEMENT_NOT_FOUND);
+            });
         return uuidsAndNames;
     }
 
