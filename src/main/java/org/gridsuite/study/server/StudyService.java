@@ -39,7 +39,6 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.integration.support.MessageBuilder;
@@ -55,13 +54,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -163,9 +159,6 @@ public class StudyService {
 
     @Autowired
     private StreamBridge studyUpdatePublisher;
-
-    @Autowired
-    private TempFileService tempFileService;
 
     @Bean
     @Transactional
@@ -299,68 +292,34 @@ public class StudyService {
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos));
-        return basicStudyInfos;
-    }
-
-    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos) {
         try {
             emitStudyCreate(basicStudyInfos.getId(), caseUuid, userId);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw new StudyException(STUDY_CREATION_FAILED);
         }
+        return basicStudyInfos;
     }
 
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
-        // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
-        File tempFile = createTempFile(caseFile, basicStudyInfos);
-        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, caseFile.getOriginalFilename(), userId, basicStudyInfos));
-        return basicStudyInfos;
-    }
 
-    private File createTempFile(MultipartFile caseFile, BasicStudyInfos basicStudyInfos) {
-        File tempFile = null;
         try {
-            tempFile = tempFileService.createTempFile(caseFile.getOriginalFilename());
-            caseFile.transferTo(tempFile);
-            return tempFile;
-        } catch (IOException e) {
-            LOGGER.error(e.toString(), e);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), basicStudyInfos.getUserId());
-            if (tempFile != null) {
-                deleteFile(tempFile);
-            }
-            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
-        }
-    }
-
-    private void deleteFile(@NonNull File file) {
-        try {
-            Files.delete(file.toPath());
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        }
-    }
-
-    private void createStudyAsync(File caseFile, String originalFilename, String userId, BasicStudyInfos basicStudyInfos) {
-        try {
-            UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
+            UUID caseUuid = importCase(caseFile, caseFile.getOriginalFilename(), basicStudyInfos.getId(), userId);
 
             if (caseUuid != null) {
                 emitStudyCreate(basicStudyInfos.getId(), caseUuid, userId);
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-        } finally {
-            deleteFile(caseFile);
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw new StudyException(STUDY_CREATION_FAILED);
         }
+        return basicStudyInfos;
     }
 
     @Bean
-    @Transactional
     public Consumer<Message<String>> consumeStudyCreate() {
         return message -> {
             AtomicReference<Long> startTime = new AtomicReference<>();
@@ -380,7 +339,7 @@ public class StudyService {
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             } finally {
-                deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                self.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                 LOGGER.trace("Create study '{}' : {} seconds", studyUuid,
                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
@@ -660,14 +619,14 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(File file, String originalFilename, UUID studyUuid, String userId) {
+    UUID importCase(MultipartFile file, String originalFilename, UUID studyUuid, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
             multipartBodyBuilder
-                .part("file", new FileSystemResource(file))
+                .part("file", file.getBytes())
                 .filename(originalFilename);
 
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(

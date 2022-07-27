@@ -2041,14 +2041,14 @@ public class StudyTest {
     @Test
     public void testCreationWithErrorBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
-        createStudy("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
+        createStudyWithCaseFileError("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
     }
 
     @Test
     public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
         // without message in response body
-        createStudy("userId", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, false,
+        createStudyWithCaseFileError("userId", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, false,
                 "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
     }
 
@@ -2187,6 +2187,52 @@ public class StudyTest {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         }
         return studyUuid;
+    }
+
+    private void createStudyWithCaseFileError(String userId, String fileName, String caseUuid, boolean isPrivate,
+            String... errorMessage) throws Exception {
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
+
+            mockMvc
+                    .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate).file(mockFile)
+                            .header("userId", userId).contentType(MediaType.MULTIPART_FORM_DATA))
+                    .andExpect(status().isInternalServerError());
+        }
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, "study.create");
+
+        // assert that the broker message has been sent a study creation message for
+        // creation
+        message = output.receive(TIMEOUT, "study.update");
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage[0], headers.get(HEADER_ERROR));
+
+        // assert that the broker message has been sent a study creation request message
+        // for deletion
+        message = output.receive(TIMEOUT, "study.update");
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        // assert that all http requests have been sent to remote services
+        var requests = getRequestsDone(caseUuid == null ? 1 : 3);
+        assertTrue(requests.contains("/v1/cases/private"));
+        if (caseUuid != null) {
+            assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
+            assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+        }
     }
 
     @Test
