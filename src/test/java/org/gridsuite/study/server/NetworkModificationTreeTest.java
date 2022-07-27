@@ -511,6 +511,7 @@ public class NetworkModificationTreeTest {
             .andExpect(status().isOk());
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().size());
+        assertNodeEquals(node1, root.getChildren().get(0));
 
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
@@ -611,7 +612,7 @@ public class NetworkModificationTreeTest {
     private void createNode(UUID studyUuid, AbstractNode parentNode, NetworkModificationNode newNode) throws Exception {
         newNode.setId(null);
 
-        // Only for tests
+        // Only for tests. Need to remove when all tests are rewritten without the variantID to identify a test in the MockWebServer
         String variantId = newNode.getVariantId();
         UUID modificationGroupUuid = newNode.getModificationGroupUuid();
         String newNodeBodyJson = objectWriter.writeValueAsString(newNode);
@@ -633,7 +634,7 @@ public class NetworkModificationTreeTest {
     private void insertNode(UUID studyUuid, AbstractNode parentNode, NetworkModificationNode newNode, InsertMode mode, AbstractNode newParentNode) throws Exception {
         newNode.setId(null);
 
-        // Only for tests
+        // Only for tests. Need to remove when all tests are rewritten without the variantID to identify a test in the MockWebServer
         String variantId = newNode.getVariantId();
         UUID modificationGroupUuid = newNode.getModificationGroupUuid();
         String newNodeBodyJson = objectWriter.writeValueAsString(newNode);

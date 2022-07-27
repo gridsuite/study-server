@@ -30,10 +30,10 @@ import java.util.UUID;
 @Setter
 public class NetworkModificationNode extends AbstractNode {
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore when all tests are rewritten without the variantID to identify a test in the MockWebServer
     private UUID modificationGroupUuid;
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only for tests. Need to replace by @JsonIgnore when all tests are rewritten without the variantID to identify a test in the MockWebServer
     private String variantId;
 
     Set<UUID> modificationsToExclude = new HashSet<>();
