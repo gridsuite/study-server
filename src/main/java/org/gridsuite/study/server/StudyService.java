@@ -98,6 +98,7 @@ public class StudyService {
     static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
     static final String UPDATE_TYPE_SWITCH = "switch";
     static final String UPDATE_TYPE_LINE = "line";
+    static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
@@ -1196,6 +1197,13 @@ public class StudyService {
             .build());
     }
 
+    private void emitStudyMetadataChanged(UUID studyUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_METADATA_UPDATED)
+                .build());
+    }
+
     public void assertCaseExists(UUID caseUuid) {
         Boolean caseExists = caseExists(caseUuid);
         if (Boolean.FALSE.equals(caseExists)) {
@@ -2269,6 +2277,14 @@ public class StudyService {
             updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
         } finally {
             networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
+    }
+
+    public void notify(@NonNull String notificationName, @NonNull UUID studyUuid) {
+        if (notificationName.equals(UPDATE_TYPE_STUDY_METADATA_UPDATED)) {
+            emitStudyMetadataChanged(studyUuid);
+        } else {
+            throw new StudyException(UNKNOWN_NOTIFICATION_TYPE);
         }
     }
 }
