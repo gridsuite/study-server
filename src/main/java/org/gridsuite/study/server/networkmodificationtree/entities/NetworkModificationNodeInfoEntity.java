@@ -43,7 +43,7 @@ import java.util.UUID;
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
-    private UUID networkModificationId;
+    private UUID modificationGroupUuid;
 
     @Column
     private String variantId;
