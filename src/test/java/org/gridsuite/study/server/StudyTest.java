@@ -273,7 +273,7 @@ public class StudyTest {
 
     private void cleanDB() {
         reportsUsagesRepository.deleteAll();
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId(), null));
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
         equipmentInfosService.deleteAll(NETWORK_UUID);

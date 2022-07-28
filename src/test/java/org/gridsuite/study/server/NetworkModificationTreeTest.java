@@ -401,7 +401,8 @@ public class NetworkModificationTreeTest {
         NetworkModificationNode node3 = buildNetworkModification("loadflow", "dance", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, node3);
 
-        networkModificationTreeService.doDeleteTree(root.getStudyId());
+        List<UUID> buildReportsUuids = new ArrayList<>();
+        networkModificationTreeService.doDeleteTree(root.getStudyId(), buildReportsUuids);
         assertEquals(0, nodeRepository.findAll().size());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
