@@ -34,11 +34,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -94,8 +90,8 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.NetworkModificationTreeService.*;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.*;
 import static org.gridsuite.study.server.StudyService.HEADER_PARENT_NODE;
+import static org.gridsuite.study.server.StudyService.*;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -2070,18 +2066,24 @@ public class StudyTest {
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID networkModificationUuid, String variantId, String nodeName) throws Exception {
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                networkModificationUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
+                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-            UUID networkModificationUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
+            UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
-                .description("description").networkModification(networkModificationUuid).variantId(variantId)
+                .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatus(buildStatus)
                 .children(Collections.emptyList()).build();
+
+        // Only for tests
         String mnBodyJson = objectWriter.writeValueAsString(modificationNode);
+        JSONObject jsonObject = new JSONObject(mnBodyJson);
+        jsonObject.put("variantId", variantId);
+        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
+        mnBodyJson = jsonObject.toString();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
@@ -2858,7 +2860,7 @@ public class StudyTest {
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
-                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getNetworkModification()
+                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
             + "/modifications/move[?]modificationsToMove=.*" + modification1)));
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
 
@@ -2873,7 +2875,7 @@ public class StudyTest {
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath()
-                        .matches("/v1/groups/" + modificationNode.getNetworkModification()
+                        .matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
                                 + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
                                 + modification2)));
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
@@ -3650,7 +3652,7 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getNetworkModification()
+                .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());

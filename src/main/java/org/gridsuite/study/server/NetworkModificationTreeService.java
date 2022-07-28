@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.powsybl.loadflow.LoadFlowResult;
 
+import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.*;
@@ -281,15 +282,13 @@ public class NetworkModificationTreeService {
 
             if (sourceNode instanceof NetworkModificationNode) {
                 NetworkModificationNode model = (NetworkModificationNode) sourceNode;
-                UUID modificationGroupToDuplicateId = model.getNetworkModification();
-                model.setNetworkModification(modificationGroupToDuplicateId != null ? newModificationGroupId : null);
+                UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
+                model.setModificationGroupUuid(newModificationGroupId);
                 model.setBuildStatus(BuildStatus.NOT_BUILT);
                 model.setReportUuid(newReportUuid);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
-                if (modificationGroupToDuplicateId != null) {
-                    networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
-                }
+                networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
             }
             if (nextParentId != null) {
                 cloneStudyTree(sourceNode, nextParentId, study);
@@ -371,6 +370,12 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public UUID getModificationGroupUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getModificationGroupUuid(nodeUuid)).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+    }
+
+    // Return json string because modification dtos are not available here
+    @Transactional(readOnly = true)
+    public String getNetworkModifications(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid));
     }
 
     @Transactional
@@ -466,7 +471,7 @@ public class NetworkModificationTreeService {
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                buildInfos.insertModificationGroupAndReport(modificationNode.getNetworkModification(), getReportUuid(nodeEntity.getIdNode()));
+                buildInfos.insertModificationGroupAndReport(modificationNode.getModificationGroupUuid(), getReportUuid(nodeEntity.getIdNode()));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
@@ -497,9 +502,9 @@ public class NetworkModificationTreeService {
         return buildInfos;
     }
 
-    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean removeOnlyResults) {
+    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus) {
 
-        if (!removeOnlyResults) {
+        if (!invalidateOnlyChildrenBuildStatus) {
             invalidateNodeInfos.addReportUuid(repositories.get(node.getType()).getReportUuid(node.getIdNode()));
             invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
         }
@@ -519,16 +524,17 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             // No need to invalidate a node with a status different of "BUILT"
             if (repositories.get(n.getType()).getBuildStatus(n.getIdNode()) == BuildStatus.BUILT) {
+                fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
                 }
                 repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
-                fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
             }
             invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
         });
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
             public void afterCommit() {
                 emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
             }
@@ -540,11 +546,11 @@ public class NetworkModificationTreeService {
             .forEach(child -> {
                 // No need to invalidate a node with a status different of "BUILT"
                 if (repositories.get(child.getType()).getBuildStatus(child.getIdNode()) == BuildStatus.BUILT) {
+                    fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                     if (!invalidateOnlyChildrenBuildStatus) {
                         repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
                     }
                     repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
-                    fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 }
                 invalidateChildrenBuildStatus(child, changedNodes, false, invalidateNodeInfos);
             });

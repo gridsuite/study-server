@@ -53,6 +53,7 @@ public class StudyException extends RuntimeException {
         NODE_BUILD_ERROR,
         INVALIDATE_BUILD_FAILED,
         UNKNOWN_NOTIFICATION_TYPE,
+        GET_MODIFICATIONS_FAILED,
     }
 
     private final Type type;
