@@ -87,9 +87,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void createNodeInfo(AbstractNode nodeInfo) {
-        if (nodeInfo.getReportUuid() == null) {
-            nodeInfo.setReportUuid(UUID.randomUUID());
-        }
+        nodeInfo.setReportUuid(UUID.randomUUID());
         nodeInfoRepository.save(toEntity(nodeInfo));
     }
 
