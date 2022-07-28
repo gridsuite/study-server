@@ -876,8 +876,11 @@ public class StudyController {
         @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector,
         @Parameter(description = "Should search in upstream built node") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode,
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
+
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
+            .body(equipmentType == null ?
+                    studyService.searchAllEquipments(studyUuid, nodeUuid, userInput, fieldSelector, inUpstreamBuiltParentNode)
+                    : studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")

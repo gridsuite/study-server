@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.*;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.data.domain.PageRequest;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  */
 public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
-    private static final int PAGE_MAX_SIZE = 1000;
+    private static final int PAGE_MAX_SIZE = 400;
 
     private final EquipmentInfosRepository equipmentInfosRepository;
 
@@ -80,14 +80,28 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     @Override
     public List<EquipmentInfos> searchEquipments(@NonNull final String query) {
         NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-            .withQuery(QueryBuilders.queryStringQuery(query))
-            .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-            .build();
+                .withQuery(QueryBuilders.queryStringQuery(query))
+                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
+                .build();
 
         return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
-            .stream()
-            .map(SearchHit::getContent)
-            .collect(Collectors.toList());
+                .stream()
+                .map(SearchHit::getContent)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<EquipmentInfos> searchEquipments(@NonNull final BoolQueryBuilder query) {
+        NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
+                .withQuery(query)
+                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
+                .withSorts()
+                .build();
+
+        return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
+                .stream()
+                .map(SearchHit::getContent)
+                .collect(Collectors.toList());
     }
 
     @Override
