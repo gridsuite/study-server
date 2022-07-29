@@ -311,13 +311,13 @@ public class StudyService {
                 .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, String importParametersJson) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, HashMap<String, Object> importParametersJson) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos, importParametersJson));
         return basicStudyInfos;
     }
 
-    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos, String importParametersJson) {
+    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos, HashMap<String, Object> importParametersJson) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
@@ -770,7 +770,7 @@ public class StudyService {
         return result;
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, String importParametersJson) {
+    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, HashMap<String, Object> importParameters) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, caseUuid)
             .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
@@ -780,7 +780,7 @@ public class StudyService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(importParametersJson, headers);
+        HttpEntity<HashMap<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
 
         try {
             ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,

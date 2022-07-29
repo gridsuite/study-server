@@ -124,7 +124,7 @@ public class StudyController {
         @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
     public ResponseEntity<BasicStudyInfos> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
-                                                                             @RequestBody(required = false) String importParametersJson,
+                                                                             @RequestBody(required = false) HashMap<String, Object> importParametersJson,
                                                                              @RequestHeader("userId") String userId) {
         studyService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParametersJson);
