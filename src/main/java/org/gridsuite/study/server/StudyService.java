@@ -285,6 +285,20 @@ public class StudyService {
         }
     }
 
+    private String getFormatImportParameters(String format) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/import/formats/{format}/parameters")
+                .buildAndExpand(format)
+                .toUriString();
+
+        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, String.class).getBody();
+    }
+
+    public String getCaseImportParameters(UUID caseUuid) {
+        String format = getCaseFormat(caseUuid);
+
+        return getFormatImportParameters(format);
+    }
+
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
@@ -297,19 +311,19 @@ public class StudyService {
                 .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, String importParametersJson) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos));
+        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos, importParametersJson));
         return basicStudyInfos;
     }
 
-    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos) {
+    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos, String importParametersJson) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
             String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParametersJson);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
         } catch (Exception e) {
@@ -362,7 +376,7 @@ public class StudyService {
             UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
                 String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                 insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
             }
@@ -625,6 +639,14 @@ public class StudyService {
         }
     }
 
+    public String getCaseFormat(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
+            .buildAndExpand(caseUuid)
+            .toUriString();
+
+        return restTemplate.getForObject(caseServerBaseUri + path, String.class);
+    }
+
     private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
         HttpStatus httpStatusCode = httpException.getStatusCode();
         String errorMessage = httpException.getResponseBodyAsString();
@@ -748,7 +770,7 @@ public class StudyService {
         return result;
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
+    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, String importParametersJson) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, caseUuid)
             .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
@@ -756,8 +778,12 @@ public class StudyService {
             .buildAndExpand()
             .toUriString();
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(importParametersJson, headers);
+
         try {
-            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null,
+            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
                     NetworkInfos.class);
             NetworkInfos networkInfos = networkInfosResponse.getBody();
             if (networkInfos == null) {
@@ -2128,6 +2154,7 @@ public class StudyService {
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
         networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
             public void afterCompletion(int status) {
                 networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
             }

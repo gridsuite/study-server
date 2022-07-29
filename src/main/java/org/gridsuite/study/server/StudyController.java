@@ -124,10 +124,21 @@ public class StudyController {
         @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
     public ResponseEntity<BasicStudyInfos> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
+                                                                             @RequestBody(required = false) String importParametersJson,
                                                                              @RequestHeader("userId") String userId) {
         studyService.assertCaseExists(caseUuid);
-        BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid);
+        BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParametersJson);
         return ResponseEntity.ok().body(createStudy);
+    }
+
+    @GetMapping(value = "/studies/cases/{caseUuid}/import-parameters")
+    @Operation(summary = "get import parameters for specific case")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The import formats of the case"),
+        @ApiResponse(responseCode = "404", description = "The case can not be found")})
+    public ResponseEntity<String> getCaseImportFormats(@PathVariable("caseUuid") UUID caseUuid) {
+        studyService.assertCaseExists(caseUuid);
+        return ResponseEntity.ok().body(studyService.getCaseImportParameters(caseUuid));
     }
 
     @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
