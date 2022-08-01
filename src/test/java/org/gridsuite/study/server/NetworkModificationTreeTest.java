@@ -73,7 +73,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.NetworkModificationTreeService.*;
-import static org.gridsuite.study.server.StudyService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
@@ -422,7 +421,7 @@ public class NetworkModificationTreeTest {
 
         var mess = output.receive(TIMEOUT);
         if (expectedDeletion != null) {
-            Collection<UUID> deletedId = (Collection<UUID>) mess.getHeaders().get(NetworkModificationTreeService.HEADER_NODES);
+            Collection<UUID> deletedId = (Collection<UUID>) mess.getHeaders().get(NotificationService.HEADER_NODES);
             assertNotNull(deletedId);
             assertEquals(expectedDeletion.size(), deletedId.size());
             deletedId.forEach(id ->
@@ -526,9 +525,9 @@ public class NetworkModificationTreeTest {
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         var header = mess.getHeaders();
-        assertEquals(root.getStudyId(), header.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(NetworkModificationTreeService.NODE_UPDATED, header.get(HEADER_UPDATE_TYPE));
-        Collection<UUID> updated = (Collection<UUID>) header.get(NetworkModificationTreeService.HEADER_NODES);
+        assertEquals(root.getStudyId(), header.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, header.get(NotificationService.HEADER_UPDATE_TYPE));
+        Collection<UUID> updated = (Collection<UUID>) header.get(NotificationService.HEADER_NODES);
         assertNotNull(updated);
         assertEquals(1, updated.size());
         updated.forEach(id -> assertEquals(node1.getId(), id));
@@ -637,8 +636,8 @@ public class NetworkModificationTreeTest {
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
-        newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
-        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
+        newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
     }
 
     private void insertNode(UUID studyUuid, AbstractNode parentNode, NetworkModificationNode newNode, InsertMode mode, AbstractNode newParentNode) throws Exception {
@@ -659,10 +658,10 @@ public class NetworkModificationTreeTest {
             .andExpect(status().isOk());
 
         var mess = output.receive(TIMEOUT);
-        assertEquals(NODE_CREATED, mess.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(newParentNode.getId(), mess.getHeaders().get(HEADER_PARENT_NODE));
-        assertEquals(mode.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
-        newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
+        assertEquals(NotificationService.NODE_CREATED, mess.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(newParentNode.getId(), mess.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
+        assertEquals(mode.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+        newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
     }
 
     @NotNull

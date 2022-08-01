@@ -88,10 +88,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.NetworkModificationTreeService.*;
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.HEADER_PARENT_NODE;
 import static org.gridsuite.study.server.StudyService.*;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -1084,9 +1082,9 @@ public class StudyTest {
         Message<byte[]> message = output.receive(TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals("userId", headers.get(HEADER_USER_ID));
-        assertEquals(s2Uuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals("userId", headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(s2Uuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         var httpRequests = getRequestsDone(3);
         assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/groups/.*")));
@@ -1374,17 +1372,17 @@ public class StudyTest {
         assertEquals(uuidResponse, resultUuid);
 
         Message<byte[]> securityAnalysisStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
         Message<byte[]> securityAnalysisUpdateMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, securityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid, securityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT, updateType);
 
         securityAnalysisStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
@@ -1408,7 +1406,7 @@ public class StudyTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
 
         securityAnalysisStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) securityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertTrue(updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS) || updateType.equals(UPDATE_TYPE_SECURITY_ANALYSIS_RESULT));
 
@@ -1467,13 +1465,13 @@ public class StudyTest {
 
         // failed security analysis
         Message<byte[]> message = output.receive(TIMEOUT);
-        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_FAILED, updateType);
 
         // message sent by run and save controller to notify frontend security analysis is running and should update SA status
         message = output.receive(TIMEOUT);
-        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
@@ -1495,7 +1493,7 @@ public class StudyTest {
 
         // message sent by run and save controller to notify frontend security analysis is running and should update SA status
         message = output.receive(TIMEOUT);
-        assertEquals(studyUuid2, message.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(studyUuid2, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, updateType);
 
@@ -2023,7 +2021,7 @@ public class StudyTest {
 
         Set<String> substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
                 substationsSet);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         assertTrue(getRequestsDone(1).stream()
@@ -2043,7 +2041,7 @@ public class StudyTest {
                         modificationNodeUuid2).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*&variantId=" + VARIANT_ID_2)));
@@ -2098,8 +2096,8 @@ public class StudyTest {
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
-        modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
-        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
+        modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
         return modificationNode;
     }
 
@@ -2117,9 +2115,9 @@ public class StudyTest {
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         output.receive(TIMEOUT);  // message for first modification node creation
 
@@ -2128,19 +2126,19 @@ public class StudyTest {
         message = output.receive(TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
-        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
 
         // assert that the broker message has been sent a study creation request message
         // for deletion
         message = output.receive(TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(3);
@@ -2172,9 +2170,9 @@ public class StudyTest {
         Message<byte[]> message = output.receive(TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         if (errorMessage.length == 0) {
             output.receive(TIMEOUT);   // message for first modification node creation
@@ -2185,19 +2183,19 @@ public class StudyTest {
         message = output.receive(TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
-        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
 
         // assert that the broker message has been sent a study creation request message
         // for deletion
         message = output.receive(TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(caseUuid == null ? 1 : 3);
@@ -2864,6 +2862,7 @@ public class StudyTest {
                         studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
@@ -2871,13 +2870,13 @@ public class StudyTest {
         assertTrue(requests.stream()
                 .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
             + "/modifications/move[?]modificationsToMove=.*" + modification1)));
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
 
         // update switch on first modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
@@ -2887,8 +2886,6 @@ public class StudyTest {
                         .matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
                                 + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
                                 + modification2)));
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
-
     }
 
     @Test
@@ -2914,8 +2911,8 @@ public class StudyTest {
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid,
-                HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
-                "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
+                NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
+                "LOAD", NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         // delete equipment on second modification node
@@ -2924,8 +2921,8 @@ public class StudyTest {
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid,
-                HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
-                "LOAD", HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
+                NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
+                "LOAD", NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
 
         var requests = getRequestsWithBodyDone(2);
@@ -2941,9 +2938,9 @@ public class StudyTest {
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_NODE));
-        assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
+        assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(equipmentType, headersStudyUpdate.get(headerUpdateTypeEquipmentType));
         assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
         assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
@@ -2959,11 +2956,11 @@ public class StudyTest {
         Message<byte[]> messageStatus = output.receive(TIMEOUT);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
-        assertEquals(studyUuid, headersStatus.get(StudyService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         if (nodeUuid != null) {
-            assertEquals(nodeUuid, headersStatus.get(HEADER_NODE));
+            assertEquals(nodeUuid, headersStatus.get(NotificationService.HEADER_NODE));
         }
-        assertEquals(updateType, headersStatus.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(updateType, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
@@ -2975,9 +2972,9 @@ public class StudyTest {
         Message<byte[]> messageStatus = output.receive(TIMEOUT);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
-        assertEquals(studyUuid, headersStatus.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodesUuids, headersStatus.get(NetworkModificationTreeService.HEADER_NODES));
-        assertEquals(NetworkModificationTreeService.NODE_UPDATED, headersStatus.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
+        assertEquals(NotificationService.NODE_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId,
@@ -2986,9 +2983,9 @@ public class StudyTest {
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_NODE));
-        assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
+        assertEquals(UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
@@ -3000,9 +2997,9 @@ public class StudyTest {
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
-        assertEquals(MODIFICATIONS_CREATING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
+        assertEquals(MODIFICATIONS_CREATING_IN_PROGRESS, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -3010,9 +3007,9 @@ public class StudyTest {
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
-        assertEquals(MODIFICATIONS_UPDATING_FINISHED, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
+        assertEquals(MODIFICATIONS_UPDATING_FINISHED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -3020,9 +3017,9 @@ public class StudyTest {
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
-        assertEquals(MODIFICATIONS_UPDATING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
+        assertEquals(MODIFICATIONS_UPDATING_IN_PROGRESS, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkStudyMetadataUpdatedMessagesReceived(UUID studyNameUserIdUuid) {
@@ -3030,7 +3027,7 @@ public class StudyTest {
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -3038,9 +3035,9 @@ public class StudyTest {
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(HEADER_PARENT_NODE));
-        assertEquals(MODIFICATIONS_DELETING_IN_PROGRESS, headersStudyUpdate.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
+        assertEquals(MODIFICATIONS_DELETING_IN_PROGRESS, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkUpdateEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -3064,42 +3061,42 @@ public class StudyTest {
 
     private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
             Set<String> modifiedIdsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
                 modifiedIdsSet);
     }
 
     private void checkEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
             Set<String> modifiedIdsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
                 modifiedIdsSet);
     }
 
     private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
             Set<String> modifiedSubstationsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
                 modifiedSubstationsSet);
 
         // assert that the broker message has been sent
         Message<byte[]> messageLine = output.receive(TIMEOUT);
         assertEquals("", new String(messageLine.getPayload()));
         MessageHeaders headersSwitch = messageLine.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersSwitch.get(HEADER_NODE));
-        assertEquals(StudyService.UPDATE_TYPE_LINE, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersSwitch.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersSwitch.get(NotificationService.HEADER_NODE));
+        assertEquals(StudyService.UPDATE_TYPE_LINE, headersSwitch.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkSwitchModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
             Set<String> modifiedSubstationsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, StudyService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
                 modifiedSubstationsSet);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(TIMEOUT);
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersSwitch.get(StudyService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersSwitch.get(HEADER_NODE));
-        assertEquals(UPDATE_TYPE_SWITCH, headersSwitch.get(StudyService.HEADER_UPDATE_TYPE));
+        assertEquals(studyNameUserIdUuid, headersSwitch.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersSwitch.get(NotificationService.HEADER_NODE));
+        assertEquals(UPDATE_TYPE_SWITCH, headersSwitch.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     @Test
@@ -3398,19 +3395,19 @@ public class StudyTest {
 
         // Initial node update -> BUILDING
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // Successful ->  Node update -> BUILT
         buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
+        assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         assertTrue(getRequestsDone(nbReportExpected).stream().allMatch(r -> r.contains("reports")));
         assertTrue(getRequestsDone(1).stream()
@@ -3425,13 +3422,13 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         output.receive(TIMEOUT);
         buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid)); // node is not
@@ -3448,18 +3445,18 @@ public class StudyTest {
 
         // initial node update -> building
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // fail -> second node update -> not built
         buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // error message sent to frontend
         buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(HEADER_NODE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
@@ -3477,13 +3474,13 @@ public class StudyTest {
 
         // initial node update -> building
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         // error -> second node update -> not built
         buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
         assertTrue(getRequestsDone(1).stream()
@@ -3616,8 +3613,8 @@ public class StudyTest {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node.get();
         assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
 
-        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode1.getId()));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
 
         // reactivate modification
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=true",
@@ -3628,8 +3625,8 @@ public class StudyTest {
         modificationNode = (NetworkModificationNode) node.get();
         assertTrue(modificationNode.getModificationsToExclude().isEmpty());
 
-        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode1.getId()));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode1.getId());
     }
 
     @Test
@@ -3664,8 +3661,8 @@ public class StudyTest {
                 .anyMatch(r -> r.matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
                         + "/modifications[?]modificationsUuids=.*" + modificationUuid + ".*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
-        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
 
@@ -3785,8 +3782,8 @@ public class StudyTest {
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
 
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
     }
 
     @Test
