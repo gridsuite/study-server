@@ -248,7 +248,7 @@ public class NetworkModificationTreeTest {
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();
-        assertEquals(0, countMessages("cleanDB"));
+        assertNull(output.receive(TIMEOUT));
     }
 
     StudyEntity createDummyStudy(UUID networkUuid) {
@@ -813,22 +813,29 @@ public class NetworkModificationTreeTest {
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
 
-        Message<byte[]> mess;
-
         NetworkModificationNode defNode1 = makeNetworkModificationNode(root, studyId, "unused variant 1");
+        assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode buildNode1 = makeNetworkModificationNode(defNode1, studyId, "built variant 1");
+        assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode defNode2 = makeNetworkModificationNode(buildNode1, studyId, "unused variant 2");
+        assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode defNode3 = makeNetworkModificationNode(defNode2, studyId, "unused variant 3");
+        assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode defNode4 = makeNetworkModificationNode(defNode2, studyId, "unused variant 4");
+        assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode buildNode2 = makeNetworkModificationNode(defNode3, studyId, "built variant 2");
+        assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode buildNode3 = makeNetworkModificationNode(defNode4, studyId, "built variant 3");
+        assertNotNull(output.receive(TIMEOUT));
 
+        countMessages("before fillBuildInfos");
         BuildInfos buildInfo1 = networkModificationTreeService.fillBuildInfos(buildNode1.getId());
         assertEquals(2, buildInfo1.getModificationReportUuids().size());
         assertEquals(2, buildInfo1.getModificationGroupUuids().size());
         assertNotEquals(defNode1.getReportUuid(), buildInfo1.getModificationReportUuids().get(0));
         assertEquals(buildNode1.getReportUuid(), buildInfo1.getModificationReportUuids().get(1));
 
+        countMessages("after fillBuildInfos");
         List<Pair<UUID, String>> pairs1 = networkModificationTreeService.getReportUuidsAndNames(buildNode1.getId(), false);
         assertEquals(3, pairs1.size());
         assertEquals(buildInfo1.getModificationReportUuids().get(0), pairs1.get(1).getLeft());
@@ -837,8 +844,7 @@ public class NetworkModificationTreeTest {
         countMessages("before update first node");
         buildNode1.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyId, buildNode1);
-
-        countMessages("after update first node");
+        assertNotNull(output.receive(TIMEOUT));
 
         BuildInfos buildInfo2 = networkModificationTreeService.fillBuildInfos(buildNode2.getId());
         assertEquals(3, buildInfo2.getModificationGroupUuids().size());
@@ -855,7 +861,7 @@ public class NetworkModificationTreeTest {
 
         buildNode2.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyId, buildNode2);
-        countMessages("after update second node");
+        assertNotNull(output.receive(TIMEOUT));
 
         BuildInfos buildInfo3 = networkModificationTreeService.fillBuildInfos(buildNode3.getId());
         assertEquals(3, buildInfo3.getModificationGroupUuids().size());
@@ -879,18 +885,21 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.invalidateBuild(buildNode3.getId(), false, invalidateNodeInfos3);
         List<UUID> pairsInv3 = invalidateNodeInfos3.getReportUuids();
         assertEquals(3, pairsInv3.size());
+        assertNotNull(output.receive(TIMEOUT));
 
         InvalidateNodeInfos invalidateNodeInfos1 = new InvalidateNodeInfos();
         networkModificationTreeService.invalidateBuild(buildNode1.getId(), false, invalidateNodeInfos1);
         List<UUID> pairsInv1 = invalidateNodeInfos1.getReportUuids();
         assertEquals(5, pairsInv1.size());
+        assertNotNull(output.receive(TIMEOUT));
     }
 
     private int countMessages(String str) {
         int counter = 0;
         try {
-            output.receive(TIMEOUT);
-            counter += 1;
+            while (null != output.receive(TIMEOUT)) {
+                counter += 1;
+            }
         } catch (Throwable ex) {
             // just counting
         }
