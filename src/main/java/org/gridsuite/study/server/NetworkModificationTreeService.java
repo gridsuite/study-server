@@ -736,7 +736,7 @@ public class NetworkModificationTreeService {
                     NodeEntity definitionNodeEntity = us.getDefinitionNode();
                     AbstractNode definitionNode = repositories.get(definitionNodeEntity.getType()).getNode(definitionNodeEntity.getIdNode());
                     defNodeIdToReport.put(definitionNodeEntity.getIdNode(),
-                        Pair.of(us.getReportId(), definitionNode.getName() + " " + us.getReportId()));
+                        Pair.of(us.getReportId(), definitionNode.getName()));
                 }
             });
 
