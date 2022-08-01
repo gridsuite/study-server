@@ -3213,12 +3213,12 @@ public class StudyTest {
 
         String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
 
-        // create suntCompensator on root node (not allowed)
+        // create shuntCompensator on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
                         studyNameUserIdUuid, rootNodeUuid).content(createShuntCompensatorAttributes))
             .andExpect(status().isForbidden());
 
-        // create suntCompensator on modification node child of root node
+        // create shuntCompensator on modification node child of root node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
                         studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes))
             .andExpect(status().isOk());

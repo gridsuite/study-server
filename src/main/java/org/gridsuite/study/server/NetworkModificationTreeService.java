@@ -50,6 +50,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -714,14 +715,14 @@ public class NetworkModificationTreeService {
         Map<UUID, Pair<UUID, String>> defNodeIdToReport,
         List<Pair<UUID, String>> uuidsAndNames) {
 
+        AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (nodeEntity.getType() != NodeType.NETWORK_MODIFICATION) {
-            AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
             uuidsAndNames.add(0, Pair.of(node.getReportUuid(), "Root"));
         } else {
             Pair<UUID, String> p = defNodeIdToReport.get(nodeEntity.getIdNode());
-            if (p != null) {
-                uuidsAndNames.add(0, p);
-            }
+            // found usage : use it ! Otherwise, was an already built node by time of build
+            // if it as changed current node has been invalidated
+            uuidsAndNames.add(0, Objects.requireNonNullElseGet(p, () -> Pair.of(node.getReportUuid(), node.getName())));
 
             if (!nodeOnlyReport) {
                 fillNodesInBuildOrder(nodeEntity.getParentNode(), false, defNodeIdToReport, uuidsAndNames);
@@ -745,7 +746,8 @@ public class NetworkModificationTreeService {
             });
 
             fillNodesInBuildOrder(buildNodeEntity, nodeOnlyReport, defNodeIdToReport, uuidsAndNames);
-
+            //AbstractNode buildNode = repositories.get(buildNodeEntity.getType()).getNode(buildNodeEntity.getIdNode());
+            //uuidsAndNames.add(Pair.of(buildNode.getReportUuid(), buildNode.getName()));
         }, () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
             });
