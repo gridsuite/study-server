@@ -205,6 +205,8 @@ public class NetworkModificationTreeService {
             if (reportUuid != null) {
                 deleteNodeInfos.addReportUuid(reportUuid);
             }
+            List<ReportUsageEntity> reportUsageEntities = reportsUsagesRepository.getReportUsageEntities(nodeToDelete.getIdNode());
+            reportUsageEntities.stream().map(ReportUsageEntity::getReportId).forEach(deleteNodeInfos::addReportUuid);
 
             String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id);
             if (!StringUtils.isBlank(variantId)) {
@@ -231,14 +233,18 @@ public class NetworkModificationTreeService {
     @Transactional
     public void doDeleteTree(UUID studyId, List<UUID> buildReportsUuids) {
         try {
+            Set<UUID> allReportUuids = new HashSet<>();
             List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+            nodes.forEach(n -> {
+                AbstractNode node = repositories.get(n.getType()).getNode(n.getIdNode());
+                allReportUuids.add(node.getReportUuid());
+            });
             repositories.forEach((key, repository) -> {
                     repository.deleteAll(
                         nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()));
                 }
             );
 
-            Set<UUID> allReportUuids = new HashSet<>();
             Set<UUID> allReportUsageUuids = new HashSet<>();
 
             // first calls of getReportUsageEntities may bring several times same ancestor report usages,
@@ -501,9 +507,14 @@ public class NetworkModificationTreeService {
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                UUID reportUuid = UUID.randomUUID();
+                UUID reportUuid;
+                if (nodeEntity.getIdNode().equals(toBuildNode.getIdNode())) {
+                    reportUuid = modificationNode.getReportUuid();
+                } else {
+                    reportUuid = UUID.randomUUID();
+                    reportsUsagesRepository.save(new ReportUsageEntity(null, reportUuid, toBuildNode, nodeEntity));
+                }
                 buildInfos.insertModificationGroupAndReport(modificationNode.getModificationGroupUuid(), reportUuid);
-                reportsUsagesRepository.save(new ReportUsageEntity(null, reportUuid, toBuildNode, nodeEntity));
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
@@ -597,6 +608,7 @@ public class NetworkModificationTreeService {
             UUID reportUuid = modificationNode.getReportUuid();
             String variantId = modificationNode.getVariantId();
             LOGGER.info("fill u:{} v:{} inv?:{}", reportUuid, variantId, removeOnlyResults);
+            ownUsedReportIds.add(reportUuid);
 
             invalidateNodeInfos.addVariantId(variantId);
             ownUsedReportIds.removeAll(otherUsedReportIds);
@@ -704,7 +716,7 @@ public class NetworkModificationTreeService {
 
         if (nodeEntity.getType() != NodeType.NETWORK_MODIFICATION) {
             AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
-            uuidsAndNames.add(0, Pair.of(node.getReportUuid(), "Woot"));
+            uuidsAndNames.add(0, Pair.of(node.getReportUuid(), "Root"));
         } else {
             Pair<UUID, String> p = defNodeIdToReport.get(nodeEntity.getIdNode());
             if (p != null) {
@@ -727,16 +739,13 @@ public class NetworkModificationTreeService {
                     && (!nodeOnlyReport || us.getDefinitionNode().getIdNode().equals(nodeUuid)))  {
                     NodeEntity definitionNodeEntity = us.getDefinitionNode();
                     AbstractNode definitionNode = repositories.get(definitionNodeEntity.getType()).getNode(definitionNodeEntity.getIdNode());
-                    defNodeIdToReport.put(definitionNodeEntity.getIdNode(), Pair.of(us.getReportId(), definitionNode.getName()));
+                    defNodeIdToReport.put(definitionNodeEntity.getIdNode(),
+                        Pair.of(us.getReportId(), definitionNode.getName() + " " + us.getReportId()));
                 }
             });
 
             fillNodesInBuildOrder(buildNodeEntity, nodeOnlyReport, defNodeIdToReport, uuidsAndNames);
 
-            if (buildNodeEntity.getType() != NodeType.ROOT) {
-                AbstractNode node = repositories.get(buildNodeEntity.getType()).getNode(buildNodeEntity.getIdNode());
-                uuidsAndNames.add(Pair.of(node.getReportUuid(), "Unshared"));
-            }
         }, () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
             });
@@ -746,9 +755,6 @@ public class NetworkModificationTreeService {
     @Transactional
     public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
         List<Pair<UUID, String>> uuidsAndNames = getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
-        if (uuidsAndNames == null) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
         return uuidsAndNames;
     }
 
