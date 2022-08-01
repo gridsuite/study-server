@@ -809,7 +809,6 @@ public class NetworkModificationTreeTest {
 
     @Test
     public void testNodeReportUsage() {
-        countMessages("before root");
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
 
@@ -828,20 +827,17 @@ public class NetworkModificationTreeTest {
         NetworkModificationNode buildNode3 = makeNetworkModificationNode(defNode4, studyId, "built variant 3");
         assertNotNull(output.receive(TIMEOUT));
 
-        countMessages("before fillBuildInfos");
         BuildInfos buildInfo1 = networkModificationTreeService.fillBuildInfos(buildNode1.getId());
         assertEquals(2, buildInfo1.getModificationReportUuids().size());
         assertEquals(2, buildInfo1.getModificationGroupUuids().size());
         assertNotEquals(defNode1.getReportUuid(), buildInfo1.getModificationReportUuids().get(0));
         assertEquals(buildNode1.getReportUuid(), buildInfo1.getModificationReportUuids().get(1));
 
-        countMessages("after fillBuildInfos");
         List<Pair<UUID, String>> pairs1 = networkModificationTreeService.getReportUuidsAndNames(buildNode1.getId(), false);
         assertEquals(3, pairs1.size());
         assertEquals(buildInfo1.getModificationReportUuids().get(0), pairs1.get(1).getLeft());
         assertEquals(buildInfo1.getModificationReportUuids().get(1), pairs1.get(2).getLeft());
 
-        countMessages("before update first node");
         buildNode1.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyId, buildNode1);
         assertNotNull(output.receive(TIMEOUT));
@@ -879,7 +875,7 @@ public class NetworkModificationTreeTest {
 
         buildNode3.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyId, buildNode3);
-        countMessages("after update third node");
+        assertNotNull(output.receive(TIMEOUT));
 
         InvalidateNodeInfos invalidateNodeInfos3 = new InvalidateNodeInfos();
         networkModificationTreeService.invalidateBuild(buildNode3.getId(), false, invalidateNodeInfos3);
@@ -892,19 +888,6 @@ public class NetworkModificationTreeTest {
         List<UUID> pairsInv1 = invalidateNodeInfos1.getReportUuids();
         assertEquals(5, pairsInv1.size());
         assertNotNull(output.receive(TIMEOUT));
-    }
-
-    private int countMessages(String str) {
-        int counter = 0;
-        try {
-            while (null != output.receive(TIMEOUT)) {
-                counter += 1;
-            }
-        } catch (Throwable ex) {
-            // just counting
-        }
-        LOGGER.warn("got " + counter + " " + str);
-        return counter;
     }
 
     private NetworkModificationNode makeNetworkModificationNode(AbstractNode parent, UUID studyId, String variantId) {
