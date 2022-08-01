@@ -559,12 +559,10 @@ public class NetworkModificationTreeService {
         final List<UUID> changedNodes = new ArrayList<>();
         changedNodes.add(nodeUuid);
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
-        LOGGER.info("invalidate:{}", nodeUuid);
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             // No need to invalidate a node with a status different of "BUILT"
             BuildStatus wasBuildStatus = repositories.get(n.getType()).getBuildStatus(n.getIdNode());
-            LOGGER.info("down {} {}", nodeUuid, wasBuildStatus);
             if (wasBuildStatus == BuildStatus.BUILT) {
                 fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 if (!invalidateOnlyChildrenBuildStatus) {
@@ -608,7 +606,6 @@ public class NetworkModificationTreeService {
 
             UUID reportUuid = modificationNode.getReportUuid();
             String variantId = modificationNode.getVariantId();
-            LOGGER.info("fill u:{} v:{} inv?:{}", reportUuid, variantId, removeOnlyResults);
             ownUsedReportIds.add(reportUuid);
 
             invalidateNodeInfos.addVariantId(variantId);
@@ -624,12 +621,10 @@ public class NetworkModificationTreeService {
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes,
         boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
-        LOGGER.info("invalidateChildren of:{}", nodeEntity.getIdNode());
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
                 // No need to invalidate a node with a status different of "BUILT"
                 BuildStatus wasBuildStatus = repositories.get(child.getType()).getBuildStatus(child.getIdNode());
-                LOGGER.info("rec down {} {}", child.getIdNode(), wasBuildStatus);
                 if (wasBuildStatus == BuildStatus.BUILT) {
                     fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                     if (!invalidateOnlyChildrenBuildStatus) {
