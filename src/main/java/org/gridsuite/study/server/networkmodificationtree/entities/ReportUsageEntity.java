@@ -17,12 +17,10 @@ import javax.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Setter
 @Entity
 @Table(name = "report_usage", indexes = {
     @Index(name = "ReportUsage_user_idx", columnList = "build_node_id"),
