@@ -172,6 +172,8 @@ public class StudyTest {
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
     private static final String NETWORK_UUID_4_STRING = "33333333-cccc-48be-be46-e92345951e32";
+    private static final String UCTE_FORMAT = "UCTE";
+    private static final String UCTE_IMPORT_PARAMETERS = "{\"formatName\":\"UCTE\",\"parameters\":[{\"name\":\"randomListParam\",\"type\":\"STRING_LIST\",\"description\":\"Random list description\",\"defaultValue\":[],\"possibleValues\":[\"paramValue1\",\"paramValue2\"]},{\"name\":\"randomParam2\",\"type\":\"String\",\"description\":\"Random param description\",\"defaultValue\":\"\",\"possibleValues\":null}]}";
     private static final NetworkInfos NETWORK_INFOS_2 = new NetworkInfos(UUID.fromString(NETWORK_UUID_2_STRING), "file_2.xiidm");
     private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
     private static final NetworkInfos NETWORK_INFOS_4 = new NetworkInfos(UUID.fromString(NETWORK_UUID_4_STRING), "file_4.xiidm");
@@ -882,6 +884,8 @@ public class StudyTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_2:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_3:
                         return new MockResponse().setResponseCode(200);
+                    case "/v1/import/formats/" + UCTE_FORMAT + "/parameters" :
+                        return new MockResponse().setResponseCode(200).setBody(UCTE_IMPORT_PARAMETERS);
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                         return new MockResponse().setResponseCode(418);
@@ -1126,6 +1130,30 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
+    }
+
+    @Test
+    public void testCreateStudyWithImportParameters() throws Exception {
+        HashMap<String, Object> importParameters = new HashMap<String, Object>();
+        ArrayList<String> randomListParam = new ArrayList<String>();
+        randomListParam.add("paramValue1");
+        randomListParam.add("paramValue2");
+        importParameters.put("randomListParam", randomListParam);
+        importParameters.put("randomParam2", "randomParamValue");
+
+        createStudyWithImportParameters("userId", CASE_UUID, importParameters);
+    }
+
+    @Test
+    public void testGetFormatImportParams() throws Exception {
+        mockMvc.perform(get("/v1/studies/cases/{caseUuid}/import-parameters", CASE_UUID_STRING)).andExpectAll(
+                status().isOk(),
+                content().string(UCTE_IMPORT_PARAMETERS));
+
+        Set<String> requests = getRequestsDone(3);
+        assertTrue(requests.contains("/v1/cases/" + CASE_UUID_STRING + "/exists"));
+        assertTrue(requests.contains("/v1/cases/" + CASE_UUID_STRING + "/format"));
+        assertTrue(requests.contains("/v1/import/formats/" + UCTE_FORMAT + "/parameters"));
     }
 
     @Test
@@ -2140,6 +2168,58 @@ public class StudyTest {
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
+        return studyUuid;
+    }
+
+    private UUID createStudyWithImportParameters(String userId, UUID caseUuid, HashMap<String, Object> importParameters, String... errorMessage) throws Exception {
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(importParameters)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = result.getResponse().getContentAsString();
+
+        BasicStudyInfos infos = mapper.readValue(resultAsString, BasicStudyInfos.class);
+
+        UUID studyUuid = infos.getId();
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT);
+
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        output.receive(TIMEOUT);  // message for first modification node creation
+
+        // assert that the broker message has been sent a study creation message for
+        // creation
+        message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(HEADER_ERROR));
+
+        // assert that the broker message has been sent a study creation request message
+        // for deletion
+        message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        // assert that all http requests have been sent to remote services
+        Set<RequestWithBody> requests = getRequestsWithBodyDone(3);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/format", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+
+        assertEquals(mapper.writeValueAsString(importParameters),
+                requests.stream().filter(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*"))
+                    .findFirst().orElseThrow().getBody());
         return studyUuid;
     }
 
