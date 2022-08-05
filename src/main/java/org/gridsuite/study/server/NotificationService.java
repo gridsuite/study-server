@@ -20,35 +20,50 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyService.*;
-
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
  */
 @Service
 public class NotificationService {
 
-    static final String HEADER_USER_ID = "userId";
-    static final String HEADER_STUDY_UUID = "studyUuid";
-    static final String HEADER_NODE = "node";
-    static final String HEADER_UPDATE_TYPE = "updateType";
-    static final String UPDATE_TYPE_STUDIES = "studies";
-    static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
     static final String HEADER_ERROR = "error";
+    static final String HEADER_NODE = "node";
+    static final String HEADER_NODES = "nodes";
+    static final String HEADER_STUDY_UUID = "studyUuid";
+    static final String HEADER_UPDATE_TYPE = "updateType";
     static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
     static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
+    static final String HEADER_USER_ID = "userId";
 
-    static final String HEADER_NODES = "nodes";
-    static final String HEADER_PARENT_NODE = "parentNode";
+    static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
+    static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
+    static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
+    static final String UPDATE_TYPE_LINE = "line";
+    static final String UPDATE_TYPE_LOADFLOW = "loadflow";
+    static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
+    static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
+    static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
+    static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    static final String UPDATE_TYPE_STUDIES = "studies";
+    static final String UPDATE_TYPE_STUDY = "study";
+    static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
+    static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
+    static final String UPDATE_TYPE_SWITCH = "switch";
+
+    static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
+    static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
+    static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
+    static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
+
+    static final String HEADER_INSERT_MODE = "insertMode";
     static final String HEADER_NEW_NODE = "newNode";
+    static final String HEADER_PARENT_NODE = "parentNode";
     static final String HEADER_REMOVE_CHILDREN = "removeChildren";
+
     static final String NODE_UPDATED = "nodeUpdated";
     static final String NODE_DELETED = "nodeDeleted";
     static final String NODE_CREATED = "nodeCreated";
-    static final String HEADER_INSERT_MODE = "insertMode";
-
-    static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
