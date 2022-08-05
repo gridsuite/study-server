@@ -565,6 +565,7 @@ public class NetworkModificationTreeService {
                 fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+                    reportsUsagesRepository.deleteAllByIdInBatch(invalidateNodeInfos.getReportUsageUuids());
                 }
                 repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
             }
@@ -601,7 +602,7 @@ public class NetworkModificationTreeService {
                 .filter(u -> u.getBuildNode().getIdNode().equals(node.getIdNode()))
                 .map(ReportUsageEntity::getId)
                 .collect(Collectors.toList());
-            reportsUsagesRepository.deleteAllByIdInBatch(ownUsagesUuids);
+            invalidateNodeInfos.setReportUsageUuids(ownUsagesUuids);
 
             UUID reportUuid = modificationNode.getReportUuid();
             String variantId = modificationNode.getVariantId();
