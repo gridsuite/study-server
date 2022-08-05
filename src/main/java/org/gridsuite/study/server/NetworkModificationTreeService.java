@@ -21,11 +21,13 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.ReportUsageEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.repositories.ReportUsageRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.slf4j.Logger;
@@ -45,9 +47,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -73,6 +78,8 @@ public class NetworkModificationTreeService {
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
     private final NodeRepository nodesRepository;
+
+    private final ReportUsageRepository reportsUsagesRepository;
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
@@ -130,13 +137,14 @@ public class NetworkModificationTreeService {
     @Autowired
     public NetworkModificationTreeService(NodeRepository nodesRepository,
                                           RootNodeInfoRepository rootNodeInfoRepository,
-                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository
+                                          NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
+                                          ReportUsageRepository reportsUsagesRepository
     ) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         repositories.put(NodeType.ROOT, new RootNodeInfoRepositoryProxy(rootNodeInfoRepository));
         repositories.put(NodeType.NETWORK_MODIFICATION, new NetworkModificationNodeInfoRepositoryProxy(networkModificationNodeInfoRepository));
-
+        this.reportsUsagesRepository = reportsUsagesRepository;
     }
 
     @Transactional
@@ -196,6 +204,8 @@ public class NetworkModificationTreeService {
             if (reportUuid != null) {
                 deleteNodeInfos.addReportUuid(reportUuid);
             }
+            List<ReportUsageEntity> reportUsageEntities = reportsUsagesRepository.getReportUsageEntities(nodeToDelete.getIdNode());
+            reportUsageEntities.stream().map(ReportUsageEntity::getReportId).forEach(deleteNodeInfos::addReportUuid);
 
             String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id);
             if (!StringUtils.isBlank(variantId)) {
@@ -220,14 +230,35 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void doDeleteTree(UUID studyId) {
+    public void doDeleteTree(UUID studyId, List<UUID> buildReportsUuids) {
         try {
+            Set<UUID> allReportUuids = new HashSet<>();
             List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
-            repositories.forEach((key, repository) ->
-                repository.deleteAll(
-                    nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))
+            nodes.forEach(n -> {
+                AbstractNode node = repositories.get(n.getType()).getNode(n.getIdNode());
+                allReportUuids.add(node.getReportUuid());
+            });
+            repositories.forEach((key, repository) -> {
+                    repository.deleteAll(
+                        nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()));
+                }
             );
+
+            Set<UUID> allReportUsageUuids = new HashSet<>();
+
+            // first calls of getReportUsageEntities may bring several times same ancestor report usages,
+            // though we could use a more refined query for this case.
+            nodes.forEach(n -> {
+                List<ReportUsageEntity> reportUsageEntities = reportsUsagesRepository.getReportUsageEntities(n.getIdNode());
+                allReportUuids.addAll(reportUsageEntities.stream().map(ReportUsageEntity::getReportId).collect(Collectors.toList()));
+                allReportUsageUuids.addAll(reportUsageEntities.stream().map(ReportUsageEntity::getId).collect(Collectors.toList()));
+            });
+
+            if (buildReportsUuids != null) {
+                buildReportsUuids.addAll(allReportUuids);
+            }
             nodesRepository.deleteAll(nodes);
+            reportsUsagesRepository.deleteAllById(allReportUsageUuids);
         } catch (EntityNotFoundException ignored) {
             // nothing to do
         }
@@ -293,6 +324,7 @@ public class NetworkModificationTreeService {
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
             }
+
             if (nextParentId != null) {
                 cloneStudyTree(sourceNode, nextParentId, study);
             }
@@ -469,26 +501,41 @@ public class NetworkModificationTreeService {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    private void getBuildInfos(NodeEntity nodeEntity, BuildInfos buildInfos) {
+    private void prepareBuild(NodeEntity nodeEntity, BuildInfos buildInfos, NodeEntity toBuildNode) {
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                buildInfos.insertModificationGroupAndReport(modificationNode.getModificationGroupUuid(), getReportUuid(nodeEntity.getIdNode()));
+                UUID reportUuid;
+                if (nodeEntity.getIdNode().equals(toBuildNode.getIdNode())) {
+                    reportUuid = modificationNode.getReportUuid();
+                } else {
+                    reportUuid = UUID.randomUUID();
+                    reportsUsagesRepository.save(new ReportUsageEntity(null, reportUuid, toBuildNode, nodeEntity));
+                }
+                buildInfos.insertModificationGroupAndReport(modificationNode.getModificationGroupUuid(), reportUuid);
             }
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
-            if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
-                getBuildInfos(nodeEntity.getParentNode(), buildInfos);
-            } else {
+            if (modificationNode.getBuildStatus() == BuildStatus.BUILT) {
+                List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(nodeEntity.getIdNode());
+                usages.forEach(usage -> {
+                    // avoid duplicates from children
+                    if (usage.getBuildNode().getIdNode().equals(nodeEntity.getIdNode())) {
+                        reportsUsagesRepository.save(new ReportUsageEntity(null, usage.getReportId(), toBuildNode,
+                            usage.getDefinitionNode()));
+                    }
+                });
                 buildInfos.setOriginVariantId(getVariantId(nodeEntity.getIdNode()));
+            } else {
+                prepareBuild(nodeEntity.getParentNode(), buildInfos, toBuildNode);
             }
         }
     }
 
     @Transactional
-    public BuildInfos getBuildInfos(UUID nodeUuid) {
+    public BuildInfos prepareBuild(UUID nodeUuid) {
         BuildInfos buildInfos = new BuildInfos();
 
         nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> {
@@ -496,26 +543,13 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(getVariantId(nodeUuid));
-                getBuildInfos(entity, buildInfos);
+                prepareBuild(entity, buildInfos, entity);
             }
         }, () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
             });
 
         return buildInfos;
-    }
-
-    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus) {
-
-        if (!invalidateOnlyChildrenBuildStatus) {
-            invalidateNodeInfos.addReportUuid(repositories.get(node.getType()).getReportUuid(node.getIdNode()));
-            invalidateNodeInfos.addVariantId(repositories.get(node.getType()).getVariantId(node.getIdNode()));
-        }
-
-        UUID securityAnalysisResultUuid = repositories.get(node.getType()).getSecurityAnalysisResultUuid(node.getIdNode());
-        if (securityAnalysisResultUuid != null) {
-            invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-        }
     }
 
     @Transactional
@@ -526,14 +560,16 @@ public class NetworkModificationTreeService {
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             // No need to invalidate a node with a status different of "BUILT"
-            if (repositories.get(n.getType()).getBuildStatus(n.getIdNode()) == BuildStatus.BUILT) {
+            BuildStatus wasBuildStatus = repositories.get(n.getType()).getBuildStatus(n.getIdNode());
+            if (wasBuildStatus == BuildStatus.BUILT) {
                 fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+                    reportsUsagesRepository.deleteAllByIdInBatch(invalidateNodeInfos.getReportUsageUuids());
                 }
                 repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
             }
-            invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
+            invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
         });
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -544,18 +580,57 @@ public class NetworkModificationTreeService {
         });
     }
 
-    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos,
+        boolean invalidateOnlyChildrenBuildStatus) {
+
+        var repositoryProxy = repositories.get(node.getType());
+        UUID nodeUuid = node.getIdNode();
+        NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
+
+        if (!invalidateOnlyChildrenBuildStatus) {
+            List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(node.getIdNode());
+            Set<UUID> ownUsedReportIds = new HashSet<>();
+            Set<UUID> otherUsedReportIds = new HashSet<>();
+            usages.forEach(u -> {
+                if (u.getBuildNode().getIdNode().equals(node.getIdNode())) {
+                    ownUsedReportIds.add(u.getReportId());
+                } else {
+                    otherUsedReportIds.add(u.getReportId());
+                }
+            });
+            List<UUID> ownUsagesUuids = usages.stream()
+                .filter(u -> u.getBuildNode().getIdNode().equals(node.getIdNode()))
+                .map(ReportUsageEntity::getId)
+                .collect(Collectors.toList());
+            invalidateNodeInfos.setReportUsageUuids(ownUsagesUuids);
+
+            UUID reportUuid = modificationNode.getReportUuid();
+            String variantId = modificationNode.getVariantId();
+            ownUsedReportIds.add(reportUuid);
+
+            invalidateNodeInfos.addVariantId(variantId);
+            ownUsedReportIds.removeAll(otherUsedReportIds);
+            ownUsedReportIds.forEach(invalidateNodeInfos::addReportUuid);
+        }
+
+        UUID securityAnalysisResultUuid = repositoryProxy.getSecurityAnalysisResultUuid(nodeUuid);
+        if (securityAnalysisResultUuid != null) {
+            invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
+        }
+    }
+
+    private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes,
+        InvalidateNodeInfos invalidateNodeInfos) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
                 // No need to invalidate a node with a status different of "BUILT"
-                if (repositories.get(child.getType()).getBuildStatus(child.getIdNode()) == BuildStatus.BUILT) {
-                    fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
-                    if (!invalidateOnlyChildrenBuildStatus) {
-                        repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
-                    }
+                BuildStatus wasBuildStatus = repositories.get(child.getType()).getBuildStatus(child.getIdNode());
+                if (wasBuildStatus == BuildStatus.BUILT) {
+                    fillInvalidateNodeInfos(child, invalidateNodeInfos, false);
+                    repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
                     repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
                 }
-                invalidateChildrenBuildStatus(child, changedNodes, false, invalidateNodeInfos);
+                invalidateChildrenBuildStatus(child, changedNodes, invalidateNodeInfos);
             });
     }
 
@@ -629,29 +704,50 @@ public class NetworkModificationTreeService {
         emitNodesChanged(studyUuid, List.of(nodeUuid));
     }
 
-    private void getParentReportUuidsAndNamesFromNode(NodeEntity nodeEntity, boolean nodeOnlyReport, List<Pair<UUID, String>> res) {
+    private void fillNodesInBuildOrder(NodeEntity nodeEntity, boolean nodeOnlyReport,
+        Map<UUID, Pair<UUID, String>> defNodeIdToReport,
+        List<Pair<UUID, String>> uuidsAndNames) {
+
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
-        res.add(0, Pair.of(getReportUuid(nodeEntity.getIdNode()), node.getName()));
-        if (node.getType() == NodeType.NETWORK_MODIFICATION && !nodeOnlyReport) {
-            getParentReportUuidsAndNamesFromNode(nodeEntity.getParentNode(), false, res);
+        if (nodeEntity.getType() != NodeType.NETWORK_MODIFICATION) {
+            uuidsAndNames.add(0, Pair.of(node.getReportUuid(), ROOT_NODE_NAME));
+        } else {
+            Pair<UUID, String> p = defNodeIdToReport.get(nodeEntity.getIdNode());
+            // found usage : use it ! Otherwise, was an already built node by time of build
+            // if it as changed current node has been invalidated
+            uuidsAndNames.add(0, Objects.requireNonNullElseGet(p, () -> Pair.of(node.getReportUuid(), node.getName())));
+
+            if (!nodeOnlyReport) {
+                fillNodesInBuildOrder(nodeEntity.getParentNode(), false, defNodeIdToReport, uuidsAndNames);
+            }
         }
     }
 
-    @Transactional
-    public List<Pair<UUID, String>> getParentReportUuidsAndNamesFromNode(UUID nodeUuid, boolean nodeOnlyReport) {
+    private List<Pair<UUID, String>> getParentReportUuidsAndNamesFromNode(UUID nodeUuid, boolean nodeOnlyReport) {
         List<Pair<UUID, String>> uuidsAndNames = new ArrayList<>();
-        nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> getParentReportUuidsAndNamesFromNode(entity, nodeOnlyReport, uuidsAndNames), () -> {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        });
+        Map<UUID, Pair<UUID, String>> defNodeIdToReport = new HashMap<>();
+        nodesRepository.findById(nodeUuid).ifPresentOrElse(buildNodeEntity -> {
+            List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(buildNodeEntity.getIdNode());
+            usages.forEach(us -> {
+                if (us.getBuildNode().getIdNode().equals(buildNodeEntity.getIdNode())
+                    && (!nodeOnlyReport || us.getDefinitionNode().getIdNode().equals(nodeUuid)))  {
+                    NodeEntity definitionNodeEntity = us.getDefinitionNode();
+                    AbstractNode definitionNode = repositories.get(definitionNodeEntity.getType()).getNode(definitionNodeEntity.getIdNode());
+                    defNodeIdToReport.put(definitionNodeEntity.getIdNode(),
+                        Pair.of(us.getReportId(), definitionNode.getName()));
+                }
+            });
+
+            fillNodesInBuildOrder(buildNodeEntity, nodeOnlyReport, defNodeIdToReport, uuidsAndNames);
+        }, () -> {
+                throw new StudyException(ELEMENT_NOT_FOUND);
+            });
         return uuidsAndNames;
     }
 
     @Transactional
     public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
         List<Pair<UUID, String>> uuidsAndNames = getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
-        if (uuidsAndNames == null) {
-            throw new StudyException(ELEMENT_NOT_FOUND);
-        }
         return uuidsAndNames;
     }
 

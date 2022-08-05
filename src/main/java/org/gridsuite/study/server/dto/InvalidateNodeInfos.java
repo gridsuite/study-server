@@ -26,6 +26,8 @@ public class InvalidateNodeInfos {
 
     private List<UUID> reportUuids = new ArrayList<>();
 
+    private List<UUID> reportUsageUuids = new ArrayList<>();
+
     private List<String> variantIds = new ArrayList<>();
 
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
