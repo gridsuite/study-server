@@ -1978,7 +1978,7 @@ public class StudyService {
     }
 
     private BuildInfos fillBuildInfos(UUID nodeUuid) {
-        return networkModificationTreeService.fillBuildInfos(nodeUuid);
+        return networkModificationTreeService.prepareBuild(nodeUuid);
     }
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {

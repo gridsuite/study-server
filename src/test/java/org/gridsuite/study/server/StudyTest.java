@@ -3548,7 +3548,7 @@ public class StudyTest {
           modificationNode5
          */
 
-        BuildInfos buildInfos = networkModificationTreeService.fillBuildInfos(modificationNode5.getId());
+        BuildInfos buildInfos = networkModificationTreeService.prepareBuild(modificationNode5.getId());
         assertNull(buildInfos.getOriginVariantId());  // previous built node is root node
         assertEquals("variant_5", buildInfos.getDestinationVariantId());
         assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
@@ -3557,7 +3557,7 @@ public class StudyTest {
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
         output.receive(TIMEOUT);
 
-        buildInfos = networkModificationTreeService.fillBuildInfos(modificationNode4.getId());
+        buildInfos = networkModificationTreeService.prepareBuild(modificationNode4.getId());
         assertEquals("variant_3", buildInfos.getOriginVariantId()); // variant to clone is variant associated to node
                                                                     // modificationNode3
         assertEquals("variant_4", buildInfos.getDestinationVariantId());

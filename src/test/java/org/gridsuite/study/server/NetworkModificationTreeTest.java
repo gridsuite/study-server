@@ -816,7 +816,7 @@ public class NetworkModificationTreeTest {
         NetworkModificationNode buildNode3 = makeNetworkModificationNode(defNode4, studyId, "built variant 3");
         assertNotNull(output.receive(TIMEOUT));
 
-        BuildInfos buildInfo1 = networkModificationTreeService.fillBuildInfos(buildNode1.getId());
+        BuildInfos buildInfo1 = networkModificationTreeService.prepareBuild(buildNode1.getId());
         assertEquals(2, buildInfo1.getModificationReportUuids().size());
         assertEquals(2, buildInfo1.getModificationGroupUuids().size());
         assertNotEquals(defNode1.getReportUuid(), buildInfo1.getModificationReportUuids().get(0));
@@ -831,7 +831,7 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.updateNode(studyId, buildNode1);
         assertNotNull(output.receive(TIMEOUT));
 
-        BuildInfos buildInfo2 = networkModificationTreeService.fillBuildInfos(buildNode2.getId());
+        BuildInfos buildInfo2 = networkModificationTreeService.prepareBuild(buildNode2.getId());
         assertEquals(3, buildInfo2.getModificationGroupUuids().size());
         assertEquals(3, buildInfo2.getModificationReportUuids().size());
         assertNotEquals(defNode2.getReportUuid(), buildInfo2.getModificationReportUuids().get(0));
@@ -848,7 +848,7 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.updateNode(studyId, buildNode2);
         assertNotNull(output.receive(TIMEOUT));
 
-        BuildInfos buildInfo3 = networkModificationTreeService.fillBuildInfos(buildNode3.getId());
+        BuildInfos buildInfo3 = networkModificationTreeService.prepareBuild(buildNode3.getId());
         assertEquals(3, buildInfo3.getModificationGroupUuids().size());
         assertEquals(3, buildInfo3.getModificationReportUuids().size());
         assertNotEquals(defNode2.getReportUuid(), buildInfo3.getModificationReportUuids().get(0));
