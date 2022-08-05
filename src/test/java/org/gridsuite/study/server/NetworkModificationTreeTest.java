@@ -695,16 +695,6 @@ public class NetworkModificationTreeTest {
             .children(Collections.emptyList()).build();
     }
 
-    private NetworkModificationNode buildNetworkModification(UUID modificationGroupUuid, String variantId, UUID reportUuid) {
-        return NetworkModificationNode.builder()
-            .modificationGroupUuid(modificationGroupUuid)
-            .variantId(variantId)
-            .name(variantId)
-            .buildStatus(BuildStatus.NOT_BUILT)
-            .reportUuid(reportUuid)
-            .children(Collections.emptyList()).build();
-    }
-
     private void assertNodeEquals(AbstractNode expected, AbstractNode current) {
         assertEquals(expected.getName(), current.getName());
         assertEquals(expected.getDescription(), current.getDescription());
@@ -878,14 +868,14 @@ public class NetworkModificationTreeTest {
 
         InvalidateNodeInfos invalidateNodeInfos3 = new InvalidateNodeInfos();
         networkModificationTreeService.invalidateBuild(buildNode3.getId(), false, invalidateNodeInfos3);
-        List<UUID> pairsInv3 = invalidateNodeInfos3.getReportUuids();
-        assertEquals(3, pairsInv3.size());
+        List<UUID> reportUUids3 = invalidateNodeInfos3.getReportUuids();
+        assertEquals(3, reportUUids3.size());
         assertNotNull(output.receive(TIMEOUT));
 
         InvalidateNodeInfos invalidateNodeInfos1 = new InvalidateNodeInfos();
         networkModificationTreeService.invalidateBuild(buildNode1.getId(), false, invalidateNodeInfos1);
-        List<UUID> pairsInv1 = invalidateNodeInfos1.getReportUuids();
-        assertEquals(5, pairsInv1.size());
+        List<UUID> reportUuids1 = invalidateNodeInfos1.getReportUuids();
+        assertEquals(5, reportUuids1.size());
         assertNotNull(output.receive(TIMEOUT));
     }
 

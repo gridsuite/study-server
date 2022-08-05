@@ -65,8 +65,6 @@ import static org.gridsuite.study.server.StudyService.*;
 @Service
 public class NetworkModificationTreeService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeService.class);
-
     public static final String HEADER_NODES = "nodes";
     public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_NEW_NODE = "newNode";
@@ -570,7 +568,7 @@ public class NetworkModificationTreeService {
                 }
                 repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
             }
-            invalidateChildrenBuildStatus(n, changedNodes, false, invalidateNodeInfos);
+            invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
         });
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -581,13 +579,14 @@ public class NetworkModificationTreeService {
         });
     }
 
-    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos, boolean removeOnlyResults) {
+    private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos,
+        boolean invalidateOnlyChildrenBuildStatus) {
 
         var repositoryProxy = repositories.get(node.getType());
         UUID nodeUuid = node.getIdNode();
         NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
 
-        if (!removeOnlyResults) {
+        if (!invalidateOnlyChildrenBuildStatus) {
             List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(node.getIdNode());
             Set<UUID> ownUsedReportIds = new HashSet<>();
             Set<UUID> otherUsedReportIds = new HashSet<>();
@@ -620,19 +619,17 @@ public class NetworkModificationTreeService {
     }
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes,
-        boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+        InvalidateNodeInfos invalidateNodeInfos) {
         nodesRepository.findAllByParentNodeIdNode(nodeEntity.getIdNode())
             .forEach(child -> {
                 // No need to invalidate a node with a status different of "BUILT"
                 BuildStatus wasBuildStatus = repositories.get(child.getType()).getBuildStatus(child.getIdNode());
                 if (wasBuildStatus == BuildStatus.BUILT) {
-                    fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
-                    if (!invalidateOnlyChildrenBuildStatus) {
-                        repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
-                    }
+                    fillInvalidateNodeInfos(child, invalidateNodeInfos, false);
+                    repositories.get(child.getType()).invalidateBuildStatus(child.getIdNode(), changedNodes);
                     repositories.get(child.getType()).updateLoadFlowResultAndStatus(child.getIdNode(), null, LoadFlowStatus.NOT_DONE);
                 }
-                invalidateChildrenBuildStatus(child, changedNodes, false, invalidateNodeInfos);
+                invalidateChildrenBuildStatus(child, changedNodes, invalidateNodeInfos);
             });
     }
 
@@ -712,7 +709,7 @@ public class NetworkModificationTreeService {
 
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(nodeEntity.getIdNode());
         if (nodeEntity.getType() != NodeType.NETWORK_MODIFICATION) {
-            uuidsAndNames.add(0, Pair.of(node.getReportUuid(), "Root"));
+            uuidsAndNames.add(0, Pair.of(node.getReportUuid(), ROOT_NODE_NAME));
         } else {
             Pair<UUID, String> p = defNodeIdToReport.get(nodeEntity.getIdNode());
             // found usage : use it ! Otherwise, was an already built node by time of build
@@ -741,8 +738,6 @@ public class NetworkModificationTreeService {
             });
 
             fillNodesInBuildOrder(buildNodeEntity, nodeOnlyReport, defNodeIdToReport, uuidsAndNames);
-            //AbstractNode buildNode = repositories.get(buildNodeEntity.getType()).getNode(buildNodeEntity.getIdNode());
-            //uuidsAndNames.add(Pair.of(buildNode.getReportUuid(), buildNode.getName()));
         }, () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
             });
