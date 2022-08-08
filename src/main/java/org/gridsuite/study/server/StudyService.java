@@ -2121,6 +2121,20 @@ public class StudyService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public void duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, UUID sourceUuid) {
+        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            checkStudyContainsNode(studyUuid, nodeUuid);
+            UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            UUID sourceGroupUuid = nodeUuid != sourceUuid ? networkModificationTreeService.getModificationGroupUuid(sourceUuid) : targetGroupUuid;
+            networkModificationService.duplicateModification(targetGroupUuid, sourceGroupUuid, modificationUuidList);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        }
+    }
+
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
         if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);

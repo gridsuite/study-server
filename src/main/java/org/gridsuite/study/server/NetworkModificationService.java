@@ -420,13 +420,32 @@ public class NetworkModificationService {
 
         try {
             restTemplate.put(getNetworkModificationServerURI(false)
-                            + path.buildAndExpand(groupUuid, modificationUuid).toUriString(), null);
+                            + path.buildAndExpand(groupUuid).toUriString(), null);
         } catch (HttpStatusCodeException e) {
             //Ignore because modification group does not exist if no modifications
             if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw e;
             }
         }
+    }
+
+    public void duplicateModification(UUID groupUuid, UUID sourceGroupUuid, List<UUID> modificationUuidList) {
+        Objects.requireNonNull(groupUuid);
+        Objects.requireNonNull(sourceGroupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH
+                        + DELIMITER + MODIFICATIONS_PATH + DELIMITER + "duplicate")
+                .queryParam("sourceGroupUuid", sourceGroupUuid);
+
+        HttpEntity<String> httpEntity;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            httpEntity = new HttpEntity<>(objectMapper.writeValueAsString(modificationUuidList), headers);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        restTemplate.put(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), httpEntity);
     }
 
     public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
