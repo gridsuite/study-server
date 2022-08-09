@@ -131,16 +131,6 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
-    @GetMapping(value = "/studies/cases/{caseUuid}/import-parameters")
-    @Operation(summary = "get import parameters for specific case")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The import formats of the case"),
-        @ApiResponse(responseCode = "404", description = "The case can not be found")})
-    public ResponseEntity<String> getCaseImportFormats(@PathVariable("caseUuid") UUID caseUuid) {
-        studyService.assertCaseExists(caseUuid);
-        return ResponseEntity.ok().body(studyService.getCaseImportParameters(caseUuid));
-    }
-
     @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "create a study and import the case")
     @ApiResponses(value = {

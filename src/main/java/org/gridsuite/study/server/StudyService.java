@@ -285,20 +285,6 @@ public class StudyService {
         }
     }
 
-    private String getFormatImportParameters(String format) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/import/formats/{format}/parameters")
-                .buildAndExpand(format)
-                .toUriString();
-
-        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, String.class).getBody();
-    }
-
-    public String getCaseImportParameters(UUID caseUuid) {
-        String format = getCaseFormat(caseUuid);
-
-        return getFormatImportParameters(format);
-    }
-
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
@@ -637,14 +623,6 @@ public class StudyService {
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(studyUuid, userId, e, "case-server");
         }
-    }
-
-    public String getCaseFormat(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
-            .buildAndExpand(caseUuid)
-            .toUriString();
-
-        return restTemplate.getForObject(caseServerBaseUri + path, String.class);
     }
 
     private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
@@ -1766,6 +1744,14 @@ public class StudyService {
             }
         };
     }
+
+//    @Bean
+//    public Consumer<Message<String>> consumeCaseImportDone() {
+//        return message -> {
+//
+//            studyCreationRequestRepository.findById()
+//        };
+//    }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
             String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters,

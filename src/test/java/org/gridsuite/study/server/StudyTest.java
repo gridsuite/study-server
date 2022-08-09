@@ -173,7 +173,6 @@ public class StudyTest {
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
     private static final String NETWORK_UUID_4_STRING = "33333333-cccc-48be-be46-e92345951e32";
     private static final String UCTE_FORMAT = "UCTE";
-    private static final String UCTE_IMPORT_PARAMETERS = "{\"formatName\":\"UCTE\",\"parameters\":[{\"name\":\"randomListParam\",\"type\":\"STRING_LIST\",\"description\":\"Random list description\",\"defaultValue\":[],\"possibleValues\":[\"paramValue1\",\"paramValue2\"]},{\"name\":\"randomParam2\",\"type\":\"String\",\"description\":\"Random param description\",\"defaultValue\":\"\",\"possibleValues\":null}]}";
     private static final NetworkInfos NETWORK_INFOS_2 = new NetworkInfos(UUID.fromString(NETWORK_UUID_2_STRING), "file_2.xiidm");
     private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
     private static final NetworkInfos NETWORK_INFOS_4 = new NetworkInfos(UUID.fromString(NETWORK_UUID_4_STRING), "file_4.xiidm");
@@ -884,8 +883,6 @@ public class StudyTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_2:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_3:
                         return new MockResponse().setResponseCode(200);
-                    case "/v1/import/formats/" + UCTE_FORMAT + "/parameters" :
-                        return new MockResponse().setResponseCode(200).setBody(UCTE_IMPORT_PARAMETERS);
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                         return new MockResponse().setResponseCode(418);
@@ -1142,18 +1139,6 @@ public class StudyTest {
         importParameters.put("randomParam2", "randomParamValue");
 
         createStudyWithImportParameters("userId", CASE_UUID, importParameters);
-    }
-
-    @Test
-    public void testGetFormatImportParams() throws Exception {
-        mockMvc.perform(get("/v1/studies/cases/{caseUuid}/import-parameters", CASE_UUID_STRING)).andExpectAll(
-                status().isOk(),
-                content().string(UCTE_IMPORT_PARAMETERS));
-
-        Set<String> requests = getRequestsDone(3);
-        assertTrue(requests.contains("/v1/cases/" + CASE_UUID_STRING + "/exists"));
-        assertTrue(requests.contains("/v1/cases/" + CASE_UUID_STRING + "/format"));
-        assertTrue(requests.contains("/v1/import/formats/" + UCTE_FORMAT + "/parameters"));
     }
 
     @Test
