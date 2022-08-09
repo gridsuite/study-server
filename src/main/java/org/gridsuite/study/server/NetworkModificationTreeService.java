@@ -30,20 +30,12 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.ReportUsageRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.integration.support.MessageBuilder;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -65,14 +57,6 @@ import static org.gridsuite.study.server.StudyService.*;
 @Service
 public class NetworkModificationTreeService {
 
-    public static final String HEADER_NODES = "nodes";
-    public static final String HEADER_PARENT_NODE = "parentNode";
-    public static final String HEADER_NEW_NODE = "newNode";
-    public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
-    public static final String NODE_UPDATED = "nodeUpdated";
-    public static final String NODE_DELETED = "nodeDeleted";
-    public static final String NODE_CREATED = "nodeCreated";
-    public static final String HEADER_INSERT_MODE = "insertMode";
     public static final String ROOT_NODE_NAME = "Root";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
@@ -81,58 +65,13 @@ public class NetworkModificationTreeService {
 
     private final ReportUsageRepository reportsUsagesRepository;
 
-    private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
-
-    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
-
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
-
-    @Autowired
-    private StreamBridge treeUpdatePublisher;
 
     @Autowired
     private NetworkModificationService networkModificationService;
 
     @Autowired
-    private NetworkModificationTreeService self;
-
-    private void sendUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
-        treeUpdatePublisher.send("publishStudyUpdate-out-0", message);
-    }
-
-    private void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated, InsertMode insertMode) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
-            .setHeader(HEADER_PARENT_NODE, parentNode)
-            .setHeader(HEADER_NEW_NODE, nodeCreated)
-            .setHeader(HEADER_INSERT_MODE, insertMode.name())
-            .build()
-        );
-    }
-
-    private void emitNodesChanged(UUID studyUuid, Collection<UUID> nodes) {
-        if (nodes.isEmpty()) {
-            return;
-        }
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, NODE_UPDATED)
-            .setHeader(HEADER_NODES, nodes)
-            .build()
-        );
-    }
-
-    private void emitNodesDeleted(UUID studyUuid, Collection<UUID> nodes, boolean deleteChildren) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, NODE_DELETED)
-            .setHeader(HEADER_NODES, nodes)
-            .setHeader(HEADER_REMOVE_CHILDREN, deleteChildren)
-            .build()
-        );
-    }
+    private NotificationService notificationService;
 
     @Autowired
     public NetworkModificationTreeService(NodeRepository nodesRepository,
@@ -169,7 +108,7 @@ public class NetworkModificationTreeService {
                     .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                     .forEach(child -> child.setParentNode(node));
             }
-            emitNodeInserted(getStudyUuidForNodeId(nodeId), parent.getIdNode(), node.getIdNode(), insertMode);
+            notificationService.emitNodeInserted(getStudyUuidForNodeId(nodeId), parent.getIdNode(), node.getIdNode(), insertMode);
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
@@ -180,7 +119,7 @@ public class NetworkModificationTreeService {
         List<UUID> removedNodes = new ArrayList<>();
         UUID studyId = getStudyUuidForNodeId(nodeId);
         deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
-        emitNodesDeleted(studyId, removedNodes, deleteChildren);
+        notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
     public UUID getStudyUuidForNodeId(UUID id) {
@@ -352,7 +291,7 @@ public class NetworkModificationTreeService {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
         repositories.get(node.getType()).updateNode(node);
-        emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
     }
 
     // TODO test if studyUuid exist and have a node <nodeId>
@@ -572,12 +511,7 @@ public class NetworkModificationTreeService {
             invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
         });
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
-            }
-        });
+        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos,
@@ -641,7 +575,7 @@ public class NetworkModificationTreeService {
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes));
 
-        emitNodesChanged(studyId, changedNodes);
+        notificationService.emitNodesChanged(studyId, changedNodes);
     }
 
     @Transactional(readOnly = true)
@@ -701,7 +635,7 @@ public class NetworkModificationTreeService {
     }
 
     public void notifyModificationNodeChanged(UUID studyUuid, UUID nodeUuid) {
-        emitNodesChanged(studyUuid, List.of(nodeUuid));
+        notificationService.emitNodesChanged(studyUuid, List.of(nodeUuid));
     }
 
     private void fillNodesInBuildOrder(NodeEntity nodeEntity, boolean nodeOnlyReport,

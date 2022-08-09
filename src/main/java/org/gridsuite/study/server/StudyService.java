@@ -35,19 +35,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
-import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -86,33 +82,6 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
 
-    private static final String CATEGORY_BROKER_OUTPUT = StudyService.class.getName() + ".output-broker-messages";
-
-    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
-
-    static final String HEADER_USER_ID = "userId";
-    static final String HEADER_STUDY_UUID = "studyUuid";
-    static final String HEADER_PARENT_NODE = "parentNode";
-    static final String HEADER_NODE = "node";
-    static final String HEADER_UPDATE_TYPE = "updateType";
-    static final String UPDATE_TYPE_STUDIES = "studies";
-    static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
-    static final String UPDATE_TYPE_LOADFLOW = "loadflow";
-    static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
-    static final String UPDATE_TYPE_SWITCH = "switch";
-    static final String UPDATE_TYPE_LINE = "line";
-    static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
-    static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
-    static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
-    static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
-    static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
-    static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
-    static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
-    static final String HEADER_ERROR = "error";
-    static final String UPDATE_TYPE_STUDY = "study";
-    static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
-    static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
     static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     static final String QUERY_PARAM_COMPONENT_LIBRARY = "componentLibrary";
     static final String QUERY_PARAM_USE_NAME = "useName";
@@ -130,10 +99,8 @@ public class StudyService {
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
-    static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
-    static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
-    static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
-    static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
+    @Autowired
+    NotificationService notificationService;
 
     NetworkModificationTreeService networkModificationTreeService;
 
@@ -162,9 +129,6 @@ public class StudyService {
     private final ObjectMapper objectMapper;
 
     @Autowired
-    private StreamBridge studyUpdatePublisher;
-
-    @Autowired
     private TempFileService tempFileService;
 
     @Bean
@@ -186,8 +150,8 @@ public class StudyService {
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
                                 // send notifications
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -534,7 +498,7 @@ public class StudyService {
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
-        emitStudyDelete(studyUuid, userId);
+        notificationService.emitStudyDelete(studyUuid, userId);
 
         return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, nodesModificationInfos, buildReportsUuids)) : Optional.empty();
     }
@@ -583,7 +547,7 @@ public class StudyService {
                 studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
         studyInfosService.add(createdStudyBasicInfos);
 
-        emitStudiesChanged(studyUuid, userId);
+        notificationService.emitStudiesChanged(studyUuid, userId);
 
         return createdStudyBasicInfos;
     }
@@ -603,14 +567,14 @@ public class StudyService {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
-        emitStudiesChanged(studyInfos.getId(), userId);
+        notificationService.emitStudiesChanged(studyInfos.getId(), userId);
 
         return createdStudyBasicInfos;
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
         StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(userId, studyUuid);
-        emitStudiesChanged(newStudy.getId(), userId);
+        notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
     }
 
@@ -635,13 +599,13 @@ public class StudyService {
         try {
             JsonNode node = new ObjectMapper().readTree(errorToParse).path("message");
             if (!node.isMissingNode()) {
-                emitStudyCreationError(studyUuid, userId, node.asText());
+                notificationService.emitStudyCreationError(studyUuid, userId, node.asText());
             } else {
-                emitStudyCreationError(studyUuid, userId, errorToParse);
+                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
             }
         } catch (JsonProcessingException e) {
             if (!errorToParse.isEmpty()) {
-                emitStudyCreationError(studyUuid, userId, errorToParse);
+                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
             }
         }
 
@@ -672,7 +636,7 @@ public class StudyService {
         } catch (StudyException e) {
             throw e;
         } catch (Exception e) {
-            emitStudyCreationError(studyUuid, userId, e.getMessage());
+            notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
             throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
 
@@ -769,7 +733,7 @@ public class StudyService {
             throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
         } catch (Exception e) {
             if (!(e instanceof StudyException)) {
-                emitStudyCreationError(studyUuid, userId, e.getMessage());
+                notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
             }
             throw e;
         }
@@ -1021,7 +985,7 @@ public class StudyService {
     }
 
     void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1032,16 +996,16 @@ public class StudyService {
                     .changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid);
             Set<String> substationIds = getSubstationIds(equipmentModificationsInfos);
 
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
             updateStatuses(studyUuid, nodeUuid);
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SWITCH);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
     public void applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1053,10 +1017,10 @@ public class StudyService {
 
             Set<String> substationIds = getSubstationIds(modificationsInfos);
 
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
             updateStatuses(studyUuid, nodeUuid);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
@@ -1103,13 +1067,13 @@ public class StudyService {
             updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE);
             throw e;
         } finally {
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
         }
     }
 
     public void setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
         updateLoadFlowStatus(nodeUuid, LoadFlowStatus.RUNNING);
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
     }
 
     public String getExportFormats() {
@@ -1148,7 +1112,7 @@ public class StudyService {
 
     public void changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull String status,
             @NonNull UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1160,71 +1124,12 @@ public class StudyService {
 
             Set<String> substationIds = getSubstationIds(modificationInfosList);
 
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
             updateStatuses(studyUuid, nodeUuid);
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LINE);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
-    }
-
-    private void emitStudiesChanged(UUID studyUuid, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_USER_ID, userId)
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
-            .build());
-    }
-
-    private void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_NODE, nodeUuid)
-            .setHeader(HEADER_UPDATE_TYPE, updateType)
-            .build());
-    }
-
-    private void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_USER_ID, userId)
-            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
-            .setHeader(HEADER_ERROR, errorMessage)
-            .build());
-    }
-
-    private void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_NODE, nodeUuid)
-            .setHeader(HEADER_UPDATE_TYPE, updateType)
-            .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
-            .build());
-    }
-
-    private void emitStudyDelete(UUID studyUuid, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_USER_ID, userId)
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE)
-            .build());
-    }
-
-    private void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
-        sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_NODE, nodeUuid)
-            .setHeader(HEADER_UPDATE_TYPE, updateType)
-            .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
-            .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, equipmentType)
-            .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, equipmentId)
-            .build());
-    }
-
-    private void emitStudyMetadataChanged(UUID studyUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_METADATA_UPDATED)
-                .build());
     }
 
     public void assertCaseExists(UUID caseUuid) {
@@ -1390,9 +1295,9 @@ public class StudyService {
     void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
         updateLoadFlowParameters(studyUuid, toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
-        emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
-        emitStudyChanged(studyUuid, null, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
     }
 
     public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
@@ -1410,7 +1315,7 @@ public class StudyService {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
-        emitStudyChanged(studyUuid, null, UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
     }
 
     @Transactional
@@ -1454,7 +1359,7 @@ public class StudyService {
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
-        emitStudyChanged(studyUuid, nodeUuid, StudyService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         return result;
     }
 
@@ -1707,7 +1612,7 @@ public class StudyService {
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
                     // send notification for stopped computation
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
 
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -1733,7 +1638,7 @@ public class StudyService {
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
                     // send notification for failed computation
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_SECURITY_ANALYSIS_FAILED);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED);
 
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -1801,11 +1706,6 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowParameters(loadFlowParametersEntity));
     }
 
-    private void sendUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
-        studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
-    }
-
     List<String> getAvailableSvgComponentLibraries() {
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries").toUriString();
@@ -1822,7 +1722,7 @@ public class StudyService {
 
     public void createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1831,16 +1731,16 @@ public class StudyService {
             List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
                     .createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
             Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
             updateStatuses(studyUuid, nodeUuid);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
     public void modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1851,37 +1751,37 @@ public class StudyService {
                     .modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
             Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
 
-            emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, substationIds);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
             updateStatuses(studyUuid, nodeUuid);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
     public void updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes,
             ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType,
                     modificationUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
     public void updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
     void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -1892,12 +1792,12 @@ public class StudyService {
                     equipmentType, equipmentId, groupUuid, variantId, reportUuid);
 
             equipmentDeletionInfosList.forEach(deletionInfo ->
-                    emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
+                    notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
                             deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
             );
             updateStatuses(studyUuid, nodeUuid);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
@@ -2015,7 +1915,7 @@ public class StudyService {
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
 
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -2039,7 +1939,7 @@ public class StudyService {
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
                     // send notification
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_CANCELLED);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_CANCELLED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -2063,7 +1963,7 @@ public class StudyService {
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
                     // send notification
                     UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), UPDATE_TYPE_BUILD_FAILED);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_FAILED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -2110,8 +2010,8 @@ public class StudyService {
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_LOADFLOW_STATUS);
-        emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
     }
 
     @Transactional
@@ -2126,20 +2026,18 @@ public class StudyService {
 
     @Transactional
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_DELETING_IN_PROGRESS);
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            public void afterCompletion(int status) {
-                networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
+        try {
+            if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
             }
-        });
-
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
-            throw new StudyException(NOT_ALLOWED);
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.deleteModifications(groupId, modificationsUuids);
+            networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
-        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        networkModificationService.deleteModifications(groupId, modificationsUuids);
-        networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
-        updateStatuses(studyUuid, nodeUuid, false);
     }
 
     private void deleteSaResult(UUID uuid) {
@@ -2212,14 +2110,14 @@ public class StudyService {
 
     @Transactional
     public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
@@ -2267,7 +2165,7 @@ public class StudyService {
 
     public void lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
                                           ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
-        networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             Objects.requireNonNull(studyUuid);
             Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
@@ -2288,17 +2186,17 @@ public class StudyService {
             List<EquipmentModificationInfos> deletions = modifications.stream()
                                                                  .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
                                                                  .collect(Collectors.toList());
-            deletions.forEach(modif -> emitStudyEquipmentDeleted(studyUuid, nodeUuid, UPDATE_TYPE_STUDY,
+            deletions.forEach(modif -> notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
                     allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
             updateStatuses(studyUuid, nodeUuid, modificationUuid == null);
         } finally {
-            networkModificationService.emitModificationEquipmentNotification(studyUuid, nodeUuid, MODIFICATIONS_UPDATING_FINISHED);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID studyUuid) {
-        if (notificationName.equals(UPDATE_TYPE_STUDY_METADATA_UPDATED)) {
-            emitStudyMetadataChanged(studyUuid);
+        if (notificationName.equals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED)) {
+            notificationService.emitStudyMetadataChanged(studyUuid);
         } else {
             throw new StudyException(UNKNOWN_NOTIFICATION_TYPE);
         }
