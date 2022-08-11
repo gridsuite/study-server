@@ -45,7 +45,6 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -92,10 +91,13 @@ public class StudyService {
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String RESULT_UUID = "resultUuid";
+    static final String NETWORK_UUID = "networkUuid";
+    static final String NETWORK_ID = "networkId";
 
     static final String QUERY_PARAM_RECEIVER = "receiver";
 
     static final String HEADER_RECEIVER = "receiver";
+    static final String HEADER_ERROR_MESSAGE = "errorMessage";
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
@@ -138,10 +140,10 @@ public class StudyService {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                SAReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            SAReceiver.class);
 
                     LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
                             receiverObj.getNodeUuid());
@@ -268,20 +270,11 @@ public class StudyService {
     }
 
     private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
-            String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
-        } finally {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
 
@@ -319,24 +312,16 @@ public class StudyService {
     }
 
     private void createStudyAsync(File caseFile, String originalFilename, String userId, BasicStudyInfos basicStudyInfos) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
             UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
-                String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
-                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
             deleteFile(caseFile);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
 
@@ -713,22 +698,28 @@ public class StudyService {
         return result;
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
+    private void persistentStoreAsync(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(
+                        new CaseImportReceiver(studyUuid, caseUuid, importReportUuid, userId, System.nanoTime()
+                    )),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-            .queryParam(CASE_UUID, caseUuid)
-            .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
-            .queryParam(REPORT_UUID, importReportUuid)
-            .buildAndExpand()
-            .toUriString();
+                .queryParam(CASE_UUID, caseUuid)
+                .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
+                .queryParam(REPORT_UUID, importReportUuid)
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
+                .buildAndExpand()
+                .toUriString();
 
         try {
-            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null,
-                    NetworkInfos.class);
-            NetworkInfos networkInfos = networkInfosResponse.getBody();
-            if (networkInfos == null) {
-                throw handleStudyCreationError(studyUuid, userId, new HttpClientErrorException(HttpStatus.BAD_REQUEST), "network-conversion-server");
-            }
-            return networkInfos;
+            restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null,
+                    Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
         } catch (Exception e) {
@@ -1333,7 +1324,7 @@ public class StudyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new SAReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -1583,7 +1574,7 @@ public class StudyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new SAReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -1601,10 +1592,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                SAReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            SAReceiver.class);
 
                     LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -1627,10 +1618,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                SAReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            SAReceiver.class);
 
                     LOGGER.info("Security analysis failed for node '{}'", receiverObj.getNodeUuid());
 
@@ -1644,6 +1635,59 @@ public class StudyService {
                     LOGGER.error(e.toString());
                 }
             }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeCaseImportSucceeded() {
+        return message -> {
+            String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            UUID networkUuid = UUID.fromString(message.getHeaders().get(NETWORK_UUID, String.class));
+            String networkId = message.getHeaders().get(NETWORK_ID, String.class);
+            NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
+
+            if (receiverString != null) {
+                CaseImportReceiver receiver;
+                try {
+                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
+                            CaseImportReceiver.class);
+
+                    UUID caseUuid = receiver.getCaseUuid();
+                    UUID studyUuid = receiver.getStudyUuid();
+                    String userId = receiver.getUserId();
+                    Long startTime = receiver.getStartTime();
+                    UUID importReportUuid = receiver.getReportUuid();
+
+                    try {
+                        String caseFormat = getCaseFormat(caseUuid, studyUuid, userId);
+                        LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                        insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                    } catch (Exception e) {
+                        LOGGER.error(e.toString(), e);
+                    } finally {
+                        self.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                        LOGGER.trace("Create study '{}' : {} seconds", studyUuid,
+                                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+                    }
+
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeCaseImportFailed() {
+        return message -> {
+            CaseImportReceiver receiver = message.getHeaders().get(HEADER_RECEIVER, CaseImportReceiver.class);
+            String errorMessage = message.getHeaders().get(HEADER_ERROR_MESSAGE, String.class);
+
+            UUID studyUuid = receiver.getStudyUuid();
+            String userId = receiver.getUserId();
+
+            self.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+            notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
         };
     }
 
@@ -1907,10 +1951,10 @@ public class StudyService {
             Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                SAReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            SAReceiver.class);
 
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
 
@@ -1929,10 +1973,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                SAReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            SAReceiver.class);
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -1953,10 +1997,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                SAReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            SAReceiver.class);
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
