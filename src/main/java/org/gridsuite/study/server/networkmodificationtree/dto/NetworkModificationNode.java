@@ -44,6 +44,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID securityAnalysisResultUuid;
 
+    UUID sensitivityAnalysisResultUuid;
+
     BuildStatus buildStatus;
 
     @Override

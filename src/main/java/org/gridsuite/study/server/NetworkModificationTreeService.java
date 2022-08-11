@@ -134,6 +134,11 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
             }
 
+            UUID sensitivityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSensitivityAnalysisResultUuid(id);
+            if (sensitivityAnalysisResultUuid != null) {
+                deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
+            }
+
             if (!deleteChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
@@ -216,6 +221,7 @@ public class NetworkModificationTreeService {
                 model.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
                 model.setLoadFlowResult(null);
                 model.setSecurityAnalysisResultUuid(null);
+                model.setSensitivityAnalysisResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
@@ -355,6 +361,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid));
+    }
+
+    @Transactional
     public void updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> updateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
@@ -363,6 +374,11 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UUID> getSensitivityAnalysisResultUuid(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSensitivityAnalysisResultUuid(nodeUuid));
     }
 
     @Transactional(readOnly = true)
@@ -388,6 +404,32 @@ public class NetworkModificationTreeService {
     public List<UUID> getSecurityAnalysisResultUuidsFromNode(UUID nodeUuid) {
         List<UUID> uuids = new ArrayList<>();
         getSecurityAnalysisResultUuids(nodeUuid, uuids);
+        return uuids;
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getStudySensitivityAnalysisResultUuids(UUID studyUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            UUID uuid = repositories.get(n.getType()).getSensitivityAnalysisResultUuid(n.getIdNode());
+            if (uuid != null) {
+                uuids.add(uuid);
+            }
+        });
+        return uuids;
+    }
+
+    private void getSensitivityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
+        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getSensitivityAnalysisResultUuid(nodeUuid))).ifPresent(uuids::add);
+        nodesRepository.findAllByParentNodeIdNode(nodeUuid)
+            .forEach(child -> getSensitivityAnalysisResultUuids(child.getIdNode(), uuids));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getSensitivityAnalysisResultUuidsFromNode(UUID nodeUuid) {
+        List<UUID> uuids = new ArrayList<>();
+        getSensitivityAnalysisResultUuids(nodeUuid, uuids);
         return uuids;
     }
 

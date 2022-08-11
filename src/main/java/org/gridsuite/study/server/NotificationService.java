@@ -45,6 +45,9 @@ public class NotificationService {
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT = "sensitivityAnalysisResult";
+    static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS = "sensitivityAnalysis_status";
+    static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED = "sensitivityAnalysis_failed";
     static final String UPDATE_TYPE_STUDIES = "studies";
     static final String UPDATE_TYPE_STUDY = "study";
     static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";

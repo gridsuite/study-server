@@ -29,6 +29,8 @@ backing-services:
     base-uri: http://localhost:5023
   report-server:
     base-uri: http://localhost:5028
+  sensitivity-analysis-server:
+    base-uri: http://localhost:5030
 
 network-store-server:
   base-uri: http://localhost:8080/

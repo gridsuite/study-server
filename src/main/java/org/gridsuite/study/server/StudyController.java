@@ -1240,4 +1240,56 @@ public class StudyController {
         studyService.notify(notificationType, studyUuid);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
+    @Operation(summary = "run sensitivity analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started")})
+    public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                    @Parameter(description = "Variables filters list uuids") @RequestParam(name = "variablesFiltersListUuid", required = false) List<UUID> variablesFiltersListUuids,
+                                                    @Parameter(description = "Contingency list uuids") @RequestParam(name = "contingencyListUuid", required = false) List<UUID> contingencyListUuids,
+                                                    @Parameter(description = "Quad filters list uuids") @RequestParam(name = "quadFiltersListUuid", required = false) List<UUID> quadFiltersListUuids,
+                                                    @RequestBody(required = false) String parameters) {
+        List<UUID> nonNullVariablesFiltersListUuids = variablesFiltersListUuids != null ? variablesFiltersListUuids : Collections.emptyList();
+        List<UUID> nonNullcontingencyListUuids = contingencyListUuids != null ? contingencyListUuids : Collections.emptyList();
+        List<UUID> nonNullQuadFiltersListUuids = quadFiltersListUuids != null ? quadFiltersListUuids : Collections.emptyList();
+
+        String nonNullParameters = Objects.toString(parameters, "");
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nonNullVariablesFiltersListUuids, nonNullcontingencyListUuids, nonNullQuadFiltersListUuids, nonNullParameters, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
+    @Operation(summary = "Get a sensitivity analysis result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis result"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
+    public ResponseEntity<String> getSensitivityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = studyService.getSensitivityAnalysisResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status")
+    @Operation(summary = "Get the sensitivity analysis status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis status"),
+        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The sensitivity analysis status has not been found")})
+    public ResponseEntity<String> getsensitivityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = studyService.getSensitivityAnalysisStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop")
+    @Operation(summary = "stop sensitivity analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has been stopped")})
+    public ResponseEntity<Void> stopsensitivityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.stopSensitivityAnalysis(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
 }
