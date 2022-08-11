@@ -1745,14 +1745,6 @@ public class StudyService {
         };
     }
 
-//    @Bean
-//    public Consumer<Message<String>> consumeCaseImportDone() {
-//        return message -> {
-//
-//            studyCreationRequestRepository.findById()
-//        };
-//    }
-
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
             String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters,
             UUID importReportUuid) {
