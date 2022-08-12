@@ -420,19 +420,6 @@ public class NetworkModificationTreeService {
         return uuids;
     }
 
-    private void getSensitivityAnalysisResultUuids(UUID nodeUuid, List<UUID> uuids) {
-        nodesRepository.findById(nodeUuid).flatMap(n -> Optional.ofNullable(repositories.get(n.getType()).getSensitivityAnalysisResultUuid(nodeUuid))).ifPresent(uuids::add);
-        nodesRepository.findAllByParentNodeIdNode(nodeUuid)
-            .forEach(child -> getSensitivityAnalysisResultUuids(child.getIdNode(), uuids));
-    }
-
-    @Transactional(readOnly = true)
-    public List<UUID> getSensitivityAnalysisResultUuidsFromNode(UUID nodeUuid) {
-        List<UUID> uuids = new ArrayList<>();
-        getSensitivityAnalysisResultUuids(nodeUuid, uuids);
-        return uuids;
-    }
-
     @Transactional(readOnly = true)
     public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
