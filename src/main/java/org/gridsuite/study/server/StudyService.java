@@ -263,16 +263,16 @@ public class StudyService {
                 .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos));
+        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos, importParameters));
         return basicStudyInfos;
     }
 
-    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos) {
+    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos, Map<String, Object> importParameters) {
         try {
             UUID importReportUuid = UUID.randomUUID();
-            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         }
@@ -316,7 +316,7 @@ public class StudyService {
             UUID importReportUuid = UUID.randomUUID();
             UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
-                persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+                persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -698,7 +698,7 @@ public class StudyService {
         return result;
     }
 
-    private void persistentStoreAsync(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
+    private void persistentStoreAsync(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(
@@ -717,8 +717,12 @@ public class StudyService {
                 .buildAndExpand()
                 .toUriString();
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
+
         try {
-            restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null,
+            restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
                     Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
