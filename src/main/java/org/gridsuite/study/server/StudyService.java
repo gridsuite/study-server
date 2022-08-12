@@ -30,6 +30,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1996,6 +1997,16 @@ public class StudyService {
 
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         networkModificationService.stopBuild(studyUuid, nodeUuid);
+    }
+
+    public UUID duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+        checkStudyContainsNode(studyUuid, nodeToCopyUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+
+        Pair<UUID, UUID> nodesUuid = networkModificationTreeService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+        updateStatuses(studyUuid, nodesUuid.getRight());
+        networkModificationTreeService.emitNodeInserted(studyUuid, nodesUuid.getLeft(), nodesUuid.getRight(), insertMode);
+        return nodesUuid.getRight();
     }
 
     @Bean
