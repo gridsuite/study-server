@@ -261,19 +261,19 @@ public class StudyService {
                 .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos));
+        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos, importParameters));
         return basicStudyInfos;
     }
 
-    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos) {
+    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos, Map<String, Object> importParameters) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
             String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
         } catch (Exception e) {
@@ -326,7 +326,7 @@ public class StudyService {
             UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
             if (caseUuid != null) {
                 String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid);
+                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                 insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
             }
@@ -713,7 +713,7 @@ public class StudyService {
         return result;
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid) {
+    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, caseUuid)
             .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
@@ -721,8 +721,12 @@ public class StudyService {
             .buildAndExpand()
             .toUriString();
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
+
         try {
-            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null,
+            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
                     NetworkInfos.class);
             NetworkInfos networkInfos = networkInfosResponse.getBody();
             if (networkInfos == null) {

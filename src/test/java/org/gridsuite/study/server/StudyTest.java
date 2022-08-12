@@ -1135,6 +1135,18 @@ public class StudyTest {
     }
 
     @Test
+    public void testCreateStudyWithImportParameters() throws Exception {
+        HashMap<String, Object> importParameters = new HashMap<String, Object>();
+        ArrayList<String> randomListParam = new ArrayList<String>();
+        randomListParam.add("paramValue1");
+        randomListParam.add("paramValue2");
+        importParameters.put("randomListParam", randomListParam);
+        importParameters.put("randomParam2", "randomParamValue");
+
+        createStudyWithImportParameters("userId", CASE_UUID, importParameters);
+    }
+
+    @Test
     public void testMetadata() throws Exception {
         UUID studyUuid = createStudy("userId", CASE_UUID);
         UUID oldStudyUuid = studyUuid;
@@ -2146,6 +2158,58 @@ public class StudyTest {
         assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
+        return studyUuid;
+    }
+
+    private UUID createStudyWithImportParameters(String userId, UUID caseUuid, HashMap<String, Object> importParameters, String... errorMessage) throws Exception {
+        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid).header("userId", userId).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(importParameters)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = result.getResponse().getContentAsString();
+
+        BasicStudyInfos infos = mapper.readValue(resultAsString, BasicStudyInfos.class);
+
+        UUID studyUuid = infos.getId();
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT);
+
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        output.receive(TIMEOUT);  // message for first modification node creation
+
+        // assert that the broker message has been sent a study creation message for
+        // creation
+        message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
+
+        // assert that the broker message has been sent a study creation request message
+        // for deletion
+        message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        // assert that all http requests have been sent to remote services
+        Set<RequestWithBody> requests = getRequestsWithBodyDone(3);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/format", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+
+        assertEquals(mapper.writeValueAsString(importParameters),
+                requests.stream().filter(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*"))
+                    .findFirst().orElseThrow().getBody());
         return studyUuid;
     }
 
