@@ -31,6 +31,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
@@ -800,6 +801,16 @@ public class NetworkModificationTreeTest {
         RootNode root = createRoot();
         UUID studyId = root.getStudyId();
 
+        // d1
+        // |
+        // B1
+        // |
+        // d2 -
+        // |   |
+        // d3  d4
+        // |   |
+        // B2  B3
+
         NetworkModificationNode defNode1 = makeNetworkModificationNode(root, studyId, "unused variant 1");
         assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode buildNode1 = makeNetworkModificationNode(defNode1, studyId, "built variant 1");
@@ -813,6 +824,8 @@ public class NetworkModificationTreeTest {
         NetworkModificationNode buildNode2 = makeNetworkModificationNode(defNode3, studyId, "built variant 2");
         assertNotNull(output.receive(TIMEOUT));
         NetworkModificationNode buildNode3 = makeNetworkModificationNode(defNode4, studyId, "built variant 3");
+        assertNotNull(output.receive(TIMEOUT));
+        NetworkModificationNode defNode5 = makeNetworkModificationNode(buildNode3, studyId, "unused variant 5");
         assertNotNull(output.receive(TIMEOUT));
 
         BuildInfos buildInfo1 = networkModificationTreeService.prepareBuild(buildNode1.getId());
@@ -839,6 +852,9 @@ public class NetworkModificationTreeTest {
 
         List<Pair<UUID, String>> pairs2 = networkModificationTreeService.getReportUuidsAndNames(buildNode2.getId(), false);
         assertEquals(6, pairs2.size());
+        assertEquals(root.getReportUuid(), pairs2.get(0).getLeft());
+        assertEquals(buildInfo1.getModificationReportUuids().get(0), pairs2.get(1).getLeft());
+        assertEquals(buildInfo1.getModificationReportUuids().get(1), pairs2.get(2).getLeft());
         assertEquals(buildInfo2.getModificationReportUuids().get(0), pairs2.get(3).getLeft());
         assertEquals(buildInfo2.getModificationReportUuids().get(1), pairs2.get(4).getLeft());
         assertEquals(buildInfo2.getModificationReportUuids().get(2), pairs2.get(5).getLeft());
@@ -857,6 +873,9 @@ public class NetworkModificationTreeTest {
 
         List<Pair<UUID, String>> pairs3 = networkModificationTreeService.getReportUuidsAndNames(buildNode3.getId(), false);
         assertEquals(6, pairs3.size());
+        assertEquals(root.getReportUuid(), pairs3.get(0).getLeft());
+        assertEquals(buildInfo1.getModificationReportUuids().get(0), pairs3.get(1).getLeft());
+        assertEquals(buildInfo1.getModificationReportUuids().get(1), pairs3.get(2).getLeft());
         assertEquals(buildInfo3.getModificationReportUuids().get(0), pairs3.get(3).getLeft());
         assertEquals(buildInfo3.getModificationReportUuids().get(1), pairs3.get(4).getLeft());
         assertEquals(buildInfo3.getModificationReportUuids().get(2), pairs3.get(5).getLeft());
@@ -865,17 +884,27 @@ public class NetworkModificationTreeTest {
         networkModificationTreeService.updateNode(studyId, buildNode3);
         assertNotNull(output.receive(TIMEOUT));
 
-        InvalidateNodeInfos invalidateNodeInfos3 = new InvalidateNodeInfos();
-        networkModificationTreeService.invalidateBuild(buildNode3.getId(), false, invalidateNodeInfos3);
-        List<UUID> reportUUids3 = invalidateNodeInfos3.getReportUuids();
-        assertEquals(3, reportUUids3.size());
-        assertNotNull(output.receive(TIMEOUT));
+        List<UUID> removedNodes = new ArrayList<>();
+        DeleteNodeInfos deleteInfos = new DeleteNodeInfos();
+        networkModificationTreeService.deleteNodes(buildNode3.getId(), true, false, removedNodes, deleteInfos);
+
+        assertEquals(Set.of(defNode5.getId(), buildNode3.getId()),
+            new HashSet<>(removedNodes));
+        assertEquals(Set.of(buildInfo3.getModificationReportUuids().get(0),
+                buildInfo3.getModificationReportUuids().get(1),
+                buildInfo3.getModificationReportUuids().get(2),
+                defNode5.getReportUuid()),
+            new HashSet<>(deleteInfos.getReportUuids()));
+
+        // deleteNodes does not emit, while doDeleteNode does, but we want to test removedNodes too
+        //assertNotNull(output.receive(TIMEOUT));
 
         InvalidateNodeInfos invalidateNodeInfos1 = new InvalidateNodeInfos();
         networkModificationTreeService.invalidateBuild(buildNode1.getId(), false, invalidateNodeInfos1);
         List<UUID> reportUuids1 = invalidateNodeInfos1.getReportUuids();
         assertEquals(5, reportUuids1.size());
         assertNotNull(output.receive(TIMEOUT));
+
     }
 
     private NetworkModificationNode makeNetworkModificationNode(AbstractNode parent, UUID studyId, String variantId) {

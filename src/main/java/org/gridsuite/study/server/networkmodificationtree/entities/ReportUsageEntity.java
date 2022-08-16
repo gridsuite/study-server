@@ -51,4 +51,12 @@ public class ReportUsageEntity {
     @JoinColumn(name = "definition_node_id", foreignKey = @ForeignKey(name = "def_node_fk_constraint"))
     private NodeEntity definitionNode;
 
+    public String toString() {
+        return "ReportUsageEntity{" +
+            "id=" + id +
+            ", reportId=" + reportId +
+            ", buildNode=" + buildNode.getIdNode() +
+            ", definitionNode=" + definitionNode.getIdNode() +
+            '}';
+    }
 }

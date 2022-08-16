@@ -20,8 +20,9 @@ import java.util.UUID;
 
 @NoArgsConstructor
 @Getter
-@Setter
+//@Setter
 public class DeleteNodeInfos {
+    @Setter
     private UUID networkUuid;
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();

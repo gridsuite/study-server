@@ -20,8 +20,10 @@ import java.util.UUID;
 
 @NoArgsConstructor
 @Getter
-@Setter
+//@Setter
 public class InvalidateNodeInfos {
+
+    @Setter
     private UUID networkUuid;
 
     private List<UUID> reportUuids = new ArrayList<>();
@@ -34,6 +36,10 @@ public class InvalidateNodeInfos {
 
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
+    }
+
+    public void addReportUsageUuid(UUID reportUuid) {
+        reportUsageUuids.add(reportUuid);
     }
 
     public void addVariantId(String variantId) {

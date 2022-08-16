@@ -36,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -127,8 +128,9 @@ public class NetworkModificationTreeService {
         return node.orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getStudy().getId();
     }
 
+    // public for @Transactional to be accepted
     @Transactional
-    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes, DeleteNodeInfos deleteNodeInfos) {
+    public void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, Collection<UUID> removedNodes, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
@@ -136,22 +138,26 @@ public class NetworkModificationTreeService {
                 throw new StudyException(CANT_DELETE_ROOT_NODE);
             }
 
-            UUID modificationGroupUuid = repositories.get(nodeToDelete.getType()).getModificationGroupUuid(id);
+            var repositoryProxy = repositories.get(nodeToDelete.getType());
+            UUID nodeUuid = nodeToDelete.getIdNode();
+            NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
+
+            UUID modificationGroupUuid = modificationNode.getModificationGroupUuid();
             deleteNodeInfos.addModificationGroupUuid(modificationGroupUuid);
 
-            UUID reportUuid = repositories.get(nodeToDelete.getType()).getReportUuid(id);
-            if (reportUuid != null) {
-                deleteNodeInfos.addReportUuid(reportUuid);
-            }
-            List<ReportUsageEntity> reportUsageEntities = reportsUsagesRepository.getReportUsageEntities(nodeToDelete.getIdNode());
-            reportUsageEntities.stream().map(ReportUsageEntity::getReportId).forEach(deleteNodeInfos::addReportUuid);
+            Collection<UUID> reportIds = new HashSet<>();
+            Collection<UUID> reportUsagesUuids = new HashSet<>();
+            fillReportsAndUsages(modificationNode, reportIds, reportUsagesUuids);
+            reportsUsagesRepository.deleteAllById(reportUsagesUuids);
 
-            String variantId = repositories.get(nodeToDelete.getType()).getVariantId(id);
+            reportIds.forEach(deleteNodeInfos::addReportUuid);
+
+            String variantId = modificationNode.getVariantId();
             if (!StringUtils.isBlank(variantId)) {
                 deleteNodeInfos.addVariantId(variantId);
             }
 
-            UUID securityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSecurityAnalysisResultUuid(id);
+            UUID securityAnalysisResultUuid = modificationNode.getSecurityAnalysisResultUuid();
             if (securityAnalysisResultUuid != null) {
                 deleteNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
             }
@@ -504,7 +510,7 @@ public class NetworkModificationTreeService {
                 fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
-                    reportsUsagesRepository.deleteAllByIdInBatch(invalidateNodeInfos.getReportUsageUuids());
+                    reportsUsagesRepository.deleteAllById(invalidateNodeInfos.getReportUsageUuids());
                 }
                 repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
             }
@@ -512,6 +518,30 @@ public class NetworkModificationTreeService {
         });
 
         notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+    }
+
+    private void fillReportsAndUsages(NetworkModificationNode modificationNode,
+        Collection<UUID> reportIds, Collection<UUID> reportUsagesUuids) {
+
+        UUID nodeId = modificationNode.getId();
+        List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(nodeId);
+        Set<UUID> ownUsedReportIds = new HashSet<>();
+        Set<UUID> otherUsedReportIds = new HashSet<>();
+        Set<UUID> ownUsagesUuids = new HashSet<>();
+        usages.forEach(u -> {
+            if (u.getBuildNode().getIdNode().equals(nodeId)) {
+                ownUsedReportIds.add(u.getReportId());
+                ownUsagesUuids.add(u.getId());
+            } else {
+                otherUsedReportIds.add(u.getReportId());
+            }
+        });
+
+        ownUsedReportIds.removeAll(otherUsedReportIds);
+        reportIds.addAll(ownUsedReportIds);
+        reportIds.add(modificationNode.getReportUuid());
+
+        reportUsagesUuids.addAll(ownUsagesUuids);
     }
 
     private void fillInvalidateNodeInfos(NodeEntity node, InvalidateNodeInfos invalidateNodeInfos,
@@ -522,29 +552,13 @@ public class NetworkModificationTreeService {
         NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
 
         if (!invalidateOnlyChildrenBuildStatus) {
-            List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(node.getIdNode());
-            Set<UUID> ownUsedReportIds = new HashSet<>();
-            Set<UUID> otherUsedReportIds = new HashSet<>();
-            usages.forEach(u -> {
-                if (u.getBuildNode().getIdNode().equals(node.getIdNode())) {
-                    ownUsedReportIds.add(u.getReportId());
-                } else {
-                    otherUsedReportIds.add(u.getReportId());
-                }
-            });
-            List<UUID> ownUsagesUuids = usages.stream()
-                .filter(u -> u.getBuildNode().getIdNode().equals(node.getIdNode()))
-                .map(ReportUsageEntity::getId)
-                .collect(Collectors.toList());
-            invalidateNodeInfos.setReportUsageUuids(ownUsagesUuids);
+            Collection<UUID> reportIds = new HashSet<>();
+            List<UUID> reportUsagesUuids = new ArrayList<>();
+            fillReportsAndUsages(modificationNode, reportIds, reportUsagesUuids);
+            reportUsagesUuids.forEach(invalidateNodeInfos::addReportUsageUuid);
+            reportIds.forEach(invalidateNodeInfos::addReportUuid);
 
-            UUID reportUuid = modificationNode.getReportUuid();
-            String variantId = modificationNode.getVariantId();
-            ownUsedReportIds.add(reportUuid);
-
-            invalidateNodeInfos.addVariantId(variantId);
-            ownUsedReportIds.removeAll(otherUsedReportIds);
-            ownUsedReportIds.forEach(invalidateNodeInfos::addReportUuid);
+            invalidateNodeInfos.addVariantId(modificationNode.getVariantId());
         }
 
         UUID securityAnalysisResultUuid = repositoryProxy.getSecurityAnalysisResultUuid(nodeUuid);
