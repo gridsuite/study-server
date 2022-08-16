@@ -260,13 +260,24 @@ public class StudyService {
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
-        persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
+        try {
+            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
+        } catch (Exception e) {
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw e;
+        }
+
         return basicStudyInfos;
     }
 
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        createStudyFromFile(caseFile, userId, basicStudyInfos);
+        try {
+            createStudyFromFile(caseFile, userId, basicStudyInfos);
+        } catch (Exception e) {
+            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw e;
+        }
         return basicStudyInfos;
     }
 
@@ -516,38 +527,24 @@ public class StudyService {
         return newStudy;
     }
 
-    public String getCaseFormat(UUID caseUuid, UUID studyUuid, String userId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
-            .buildAndExpand(caseUuid)
-            .toUriString();
-
-        try {
-            return restTemplate.getForObject(caseServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e, "case-server");
-        }
-    }
-
     private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
         HttpStatus httpStatusCode = httpException.getStatusCode();
         String errorMessage = httpException.getResponseBodyAsString();
         String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
                 : errorMessage;
 
+        LOGGER.error(errorToParse, httpException);
+
         try {
             JsonNode node = new ObjectMapper().readTree(errorToParse).path("message");
             if (!node.isMissingNode()) {
-                notificationService.emitStudyCreationError(studyUuid, userId, node.asText());
-            } else {
-                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
+                return new StudyException(STUDY_CREATION_FAILED, node.asText());
             }
         } catch (JsonProcessingException e) {
             if (!errorToParse.isEmpty()) {
-                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
+                return new StudyException(STUDY_CREATION_FAILED, errorToParse);
             }
         }
-
-        LOGGER.error(errorToParse, httpException);
 
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
@@ -573,7 +570,6 @@ public class StudyService {
         } catch (StudyException e) {
             throw e;
         } catch (Exception e) {
-            notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
             throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
 
@@ -679,10 +675,7 @@ public class StudyService {
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
         } catch (Exception e) {
-            if (!(e instanceof StudyException)) {
-                notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
-            }
-            throw e;
+            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
 
     }
