@@ -20,10 +20,12 @@ import java.util.UUID;
 
 @NoArgsConstructor
 @Getter
-//@Setter
 public class DeleteNodeInfos {
+
     @Setter
     private UUID networkUuid;
+
+    private List<UUID> impactedNodeUuids = new ArrayList<>();
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
@@ -32,6 +34,10 @@ public class DeleteNodeInfos {
     private List<String> variantIds = new ArrayList<>();
 
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
+
+    public void addImpactedNodeUuid(UUID nodeUuid) {
+        impactedNodeUuids.add(nodeUuid);
+    }
 
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);

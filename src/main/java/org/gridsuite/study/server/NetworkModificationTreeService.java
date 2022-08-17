@@ -140,6 +140,7 @@ public class NetworkModificationTreeService {
 
             var repositoryProxy = repositories.get(nodeToDelete.getType());
             UUID nodeUuid = nodeToDelete.getIdNode();
+            deleteNodeInfos.addImpactedNodeUuid(nodeUuid);
             NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
 
             UUID modificationGroupUuid = modificationNode.getModificationGroupUuid();
@@ -147,7 +148,7 @@ public class NetworkModificationTreeService {
 
             Collection<UUID> reportIds = new HashSet<>();
             Collection<UUID> reportUsagesUuids = new HashSet<>();
-            fillReportsAndUsages(modificationNode, reportIds, reportUsagesUuids);
+            fillReportsAndUsages(modificationNode, reportIds, reportUsagesUuids, deleteNodeInfos.getImpactedNodeUuids());
             reportsUsagesRepository.deleteAllById(reportUsagesUuids);
 
             reportIds.forEach(deleteNodeInfos::addReportUuid);
@@ -510,18 +511,18 @@ public class NetworkModificationTreeService {
                 fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
                 if (!invalidateOnlyChildrenBuildStatus) {
                     repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
-                    reportsUsagesRepository.deleteAllById(invalidateNodeInfos.getReportUsageUuids());
                 }
                 repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
             }
             invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
+            reportsUsagesRepository.deleteAllById(invalidateNodeInfos.getReportUsageUuids());
         });
 
         notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     private void fillReportsAndUsages(NetworkModificationNode modificationNode,
-        Collection<UUID> reportIds, Collection<UUID> reportUsagesUuids) {
+        Collection<UUID> reportIds, Collection<UUID> reportUsagesUuids, Collection<UUID> impactedNodeUuids) {
 
         UUID nodeId = modificationNode.getId();
         List<ReportUsageEntity> usages = reportsUsagesRepository.getReportUsageEntities(nodeId);
@@ -529,10 +530,11 @@ public class NetworkModificationTreeService {
         Set<UUID> otherUsedReportIds = new HashSet<>();
         Set<UUID> ownUsagesUuids = new HashSet<>();
         usages.forEach(u -> {
-            if (u.getBuildNode().getIdNode().equals(nodeId)) {
+            UUID buildNodeId = u.getBuildNode().getIdNode();
+            if (buildNodeId.equals(nodeId)) {
                 ownUsedReportIds.add(u.getReportId());
                 ownUsagesUuids.add(u.getId());
-            } else {
+            } else if (!impactedNodeUuids.contains(buildNodeId)) {
                 otherUsedReportIds.add(u.getReportId());
             }
         });
@@ -549,12 +551,13 @@ public class NetworkModificationTreeService {
 
         var repositoryProxy = repositories.get(node.getType());
         UUID nodeUuid = node.getIdNode();
+        invalidateNodeInfos.addImpactedNodeUuid(nodeUuid);
         NetworkModificationNode modificationNode = (NetworkModificationNode) repositoryProxy.getNode(nodeUuid);
 
         if (!invalidateOnlyChildrenBuildStatus) {
             Collection<UUID> reportIds = new HashSet<>();
             List<UUID> reportUsagesUuids = new ArrayList<>();
-            fillReportsAndUsages(modificationNode, reportIds, reportUsagesUuids);
+            fillReportsAndUsages(modificationNode, reportIds, reportUsagesUuids, invalidateNodeInfos.getImpactedNodeUuids());
             reportUsagesUuids.forEach(invalidateNodeInfos::addReportUsageUuid);
             reportIds.forEach(invalidateNodeInfos::addReportUuid);
 
