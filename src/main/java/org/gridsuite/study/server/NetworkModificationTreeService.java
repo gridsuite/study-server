@@ -498,29 +498,6 @@ public class NetworkModificationTreeService {
         return buildInfos;
     }
 
-    @Transactional
-    public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
-        final List<UUID> changedNodes = new ArrayList<>();
-        changedNodes.add(nodeUuid);
-        UUID studyId = getStudyUuidForNodeId(nodeUuid);
-
-        nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            // No need to invalidate a node with a status different of "BUILT"
-            BuildStatus wasBuildStatus = repositories.get(n.getType()).getBuildStatus(n.getIdNode());
-            if (wasBuildStatus == BuildStatus.BUILT) {
-                fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
-                if (!invalidateOnlyChildrenBuildStatus) {
-                    repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
-                }
-                repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
-            }
-            invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
-            reportsUsagesRepository.deleteAllById(invalidateNodeInfos.getReportUsageUuids());
-        });
-
-        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
-    }
-
     private void fillReportsAndUsages(NetworkModificationNode modificationNode,
         Collection<UUID> reportIds, Collection<UUID> reportUsagesUuids, Collection<UUID> impactedNodeUuids) {
 
@@ -568,6 +545,29 @@ public class NetworkModificationTreeService {
         if (securityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
         }
+    }
+
+    @Transactional
+    public void invalidateBuild(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+        final List<UUID> changedNodes = new ArrayList<>();
+        changedNodes.add(nodeUuid);
+        UUID studyId = getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(n -> {
+            // No need to invalidate a node with a status different of "BUILT"
+            BuildStatus wasBuildStatus = repositories.get(n.getType()).getBuildStatus(n.getIdNode());
+            if (wasBuildStatus == BuildStatus.BUILT) {
+                fillInvalidateNodeInfos(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
+                if (!invalidateOnlyChildrenBuildStatus) {
+                    repositories.get(n.getType()).invalidateBuildStatus(nodeUuid, changedNodes);
+                }
+                repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, null, LoadFlowStatus.NOT_DONE);
+            }
+            invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
+            reportsUsagesRepository.deleteAllById(invalidateNodeInfos.getReportUsageUuids());
+        });
+
+        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes,
