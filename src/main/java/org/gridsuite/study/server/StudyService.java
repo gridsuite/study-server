@@ -263,7 +263,7 @@ public class StudyService {
         try {
             persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
         }
 
@@ -275,7 +275,7 @@ public class StudyService {
         try {
             createStudyFromFile(caseFile, userId, basicStudyInfos);
         } catch (Exception e) {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
         }
         return basicStudyInfos;
@@ -527,7 +527,7 @@ public class StudyService {
         return newStudy;
     }
 
-    private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
+    private StudyException handleStudyCreationError(HttpStatusCodeException httpException, String serverName) {
         HttpStatus httpStatusCode = httpException.getStatusCode();
         String errorMessage = httpException.getResponseBodyAsString();
         String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
@@ -556,7 +556,7 @@ public class StudyService {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
             multipartBodyBuilder
-                .part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
+                .part("file", multipartFile);
 
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
@@ -565,7 +565,7 @@ public class StudyService {
                 caseUuid = restTemplate.postForObject(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private",
                         request, UUID.class);
             } catch (HttpStatusCodeException e) {
-                throw handleStudyCreationError(studyUuid, userId, e, "case-server");
+                throw handleStudyCreationError(e, "case-server");
             }
         } catch (StudyException e) {
             throw e;
@@ -673,7 +673,7 @@ public class StudyService {
             restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
                     Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
+            throw handleStudyCreationError(e, "network-conversion-server");
         } catch (Exception e) {
             throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
