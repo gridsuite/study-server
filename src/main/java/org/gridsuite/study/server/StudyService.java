@@ -283,7 +283,7 @@ public class StudyService {
 
     private void createStudyFromFile(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
         UUID importReportUuid = UUID.randomUUID();
-        UUID caseUuid = importCase(caseFile, basicStudyInfos.getId(), userId);
+        UUID caseUuid = importCase(caseFile, userId);
         if (caseUuid != null) {
             persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
         }
@@ -549,14 +549,14 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(MultipartFile multipartFile, UUID studyUuid, String userId) {
+    UUID importCase(MultipartFile multipartFile, String userId) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
             multipartBodyBuilder
-                .part("file", multipartFile);
+                .part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
 
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
