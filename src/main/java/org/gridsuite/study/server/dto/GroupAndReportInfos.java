@@ -7,15 +7,19 @@
 
 package org.gridsuite.study.server.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
 import java.util.UUID;
 
-@Getter
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+/**
+ * @author Laurent Garnier <laurent.garnier@rte-france.com>
+ */
 @AllArgsConstructor
-@NoArgsConstructor
-public class Receiver {
-    private UUID nodeUuid;
+@Getter
+@Schema(description = "report usage infos")
+public class GroupAndReportInfos {
+    private UUID groupUuid;
+    private UUID reportUuid;
 }

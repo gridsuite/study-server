@@ -34,3 +34,6 @@ dbName: study
 # default values for loadflow providers "Hades2" or "OpenLoadFlow"
 loadflow:
   default-provider: OpenLoadFlow
+
+server:
+  max-http-header-size: 64000

@@ -24,8 +24,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
-import org.springframework.integration.support.MessageBuilder;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -63,12 +61,6 @@ public class NetworkModificationService {
 
     private final ObjectMapper objectMapper;
 
-    private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationService.class.getName() + ".output-broker-messages";
-
-    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
-
-    private StreamBridge modificationUpdatePublisher;
-
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkService networkStoreService,
@@ -76,12 +68,6 @@ public class NetworkModificationService {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.objectMapper = objectMapper;
-        this.modificationUpdatePublisher = modificationUpdatePublisher;
-    }
-
-    private void sendUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
-        modificationUpdatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
     void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -96,6 +82,21 @@ public class NetworkModificationService {
         return UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER)
                 .buildAndExpand(networkUuid)
                 .toUriString();
+    }
+
+    // Return json string because modification dtos are not available here
+    public String getModifications(UUID groupUUid) {
+        Objects.requireNonNull(groupUUid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + MODIFICATIONS_PATH)
+            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+            .buildAndExpand(groupUUid)
+            .toUriString();
+
+        try {
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, GET_MODIFICATIONS_FAILED);
+        }
     }
 
     public void deleteModifications(UUID groupUUid) {
@@ -467,16 +468,6 @@ public class NetworkModificationService {
         }
 
         return result;
-    }
-
-    public void emitModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType) {
-
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_PARENT_NODE, nodeUuid)
-                .setHeader(HEADER_UPDATE_TYPE, modificationType)
-                .build()
-        );
     }
 
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
