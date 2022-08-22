@@ -1455,8 +1455,7 @@ public class StudyService {
         String variantId = getVariantId(nodeUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                        + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
                 .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
                 .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
@@ -1468,11 +1467,10 @@ public class StudyService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
         String result;
         try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+            result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build(), String.class, networkUuid, substationId).getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
