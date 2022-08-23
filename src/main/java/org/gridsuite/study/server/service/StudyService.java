@@ -102,7 +102,6 @@ public class StudyService {
 
     @Autowired
     private RestTemplate restTemplate;
-    private String networkConversionServerBaseUri;
     private String geoDataServerBaseUri;
     private String networkMapServerBaseUri;
     private String securityAnalysisServerBaseUri;
@@ -119,6 +118,7 @@ public class StudyService {
     private final LoadflowService loadflowService;
     private final CaseService caseService;
     private final SingleLineDiagramService singleLineDiagramService;
+    private final NetworkConversionService networkConversionService;
 
     private final ObjectMapper objectMapper;
 
@@ -130,7 +130,6 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
         @Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri,
         @Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri,
         @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
@@ -148,8 +147,8 @@ public class StudyService {
         StudyServerExecutionService studyServerExecutionService,
         LoadflowService loadflowService,
         CaseService caseService,
-        SingleLineDiagramService singleLineDiagramService) {
-        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
+        SingleLineDiagramService singleLineDiagramService,
+        NetworkConversionService networkConversionService) {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
         this.networkMapServerBaseUri = networkMapServerBaseUri;
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
@@ -168,6 +167,7 @@ public class StudyService {
         this.loadflowService = loadflowService;
         this.caseService = caseService;
         this.singleLineDiagramService = singleLineDiagramService;
+        this.networkConversionService = networkConversionService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -233,7 +233,7 @@ public class StudyService {
         try {
             UUID importReportUuid = UUID.randomUUID();
             String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
+            NetworkInfos networkInfos = persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
             insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
         } catch (Exception e) {
@@ -287,7 +287,7 @@ public class StudyService {
 
             if (caseUuid != null) {
                 String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
+                NetworkInfos networkInfos = persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                 insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
             }
@@ -596,22 +596,9 @@ public class StudyService {
         return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-            .queryParam(CASE_UUID, caseUuid)
-            .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
-            .queryParam(REPORT_UUID, importReportUuid)
-            .buildAndExpand()
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
-
+    private NetworkInfos persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
         try {
-            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
-                    NetworkInfos.class);
-            NetworkInfos networkInfos = networkInfosResponse.getBody();
+            NetworkInfos networkInfos = networkConversionService.persistentStore(caseUuid, importReportUuid, importParameters);
             if (networkInfos == null) {
                 throw handleStudyCreationError(studyUuid, userId, new HttpClientErrorException(HttpStatus.BAD_REQUEST), "network-conversion-server");
             }
@@ -624,7 +611,6 @@ public class StudyService {
             }
             throw e;
         }
-
     }
 
     public String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
@@ -910,38 +896,11 @@ public class StudyService {
         loadflowService.runLoadFlow(studyUuid, nodeUuid, loadflowParameters, provider);
     }
 
-    public String getExportFormats() {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
-            .toUriString();
-
-        ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
-        };
-
-        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
-    }
-
     public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format, String paramatersJson) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
-            + "/networks/{networkUuid}/export/{format}");
-        if (!variantId.isEmpty()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
-        }
-        String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
-
-        ResponseEntity<byte[]> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST,
-            httpEntity, byte[].class);
-
-        byte[] bytes = responseEntity.getBody();
-        String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
-        return new ExportNetworkInfos(filename, bytes);
+        return networkConversionService.exportNetwork(networkUuid, variantId, format, paramatersJson);
     }
 
     public void changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull String status,
@@ -1309,10 +1268,6 @@ public class StudyService {
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
         invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
-    }
-
-    void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
-        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
     }
 
     void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
@@ -1708,13 +1663,8 @@ public class StudyService {
             // reindex study in elasticsearch
             studyInfosService.recreateStudyInfos(studyInfos);
 
-            // reindex study network equipments in elasticsearch
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
-                .buildAndExpand(networkUuid)
-                .toUriString();
-
             try {
-                restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
+                networkConversionService.reindexStudyNetworkEquipments(networkUuid);
             } catch (HttpStatusCodeException e) {
                 LOGGER.error(e.toString(), e);
                 throw e;

@@ -21,6 +21,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
@@ -49,15 +50,18 @@ public class StudyController {
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final SingleLineDiagramService singleLineDiagramService;
+    private final NetworkConversionService networkConversionService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
             NetworkModificationTreeService networkModificationTreeService,
-            SingleLineDiagramService singleLineDiagramService) {
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.singleLineDiagramService = singleLineDiagramService;
+        this.networkConversionService = networkConversionService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
@@ -592,7 +596,7 @@ public class StudyController {
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
     public ResponseEntity<String> getExportFormats() {
-        String formatsJson = studyService.getExportFormats();
+        String formatsJson = networkConversionService.getExportFormats();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
