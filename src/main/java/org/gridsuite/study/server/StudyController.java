@@ -22,6 +22,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkMapService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
@@ -51,17 +52,20 @@ public class StudyController {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
+    private final NetworkMapService networkMapService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
             NetworkModificationTreeService networkModificationTreeService,
             SingleLineDiagramService singleLineDiagramService,
-            NetworkConversionService networkConversionService) {
+            NetworkConversionService networkConversionService,
+            NetworkMapService networkMapService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
+        this.networkMapService = networkMapService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
