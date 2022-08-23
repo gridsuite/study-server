@@ -140,14 +140,10 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder
-            .buildAndExpand(switchId)
-            .toUriString();
 
         try {
-            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, null,
-                    new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
-                    }).getBody();
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + uriComponentsBuilder.build().toUriString(), HttpMethod.PUT, null,
+                    new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }, switchId).getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(ELEMENT_NOT_FOUND);
@@ -190,16 +186,13 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder
-            .buildAndExpand(lineId)
-            .toUriString();
 
         HttpEntity<String> httpEntity = new HttpEntity<>(status);
 
         try {
-            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.PUT, httpEntity,
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + uriComponentsBuilder.build(), HttpMethod.PUT, httpEntity,
                     new ParameterizedTypeReference<List<ModificationInfos>>() {
-                    }).getBody();
+                    }, lineId).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleChangeError(e, LINE_MODIFICATION_FAILED);
         }
@@ -353,14 +346,11 @@ public class NetworkModificationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder
-            .buildAndExpand(equipmentType, equipmentId)
-            .toUriString();
 
         try {
-            result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.DELETE, null,
+            result = restTemplate.exchange(getNetworkModificationServerURI(true) + uriComponentsBuilder.build(), HttpMethod.DELETE, null,
                     new ParameterizedTypeReference<List<EquipmentDeletionInfos>>() {
-                    }).getBody();
+                    }, equipmentType, equipmentId).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleChangeError(e, DELETE_EQUIPMENT_FAILED);
         }
