@@ -102,7 +102,6 @@ public class StudyService {
 
     @Autowired
     private RestTemplate restTemplate;
-    private String geoDataServerBaseUri;
     private String networkMapServerBaseUri;
     private String securityAnalysisServerBaseUri;
     private String actionsServerBaseUri;
@@ -119,6 +118,7 @@ public class StudyService {
     private final CaseService caseService;
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
+    private final GeoDataService geoDataService;
 
     private final ObjectMapper objectMapper;
 
@@ -130,7 +130,6 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri,
         @Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri,
         @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
@@ -148,8 +147,8 @@ public class StudyService {
         LoadflowService loadflowService,
         CaseService caseService,
         SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService) {
-        this.geoDataServerBaseUri = geoDataServerBaseUri;
+        NetworkConversionService networkConversionService,
+        GeoDataService geoDataService) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
         this.actionsServerBaseUri = actionsServerBaseUri;
@@ -168,6 +167,7 @@ public class StudyService {
         this.caseService = caseService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
+        this.geoDataService = geoDataService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -614,38 +614,15 @@ public class StudyService {
     }
 
     public String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        String variantId = getVariantId(nodeUuid);
-
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
-            .queryParam(NETWORK_UUID, networkUuid);
-
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        var path = uriComponentsBuilder
-            .buildAndExpand()
-            .toUriString();
-
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
+        return geoDataService.getLinesGraphics(networkUuid, variantId);
     }
 
     public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
-                .queryParam(NETWORK_UUID, networkUuid);
-
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
+        return geoDataService.getSubstationsGraphics(networkUuid, variantId);
     }
 
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentPath) {
@@ -1270,11 +1247,7 @@ public class StudyService {
         invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
     }
 
-    void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
-        this.geoDataServerBaseUri = geoDataServerBaseUri;
-    }
-
-    void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
+    public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
 

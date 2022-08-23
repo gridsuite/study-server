@@ -71,7 +71,7 @@ public class NetworkModificationService {
         this.objectMapper = objectMapper;
     }
 
-    void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
+    public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri + DELIMITER;
     }
 
