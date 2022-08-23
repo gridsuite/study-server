@@ -22,7 +22,7 @@ public class NetworkVariantsListener implements NetworkListener {
 
     private final EquipmentInfosService equipmentInfosService;
 
-    protected NetworkVariantsListener(UUID networkUuid, EquipmentInfosService equipmentInfosService) {
+    public NetworkVariantsListener(UUID networkUuid, EquipmentInfosService equipmentInfosService) {
         this.networkUuid = networkUuid;
         this.equipmentInfosService = equipmentInfosService;
     }

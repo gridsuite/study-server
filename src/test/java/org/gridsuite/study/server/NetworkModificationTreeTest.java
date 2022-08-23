@@ -43,6 +43,11 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeI
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NotificationService;
+import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.StudyService;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
@@ -72,7 +77,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.NetworkModificationTreeService.*;
+import static org.gridsuite.study.server.service.NetworkModificationTreeService.*;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;

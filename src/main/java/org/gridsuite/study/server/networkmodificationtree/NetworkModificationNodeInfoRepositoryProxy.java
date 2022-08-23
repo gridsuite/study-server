@@ -9,7 +9,6 @@ package org.gridsuite.study.server.networkmodificationtree;
 
 import com.powsybl.loadflow.LoadFlowResult;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.StudyService;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
@@ -18,6 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.service.StudyService;
 
 import java.util.HashSet;
 import java.util.List;

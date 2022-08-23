@@ -21,6 +21,10 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.SingleLineDiagramService;
+import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
@@ -44,11 +48,16 @@ public class StudyController {
     private final StudyService studyService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final SingleLineDiagramService singleLineDiagramService;
 
-    public StudyController(StudyService studyService, NetworkService networkStoreService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService,
+            NetworkService networkStoreService,
+            NetworkModificationTreeService networkModificationTreeService,
+            SingleLineDiagramService singleLineDiagramService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
+        this.singleLineDiagramService = singleLineDiagramService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
@@ -779,7 +788,7 @@ public class StudyController {
     @Operation(summary = "Get a list of the available svg component libraries")
     @ApiResponse(responseCode = "200", description = "The list of the available svg component libraries")
     public ResponseEntity<List<String>> getAvailableSvgComponentLibraries() {
-        List<String> libraries = studyService.getAvailableSvgComponentLibraries();
+        List<String> libraries = singleLineDiagramService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
@@ -1232,8 +1241,8 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/notification")
     @Operation(summary = "Create study related notification")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The notification has been sent"),
-            @ApiResponse(responseCode = "400", description = "The notification type is unknown")
+        @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
     public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid,
                                              @RequestParam("type") String notificationType) {
