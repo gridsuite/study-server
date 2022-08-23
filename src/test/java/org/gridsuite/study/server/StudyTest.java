@@ -172,7 +172,8 @@ public class StudyTest {
     private static final String CASE_2_UUID_STRING = "656719f3-aaaa-48be-be46-ef7b93331e32";
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
     private static final String CASE_4_UUID_STRING = "196719f5-cccc-48be-be46-e92345951e32";
-    private static final String CASE_UUID_CAUSING_ERROR = "178719f5-cccc-48be-be46-e92345951e32";
+    private static final String CASE_UUID_CAUSING_IMPORT_ERROR = "178719f5-cccc-48be-be46-e92345951e32";
+    private static final String CASE_UUID_CAUSING_STUDY_CREATION_ERROR = "278719f5-cccc-48be-be46-e92345951e32";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
     private static final String NETWORK_UUID_4_STRING = "33333333-cccc-48be-be46-e92345951e32";
@@ -185,6 +186,8 @@ public class StudyTest {
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final UUID NETWORK_LOADFLOW_ERROR_UUID = UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING);
     private static final NetworkInfos NETWORK_LOADFLOW_ERROR_INFOS = new NetworkInfos(NETWORK_LOADFLOW_ERROR_UUID, "20140116_0830_2D4_UX1_pst");
+
+    private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -649,6 +652,11 @@ public class StudyTest {
                         }
                     }).start();
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId="
+                        + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportFailedMessage(path, STUDY_CREATION_ERROR_MESSAGE);
+                    return new MockResponse().setResponseCode(200)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports/.*")) {
                     return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(REPORT_TEST))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
@@ -689,7 +697,8 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/exists":
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/exists":
                     case "/v1/cases/" + CASE_4_UUID_STRING + "/exists":
-                    case "/v1/cases/" + CASE_UUID_CAUSING_ERROR + "/exists":
+                    case "/v1/cases/" + CASE_UUID_CAUSING_IMPORT_ERROR + "/exists":
+                    case "/v1/cases/" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "/exists":
                     case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -769,8 +778,11 @@ public class StudyTest {
                     case "/v1/networks?caseUuid=" + CASE_4_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfos4AsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks?caseUuid=" + CASE_UUID_CAUSING_ERROR + "&variantId=" + FIRST_VARIANT_ID:
+                    case "/v1/networks?caseUuid=" + CASE_UUID_CAUSING_IMPORT_ERROR + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setResponseCode(500);
+                    case "/v1/networks?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID:
+                        sendCaseImportFailedMessage(path, "ERROR WHILE IMPORTING STUDY");
+                        return new MockResponse().setResponseCode(200);
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -940,6 +952,17 @@ public class StudyTest {
                     .setHeader("networkId", networkInfos.getNetworkId())
                     .setHeader("caseFormat", format)
                     .build(), "case.import.succeeded");
+        }
+    }
+
+    private void sendCaseImportFailedMessage(String requestPath, String errorMessage) {
+        Pattern receiverPattern = Pattern.compile("receiver=(.*)");
+        Matcher matcher = receiverPattern.matcher(requestPath);
+        if (matcher.find()) {
+            String receiverUrlString = matcher.group(1);
+            input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
+                    .setHeader("errorMessage", errorMessage)
+                    .build(), "case.import.failed");
         }
     }
 
@@ -2362,15 +2385,14 @@ public class StudyTest {
     }
 
     @Test
-    public void testCreateStudyWithErrorDuringCreation() throws Exception {
+    public void testCreateStudyWithErrorDuringCaseImport() throws Exception {
         String userId = "userId";
-        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_ERROR).header("userId", userId))
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR).header("userId", userId))
             .andExpect(status().is5xxServerError());
 
        // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT);
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
 
-        assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
@@ -2392,8 +2414,38 @@ public class StudyTest {
         assertEquals(List.of(), bsiListResult);
 
         var requests = getRequestsDone(2);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_ERROR)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_IMPORT_ERROR)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_IMPORT_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+    }
+
+    @Test
+    public void testCreateStudyWithErrorDuringStudyCreation() throws Exception {
+        String userId = "userId";
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR).header("userId", userId))
+            .andExpect(status().isOk());
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        // study deletion
+        message = output.receive(TIMEOUT, "study.update");
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        // study error message
+        message = output.receive(TIMEOUT, "study.update");
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(STUDY_CREATION_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
+
+        var requests = getRequestsDone(2);
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
     @Test

@@ -283,7 +283,7 @@ public class StudyService {
 
     private void createStudyFromFile(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
         UUID importReportUuid = UUID.randomUUID();
-        UUID caseUuid = importCase(caseFile, userId);
+        UUID caseUuid = importCase(caseFile);
         if (caseUuid != null) {
             persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
         }
@@ -549,7 +549,7 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(MultipartFile multipartFile, String userId) {
+    UUID importCase(MultipartFile multipartFile) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
@@ -1338,7 +1338,7 @@ public class StudyService {
         return contingencyListNames.stream().map(contingencyListName -> {
             var uriComponentsBuilder = UriComponentsBuilder
                     .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
-                    .queryParam("networkUuid", uuid);
+                    .queryParam(NETWORK_UUID, uuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
