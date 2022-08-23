@@ -21,12 +21,9 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import static org.gridsuite.study.server.StudyConstants.*;
-
 @Service
 public class SingleLineDiagramService {
 
-    static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     static final String QUERY_PARAM_COMPONENT_LIBRARY = "componentLibrary";
     static final String QUERY_PARAM_USE_NAME = "useName";
     static final String QUERY_PARAM_CENTER_LABEL = "centerLabel";
@@ -35,7 +32,6 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
-    static final String RESULT_UUID = "resultUuid";
 
     @Autowired
     private RestTemplate restTemplate;
@@ -84,5 +80,108 @@ public class SingleLineDiagramService {
             }
         }
         return result;
+    }
+
+    public String getVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters) {
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
+                        + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
+                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
+                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
+                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
+                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring());
+        if (diagramParameters.getComponentLibrary() != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+            .buildAndExpand(networkUuid, voltageLevelId)
+            .toUriString();
+
+        String result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public byte[] getSubstationSvg(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout) {
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
+                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
+                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
+                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isLabelCentered())
+                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
+                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
+        if (diagramParameters.getComponentLibrary() != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
+
+        byte[] result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public String getSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout) {
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
+                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
+                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
+                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
+                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
+        if (diagramParameters.getComponentLibrary() != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        String result;
+        try {
+            result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build(), String.class, networkUuid, substationId).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+            } else {
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public String getNeworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth) {
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/network-area-diagram/{networkUuid}")
+                .queryParam(QUERY_PARAM_DEPTH, depth)
+                .queryParam(QUERY_PARAM_VOLTAGE_LEVELS_IDS, voltageLevelsIds);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+                .buildAndExpand(networkUuid)
+                .toUriString();
+
+        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
     }
 }

@@ -102,7 +102,6 @@ public class StudyService {
 
     @Autowired
     private RestTemplate restTemplate;
-    private String singleLineDiagramServerBaseUri;
     private String networkConversionServerBaseUri;
     private String geoDataServerBaseUri;
     private String networkMapServerBaseUri;
@@ -131,7 +130,6 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
         @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
         @Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri,
         @Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri,
@@ -151,7 +149,6 @@ public class StudyService {
         LoadflowService loadflowService,
         CaseService caseService,
         SingleLineDiagramService singleLineDiagramService) {
-        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
         this.geoDataServerBaseUri = geoDataServerBaseUri;
         this.networkMapServerBaseUri = networkMapServerBaseUri;
@@ -594,36 +591,9 @@ public class StudyService {
     public String getVoltageLevelSvgAndMetadata(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
             UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                        + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring());
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder
-            .buildAndExpand(networkUuid, voltageLevelId)
-            .toUriString();
-
-        String result;
-        try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
     }
 
     private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
@@ -1281,32 +1251,7 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
-
-        byte[] result;
-        try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
     }
 
     public String getSubstationSvgAndMetadata(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
@@ -1314,49 +1259,14 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        String result;
-        try {
-            result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build(), String.class, networkUuid, substationId).getBody();
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return singleLineDiagramService.getSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout);
     }
 
     public String getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}")
-                .queryParam(QUERY_PARAM_DEPTH, depth)
-                .queryParam(QUERY_PARAM_VOLTAGE_LEVELS_IDS, voltageLevelsIds);
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder
-                .buildAndExpand(networkUuid)
-                .toUriString();
-
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        return singleLineDiagramService.getNeworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth);
     }
 
     public String getSecurityAnalysisStatus(UUID nodeUuid) {
@@ -1407,10 +1317,6 @@ public class StudyService {
 
     void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
-    }
-
-    void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
-        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
     }
 
     void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
