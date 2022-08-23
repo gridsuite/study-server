@@ -22,9 +22,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkMapService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.SecurityAnalysisService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.*;
@@ -52,20 +52,20 @@ public class StudyController {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
-    private final NetworkMapService networkMapService;
+    private final SecurityAnalysisService securityAnalysisService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
             NetworkModificationTreeService networkModificationTreeService,
             SingleLineDiagramService singleLineDiagramService,
             NetworkConversionService networkConversionService,
-            NetworkMapService networkMapService) {
+            SecurityAnalysisService securityAnalysisService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
-        this.networkMapService = networkMapService;
+        this.securityAnalysisService = securityAnalysisService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
@@ -644,7 +644,7 @@ public class StudyController {
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        String result = studyService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes);
+        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }

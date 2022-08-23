@@ -102,7 +102,6 @@ public class StudyService {
 
     @Autowired
     private RestTemplate restTemplate;
-    private String securityAnalysisServerBaseUri;
     private String actionsServerBaseUri;
     private String defaultLoadflowProvider;
 
@@ -119,6 +118,7 @@ public class StudyService {
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
+    private final SecurityAnalysisService securityAnalysisService;
 
     private final ObjectMapper objectMapper;
 
@@ -130,7 +130,6 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
         @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
         @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
         StudyRepository studyRepository,
@@ -148,8 +147,8 @@ public class StudyService {
         SingleLineDiagramService singleLineDiagramService,
         NetworkConversionService networkConversionService,
         GeoDataService geoDataService,
-        NetworkMapService networkMapService) {
-        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+        NetworkMapService networkMapService,
+        SecurityAnalysisService securityAnalysisService) {
         this.actionsServerBaseUri = actionsServerBaseUri;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
@@ -168,6 +167,7 @@ public class StudyService {
         this.networkConversionService = networkConversionService;
         this.geoDataService = geoDataService;
         this.networkMapService = networkMapService;
+        this.securityAnalysisService = securityAnalysisService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -1074,52 +1074,11 @@ public class StudyService {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportUuid.toString());
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder.queryParam("contingencyListName", contingencyListNames)
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        UUID result = restTemplate
-                .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, variantId, provider, contingencyListNames, parameters, receiver);
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        return result;
-    }
-
-    public String getSecurityAnalysisResult(UUID nodeUuid, List<String> limitTypes) {
-        Objects.requireNonNull(limitTypes);
-        String result = null;
-        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-                .queryParam("limitType", limitTypes).buildAndExpand(resultUuidOpt.get()).toUriString();
-        try {
-            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-
         return result;
     }
 
@@ -1179,12 +1138,8 @@ public class StudyService {
             return null;
         }
 
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
-
         try {
-            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+            result = securityAnalysisService.getSecurityAnalysisStatus(resultUuidOpt.get());
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
@@ -1195,26 +1150,12 @@ public class StudyService {
         return result;
     }
 
-    private void invalidateSaStatus(List<UUID> uuids) {
-        if (!uuids.isEmpty()) {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/invalidate-status")
-                    .queryParam(RESULT_UUID, uuids).build().toUriString();
-
-            restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
-        }
-    }
-
     public void invalidateSecurityAnalysisStatus(UUID nodeUuid) {
-        invalidateSaStatus(networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid));
+        securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid));
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
-    }
-
-    public void setSecurityAnalysisServerBaseUri(String securityAnalysisServerBaseUri) {
-        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+        securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
     }
 
     public void setActionsServerBaseUri(String actionsServerBaseUri) {
@@ -1238,11 +1179,8 @@ public class StudyService {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
-        restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
+        securityAnalysisService.stopSecurityAnalysis(resultUuidOpt.get(), receiver);
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
@@ -1469,7 +1407,7 @@ public class StudyService {
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
-                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult)),
+                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                 studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
 
@@ -1525,14 +1463,6 @@ public class StudyService {
         }
     }
 
-    private void deleteSaResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(securityAnalysisServerBaseUri + path);
-    }
-
     @Transactional
     public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
@@ -1544,7 +1474,7 @@ public class StudyService {
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
-            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult)),
+            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
             studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
         );
 
