@@ -5,9 +5,6 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.SECURITY_ANALYSIS_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_NOT_FOUND;
 
-import java.io.UncheckedIOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -15,7 +12,6 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.Receiver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -27,8 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 @Service
 public class SecurityAnalysisService {

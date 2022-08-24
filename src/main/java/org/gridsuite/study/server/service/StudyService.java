@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.contingency.Contingency;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -19,7 +18,6 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.TempFileService;
@@ -38,15 +36,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -63,7 +58,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
@@ -100,9 +94,6 @@ public class StudyService {
 
     StudyServerExecutionService studyServerExecutionService;
 
-    @Autowired
-    private RestTemplate restTemplate;
-    private String actionsServerBaseUri;
     private String defaultLoadflowProvider;
 
     private final StudyRepository studyRepository;
@@ -119,6 +110,7 @@ public class StudyService {
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final ActionsService actionsService;
 
     private final ObjectMapper objectMapper;
 
@@ -148,8 +140,8 @@ public class StudyService {
         NetworkConversionService networkConversionService,
         GeoDataService geoDataService,
         NetworkMapService networkMapService,
-        SecurityAnalysisService securityAnalysisService) {
-        this.actionsServerBaseUri = actionsServerBaseUri;
+        SecurityAnalysisService securityAnalysisService,
+        ActionsService actionsService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -168,6 +160,7 @@ public class StudyService {
         this.geoDataService = geoDataService;
         this.networkMapService = networkMapService;
         this.securityAnalysisService = securityAnalysisService;
+        this.actionsService = actionsService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -795,7 +788,7 @@ public class StudyService {
     public void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -815,7 +808,7 @@ public class StudyService {
     public void applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -850,7 +843,7 @@ public class StudyService {
             @NonNull UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1065,7 +1058,7 @@ public class StudyService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String provider = getLoadFlowProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -1087,24 +1080,10 @@ public class StudyService {
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(nodeUuid);
 
-        UUID uuid = networkStoreService.getNetworkUuid(studyUuid);
+        UUID networkuuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        return contingencyListNames.stream().map(contingencyListName -> {
-            var uriComponentsBuilder = UriComponentsBuilder
-                    .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
-                    .queryParam("networkUuid", uuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder.buildAndExpand(contingencyListName).toUriString();
-
-            List<Contingency> contingencies = restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<Contingency>>() {
-                    }).getBody();
-
-            return contingencies.size();
-        }).reduce(0, Integer::sum);
+        return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
     }
 
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
@@ -1156,10 +1135,6 @@ public class StudyService {
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
         securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
-    }
-
-    public void setActionsServerBaseUri(String actionsServerBaseUri) {
-        this.actionsServerBaseUri = actionsServerBaseUri;
     }
 
     public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
@@ -1236,7 +1211,7 @@ public class StudyService {
             UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1254,7 +1229,7 @@ public class StudyService {
             UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1295,7 +1270,7 @@ public class StudyService {
     public void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1378,13 +1353,13 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = fillBuildInfos(nodeUuid);
         List<UUID> reportsUuids = buildInfos.getModificationReportUuids();
-        updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
         reportsUuids.forEach(reportService::deleteReport);
 
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         } catch (Exception e) {
-            updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
+            networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
             throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
         }
 
@@ -1392,10 +1367,6 @@ public class StudyService {
 
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         networkModificationService.stopBuild(studyUuid, nodeUuid);
-    }
-
-    private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
@@ -1537,10 +1508,6 @@ public class StudyService {
         }
     }
 
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
-    }
-
     private List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
         return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
     }
@@ -1557,11 +1524,7 @@ public class StudyService {
     }
 
     public void deleteNodeReport(UUID studyUuid, UUID nodeUuid) {
-        reportService.deleteReport(getReportUuid(nodeUuid));
-    }
-
-    private NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        return networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+        reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
     }
 
     public String getDefaultLoadflowProviderValue() {
@@ -1579,7 +1542,7 @@ public class StudyService {
         try {
             Objects.requireNonNull(studyUuid);
             Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
