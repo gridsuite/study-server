@@ -16,6 +16,6 @@ import java.util.UUID;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class SAReceiver {
+public class NodeReceiver {
     private UUID nodeUuid;
 }

@@ -134,10 +134,10 @@ public class StudyService {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                SAReceiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            SAReceiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
                             receiverObj.getNodeUuid());
@@ -1273,7 +1273,7 @@ public class StudyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new SAReceiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -1521,7 +1521,7 @@ public class StudyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new SAReceiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -1539,10 +1539,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                SAReceiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            SAReceiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -1565,10 +1565,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                SAReceiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            SAReceiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Security analysis failed for node '{}'", receiverObj.getNodeUuid());
 
@@ -1907,10 +1907,10 @@ public class StudyService {
             Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                SAReceiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            SAReceiver.class);
+                            NodeReceiver.class);
 
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
 
@@ -1929,10 +1929,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                SAReceiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            SAReceiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -1953,10 +1953,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                SAReceiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            SAReceiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
