@@ -97,4 +97,8 @@ public class NetworkMapService {
                 new ParameterizedTypeReference<List<IdentifiableInfos>>() {
                 }).getBody();
     }
+
+    public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
+        this.networkMapServerBaseUri = networkMapServerBaseUri;
+    }
 }

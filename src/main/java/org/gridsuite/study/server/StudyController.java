@@ -21,6 +21,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NetworkService;
@@ -53,19 +54,22 @@ public class StudyController {
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final CaseService caseService;
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
             NetworkModificationTreeService networkModificationTreeService,
             SingleLineDiagramService singleLineDiagramService,
             NetworkConversionService networkConversionService,
-            SecurityAnalysisService securityAnalysisService) {
+            SecurityAnalysisService securityAnalysisService,
+            CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
         this.securityAnalysisService = securityAnalysisService;
+        this.caseService = caseService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
@@ -143,7 +147,7 @@ public class StudyController {
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestBody(required = false) Map<String, Object> importParameters,
                                                                              @RequestHeader("userId") String userId) {
-        studyService.assertCaseExists(caseUuid);
+        caseService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters);
         return ResponseEntity.ok().body(createStudy);
     }
@@ -788,7 +792,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> deleteNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.deleteNodeReport(studyUuid, nodeUuid);
+        studyService.deleteNodeReport(nodeUuid);
         return ResponseEntity.ok().build();
     }
 

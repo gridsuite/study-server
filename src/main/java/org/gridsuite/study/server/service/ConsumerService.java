@@ -62,7 +62,7 @@ public class ConsumerService {
                     // update DB
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
                                 // send notifications
-                    UUID studyUuid = studyService.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
                 } catch (JsonProcessingException e) {
@@ -87,7 +87,7 @@ public class ConsumerService {
                     // delete security analysis result in database
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
                     // send notification for stopped computation
-                    UUID studyUuid = studyService.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
 
                 } catch (JsonProcessingException e) {
@@ -112,7 +112,7 @@ public class ConsumerService {
                     // delete security analysis result in database
                     updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
                     // send notification for failed computation
-                    UUID studyUuid = studyService.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED);
 
                 } catch (JsonProcessingException e) {
@@ -135,7 +135,7 @@ public class ConsumerService {
 
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
 
-                    UUID studyUuid = studyService.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -158,7 +158,7 @@ public class ConsumerService {
 
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
                     // send notification
-                    UUID studyUuid = studyService.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_CANCELLED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -181,7 +181,7 @@ public class ConsumerService {
 
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
                     // send notification
-                    UUID studyUuid = studyService.getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_FAILED);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());

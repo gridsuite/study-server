@@ -124,4 +124,8 @@ public class SecurityAnalysisService {
             restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
         }
     }
+
+    public void setSecurityAnalysisServerBaseUri(String securityAnalysisServerBaseUri) {
+        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
+    }
 }

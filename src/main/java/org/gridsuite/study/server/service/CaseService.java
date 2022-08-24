@@ -116,4 +116,14 @@ public class CaseService {
 
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
+
+    public void assertCaseExists(UUID caseUuid) {
+        if (Boolean.FALSE.equals(caseExists(caseUuid))) {
+            throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
+        }
+    }
+
+    public void setCaseServerBaseUri(String caseServerBaseUri) {
+        this.caseServerBaseUri = caseServerBaseUri;
+    }
 }

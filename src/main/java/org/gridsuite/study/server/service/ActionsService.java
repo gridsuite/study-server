@@ -48,4 +48,8 @@ public class ActionsService {
             return contingencies.size();
         }).reduce(0, Integer::sum);
     }
+
+    public void setActionsServerBaseUri(String actionsServerBaseUri) {
+        this.actionsServerBaseUri = actionsServerBaseUri;
+    }
 }

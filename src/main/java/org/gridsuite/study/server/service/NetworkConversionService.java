@@ -90,4 +90,8 @@ public class NetworkConversionService {
 
         restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
     }
+
+    public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
+        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
+    }
 }

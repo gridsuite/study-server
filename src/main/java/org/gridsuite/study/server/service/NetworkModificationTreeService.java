@@ -50,7 +50,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.service.StudyService.*;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -59,6 +58,7 @@ import static org.gridsuite.study.server.service.StudyService.*;
 public class NetworkModificationTreeService {
 
     public static final String ROOT_NODE_NAME = "Root";
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -123,6 +123,7 @@ public class NetworkModificationTreeService {
         notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
+    @Transactional(readOnly = true)
     public UUID getStudyUuidForNodeId(UUID id) {
         Optional<NodeEntity> node = nodesRepository.findById(id);
         return node.orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getStudy().getId();

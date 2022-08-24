@@ -56,4 +56,8 @@ public class GeoDataService {
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
+
+    public void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
+        this.geoDataServerBaseUri = geoDataServerBaseUri;
+    }
 }

@@ -39,10 +39,18 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.ReportUsa
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.ActionsService;
+import org.gridsuite.study.server.service.CaseService;
+import org.gridsuite.study.server.service.GeoDataService;
+import org.gridsuite.study.server.service.LoadflowService;
+import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkMapService;
 import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
@@ -124,6 +132,8 @@ public class StudyTest {
     @Autowired
     private MockMvc mockMvc;
 
+    static final String FIRST_VARIANT_ID = "first_variant_id";
+
     private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
     private static final String TEST_FILE = "testCase.xiidm";
@@ -199,10 +209,34 @@ public class StudyTest {
     private StudyService studyService;
 
     @Autowired
+    private CaseService caseService;
+
+    @Autowired
+    private NetworkConversionService networkConversionService;
+
+    @Autowired
     private NetworkModificationService networkModificationService;
 
     @Autowired
+    private NetworkMapService networkMapService;
+
+    @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private SecurityAnalysisService securityAnalysisService;
+
+    @Autowired
+    private SingleLineDiagramService singleLineDiagramService;
+
+    @Autowired
+    private LoadflowService loadflowService;
+
+    @Autowired
+    private GeoDataService geoDataService;
+
+    @Autowired
+    private ActionsService actionsService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -301,14 +335,14 @@ public class StudyTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        studyService.setCaseServerBaseUri(baseUrl);
-        studyService.setNetworkConversionServerBaseUri(baseUrl);
-        studyService.setSingleLineDiagramServerBaseUri(baseUrl);
-        studyService.setGeoDataServerBaseUri(baseUrl);
-        studyService.setNetworkMapServerBaseUri(baseUrl);
-        studyService.setLoadFlowServerBaseUri(baseUrl);
-        studyService.setSecurityAnalysisServerBaseUri(baseUrl);
-        studyService.setActionsServerBaseUri(baseUrl);
+        caseService.setCaseServerBaseUri(baseUrl);
+        networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
+        singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
+        geoDataService.setGeoDataServerBaseUri(baseUrl);
+        networkMapService.setNetworkMapServerBaseUri(baseUrl);
+        loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
+        actionsService.setActionsServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
@@ -3922,14 +3956,14 @@ public class StudyTest {
     @Test
     public void getCaseFormat() throws Exception {
         UUID study1Uuid = createStudy("userId", CASE_UUID);
-        String caseFormat = studyService.getCaseFormat(CASE_UUID, study1Uuid, "userId");
+        String caseFormat = studyService.getCaseFormatWithNotificationOnError(CASE_UUID, study1Uuid, "userId");
         assertEquals("UCTE", caseFormat);
 
         var requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/format")));
 
         UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
-        assertThrows(StudyException.class, () -> studyService.getCaseFormat(notExistingCase, study1Uuid, "userId"));
+        assertThrows(StudyException.class, () -> studyService.getCaseFormatWithNotificationOnError(notExistingCase, study1Uuid, "userId"));
         output.receive(TIMEOUT);
 
         requests = getRequestsWithBodyDone(1);

@@ -184,4 +184,8 @@ public class SingleLineDiagramService {
 
         return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
     }
+
+    public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
+        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
+    }
 }

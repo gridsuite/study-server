@@ -51,9 +51,11 @@ public class NetworkModificationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationService.class);
 
     private static final String DELIMITER = "/";
-    public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
+    private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
     private static final String MODIFICATIONS_PATH = "modifications";
+    private static final String QUERY_PARAM_RECEIVER = "receiver";
+
     private String networkModificationServerBaseUri;
 
     private final NetworkService networkStoreService;

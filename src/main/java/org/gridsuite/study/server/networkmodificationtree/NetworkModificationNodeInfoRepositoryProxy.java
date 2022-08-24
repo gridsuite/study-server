@@ -17,7 +17,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.LoadflowService;
 
 import java.util.HashSet;
 import java.util.List;
@@ -56,7 +56,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getVariantId(),
             modificationNode.getModificationsToExclude(),
             modificationNode.getLoadFlowStatus(),
-            StudyService.toEntity(modificationNode.getLoadFlowResult()),
+            LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getBuildStatus());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
@@ -70,7 +70,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getVariantId(),
             node.getModificationsToExclude(),
             node.getLoadFlowStatus(),
-            StudyService.fromEntity(node.getLoadFlowResult()),
+            LoadflowService.fromEntity(node.getLoadFlowResult()),
             node.getSecurityAnalysisResultUuid(),
             node.getBuildStatus()));
     }

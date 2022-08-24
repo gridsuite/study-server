@@ -10,12 +10,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
-import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.apache.commons.lang3.tuple.Pair;
@@ -70,23 +67,6 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
 
-    static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
-    static final String QUERY_PARAM_COMPONENT_LIBRARY = "componentLibrary";
-    static final String QUERY_PARAM_USE_NAME = "useName";
-    static final String QUERY_PARAM_CENTER_LABEL = "centerLabel";
-    static final String QUERY_PARAM_DIAGONAL_LABEL = "diagonalLabel";
-    static final String QUERY_PARAM_TOPOLOGICAL_COLORING = "topologicalColoring";
-    static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
-    static final String QUERY_PARAM_DEPTH = "depth";
-    static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
-    static final String RESULT_UUID = "resultUuid";
-
-    static final String QUERY_PARAM_RECEIVER = "receiver";
-
-    static final String HEADER_RECEIVER = "receiver";
-
-    static final String FIRST_VARIANT_ID = "first_variant_id";
-
     @Autowired
     NotificationService notificationService;
 
@@ -122,7 +102,6 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
         @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
@@ -225,10 +204,10 @@ public class StudyService {
         startTime.set(System.nanoTime());
         try {
             UUID importReportUuid = UUID.randomUUID();
-            String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
+            String caseFormat = getCaseFormatWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId);
             NetworkInfos networkInfos = persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
             LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, LoadflowService.toEntity(loadFlowParameters), importReportUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -279,10 +258,10 @@ public class StudyService {
             UUID caseUuid = importCaseWithNotificationOnError(caseFile, originalFilename, basicStudyInfos.getId(), userId);
 
             if (caseUuid != null) {
-                String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
+                String caseFormat = getCaseFormatWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId);
                 NetworkInfos networkInfos = persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
                 LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, LoadflowService.toEntity(loadFlowParameters), importReportUuid);
             }
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -310,7 +289,7 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
-        LoadFlowParameters sourceLoadFlowParameters = fromEntity(sourceStudy.getLoadFlowParameters());
+        LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, userId));
@@ -328,7 +307,7 @@ public class StudyService {
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, toEntity(newLoadFlowParameters), userId, clonedNetworkUuid);
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), userId, clonedNetworkUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -541,7 +520,7 @@ public class StudyService {
         return newStudy;
     }
 
-    public String getCaseFormat(UUID caseUuid, UUID studyUuid, String userId) {
+    public String getCaseFormatWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId) {
         try {
             return caseService.getCaseFormat(caseUuid);
         } catch (HttpStatusCodeException e) {
@@ -861,13 +840,6 @@ public class StudyService {
         }
     }
 
-    public void assertCaseExists(UUID caseUuid) {
-        Boolean caseExists = caseService.caseExists(caseUuid);
-        if (Boolean.FALSE.equals(caseExists)) {
-            throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
-        }
-    }
-
     public void assertLoadFlowRunnable(UUID nodeUuid) {
         LoadFlowStatus lfStatus = getLoadFlowStatus(nodeUuid);
 
@@ -928,101 +900,14 @@ public class StudyService {
         }
     }
 
-    public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
-        Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
-                parameters.isTransformerVoltageControlOn(),
-                parameters.isNoGeneratorReactiveLimits(),
-                parameters.isPhaseShifterRegulationOn(),
-                parameters.isTwtSplitShuntAdmittance(),
-                parameters.isShuntCompensatorVoltageControlOn(),
-                parameters.isReadSlackBus(),
-                parameters.isWriteSlackBus(),
-                parameters.isDc(),
-                parameters.isDistributedSlack(),
-                parameters.getBalanceType(),
-                parameters.isDcUseTransformerRatio(),
-                parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
-                parameters.getConnectedComponentMode(),
-                parameters.isHvdcAcEmulation());
-    }
-
-    public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
-        Objects.requireNonNull(entity);
-        return new LoadFlowParameters(entity.getVoltageInitMode(),
-            entity.isTransformerVoltageControlOn(),
-            entity.isNoGeneratorReactiveLimits(),
-            entity.isPhaseShifterRegulationOn(),
-            entity.isTwtSplitShuntAdmittance(),
-            entity.isShuntCompensatorVoltageControlOn(),
-            entity.isReadSlackBus(),
-            entity.isWriteSlackBus(),
-            entity.isDc(),
-            entity.isDistributedSlack(),
-            entity.getBalanceType(),
-            entity.isDcUseTransformerRatio(),
-            entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
-            entity.getConnectedComponentMode(),
-            entity.isHvdcAcEmulation()
-            );
-    }
-
-    public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
-        return result != null
-                ? new LoadFlowResultEntity(result.isOk(),
-                      result.getMetrics(),
-                      result.getLogs(),
-                      result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList())) : null;
-    }
-
-    public static LoadFlowResult fromEntity(LoadFlowResultEntity entity) {
-        LoadFlowResult result = null;
-        if (entity != null) {
-            // This is a workaround to prepare the componentResultEmbeddables which will be used later in the webflux pipeline
-            // The goal is to avoid LazyInitializationException
-            @SuppressWarnings("unused")
-            int ignoreSize = entity.getComponentResults().size();
-            @SuppressWarnings("unused")
-            int ignoreSize2 = entity.getMetrics().size();
-
-            result = new LoadFlowResultImpl(entity.isOk(),
-                    entity.getMetrics(),
-                    entity.getLogs(),
-                    entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
-        }
-        return result;
-    }
-
-    public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
-        Objects.requireNonNull(componentResult);
-        return new ComponentResultEmbeddable(componentResult.getConnectedComponentNum(),
-            componentResult.getSynchronousComponentNum(),
-            componentResult.getStatus(),
-            componentResult.getIterationCount(),
-            componentResult.getSlackBusId(),
-            componentResult.getSlackBusActivePowerMismatch(),
-            componentResult.getDistributedActivePower());
-    }
-
-    public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
-        Objects.requireNonNull(entity);
-        return new LoadFlowResultImpl.ComponentResultImpl(entity.getConnectedComponentNum(),
-            entity.getSynchronousComponentNum(),
-            entity.getStatus(),
-            entity.getIterationCount(),
-            entity.getSlackBusId(),
-            entity.getSlackBusActivePowerMismatch(),
-            entity.getDistributedActivePower());
-    }
-
     public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
+            .map(studyEntity -> LoadflowService.fromEntity(studyEntity.getLoadFlowParameters()))
             .orElse(null);
     }
 
     public void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
-        updateLoadFlowParameters(studyUuid, toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
+        updateLoadFlowParameters(studyUuid, LoadflowService.toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
@@ -1332,11 +1217,6 @@ public class StudyService {
         return networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
     }
 
-    @Transactional(readOnly = true)
-    public UUID getStudyUuidFromNodeUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-    }
-
     public LoadFlowInfos getLoadFlowInfos(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
@@ -1411,7 +1291,7 @@ public class StudyService {
     @Transactional
     public void changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid,
             @NonNull UUID modificationUuid, boolean active) {
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active);
@@ -1422,7 +1302,7 @@ public class StudyService {
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
-            if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
@@ -1503,7 +1383,7 @@ public class StudyService {
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
     }
@@ -1523,7 +1403,7 @@ public class StudyService {
         }).collect(Collectors.toList());
     }
 
-    public void deleteNodeReport(UUID studyUuid, UUID nodeUuid) {
+    public void deleteNodeReport(UUID nodeUuid) {
         reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
     }
 
