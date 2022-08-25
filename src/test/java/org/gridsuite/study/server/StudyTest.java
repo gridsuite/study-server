@@ -17,12 +17,10 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.*;
 import com.powsybl.iidm.xml.XMLImporter;
-import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import lombok.SneakyThrows;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -40,7 +38,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.ActionsService;
 import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.GeoDataService;
 import org.gridsuite.study.server.service.LoadflowService;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.NetworkMapService;
@@ -49,7 +46,6 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.MatcherReport;
@@ -84,7 +80,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.ResourceUtils;
-import org.springframework.web.util.NestedServletException;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -145,19 +140,13 @@ public class StudyTest {
     private static final String DUPLICATED_STUDY_UUID = "11888888-0000-0000-0000-111111111111";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
-    private static final String SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11111111-9594-4e55-8ec7-07ea965d24eb";
-    private static final String SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "22222222-9594-4e55-8ec7-07ea965d24eb";
+    private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_WITH_ERRORS_UUID = UUID.fromString(IMPORTED_CASE_WITH_ERRORS_UUID_STRING);
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
-    private static final String CONTINGENCY_LIST_NAME = "ls";
-    private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
-    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.7\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
-    public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.7\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
     private static final ReporterModel REPORT_TEST_ROOT_NODE = new ReporterModel("test", "Root");
     private static final String VOLTAGE_LEVEL_ID = "VOLTAGE_LEVEL_ID";
@@ -176,18 +165,10 @@ public class StudyTest {
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
     private static final String CASE_2_UUID_STRING = "656719f3-aaaa-48be-be46-ef7b93331e32";
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
-    private static final String CASE_4_UUID_STRING = "196719f5-cccc-48be-be46-e92345951e32";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
-    private static final String NETWORK_UUID_4_STRING = "33333333-cccc-48be-be46-e92345951e32";
     private static final NetworkInfos NETWORK_INFOS_2 = new NetworkInfos(UUID.fromString(NETWORK_UUID_2_STRING), "file_2.xiidm");
     private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
-    private static final NetworkInfos NETWORK_INFOS_4 = new NetworkInfos(UUID.fromString(NETWORK_UUID_4_STRING), "file_4.xiidm");
-
-    private static final String CASE_LOADFLOW_ERROR_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
-    private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
-    private static final UUID NETWORK_LOADFLOW_ERROR_UUID = UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING);
-    private static final NetworkInfos NETWORK_LOADFLOW_ERROR_INFOS = new NetworkInfos(NETWORK_LOADFLOW_ERROR_UUID, "20140116_0830_2D4_UX1_pst");
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -220,13 +201,7 @@ public class StudyTest {
     private SecurityAnalysisService securityAnalysisService;
 
     @Autowired
-    private SingleLineDiagramService singleLineDiagramService;
-
-    @Autowired
     private LoadflowService loadflowService;
-
-    @Autowired
-    private GeoDataService geoDataService;
 
     @Autowired
     private ActionsService actionsService;
@@ -330,8 +305,6 @@ public class StudyTest {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         caseService.setCaseServerBaseUri(baseUrl);
         networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
-        singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
-        geoDataService.setGeoDataServerBaseUri(baseUrl);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
@@ -350,19 +323,7 @@ public class StudyTest {
         String networkInfosAsString = mapper.writeValueAsString(NETWORK_INFOS);
         String networkInfos2AsString = mapper.writeValueAsString(NETWORK_INFOS_2);
         String networkInfos3AsString = mapper.writeValueAsString(NETWORK_INFOS_3);
-        String networkInfos4AsString = mapper.writeValueAsString(NETWORK_INFOS_4);
         String importedCaseUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_UUID);
-        String networkLoadFlowErrorInfosAsString = mapper.writeValueAsString(NETWORK_LOADFLOW_ERROR_INFOS);
-
-        LoadFlowResult loadFlowOK = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
-            List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0, LoadFlowResult.ComponentResult.Status.CONVERGED, 10, "bus_1", 5., 3.5),
-                new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.FAILED, 20, "bus_2", 10., 2.78)));
-        String loadFlowOKString = mapper.writeValueAsString(loadFlowOK);
-
-        LoadFlowResult loadFlowError = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
-            List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0, LoadFlowResult.ComponentResult.Status.MAX_ITERATION_REACHED, 10, "bus_1", 5., 1),
-                new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.CONVERGED, 20, "bus_2", 10., 4)));
-        String loadFlowErrorString = mapper.writeValueAsString(loadFlowError);
 
         String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
             VoltageLevelMapData.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
@@ -544,22 +505,6 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow") ||
-                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&variantId=.*") ||
-                           path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
-                        return new MockResponse().setResponseCode(200)
-                            .setBody(loadFlowOKString)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&") ||
-                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&variantId=.*") ||
-                    path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
-                    return new MockResponse().setResponseCode(200)
-                        .setBody(loadFlowErrorString)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING)
-                           || path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_NAME + "/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(CONTINGENCIES_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build.*") && request.getMethod().equals("POST")) {
                     // variant build
                     input.send(MessageBuilder.withPayload("s1,s2").setHeader("receiver", "%7B%22nodeUuid%22%3A%22"
@@ -624,9 +569,6 @@ public class StudyTest {
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    return new MockResponse().setBody(String.valueOf(networkLoadFlowErrorInfosAsString)).setResponseCode(200)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     countDownLatch.await(2, TimeUnit.SECONDS);
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
@@ -659,8 +601,6 @@ public class StudyTest {
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/exists":
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/exists":
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/exists":
-                    case "/v1/cases/" + CASE_4_UUID_STRING + "/exists":
-                    case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -673,8 +613,6 @@ public class StudyTest {
                     case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/format":
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/format":
-                    case "/v1/cases/" + CASE_4_UUID_STRING + "/format":
-                    case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + CASE_UUID_STRING + "/name":
@@ -736,86 +674,15 @@ public class StudyTest {
                     case "/v1/networks?caseUuid=" + CASE_3_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfos3AsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks?caseUuid=" + CASE_4_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(networkInfos4AsString)).setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
                             .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
 
-                    case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING:
-                    case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING:
-                    case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
-                    case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/substations":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/3-windings-transformers":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/batteries":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/dangling-lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lcc-converter-stations":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/vsc-converter-stations":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads-modification":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/static-var-compensators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
-                        return new MockResponse().setBody(" ").setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
-                        return new MockResponse().setBody(String.valueOf(networkLoadFlowErrorInfosAsString)).setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-
                     case "/v1/reports/" + NETWORK_UUID_STRING:
                         return new MockResponse().setResponseCode(200)
                             .setBody(mapper.writeValueAsString(REPORT_TEST))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-
-                    case "/v1/svg/" + NETWORK_UUID_STRING
-                            + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                        return new MockResponse().setResponseCode(200).setBody("byte")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
-                            + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                        return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/substation-svg/" + NETWORK_UUID_STRING
-                            + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                        return new MockResponse().setResponseCode(200).setBody("substation-byte")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING
-                            + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                        return new MockResponse().setResponseCode(200).setBody("substation-svgandmetadata")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                        return new MockResponse().setResponseCode(404);
-
-                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false":
-                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                        return new MockResponse().setResponseCode(500)
-                            .addHeader("Content-Type", "application/json; charset=utf-8")
-                            .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
-
-                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&voltageLevelsIds=vlFr1A":
-                        return new MockResponse().setResponseCode(200).setBody("nad-svg")
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/svg-component-libraries":
-                        return new MockResponse().setResponseCode(200).setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/export/formats":
                         return new MockResponse().setResponseCode(200).setBody("[\"CGMES\",\"UCTE\",\"XIIDM\"]")
@@ -839,7 +706,6 @@ public class StudyTest {
                         }
                         return new MockResponse().setResponseCode(500);
                     case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_RESULT_UUID:
-                    case "/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID:
                         return new MockResponse().setResponseCode(200).addHeader("Content-Type",
                                 "application/json; charset=utf-8");
 
@@ -1201,301 +1067,6 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-    }
-
-    @Test
-    public void testDiagramsAndGraphics() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
-
-        //insert a study
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
-        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        UUID randomUuid = UUID.randomUUID();
-
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
-        UUID modificationNodeUuid = modificationNode1.getId();
-
-        //get the voltage level diagram svg
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_XML),
-                        content().string("byte"));
-
-        assertTrue(getRequestsDone(1).contains(String.format(
-                "/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false",
-                NETWORK_UUID_STRING)));
-
-        //get the voltage level diagram svg from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
-                randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
-
-        //get the voltage level diagram svg and metadata
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON),
-                        content().string("svgandmetadata"));
-
-        assertTrue(getRequestsDone(1).contains(String.format(
-                "/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false",
-                NETWORK_UUID_STRING)));
-
-        // get the voltage level diagram svg and metadata from a study that doesn't
-        // exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata",
-                randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
-
-        // get the substation diagram svg
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
-                        studyNameUserIdUuid, rootNodeUuid, "substationId")).andExpectAll(
-                                status().isOk(),
-                                content().contentType(MediaType.APPLICATION_XML),
-                                content().string("substation-byte"));
-
-        assertTrue(getRequestsDone(1).contains(String.format(
-                "/v1/substation-svg/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal",
-                NETWORK_UUID_STRING)));
-
-        // get the substation diagram svg from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg",
-                randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
-
-        // get the substation diagram svg and metadata
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
-                studyNameUserIdUuid, rootNodeUuid, "substationId")).andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON),
-                        content().string("substation-svgandmetadata"));
-
-        assertTrue(getRequestsDone(1).contains(String.format(
-                "/v1/substation-svg-and-metadata/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal",
-                NETWORK_UUID_STRING)));
-
-        // get the substation diagram svg and metadata from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata",
-                        randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
-
-        // get the network area diagram
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", studyNameUserIdUuid, rootNodeUuid))
-            .andExpectAll(
-                content().contentType(MediaType.APPLICATION_JSON),
-                status().isOk(),
-                content().string("nad-svg")
-            );
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&voltageLevelsIds=vlFr1A")));
-
-        // get the network area diagram from a study that doesn't exist
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&voltageLevelsIds=vlFr1A", randomUuid, rootNodeUuid))
-            .andExpect(status().isNotFound());
-
-        //get voltage levels
-        EqualsVerifier.simple().forClass(VoltageLevelMapData.class).verify();
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels", studyNameUserIdUuid,
-                        rootNodeUuid)).andExpect(status().isOk())
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<VoltageLevelInfos> vliListResponse = mapper.readValue(resultAsString, new TypeReference<List<VoltageLevelInfos>>() {
-        });
-
-        assertThat(vliListResponse, new MatcherJson<>(mapper, List.of(
-                VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
-                VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
-                VoltageLevelInfos.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").build(),
-                VoltageLevelInfos.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").build(),
-                VoltageLevelInfos.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").build(),
-                VoltageLevelInfos.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").build(),
-                VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
-                VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
-                VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
-                        VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build())));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
-
-        //get the lines-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/lines?networkUuid=%s", NETWORK_UUID_STRING)));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines/", studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/lines?networkUuid=%s&variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
-
-        //get the substation-graphics of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/substations?networkUuid=%s", NETWORK_UUID_STRING)));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations/", studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/substations?networkUuid=%s&variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
-
-        //get the lines map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/lines", NETWORK_UUID_STRING)));
-
-        //get the substation map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/", studyNameUserIdUuid,
-                        rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/substations", NETWORK_UUID_STRING)));
-
-        //get the 2 windings transformers map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/",
-                        studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/networks/%s/2-windings-transformers", NETWORK_UUID_STRING)));
-
-        //get the 3 windings transformers map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/3-windings-transformers/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/networks/%s/3-windings-transformers", NETWORK_UUID_STRING)));
-
-        //get the generators map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/generators", NETWORK_UUID_STRING)));
-
-        //get the batteries map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/batteries/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/batteries", NETWORK_UUID_STRING)));
-
-        //get the dangling lines map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/dangling-lines/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/dangling-lines", NETWORK_UUID_STRING)));
-
-        //get the hvdc lines map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/hvdc-lines", NETWORK_UUID_STRING)));
-
-        //get the lcc converter stations map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lcc-converter-stations/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/networks/%s/lcc-converter-stations", NETWORK_UUID_STRING)));
-
-        //get the vsc converter stations map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/vsc-converter-stations/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/networks/%s/vsc-converter-stations", NETWORK_UUID_STRING)));
-
-        //get the loads map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/loads", NETWORK_UUID_STRING)));
-
-        //get the shunt compensators map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(
-                getRequestsDone(1).contains(String.format("/v1/networks/%s/shunt-compensators", NETWORK_UUID_STRING)));
-
-        //get the static var compensators map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/static-var-compensators/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/networks/%s/static-var-compensators", NETWORK_UUID_STRING)));
-
-        //get the voltage levels map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1)
-                .contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
-
-        //get all map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/networks/%s/all", NETWORK_UUID_STRING)));
-
-        // get the svg component libraries
-        mockMvc.perform(get("/v1/svg-component-libraries")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(getRequestsDone(1).contains("/v1/svg-component-libraries"));
-
-        // Test getting non existing voltage level or substation svg
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelNotFoundId")).andExpectAll(status().isNotFound());
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg/%s/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false", NETWORK_UUID_STRING)));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelNotFoundId")).andExpectAll(status().isNotFound());
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg-and-metadata/%s/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false", NETWORK_UUID_STRING)));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/substation-svg/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/substation-svg-and-metadata/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
-
-        // Test other errors when getting voltage level or substation svg
-        assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelErrorId")));
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg/%s/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false", NETWORK_UUID_STRING)));
-
-        assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "voltageLevelErrorId")));
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/svg-and-metadata/%s/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false", NETWORK_UUID_STRING)));
-
-        assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationErrorId")));
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/substation-svg/%s/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
-
-        assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationErrorId")));
-        assertTrue(getRequestsDone(1).contains(String.format("/v1/substation-svg-and-metadata/%s/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -2807,11 +2378,6 @@ public class StudyTest {
 
     private void checkNodesInvalidationMessagesReceived(UUID studyNameUserIdUuid, List<UUID> invalidatedNodes) {
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, invalidatedNodes);
-    }
-
-    private void checkNodeModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
     }
 
     private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
