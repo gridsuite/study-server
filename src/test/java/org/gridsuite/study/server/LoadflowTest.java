@@ -45,6 +45,7 @@ import org.gridsuite.study.server.service.LoadflowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;

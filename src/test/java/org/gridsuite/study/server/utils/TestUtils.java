@@ -1,4 +1,4 @@
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.utils;
 
 import static org.junit.Assert.assertNull;
 
