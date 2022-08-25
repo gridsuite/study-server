@@ -17,7 +17,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,7 +26,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -35,9 +33,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
@@ -50,18 +45,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.ActionsService;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.GeoDataService;
 import org.gridsuite.study.server.service.LoadflowService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkMapService;
-import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -69,7 +55,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,15 +74,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
-import com.jayway.jsonpath.spi.json.JsonProvider;
-import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
-import com.jayway.jsonpath.spi.mapper.MappingProvider;
+import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
@@ -109,7 +88,6 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import okio.Buffer;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -154,34 +132,7 @@ public class LoadflowTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private CaseService caseService;
-
-    @Autowired
-    private NetworkConversionService networkConversionService;
-
-    @Autowired
-    private NetworkModificationService networkModificationService;
-
-    @Autowired
-    private NetworkMapService networkMapService;
-
-    @Autowired
-    private ReportService reportService;
-
-    @Autowired
-    private SecurityAnalysisService securityAnalysisService;
-
-    @Autowired
-    private SingleLineDiagramService singleLineDiagramService;
-
-    @Autowired
     private LoadflowService loadflowService;
-
-    @Autowired
-    private GeoDataService geoDataService;
-
-    @Autowired
-    private ActionsService actionsService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -195,36 +146,12 @@ public class LoadflowTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    //output destinations
+    private String studyUpdateDestination = "study.update";
+
     @Before
     public void setup() throws IOException {
-        Configuration.defaultConfiguration();
-        MockitoAnnotations.initMocks(this);
-        objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
-        objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
-        objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
-
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
-
-        Configuration.setDefaults(new Configuration.Defaults() {
-
-            private final JsonProvider jsonProvider = new JacksonJsonProvider(objectMapper);
-            private final MappingProvider mappingProvider = new JacksonMappingProvider(objectMapper);
-
-            @Override
-            public JsonProvider jsonProvider() {
-                return jsonProvider;
-            }
-
-            @Override
-            public MappingProvider mappingProvider() {
-                return mappingProvider;
-            }
-
-            @Override
-            public Set<Option> options() {
-                return EnumSet.noneOf(Option.class);
-            }
-        });
 
         server = new MockWebServer();
 
@@ -236,16 +163,7 @@ public class LoadflowTest {
      // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        caseService.setCaseServerBaseUri(baseUrl);
-        networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
-        singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
-        geoDataService.setGeoDataServerBaseUri(baseUrl);
-        networkMapService.setNetworkMapServerBaseUri(baseUrl);
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
-        actionsService.setActionsServerBaseUri(baseUrl);
-        networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
-        reportService.setReportServerBaseUri(baseUrl);
 
         // results definitions
         LoadFlowResult loadFlowError = new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs",
@@ -264,7 +182,7 @@ public class LoadflowTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                Buffer body = request.getBody();
+                request.getBody();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
@@ -285,33 +203,6 @@ public class LoadflowTest {
         server.setDispatcher(dispatcher);
     }
 
-    StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid) {
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("").caseUuid(caseUuid)
-            .date(LocalDateTime.now())
-            .networkId("netId")
-            .networkUuid(networkUuid)
-            .userId("userId")
-            .loadFlowProvider(defaultLoadflowProvider)
-            .loadFlowParameters(defaultLoadflowParametersEntity)
-            .build();
-    }
-
-    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = createDummyStudy(networkUuid, caseUuid);
-        var study = studyRepository.save(studyEntity);
-        networkModificationTreeService.createRoot(studyEntity, null);
-        return study;
-    }
-
-    private RootNode getRootNode(UUID study) throws Exception {
-
-        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{uuid}/tree", study))
-                    .andExpect(status().isOk())
-                    .andReturn()
-                    .getResponse()
-                    .getContentAsString(), new TypeReference<>() { });
-    }
-
     @Test
     public void testLoadFlowError() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
@@ -327,7 +218,7 @@ public class LoadflowTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
 
         // check load flow status
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
@@ -372,7 +263,7 @@ public class LoadflowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
 
         // check load flow status
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
@@ -425,7 +316,7 @@ public class LoadflowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
 
         // get default load flow provider
         mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)).andExpectAll(
@@ -461,7 +352,7 @@ public class LoadflowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID_3)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID_3)));
 
         // check load flow status
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
@@ -474,6 +365,22 @@ public class LoadflowTest {
 
         assertThat(lfInfos, new MatcherLoadFlowInfos(
                         LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+    }
+
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        var study = studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity, null);
+        return study;
+    }
+
+    private RootNode getRootNode(UUID study) throws Exception {
+
+        return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{uuid}/tree", study))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString(), new TypeReference<>() { });
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
@@ -527,41 +434,20 @@ public class LoadflowTest {
         studyRepository.deleteAll();
     }
 
-    private Set<String> getRequestsDone(int n) {
-        return IntStream.range(0, n).mapToObj(i -> {
-            try {
-                return server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS).getPath();
-            } catch (InterruptedException e) {
-                LOGGER.error("Error while attempting to get the request done : ", e);
-            }
-            return null;
-        }).collect(Collectors.toSet());
-    }
-
     @After
     public void tearDown() {
+        List<String> destinations = List.of(studyUpdateDestination);
+
         cleanDB();
 
-        Set<String> httpRequest = null;
-        Message<byte[]> message = null;
+        TestUtils.assertQueuesEmpty(destinations, output);
+
         try {
-            message = output.receive(TIMEOUT);
-            httpRequest = getRequestsDone(1);
-        } catch (NullPointerException e) {
+            TestUtils.assertServerRequestsEmpty(server);
+        } catch (UncheckedInterruptedException e) {
+            LOGGER.error("Error while attempting to get the request done : ", e);
+        } catch (IOException e) {
             // Ignoring
         }
-
-        // Shut down the server. Instances cannot be reused.
-        try {
-            server.shutdown();
-        } catch (Exception e) {
-            // Ignoring
-        }
-
-        output.clear(); // purge in order to not fail the other tests
-
-        assertNull("Should not be any messages : ", message);
-        assertNull("Should not be any http requests : ", httpRequest);
     }
-
 }
