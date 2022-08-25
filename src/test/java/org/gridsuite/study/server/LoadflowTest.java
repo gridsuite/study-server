@@ -7,12 +7,11 @@
 
 package org.gridsuite.study.server;
 
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
-
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
@@ -31,13 +30,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -61,7 +57,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
@@ -108,8 +103,6 @@ public class LoadflowTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_3 = "variant_3";
 
-    private LoadFlowParametersEntity defaultLoadflowParametersEntity = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES, false, false, false, false, false, true, false, false, true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX, true, Set.of(), LoadFlowParameters.ConnectedComponentMode.MAIN, true);
-
     private static final long TIMEOUT = 1000;
 
     @Value("${loadflow.default-provider}")
@@ -133,12 +126,6 @@ public class LoadflowTest {
 
     @Autowired
     private LoadflowService loadflowService;
-
-    @MockBean
-    private EquipmentInfosService equipmentInfosService;
-
-    @MockBean
-    private StudyInfosService studyInfosService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -193,8 +180,8 @@ public class LoadflowTest {
                             .setBody(loadFlowErrorString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
-                    LOGGER.error("Following path is not implemented in dispatcher : ", path);
-                    return new MockResponse().setResponseCode(418).setBody("Following path is not implemented in dispatcher : " + path);
+                    LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
             }
 
@@ -368,6 +355,15 @@ public class LoadflowTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+        LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
+                .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
+                .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
+                .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                .readSlackBus(true)
+                .distributedSlack(true)
+                .dcUseTransformerRatio(true)
+                .hvdcAcEmulation(true)
+                .build();
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, defaultLoadflowProvider, defaultLoadflowParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
