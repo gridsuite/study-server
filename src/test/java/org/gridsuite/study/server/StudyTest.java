@@ -17,7 +17,6 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.*;
 import com.powsybl.iidm.xml.XMLImporter;
-import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -53,7 +52,6 @@ import org.gridsuite.study.server.service.SecurityAnalysisService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherJson;
-import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
@@ -103,12 +101,10 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.service.StudyService.*;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -132,7 +128,7 @@ public class StudyTest {
     @Autowired
     private MockMvc mockMvc;
 
-    static final String FIRST_VARIANT_ID = "first_variant_id";
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
@@ -191,7 +187,6 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS_4 = new NetworkInfos(UUID.fromString(NETWORK_UUID_4_STRING), "file_4.xiidm");
 
     private static final String CASE_LOADFLOW_ERROR_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
-    private static final UUID CASE_LOADFLOW_ERROR_UUID = UUID.fromString(CASE_LOADFLOW_ERROR_UUID_STRING);
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final UUID NETWORK_LOADFLOW_ERROR_UUID = UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING);
     private static final NetworkInfos NETWORK_LOADFLOW_ERROR_INFOS = new NetworkInfos(NETWORK_LOADFLOW_ERROR_UUID, "20140116_0830_2D4_UX1_pst");
@@ -1243,168 +1238,6 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-    }
-
-    @Test
-    public void testLoadFlow() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
-        //insert a study
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
-        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID, "node 1");
-        UUID modificationNode1Uuid = modificationNode1.getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
-        UUID modificationNode2Uuid = modificationNode2.getId();
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 3");
-        UUID modificationNode3Uuid = modificationNode3.getId();
-
-        // run a loadflow on root node (not allowed)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, rootNodeUuid))
-            .andExpect(status().isForbidden());
-
-        //run a loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid,
-                modificationNode2Uuid)).andExpect(
-                        status().isOk());
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
-
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
-
-        // check load flow status
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
-                        modificationNode2Uuid)).andExpectAll(
-                                status().isOk(),
-                                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        LoadFlowInfos loadFlowInfos = mapper.readValue(resultAsString, LoadFlowInfos.class);
-
-        assertThat(loadFlowInfos, new MatcherLoadFlowInfos(
-                        LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
-
-        //try to run a another loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid,
-                        modificationNode2Uuid)).andExpectAll(
-                                status().isForbidden(),
-                                jsonPath("$", is(LOADFLOW_NOT_RUNNABLE.name())));
-
-        // get default LoadFlowParameters
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(LOAD_PARAMETERS_JSON));
-
-        // setting loadFlow Parameters
-        LoadFlowParameters lfpBody = new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
-                false, true, false, true, false, true, true, true,
-                LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
-                EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true);
-        String lfpBodyJson = objectWriter.writeValueAsString(lfpBody);
-        mockMvc.perform(
-                post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-            .header("userId", "userId")
-            .contentType(MediaType.APPLICATION_JSON)
-                    .content(lfpBodyJson)).andExpect(
-                            status().isOk());
-
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, null);
-
-        // getting setted values
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(LOAD_PARAMETERS_JSON2));
-
-        // run loadflow with new parameters
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid,
-                modificationNode2Uuid)).andExpect(
-                        status().isOk());
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
-
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
-
-        // get default load flow provider
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(defaultLoadflowProvider));
-
-        // set load flow provider
-        mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid).header("userId", "userId").contentType(MediaType.TEXT_PLAIN).content("Hades2"))
-            .andExpect(status().isOk());
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-
-        // get load flow provider
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)).andExpectAll(
-                    status().isOk(),
-                    content().string("Hades2"));
-
-        // reset load flow provider to default one
-        mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid).header("userId", "userId"))
-            .andExpect(status().isOk());
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-
-        // get default load flow provider again
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)).andExpectAll(
-                status().isOk(),
-                content().string(defaultLoadflowProvider));
-
-        //run a loadflow on another node
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid,
-                modificationNode3Uuid)).andExpect(status().isOk());
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
-
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID_3)));
-
-        // check load flow status
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
-                        modificationNode3Uuid)).andExpectAll(
-                                status().isOk(),
-                                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        LoadFlowInfos lfInfos = mapper.readValue(resultAsString, LoadFlowInfos.class);
-
-        assertThat(lfInfos, new MatcherLoadFlowInfos(
-                        LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
-    }
-
-    @Test
-    public void testLoadFlowError() throws Exception {
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_LOADFLOW_ERROR_UUID);
-        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID, "node");
-        UUID modificationNodeUuid = modificationNode.getId();
-
-        // run loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, modificationNodeUuid))
-            .andExpect(status().isOk());
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
-
-        // check load flow status
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
-                        modificationNodeUuid)).andExpectAll(
-                                status().isOk(),
-                                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        String resultAsString = mvcResult.getResponse().getContentAsString();
-        LoadFlowInfos lfInfos = mapper.readValue(resultAsString, LoadFlowInfos.class);
-
-        assertThat(lfInfos, new MatcherLoadFlowInfos(
-                LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.DIVERGED).build()));
     }
 
     private void testSecurityAnalysisWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {

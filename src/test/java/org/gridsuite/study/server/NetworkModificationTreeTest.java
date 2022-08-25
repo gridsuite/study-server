@@ -34,6 +34,8 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -43,11 +45,18 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeI
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.ActionsService;
+import org.gridsuite.study.server.service.CaseService;
+import org.gridsuite.study.server.service.GeoDataService;
+import org.gridsuite.study.server.service.LoadflowService;
+import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkMapService;
 import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
@@ -128,13 +137,40 @@ public class NetworkModificationTreeTest {
     private LoadFlowResult loadFlowResult2;
 
     @Autowired
-    private StudyService studyService;
+    private CaseService caseService;
+
+    @Autowired
+    private NetworkConversionService networkConversionService;
 
     @Autowired
     private NetworkModificationService networkModificationService;
 
     @Autowired
+    private NetworkMapService networkMapService;
+
+    @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private SecurityAnalysisService securityAnalysisService;
+
+    @Autowired
+    private SingleLineDiagramService singleLineDiagramService;
+
+    @Autowired
+    private LoadflowService loadflowService;
+
+    @Autowired
+    private GeoDataService geoDataService;
+
+    @Autowired
+    private ActionsService actionsService;
+
+    @MockBean
+    private EquipmentInfosService equipmentInfosService;
+
+    @MockBean
+    private StudyInfosService studyInfosService;
 
     private MockWebServer server;
 
@@ -205,14 +241,14 @@ public class NetworkModificationTreeTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        studyService.setCaseServerBaseUri(baseUrl);
-        studyService.setNetworkConversionServerBaseUri(baseUrl);
-        studyService.setSingleLineDiagramServerBaseUri(baseUrl);
-        studyService.setGeoDataServerBaseUri(baseUrl);
-        studyService.setNetworkMapServerBaseUri(baseUrl);
-        studyService.setLoadFlowServerBaseUri(baseUrl);
-        studyService.setSecurityAnalysisServerBaseUri(baseUrl);
-        studyService.setActionsServerBaseUri(baseUrl);
+        caseService.setCaseServerBaseUri(baseUrl);
+        networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
+        singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
+        geoDataService.setGeoDataServerBaseUri(baseUrl);
+        networkMapService.setNetworkMapServerBaseUri(baseUrl);
+        loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
+        actionsService.setActionsServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
 
