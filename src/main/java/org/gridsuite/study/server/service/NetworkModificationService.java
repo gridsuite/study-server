@@ -384,7 +384,7 @@ public class NetworkModificationService {
         restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public void stopBuild(@NonNull UUID nodeUuid) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
@@ -424,7 +424,7 @@ public class NetworkModificationService {
     public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
         ModificationType modificationType, UUID modificationUuid) {
         UriComponentsBuilder uriComponentsBuilder;
-        uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
+        uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
             modificationType));
         var path = uriComponentsBuilder
             .buildAndExpand()
@@ -433,7 +433,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(lineSplitWithVoltageLevelAttributes, headers);
 
         try {
             restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class).getBody();
@@ -461,7 +461,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(lineSplitWithVoltageLevelAttributes, headers);
 
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();

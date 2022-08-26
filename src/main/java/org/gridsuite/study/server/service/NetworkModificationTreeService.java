@@ -179,10 +179,9 @@ public class NetworkModificationTreeService {
                 AbstractNode node = repositories.get(n.getType()).getNode(n.getIdNode());
                 allReportUuids.add(node.getReportUuid());
             });
-            repositories.forEach((key, repository) -> {
+            repositories.forEach((key, repository) ->
                     repository.deleteAll(
-                        nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()));
-                }
+                        nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))
             );
 
             Set<UUID> allReportUsageUuids = new HashSet<>();
@@ -683,8 +682,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<Pair<UUID, String>> uuidsAndNames = getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
-        return uuidsAndNames;
+        return getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
     }
 
     @Transactional

@@ -775,7 +775,7 @@ public class StudyController {
     public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(studyUuid, nodeUuid, nodeOnlyReport));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications", produces = MediaType.TEXT_PLAIN_VALUE)

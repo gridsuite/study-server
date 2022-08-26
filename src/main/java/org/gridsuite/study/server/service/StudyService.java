@@ -906,6 +906,7 @@ public class StudyService {
             .orElse(null);
     }
 
+    @Transactional
     public void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
         updateLoadFlowParameters(studyUuid, LoadflowService.toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
@@ -1086,7 +1087,6 @@ public class StudyService {
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
-    @Transactional
     public void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowParameters(loadFlowParametersEntity));
@@ -1193,7 +1193,7 @@ public class StudyService {
         return networkMapService.getVoltageLevelBusesOrBusbarSections(networkUuid, variantId, voltageLevelId, busPath);
     }
 
-    public List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, Boolean inUpstreamBuiltParentNode) {
+    public List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
@@ -1201,7 +1201,7 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "configured-buses");
     }
 
-    public List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, Boolean inUpstreamBuiltParentNode) {
+    public List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
@@ -1221,9 +1221,7 @@ public class StudyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        LoadFlowInfos lfInfos = networkModificationTreeService.getLoadFlowInfos(nodeUuid);
-
-        return lfInfos;
+        return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
     }
 
     private BuildInfos fillBuildInfos(UUID nodeUuid) {
@@ -1246,7 +1244,7 @@ public class StudyService {
     }
 
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        networkModificationService.stopBuild(studyUuid, nodeUuid);
+        networkModificationService.stopBuild(nodeUuid);
     }
 
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
@@ -1392,7 +1390,7 @@ public class StudyService {
         return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
     }
 
-    public List<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid, boolean nodeOnlyReport) {
+    public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
         List<Pair<UUID, String>> reportUuidsAndNames = getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
         return reportUuidsAndNames.stream().map(reportInfo -> {
             ReporterModel reporter = reportService.getReport(reportInfo.getLeft(), reportInfo.getRight());
