@@ -7,6 +7,10 @@
 
 package org.gridsuite.study.server;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -69,10 +73,6 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-
-/**
- * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
- */
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -389,7 +389,7 @@ public class NetworkMapTest {
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
 
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

@@ -551,7 +551,7 @@ public class SingleLineDiagramTest {
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
 
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

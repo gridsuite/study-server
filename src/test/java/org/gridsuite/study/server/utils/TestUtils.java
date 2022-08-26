@@ -1,4 +1,15 @@
+/**
+ * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 package org.gridsuite.study.server.utils;
+
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 
 import static org.junit.Assert.assertNull;
 
@@ -27,6 +38,20 @@ public final class TestUtils {
 
     }
 
+    public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) throws UncheckedInterruptedException {
+        return IntStream.range(0, n).mapToObj(i -> {
+            try {
+                var request = server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS);
+                if (request == null) {
+                    throw new AssertionError("Expected " + n + " requests, got only " + i);
+                }
+                return new RequestWithBody(request.getPath(), request.getBody().readUtf8());
+            } catch (InterruptedException e) {
+                throw new UncheckedInterruptedException(e);
+            }
+        }).collect(Collectors.toSet());
+    }
+
     public static Set<String> getRequestsDone(int n, MockWebServer server) throws UncheckedInterruptedException {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
@@ -37,8 +62,8 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity) {
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("").caseUuid(caseUuid)
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity) {
+        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .date(LocalDateTime.now())
             .networkId("netId")
             .networkUuid(networkUuid)

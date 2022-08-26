@@ -365,7 +365,7 @@ public class LoadflowTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .build();
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

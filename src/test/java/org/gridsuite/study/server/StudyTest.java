@@ -61,7 +61,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpHeaders;
@@ -69,7 +68,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
@@ -166,9 +164,6 @@ public class StudyTest {
 
     @Autowired
     private OutputDestination output;
-
-    @Autowired
-    private InputDestination input;
 
     @Autowired
     private StudyService studyService;
@@ -392,11 +387,6 @@ public class StudyTest {
                     }
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines/lineFailedId/status\\?group=.*")) {
                     return new MockResponse().setResponseCode(500).setBody(LINE_MODIFICATION_FAILED.name());
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s4", "s5", "s6", "s7")));
-                    return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads(-modification)?\\?group=.*")) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
@@ -466,30 +456,6 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200)
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build.*") && request.getMethod().equals("POST")) {
-                    // variant build
-                    input.send(MessageBuilder.withPayload("s1,s2").setHeader("receiver", "%7B%22nodeUuid%22%3A%22"
-                            + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), "build.result");
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build.*") && request.getMethod().equals("POST")) {
-                    // failed build
-                    input.send(MessageBuilder.withPayload("").setHeader("receiver", "%7B%22nodeUuid%22%3A%22"
-                            + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), "build.failed");
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build.*") && request.getMethod().equals("POST")) {
-                    // failed build
-                    return new MockResponse().setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                } else if (path.matches("/v1/build/stop.*")) {
-                    // stop variant build
-                    input.send(MessageBuilder.withPayload("").setHeader("receiver", "%7B%22nodeUuid%22%3A%22"
-                            + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                        .build(), "build.stopped");
-                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
-                            "application/json; charset=utf-8");
                 } else if (path.matches("/v1/groups/.*/modifications[?]") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/") && request.getMethod().equals("PUT")) {
@@ -992,144 +958,6 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-    }
-
-    @Test
-    public void testNetworkModificationSwitch() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
-
-        createStudy("userId", CASE_UUID);
-        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID, "node 1");
-        UUID modificationNode1Uuid = modificationNode1.getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
-        UUID modificationNode2Uuid = modificationNode2.getId();
-
-        // update switch on root node (not allowed)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                studyNameUserIdUuid, rootNodeUuid, "switchId")).andExpect(status().isForbidden());
-
-        // update switch on first modification node
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
-
-        Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
-        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, substationsSet);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-
-        var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID)));
-
-        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-
-        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
-
-        // update switch on second modification node
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, modificationNode2Uuid, "switchId")).andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, substationsSet);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID_2)));
-
-        // test build status on switch modification
-        modificationNode1.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode1 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
-        output.receive(TIMEOUT);
-        modificationNode2.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode2 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
-        output.receive(TIMEOUT);
-
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        try {
-            output.receive(TIMEOUT);
-        } catch (Exception e) {
-            throw e;
-        }
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-
-        requests = getRequestsWithBodyDone(2);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
-
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode1Uuid)); // modificationNode1
-                                                                                                               // is
-                                                                                                               // still
-                                                                                                               // built
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode2Uuid)); // modificationNode2
-                                                                                                                       // is
-                                                                                                                       // now
-                                                                                                                       // invalid
-    }
-
-    @Test
-    public void testNetworkModificationEquipment() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
-
-        createStudy("userId", CASE_UUID);
-        UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node 1");
-        UUID modificationNodeUuid = modificationNode.getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNodeUuid, VARIANT_ID_2, "node 2");
-        UUID modificationNodeUuid2 = modificationNode2.getId();
-
-        //update equipment on root node (not allowed)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                rootNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
-            .andExpect(status().isForbidden());
-
-        //update equipment
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                        modificationNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
-            .andExpect(status().isOk());
-
-        Set<String> substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
-        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                substationsSet);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        assertTrue(getRequestsDone(1).stream()
-                .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")));
-
-        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId").header("userId", "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-
-        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "userId", "UCTE"));
-
-        // update equipment on second modification node
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                        modificationNodeUuid2).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
-            .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
-
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*&variantId=" + VARIANT_ID_2)));
     }
 
     @Test
@@ -2478,206 +2306,6 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*&variantId=" + VARIANT_ID_2) && r.getBody().equals(createTwoWindingsTransformerAttributes)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/two-windings-transformers-creation") && r.getBody().equals(twoWindingsTransformerAttributesUpdated)));
 
-    }
-
-    private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, int nbReportExpected) throws Exception {
-        // build node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
-            .andExpect(status().isOk());
-
-        // Initial node update -> BUILDING
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        // Successful ->  Node update -> BUILT
-        buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
-        assertEquals(NotificationService.UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-        assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
-
-        assertTrue(getRequestsDone(nbReportExpected).stream().allMatch(r -> r.contains("reports")));
-        assertTrue(getRequestsDone(1).stream()
-            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/build\\?receiver=.*")));
-
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is built
-
-        networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
-
-        // stop build
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build/stop", studyUuid, nodeUuid))
-            .andExpect(status().isOk());
-
-        buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        output.receive(TIMEOUT);
-        buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
-        assertEquals(NotificationService.UPDATE_TYPE_BUILD_CANCELLED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid)); // node is not
-                                                                                                      // built
-
-        assertTrue(getRequestsDone(1).stream().anyMatch(r -> r.matches("/v1/build/stop\\?receiver=.*")));
-    }
-
-    // builds on network 2 will fail
-    private void testBuildFailedWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
-        // build node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
-            .andExpect(status().isOk());
-
-        // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        // fail -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        // error message sent to frontend
-        buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
-        assertEquals(NotificationService.UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
-        assertTrue(getRequestsDone(1).stream()
-            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/build\\?receiver=.*")));
-
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
-    }
-
-    // builds on network 3 will throw an error on networkmodificationservice call
-    private void testBuildErrorWithNodeUuid(UUID studyUuid, UUID nodeUuid) throws Exception {
-        // build node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/build", studyUuid, nodeUuid))
-            .andExpect(status().isInternalServerError());
-
-        // initial node update -> building
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        // error -> second node update -> not built
-        buildStatusMessage = output.receive(TIMEOUT);
-        assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        assertTrue(getRequestsDone(1).iterator().next().contains("reports"));
-        assertTrue(getRequestsDone(1).stream()
-            .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/build\\?receiver=.*")));
-
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
-    }
-
-    @Test
-    public void testBuildFailed() throws Exception {
-        UUID studyUuid = createStudy("userId", UUID.fromString(CASE_2_UUID_STRING));
-        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
-        UUID modificationGroupUuid1 = UUID.randomUUID();
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid,
-                modificationGroupUuid1, "variant_1", "node 1");
-
-        testBuildFailedWithNodeUuid(studyUuid, modificationNode.getId());
-    }
-
-    @Test
-    public void testBuildError() throws Exception {
-        UUID studyUuid = createStudy("userId", UUID.fromString(CASE_3_UUID_STRING));
-        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
-        UUID modificationGroupUuid1 = UUID.randomUUID();
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyUuid, rootNodeUuid,
-                modificationGroupUuid1, "variant_1", "node 1");
-
-        testBuildErrorWithNodeUuid(studyUuid, modificationNode.getId());
-    }
-
-    @Test
-    public void testBuild() throws Exception {
-        UUID studyNameUserIdUuid = createStudy("userId", CASE_UUID);
-        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        UUID modificationGroupUuid1 = UUID.randomUUID();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                modificationGroupUuid1, "variant_1", "node 1");
-        UUID modificationGroupUuid2 = UUID.randomUUID();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode1.getId(), modificationGroupUuid2, "variant_2", "node 2");
-        UUID modificationGroupUuid3 = UUID.randomUUID();
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode2.getId(), modificationGroupUuid3, "variant_3", "node 3");
-        UUID modificationGroupUuid4 = UUID.randomUUID();
-        NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode3.getId(), modificationGroupUuid4, "variant_4", "node 4");
-        UUID modificationGroupUuid5 = UUID.randomUUID();
-        NetworkModificationNode modificationNode5 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode4.getId(), modificationGroupUuid5, "variant_5", "node 5");
-
-        /*
-            root
-             |
-          modificationNode1
-             |
-          modificationNode2
-             |
-          modificationNode3
-             |
-          modificationNode4
-             |
-          modificationNode5
-         */
-
-        BuildInfos buildInfos = networkModificationTreeService.prepareBuild(modificationNode5.getId());
-        assertNull(buildInfos.getOriginVariantId());  // previous built node is root node
-        assertEquals("variant_5", buildInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
-
-        modificationNode3.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode3 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
-        output.receive(TIMEOUT);
-
-        buildInfos = networkModificationTreeService.prepareBuild(modificationNode4.getId());
-        assertEquals("variant_3", buildInfos.getOriginVariantId()); // variant to clone is variant associated to node
-                                                                    // modificationNode3
-        assertEquals("variant_4", buildInfos.getDestinationVariantId());
-        assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroupUuids());
-
-        modificationNode2.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode2 as not built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
-        output.receive(TIMEOUT);
-        modificationNode4.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode4 as built invalid
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4);
-        output.receive(TIMEOUT);
-        modificationNode5.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode5 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5);
-        output.receive(TIMEOUT);
-
-        // build modificationNode2 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 2);
-
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
-
-        modificationNode3.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode3 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
-        output.receive(TIMEOUT);
-
-        // build modificationNode3 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 3);
-
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
     }
 
     @Test
