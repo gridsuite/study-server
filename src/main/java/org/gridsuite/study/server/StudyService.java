@@ -697,13 +697,10 @@ public class StudyService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder
-            .buildAndExpand(networkUuid, voltageLevelId)
-            .toUriString();
 
         String result;
         try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, voltageLevelId);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
@@ -1456,8 +1453,7 @@ public class StudyService {
         String variantId = getVariantId(nodeUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                        + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
                 .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
                 .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
@@ -1469,11 +1465,10 @@ public class StudyService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
         String result;
         try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+            result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, substationId).getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
@@ -1837,11 +1832,9 @@ public class StudyService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        String path = builder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
 
-        return restTemplate.exchange(networkMapServerBaseUri + path, HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<IdentifiableInfos>>() {
-                }).getBody();
+        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
+            new ParameterizedTypeReference<List<IdentifiableInfos>>() { }, networkUuid, voltageLevelId).getBody();
     }
 
     List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, Boolean inUpstreamBuiltParentNode) {
