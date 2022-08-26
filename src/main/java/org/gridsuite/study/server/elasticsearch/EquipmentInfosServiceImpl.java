@@ -17,8 +17,11 @@ import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilde
 import org.springframework.lang.NonNull;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static java.util.Map.entry;
 
 /**
  * A class to implement elasticsearch indexing
@@ -29,6 +32,25 @@ import java.util.stream.Collectors;
 public class EquipmentInfosServiceImpl implements EquipmentInfosService {
 
     private static final int PAGE_MAX_SIZE = 400;
+
+    public static final Map<String, Integer> EQUIPMENT_TYPE_SCORES = Map.ofEntries(
+            entry("SUBSTATION", 15),
+            entry("VOLTAGE_LEVEL", 14),
+            entry("LINE", 13),
+            entry("TWO_WINDINGS_TRANSFORMER", 12),
+            entry("THREE_WINDINGS_TRANSFORMER", 11),
+            entry("HVDC_LINE", 10),
+            entry("GENERATOR", 9),
+            entry("BATTERY", 8),
+            entry("LOAD", 7),
+            entry("SHUNT_COMPENSATOR", 6),
+            entry("DANGLING_LINE", 5),
+            entry("STATIC_VAR_COMPENSATOR", 4),
+            entry("HVDC_CONVERTER_STATION", 3),
+            entry("BUSBAR_SECTION", 2),
+            entry("BUS", 1),
+            entry("SWITCH", 0)
+    );
 
     private final EquipmentInfosRepository equipmentInfosRepository;
 

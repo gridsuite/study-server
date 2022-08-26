@@ -21,10 +21,7 @@ import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.WildcardQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.dto.*;
@@ -75,9 +72,10 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -468,33 +466,20 @@ public class StudyService {
             variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
         }
 
-        BoolQueryBuilder queryInitialVariant = buildSearchAllEquipmentQuery(userInput, fieldSelector, networkUuid,
-                VariantManagerConstants.INITIAL_VARIANT_ID);
+        BoolQueryBuilder query = buildSearchAllEquipmentQuery(userInput, fieldSelector, networkUuid,
+                VariantManagerConstants.INITIAL_VARIANT_ID, variantId);
 
-        List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
+        List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
 
-        return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) ? equipmentInfosInInitVariant
-                : completeSearchAllEquipmentsWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector,
-                equipmentInfosInInitVariant);
-    }
-
-    private List<EquipmentInfos> completeSearchAllEquipmentsWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
-                                                                  EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant) {
         String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
         Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
-        BoolQueryBuilder queryVariant = buildSearchAllEquipmentQuery(userInput, fieldSelector, networkUuid, variantId);
-        List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
-
-        List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
-                .stream()
+        equipmentInfos = equipmentInfos.stream()
                 .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
                 .collect(Collectors.toList());
-
-        equipmentInfos.addAll(addedEquipmentInfosInVariant);
 
         return equipmentInfos;
     }
@@ -530,29 +515,39 @@ public class StudyService {
                 escapeLucene(userInput), equipmentType);
     }
 
-    private BoolQueryBuilder buildSearchAllEquipmentQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId) {
+    private BoolQueryBuilder buildSearchAllEquipmentQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
         WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", "*" + escapeLucene(userInput) + "*");
         MatchQueryBuilder networkUuidSearchQuery = matchQuery("networkUuid.keyword", networkUuid.toString());
-        MatchQueryBuilder variantIdSearchQuery = matchQuery("variantId.keyword", variantId);
+        TermsQueryBuilder variantIdSearchQuery = termsQuery("variantId.keyword", initialVariantId, variantId);
 
-        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = {
-            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                    matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", escapeLucene(userInput)),
-                    ScoreFunctionBuilders.weightFactorFunction(4)
-            ),
-            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                    matchQuery("equipmentType", "SUBSTATION"),
-                    ScoreFunctionBuilders.weightFactorFunction(3)
-            ),
-            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                    matchQuery("equipmentType", "VOLTAGE_LEVEL"),
-                    ScoreFunctionBuilders.weightFactorFunction(2)
-            ),
-        };
+        List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionsForScoreQueries = new ArrayList<>();
+        filterFunctionsForScoreQueries.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", escapeLucene(userInput)),
+                ScoreFunctionBuilders.weightFactorFunction(EQUIPMENT_TYPE_SCORES.entrySet().size())
+        ));
+//        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = {
+//            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+//                    matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", escapeLucene(userInput)),
+//                    ScoreFunctionBuilders.weightFactorFunction(4)
+//            ),
+//            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+//                    matchQuery("equipmentType", "SUBSTATION"),
+//                    ScoreFunctionBuilders.weightFactorFunction(3)
+//            ),
+//            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+//                    matchQuery("equipmentType", "VOLTAGE_LEVEL"),
+//                    ScoreFunctionBuilders.weightFactorFunction(2)
+//            ),
+//        };
 
-        FunctionScoreQueryBuilder functionScoreBoostQuery = QueryBuilders.functionScoreQuery(
-                filterFunctionsForScoreQueries
-        );
+        EQUIPMENT_TYPE_SCORES.entrySet().forEach(equipmentTypeScore -> filterFunctionsForScoreQueries.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                matchQuery("equipmentType", equipmentTypeScore.getKey()),
+                ScoreFunctionBuilders.weightFactorFunction(equipmentTypeScore.getValue())
+        )));
+
+        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueriesAsArray = new FunctionScoreQueryBuilder.FilterFunctionBuilder[ filterFunctionsForScoreQueries.size() ];
+        filterFunctionsForScoreQueries.toArray(filterFunctionsForScoreQueriesAsArray);
+        FunctionScoreQueryBuilder functionScoreBoostQuery = QueryBuilders.functionScoreQuery(filterFunctionsForScoreQueriesAsArray);
 
         BoolQueryBuilder esQuery = QueryBuilders.boolQuery();
         esQuery.filter(equipmentSearchQuery).filter(networkUuidSearchQuery).filter(variantIdSearchQuery).must(functionScoreBoostQuery);
