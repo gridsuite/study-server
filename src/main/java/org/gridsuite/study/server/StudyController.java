@@ -181,11 +181,12 @@ public class StudyController {
             @ApiResponse(responseCode = "200", description = "The node was successfully created"),
             @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
             @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
-    public ResponseEntity<UUID> duplicateNode(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> duplicateNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
                                               @Parameter(description = "The reference node to where we want to copy") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                               @Parameter(description = "the position where the node will be copied relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
-        return ResponseEntity.ok().body(studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode));
+        studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")

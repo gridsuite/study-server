@@ -3897,14 +3897,14 @@ public class StudyTest {
                 .count());
 
         //now the tree looks like root -> modificationNode -> duplicatedNode2 -> node1 -> node2 -> duplicatedNode1
-        //duplicate node1 in a new branch starting from duplicatedNode2 parent (modificationNode)
+        //duplicate node1 in a new branch starting from duplicatedNode2
         UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, node1.getId(), duplicatedNodeUuid2, InsertMode.NEW_BRANCH);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         //expect to have modificationNode as a parent
         assertEquals(1, allNodes.stream()
                 .filter(nodeEntity -> nodeEntity.getParentNode() != null
                         && nodeEntity.getIdNode().equals(duplicatedNodeUuid3)
-                        && nodeEntity.getParentNode().getIdNode().equals(modificationNodeUuid))
+                        && nodeEntity.getParentNode().getIdNode().equals(duplicatedNodeUuid2))
                 .count());
         //and expect that no other node has the new branch create node as parent
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(duplicatedNodeUuid3)).count());
@@ -3935,12 +3935,13 @@ public class StudyTest {
     }
 
     public UUID duplicateNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) throws Exception {
-        String createdNodeUuidString = mockMvc.perform(post(STUDIES_URL +
+        List<NodeEntity> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(studyUuid);
+
+        mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode)
                 .header("userId", "userId"))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(status().isOk());
 
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
@@ -3951,8 +3952,14 @@ public class StudyTest {
 
         var requests = getRequestsDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
-        //remove quotes from uuid
-        return UUID.fromString(createdNodeUuidString.substring(1, createdNodeUuidString.length() - 1));
+
+        List<NodeEntity> allNodesAfterDuplication = networkModificationTreeService.getAllNodes(studyUuid);
+
+        List<NodeEntity> newNodeUuid;
+        //newNodeUuid = allNodesAfterDuplication.stream().filter(nodeEntity -> !allNodesBeforeDuplication.contains(nodeEntity)).collect(Collectors.toList());
+        allNodesAfterDuplication.removeIf(nodeEntity -> allNodesBeforeDuplication.stream().anyMatch(nodeEntity1 -> nodeEntity.getIdNode().equals(nodeEntity1.getIdNode())));
+
+        return allNodesAfterDuplication.get(0).getIdNode();
     }
 
     public void getDefaultLoadflowProvider() throws Exception {

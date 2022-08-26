@@ -114,15 +114,14 @@ public class NetworkModificationTreeService {
 
         UUID newGroupUuid = UUID.randomUUID();
         UUID modificationGroupUuid = getModificationGroupUuid(nodeToCopyUuid);
-        UUID reportUuid = getReportUuid(nodeToCopyUuid);
         UUID newReportUuid = UUID.randomUUID();
         //First we create the modification group
-        networkModificationService.createModifications(modificationGroupUuid, newGroupUuid, reportUuid);
+        networkModificationService.createModifications(modificationGroupUuid, newGroupUuid, newReportUuid);
 
         if (insertMode.equals(InsertMode.BEFORE) && referenceNodeEntity.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) || insertMode.equals(InsertMode.NEW_BRANCH) ?
+        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
                 referenceNodeEntity.getParentNode() : referenceNodeEntity;
         //Then we create the node
         NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeToCopyEntity.getType(), referenceNodeEntity.getStudy()));
@@ -146,7 +145,7 @@ public class NetworkModificationTreeService {
                 null,
                 BuildStatus.NOT_BUILT
         );
-        newNetworkModificationNodeInfoEntity.setName(getUniqueNodeName(studyUuid));
+        newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
         newNetworkModificationNodeInfoEntity.setDescription(networkModificationNodeInfoEntity.getDescription());
         newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
         newNetworkModificationNodeInfoEntity.setReportUuid(newReportUuid);
@@ -375,6 +374,22 @@ public class NetworkModificationTreeService {
             ++counter;
         }
 
+        return uniqueName;
+    }
+
+    @Transactional(readOnly = true)
+    public String getSuffixedNodeName(UUID studyUuid, String nodeName) {
+        List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
+                .stream()
+                .map(AbstractNodeInfoEntity::getName)
+                .collect(Collectors.toList());
+
+        String uniqueName = StringUtils.EMPTY;
+        int i = 1;
+        while (StringUtils.EMPTY.equals(uniqueName) || studyNodeNames.contains(uniqueName)) {
+            uniqueName = nodeName + " (" + i + ")";
+            i++;
+        }
         return uniqueName;
     }
 
