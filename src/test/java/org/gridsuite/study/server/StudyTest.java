@@ -43,7 +43,6 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.jetbrains.annotations.NotNull;
@@ -150,7 +149,6 @@ public class StudyTest {
     private static final String VARIANT_ID_3 = "variant_3";
     private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
     private static final String VL_ID_1 = "VL_ID_1";
-    private static final String CASE_NAME = "DefaultCaseName";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
     private static final String CASE_2_UUID_STRING = "656719f3-aaaa-48be-be46-ef7b93331e32";
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
@@ -164,9 +162,6 @@ public class StudyTest {
 
     @Autowired
     private OutputDestination output;
-
-    @Autowired
-    private StudyService studyService;
 
     @Autowired
     private CaseService caseService;
@@ -526,12 +521,6 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/format":
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("XIIDM")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/cases/" + CASE_UUID_STRING + "/name":
-                        return new MockResponse().setResponseCode(200).setBody(CASE_NAME)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name":
-                        return new MockResponse().setResponseCode(424).setBody("notFoundCaseName")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("false")
@@ -2265,48 +2254,6 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/" + modificationTypeUrl) && r.getBody().equals(generatorAttributesUpdated)));
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
-    }
-
-    @Test
-    public void getCaseName() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-                status().isOk(),
-                content().string(CASE_NAME));
-
-        var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/name")));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
-                .andExpect(status().isNotFound());
-
-        // change study case uuid and trying to get case name : error
-        StudyEntity study = studyRepository.findAll().get(0);
-        study.setCaseUuid(UUID.fromString(NOT_EXISTING_CASE_UUID));
-        studyRepository.save(study);
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-            status().is4xxClientError());
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name")));
-    }
-
-    @Test
-    public void getCaseFormat() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
-        String caseFormat = studyService.getCaseFormatWithNotificationOnError(CASE_UUID, study1Uuid, "userId");
-        assertEquals("UCTE", caseFormat);
-
-        var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/format")));
-
-        UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
-        assertThrows(StudyException.class, () -> studyService.getCaseFormatWithNotificationOnError(notExistingCase, study1Uuid, "userId"));
-        output.receive(TIMEOUT);
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/format")));
     }
 
     @After
