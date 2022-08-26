@@ -139,8 +139,6 @@ public class LoadflowTest {
 
     @Before
     public void setup() throws IOException {
-        objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
-
         server = new MockWebServer();
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
@@ -382,7 +380,7 @@ public class LoadflowTest {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT);
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -414,7 +412,7 @@ public class LoadflowTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -437,10 +435,10 @@ public class LoadflowTest {
 
         cleanDB();
 
-        TestUtils.assertQueuesEmpty(destinations, output);
+        TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
-            TestUtils.assertServerRequestsEmpty(server);
+            TestUtils.assertServerRequestsEmptyThenShutsown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         } catch (IOException e) {

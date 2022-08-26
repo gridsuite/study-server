@@ -52,6 +52,8 @@ public class TestTempDir {
     @MockBean
     private TempFileService tempFileService;
 
+    private String studyUpdateDestination = "study.update";
+
     @Test
     public void testCreateTmpDirException() throws Exception {
 
@@ -66,8 +68,8 @@ public class TestTempDir {
         }
 
         // assert that the broker message has been sent a study creation request message
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, studyUpdateDestination);
         // assert that the broker message has been sent a study creation request deletion message
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, studyUpdateDestination);
     }
 }

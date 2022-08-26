@@ -436,10 +436,10 @@ public class SecurityAnalysisTest {
 
         cleanDB();
 
-        TestUtils.assertQueuesEmpty(destinations, output);
+        TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
-            TestUtils.assertServerRequestsEmpty(server);
+            TestUtils.assertServerRequestsEmptyThenShutsown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         } catch (IOException e) {

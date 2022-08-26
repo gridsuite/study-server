@@ -189,6 +189,8 @@ public class NetworkModificationTreeTest {
     @MockBean
     private Network network;
 
+    private String studyUpdateDestination = "study.update";
+
     @Before
     public void setUp() throws IOException {
         Configuration.defaultConfiguration();
@@ -287,7 +289,7 @@ public class NetworkModificationTreeTest {
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();
-        assertNull(output.receive(TIMEOUT));
+        assertNull(output.receive(TIMEOUT, studyUpdateDestination));
     }
 
     StudyEntity createDummyStudy(UUID networkUuid) {
@@ -460,7 +462,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren))
             .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         if (expectedDeletion != null) {
             Collection<UUID> deletedId = (Collection<UUID>) mess.getHeaders().get(NotificationService.HEADER_NODES);
             assertNotNull(deletedId);
@@ -563,7 +565,7 @@ public class NetworkModificationTreeTest {
         assertEquals(1, root.getChildren().size());
         assertNodeEquals(node1, root.getChildren().get(0));
 
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         var header = mess.getHeaders();
         assertEquals(root.getStudyId(), header.get(NotificationService.HEADER_STUDY_UUID));
@@ -580,7 +582,7 @@ public class NetworkModificationTreeTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(justeANameUpdate)))
             .andExpect(status().isOk());
-        output.receive(TIMEOUT).getHeaders();
+        output.receive(TIMEOUT, studyUpdateDestination).getHeaders();
 
         var newNode = getNode(root.getStudyId(), node1.getId());
         node1.setName(justeANameUpdate.getName());
@@ -675,7 +677,7 @@ public class NetworkModificationTreeTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(newNodeBodyJson))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -698,7 +700,7 @@ public class NetworkModificationTreeTest {
                 .content(newNodeBodyJson))
             .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.NODE_CREATED, mess.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(newParentNode.getId(), mess.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
         assertEquals(mode.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -842,19 +844,19 @@ public class NetworkModificationTreeTest {
         UUID studyId = root.getStudyId();
 
         NetworkModificationNode defNode1 = makeNetworkModificationNode(root, studyId, "unused variant 1");
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         NetworkModificationNode buildNode1 = makeNetworkModificationNode(defNode1, studyId, "built variant 1");
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         NetworkModificationNode defNode2 = makeNetworkModificationNode(buildNode1, studyId, "unused variant 2");
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         NetworkModificationNode defNode3 = makeNetworkModificationNode(defNode2, studyId, "unused variant 3");
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         NetworkModificationNode defNode4 = makeNetworkModificationNode(defNode2, studyId, "unused variant 4");
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         NetworkModificationNode buildNode2 = makeNetworkModificationNode(defNode3, studyId, "built variant 2");
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         NetworkModificationNode buildNode3 = makeNetworkModificationNode(defNode4, studyId, "built variant 3");
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         BuildInfos buildInfo1 = networkModificationTreeService.prepareBuild(buildNode1.getId());
         assertEquals(2, buildInfo1.getModificationReportUuids().size());
@@ -869,7 +871,7 @@ public class NetworkModificationTreeTest {
 
         buildNode1.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyId, buildNode1);
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         BuildInfos buildInfo2 = networkModificationTreeService.prepareBuild(buildNode2.getId());
         assertEquals(3, buildInfo2.getModificationGroupUuids().size());
@@ -886,7 +888,7 @@ public class NetworkModificationTreeTest {
 
         buildNode2.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyId, buildNode2);
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         BuildInfos buildInfo3 = networkModificationTreeService.prepareBuild(buildNode3.getId());
         assertEquals(3, buildInfo3.getModificationGroupUuids().size());
@@ -904,19 +906,19 @@ public class NetworkModificationTreeTest {
 
         buildNode3.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyId, buildNode3);
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         InvalidateNodeInfos invalidateNodeInfos3 = new InvalidateNodeInfos();
         networkModificationTreeService.invalidateBuild(buildNode3.getId(), false, invalidateNodeInfos3);
         List<UUID> reportUUids3 = invalidateNodeInfos3.getReportUuids();
         assertEquals(3, reportUUids3.size());
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         InvalidateNodeInfos invalidateNodeInfos1 = new InvalidateNodeInfos();
         networkModificationTreeService.invalidateBuild(buildNode1.getId(), false, invalidateNodeInfos1);
         List<UUID> reportUuids1 = invalidateNodeInfos1.getReportUuids();
         assertEquals(5, reportUuids1.size());
-        assertNotNull(output.receive(TIMEOUT));
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
     }
 
     private NetworkModificationNode makeNetworkModificationNode(AbstractNode parent, UUID studyId, String variantId) {

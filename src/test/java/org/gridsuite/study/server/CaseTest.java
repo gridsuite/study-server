@@ -181,7 +181,7 @@ public class CaseTest {
 
         UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
         assertThrows(StudyException.class, () -> studyService.getCaseFormatWithNotificationOnError(notExistingCase, study1Uuid, "userId"));
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT, studyUpdateDestination);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/format")));
@@ -214,10 +214,10 @@ public class CaseTest {
 
         cleanDB();
 
-        TestUtils.assertQueuesEmpty(destinations, output);
+        TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
-            TestUtils.assertServerRequestsEmpty(server);
+            TestUtils.assertServerRequestsEmptyThenShutsown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         } catch (IOException e) {

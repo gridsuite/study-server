@@ -12,36 +12,26 @@ package org.gridsuite.study.server;
  */
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkMapService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +42,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
@@ -63,7 +52,6 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 
@@ -80,8 +68,6 @@ import okhttp3.mockwebserver.RecordedRequest;
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class NetworkMapTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkMapTest.class);
-
-    private static final long TIMEOUT = 1000;
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
 
@@ -106,12 +92,7 @@ public class NetworkMapTest {
     private MockWebServer server;
 
     @Autowired
-    private OutputDestination output;
-
-    @Autowired
     private ObjectMapper mapper;
-
-    private ObjectWriter objectWriter;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -125,16 +106,9 @@ public class NetworkMapTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    //output destinations
-    private String studyUpdateDestination = "study.update";
-
     @Before
     public void setup() throws IOException {
-        objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
-
         server = new MockWebServer();
-
-        objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
         // Start the server.
         server.start();
@@ -404,35 +378,6 @@ public class NetworkMapTest {
                     .getContentAsString(), new TypeReference<>() { });
     }
 
-    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-            UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
-        return createNetworkModificationNode(studyUuid, parentNodeUuid,
-            modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
-    }
-
-    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-            UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
-        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
-                .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatus(buildStatus)
-                .children(Collections.emptyList()).build();
-
-        // Only for tests
-        String mnBodyJson = objectWriter.writeValueAsString(modificationNode);
-        JSONObject jsonObject = new JSONObject(mnBodyJson);
-        jsonObject.put("variantId", variantId);
-        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
-        mnBodyJson = jsonObject.toString();
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(mess);
-        modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
-        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
-        return modificationNode;
-    }
-
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId(), null));
         studyRepository.deleteAll();
@@ -440,14 +385,10 @@ public class NetworkMapTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination);
-
         cleanDB();
 
-        TestUtils.assertQueuesEmpty(destinations, output);
-
         try {
-            TestUtils.assertServerRequestsEmpty(server);
+            TestUtils.assertServerRequestsEmptyThenShutsown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         } catch (IOException e) {

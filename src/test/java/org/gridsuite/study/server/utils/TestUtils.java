@@ -32,7 +32,7 @@ import okhttp3.mockwebserver.MockWebServer;
 
 public final class TestUtils {
 
-    private static final long TIMEOUT = 1000;
+    private static final long TIMEOUT = 100;
 
     private TestUtils() {
 
@@ -73,7 +73,7 @@ public final class TestUtils {
             .build();
     }
 
-    public static void assertQueuesEmpty(List<String> destinations, OutputDestination output) {
+    public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
             destinations.forEach(destination -> {
                 assertNull("Should not be any messages in queue " + destination + " : ", output.receive(TIMEOUT, destination));
@@ -85,7 +85,7 @@ public final class TestUtils {
         }
     }
 
-    public static void assertServerRequestsEmpty(MockWebServer server) throws UncheckedInterruptedException, IOException {
+    public static void assertServerRequestsEmptyThenShutsown(MockWebServer server) throws UncheckedInterruptedException, IOException {
         Set<String> httpRequest = null;
 
         try {
