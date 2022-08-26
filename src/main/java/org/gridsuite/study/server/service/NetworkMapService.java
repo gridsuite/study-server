@@ -91,11 +91,9 @@ public class NetworkMapService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        String path = builder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
 
-        return restTemplate.exchange(networkMapServerBaseUri + path, HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<IdentifiableInfos>>() {
-                }).getBody();
+        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
+            new ParameterizedTypeReference<List<IdentifiableInfos>>() { }, networkUuid, voltageLevelId).getBody();
     }
 
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
