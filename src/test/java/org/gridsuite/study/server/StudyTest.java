@@ -2858,8 +2858,9 @@ public class StudyTest {
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
 
+        // switch the 2 modifications order (modification1 is set at the end, after modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
-                        studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
+                        studyNameUserIdUuid, modificationNodeUuid, modification1))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
@@ -2867,11 +2868,13 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream()
-                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
-            + "/modifications/move[?]modificationsToMove=.*" + modification1)));
+        Optional<RequestWithBody> switchModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid() + "[?]action=MOVE")).findFirst();
+        assertTrue(switchModificationRequest.isPresent());
+        List<UUID> modificationUuidList = Collections.singletonList(modification1);
+        String expectedBody = mapper.writeValueAsString(modificationUuidList);
+        assertEquals(expectedBody, switchModificationRequest.get().getBody()); // modification1 is in the request body
 
-        // update switch on first modification node
+        // switch back the 2 modifications order (modification1 is set before modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
@@ -2881,11 +2884,9 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream()
-                .anyMatch(r -> r.getPath()
-                        .matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
-                                + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
-                                + modification2)));
+        Optional<RequestWithBody> switchBackModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid() + "[?]action=MOVE&before=" + modification2)).findFirst();
+        assertTrue(switchBackModificationRequest.isPresent());
+        assertEquals(expectedBody, switchBackModificationRequest.get().getBody()); // modification1 is still in the request body
     }
 
     @Test

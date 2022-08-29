@@ -2114,7 +2114,8 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
+            List<UUID> modificationUuidList = Collections.singletonList(modificationUuid);
+            networkModificationService.reorderModification(groupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
@@ -2122,13 +2123,12 @@ public class StudyService {
     }
 
     @Transactional()
-    public void duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, UUID sourceUuid) {
+    public void duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            UUID sourceGroupUuid = nodeUuid != sourceUuid ? networkModificationTreeService.getModificationGroupUuid(sourceUuid) : targetGroupUuid;
-            networkModificationService.duplicateModification(targetGroupUuid, sourceGroupUuid, modificationUuidList);
+            networkModificationService.duplicateModification(targetGroupUuid, modificationUuidList);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);

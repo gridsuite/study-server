@@ -558,10 +558,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated")})
     public ResponseEntity<Void> duplicationModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                @Parameter(description = "the originating node Uuid") @RequestParam(value = "sourceNodeUuid") UUID sourceUuid,
                                                 @RequestBody List<UUID> modificationsUuidList) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList, sourceUuid);
+        studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList);
         return ResponseEntity.ok().build();
     }
 
