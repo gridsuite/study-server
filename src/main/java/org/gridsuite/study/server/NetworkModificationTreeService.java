@@ -472,6 +472,11 @@ public class NetworkModificationTreeService {
         if (securityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSecurityAnalysisResultUuid(securityAnalysisResultUuid);
         }
+
+        UUID sensitivityAnalysisResultUuid = repositories.get(node.getType()).getSensitivityAnalysisResultUuid(node.getIdNode());
+        if (sensitivityAnalysisResultUuid != null) {
+            invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
+        }
     }
 
     @Transactional
