@@ -525,20 +525,6 @@ public class StudyService {
                 matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", escapeLucene(userInput)),
                 ScoreFunctionBuilders.weightFactorFunction(EQUIPMENT_TYPE_SCORES.entrySet().size())
         ));
-//        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = {
-//            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-//                    matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", escapeLucene(userInput)),
-//                    ScoreFunctionBuilders.weightFactorFunction(4)
-//            ),
-//            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-//                    matchQuery("equipmentType", "SUBSTATION"),
-//                    ScoreFunctionBuilders.weightFactorFunction(3)
-//            ),
-//            new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-//                    matchQuery("equipmentType", "VOLTAGE_LEVEL"),
-//                    ScoreFunctionBuilders.weightFactorFunction(2)
-//            ),
-//        };
 
         EQUIPMENT_TYPE_SCORES.entrySet().forEach(equipmentTypeScore -> filterFunctionsForScoreQueries.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(
                 matchQuery("equipmentType", equipmentTypeScore.getKey()),
