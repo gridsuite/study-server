@@ -553,15 +553,14 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "duplicate a list of network modifications and append them to current node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated")})
-    public ResponseEntity<Void> duplicationModifications(@PathVariable("studyUuid") UUID studyUuid,
-                                                @PathVariable("nodeUuid") UUID nodeUuid,
-                                                @RequestBody List<UUID> modificationsUuidList) {
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
+    public ResponseEntity<String> duplicateModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestBody List<UUID> modificationsUuidList) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)

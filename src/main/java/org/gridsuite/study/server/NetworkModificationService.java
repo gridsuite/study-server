@@ -440,13 +440,13 @@ public class NetworkModificationService {
         }
     }
 
-    public void duplicateModification(UUID groupUuid, List<UUID> modificationUuidList) {
+    public String duplicateModification(UUID groupUuid, List<UUID> modificationUuidList) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "DUPLICATE");
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
-        restTemplate.put(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), httpEntity);
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
     }
 
     public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,

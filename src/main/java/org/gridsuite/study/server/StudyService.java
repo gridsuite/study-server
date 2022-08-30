@@ -2123,16 +2123,18 @@ public class StudyService {
     }
 
     @Transactional()
-    public void duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
+    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        String response;
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.duplicateModification(targetGroupUuid, modificationUuidList);
+            response = networkModificationService.duplicateModification(targetGroupUuid, modificationUuidList);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        return response;
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
