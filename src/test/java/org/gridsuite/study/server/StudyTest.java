@@ -3955,11 +3955,11 @@ public class StudyTest {
         CaseInfos caseInfos2 = CaseInfos.builder().uuid(UUID.fromString(NEW_STUDY_CASE_UUID)).name(CASE_NAME).format("XIIDM").build();
         CaseInfos caseInfos3 = CaseInfos.builder().uuid(UUID.fromString(CASE_UUID_STRING)).name(CASE_NAME).format("XIIDM").build();
 
-        assertEquals(caseInfos1, caseInfos1);
-        assertNotEquals(caseInfos1, caseInfos2);
-        assertNotEquals(caseInfos1, caseInfos3);
         assertNotEquals(caseInfos1, null);
-        assertNotEquals(caseInfos1, "caseInfos2");
+        assertTrue(caseInfos1.equals(caseInfos1));
+        assertTrue(!caseInfos1.equals(caseInfos2);
+        assertTrue(!caseInfos1.equals(caseInfos3));
+        assertTrue(!caseInfos1.equals("caseInfos2"));
 
         assertNotEquals(caseInfos1.hashCode(), caseInfos2.hashCode());
     }
