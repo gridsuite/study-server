@@ -554,7 +554,7 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "duplicate a list of network modifications and append them to current node")
+    @Operation(summary = "For a list of network modifications passed in body, duplicate and append them to current node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
     public ResponseEntity<String> duplicateModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,

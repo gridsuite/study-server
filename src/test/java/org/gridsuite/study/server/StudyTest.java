@@ -2837,6 +2837,51 @@ public class StudyTest {
         assertEquals(createLineAttachToVoltageLevelAttributes, updateRequest.get().getBody());
     }
 
+    @Test
+    public void testDuplicateModification() throws Exception {
+        createStudy("userId", CASE_UUID);
+        UUID studyUuid = studyRepository.findAll().get(0).getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1");
+        UUID nodeUuid1 = node1.getId();
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        String modificationUuidListBody = objectWriter.writeValueAsString(Arrays.asList(modification1, modification2));
+
+        // Random/bad studyId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+                        UUID.randomUUID(), rootNodeUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isForbidden());
+
+        // Random/bad nodeId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+                        studyUuid, UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody))
+                .andExpect(status().isNotFound());
+
+        // duplicate 2 modifications in node1
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+                        studyUuid, nodeUuid1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        var requests = getRequestsWithBodyDone(1);
+        Optional<RequestWithBody> duplicateModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + node1.getModificationGroupUuid() + "[?]action=DUPLICATE")).findFirst();
+        assertTrue(duplicateModificationRequest.isPresent());
+        List<UUID> expectedList = List.of(modification1, modification2);
+        String expectedBody = mapper.writeValueAsString(expectedList);
+        assertEquals(expectedBody, duplicateModificationRequest.get().getBody());
+    }
+
     @Test public void testReorderModification() throws Exception {
         createStudy("userId", CASE_UUID);
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
