@@ -104,7 +104,6 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
         NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
             .withQuery(QueryBuilders.queryStringQuery(query))
             .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-            .withSorts()
             .build();
         return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
                 .stream()
