@@ -30,6 +30,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -261,6 +262,8 @@ public class StudyTest {
 
         when(equipmentInfosService.searchEquipments(String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND equipmentId.fullascii:(*B*)", NETWORK_UUID_STRING, VariantManagerConstants.INITIAL_VARIANT_ID)))
             .then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
+
+        when(equipmentInfosService.searchEquipments(any(BoolQueryBuilder.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
 
         when(networkStoreService.cloneNetwork(NETWORK_UUID, Collections.emptyList())).thenReturn(network);
         when(networkStoreService.getNetworkUuid(network)).thenReturn(NETWORK_UUID);
