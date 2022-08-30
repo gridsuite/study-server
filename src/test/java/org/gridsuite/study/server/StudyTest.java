@@ -3957,7 +3957,7 @@ public class StudyTest {
 
         assertNotEquals(caseInfos1, null);
         assertTrue(caseInfos1.equals(caseInfos1));
-        assertTrue(!caseInfos1.equals(caseInfos2);
+        assertTrue(!caseInfos1.equals(caseInfos2));
         assertTrue(!caseInfos1.equals(caseInfos3));
         assertTrue(!caseInfos1.equals("caseInfos2"));
 
