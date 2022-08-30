@@ -886,7 +886,6 @@ public class StudyController {
         @Parameter(description = "What against to match") @RequestParam(value = "fieldSelector") EquipmentInfosService.FieldSelector fieldSelector,
         @Parameter(description = "Should search in upstream built node") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode,
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
-
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
             .body(equipmentType == null ?
                     studyService.searchAllEquipments(studyUuid, nodeUuid, userInput, fieldSelector, inUpstreamBuiltParentNode)
