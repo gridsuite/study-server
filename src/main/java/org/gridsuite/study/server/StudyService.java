@@ -448,7 +448,6 @@ public class StudyService {
 
         String queryInitialVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid,
                 VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
-
         List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
 
         return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) ? equipmentInfosInInitVariant

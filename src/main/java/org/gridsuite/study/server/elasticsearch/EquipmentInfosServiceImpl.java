@@ -102,9 +102,9 @@ public class EquipmentInfosServiceImpl implements EquipmentInfosService {
     @Override
     public List<EquipmentInfos> searchEquipments(@NonNull final String query) {
         NativeSearchQuery nativeSearchQuery = new NativeSearchQueryBuilder()
-            .withQuery(QueryBuilders.queryStringQuery(query))
-            .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-            .build();
+                .withQuery(QueryBuilders.queryStringQuery(query))
+                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
+                .build();
         return elasticsearchOperations.search(nativeSearchQuery, EquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
