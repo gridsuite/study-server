@@ -13,6 +13,5 @@ package org.gridsuite.study.server.networkmodificationtree.dto;
 public enum InsertMode {
     BEFORE,
     AFTER,
-    CHILD,
     NEW_BRANCH;
 }
