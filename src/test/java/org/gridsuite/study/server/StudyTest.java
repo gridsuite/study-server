@@ -3917,8 +3917,7 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
     }
 
-
-
+    
     @Test
     public void testCaseInfos() throws Exception {
         //case format
