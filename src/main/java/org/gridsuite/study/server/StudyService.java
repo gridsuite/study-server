@@ -104,6 +104,10 @@ public class StudyService {
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
+    static final String EQUIPMENT_NAME = "equipmentName.fullascii";
+
+    static final String EQUIPMENT_ID = "equipmentId.keyword";
+
     @Autowired
     NotificationService notificationService;
 
@@ -511,18 +515,18 @@ public class StudyService {
         String query = "networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s:(*%s*)"
                 + (equipmentType == null ? "" : " AND equipmentType.keyword:(%s)");
         return String.format(query, networkUuid, variantId,
-                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
+                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID,
                 escapeLucene(userInput), equipmentType);
     }
 
     private BoolQueryBuilder buildSearchAllEquipmentQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
-        WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", "*" + escapeLucene(userInput) + "*");
+        WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
         MatchQueryBuilder networkUuidSearchQuery = matchQuery("networkUuid.keyword", networkUuid.toString());
         TermsQueryBuilder variantIdSearchQuery = termsQuery("variantId.keyword", initialVariantId, variantId);
 
         List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionsForScoreQueries = new ArrayList<>();
         filterFunctionsForScoreQueries.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii", escapeLucene(userInput)),
+                matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, escapeLucene(userInput)),
                 ScoreFunctionBuilders.weightFactorFunction(EQUIPMENT_TYPE_SCORES.entrySet().size())
         ));
 
