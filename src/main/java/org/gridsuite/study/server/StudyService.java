@@ -106,7 +106,7 @@ public class StudyService {
 
     static final String EQUIPMENT_NAME = "equipmentName.fullascii";
 
-    static final String EQUIPMENT_ID = "equipmentId.keyword";
+    static final String EQUIPMENT_ID = "equipmentId.fullascii";
 
     @Autowired
     NotificationService notificationService;
