@@ -887,9 +887,7 @@ public class StudyController {
         @Parameter(description = "Should search in upstream built node") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode,
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(equipmentType == null ?
-                    studyService.searchAllEquipments(studyUuid, nodeUuid, userInput, fieldSelector, inUpstreamBuiltParentNode)
-                    : studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
+            .body(studyService.searchEquipments(studyUuid, nodeUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")

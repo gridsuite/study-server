@@ -249,7 +249,7 @@ public class EquipmentInfosServiceTests {
     private void testNameFullAscii(String pat) {
         Set<EquipmentInfos> hits = new HashSet<>();
 
-        hits.addAll(studyService.searchAllEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, false));
+        hits.addAll(studyService.searchEquipments(NETWORK_UUID, NODE_UUID, pat, EquipmentInfosService.FieldSelector.NAME, null, false));
         pbsc.checkThat(hits.size(), is(1));
     }
 
