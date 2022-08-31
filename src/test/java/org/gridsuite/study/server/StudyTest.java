@@ -615,11 +615,10 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID
-                        + "&reportUuid=.*&receiver=.*")) {
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
                     return new MockResponse().setResponseCode(200)
-                        .addHeader("Content-Type","application/json; charset=utf-8");
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_INFOS_2, "UCTE");
                     return new MockResponse().setResponseCode(200)
