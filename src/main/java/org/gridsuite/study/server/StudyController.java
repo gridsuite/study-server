@@ -101,9 +101,8 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name"),
                            @ApiResponse(responseCode = "204", description = "The study has no case name attached")})
     public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid) {
-
         String studyCaseName = studyService.getStudyCaseName(studyUuid);
-        return studyCaseName == null || studyCaseName.isEmpty() ?  ResponseEntity.noContent().build() : ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyCaseName);
+        return StringUtils.isEmpty(studyCaseName) ?  ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
     @GetMapping(value = "/study_creation_requests")
