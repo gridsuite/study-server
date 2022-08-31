@@ -631,11 +631,10 @@ public class StudyTest {
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId="
-                        + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     sendCaseImportSucceededMessage(path, NETWORK_LOADFLOW_ERROR_INFOS, "UCTE");
                     return new MockResponse().setResponseCode(200)
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     // need asynchronous run to get study creation requests
                     new Thread(() -> {
