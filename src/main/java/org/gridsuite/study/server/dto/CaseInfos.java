@@ -21,7 +21,6 @@ import org.springframework.data.annotation.TypeAlias;
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
  */
-@SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode
 @Getter
