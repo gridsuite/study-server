@@ -3953,12 +3953,17 @@ public class StudyTest {
         //CaseInfos comparison method
         CaseInfos caseInfos1 = CaseInfos.builder().uuid(UUID.fromString(CASE_UUID_STRING)).name(TEST_FILE_UCTE).format("UCTE").build();
         CaseInfos caseInfos2 = CaseInfos.builder().uuid(UUID.fromString(NEW_STUDY_CASE_UUID)).name(CASE_NAME).format("XIIDM").build();
-        CaseInfos caseInfos3 = CaseInfos.builder().uuid(UUID.fromString(CASE_UUID_STRING)).name(TEST_FILE_UCTE).format("UCTE").build();
+        CaseInfos caseInfos3 = CaseInfos.builder().uuid(UUID.fromString(CASE_UUID_STRING)).name(CASE_NAME).format("XIIDM").build();
+        CaseInfos caseInfos4 = CaseInfos.builder().uuid(UUID.fromString(CASE_UUID_STRING)).name(TEST_FILE_UCTE).format("XIIDM").build();
 
+        boolean selfComparison = caseInfos1.equals(caseInfos1);
+        boolean differentTypeComparison = caseInfos1.equals("caseInfos1");
+
+        assertTrue(selfComparison);
+        assertTrue(!differentTypeComparison);
+        assertNotEquals(caseInfos1, null);
         assertNotEquals(caseInfos1, caseInfos2);
-        assertEquals(caseInfos1, caseInfos3);
-        assertNotEquals(caseInfos1.hashCode(), caseInfos2.hashCode());
-        assertEquals(caseInfos1.hashCode(), caseInfos3.hashCode());
+        assertNotEquals(caseInfos1, caseInfos3);
 
     }
 
