@@ -95,6 +95,7 @@ public class NotificationService {
                 .build());
     }
 
+    @PostCompletion
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)

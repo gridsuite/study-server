@@ -33,6 +33,7 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeI
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityNotFoundException;
@@ -218,7 +219,7 @@ public class NetworkModificationTreeService {
         return node;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public RootNode getStudyTree(UUID studyId) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
         if (nodes.isEmpty()) {
@@ -296,7 +297,7 @@ public class NetworkModificationTreeService {
     }
 
     // TODO test if studyUuid exist and have a node <nodeId>
-    @Transactional
+    @Transactional(readOnly = true)
     public AbstractNode getSimpleNode(UUID nodeId) {
         AbstractNode node = nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
         nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
@@ -685,7 +686,7 @@ public class NetworkModificationTreeService {
         return getParentReportUuidsAndNamesFromNode(nodeUuid, nodeOnlyReport);
     }
 
-    @Transactional
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
         NodeModificationInfos nodeModificationInfos = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid)).orElse(null);
         if (nodeModificationInfos == null) {

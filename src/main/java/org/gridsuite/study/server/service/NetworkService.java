@@ -20,6 +20,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.stream.Collectors;
@@ -50,6 +51,7 @@ public class NetworkService {
         this.studyRepository = studyRepository;
     }
 
+    @Transactional(readOnly = true)
     public UUID getNetworkUuid(UUID studyUuid) {
         UUID networkUuid = doGetNetworkUuid(studyUuid);
         if (networkUuid == null) {
