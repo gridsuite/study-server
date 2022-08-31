@@ -627,7 +627,7 @@ public class NetworkModificationTreeTest {
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
-        assertEquals(InsertMode.NEW_BRANCH.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
     }
 
     private void insertNode(UUID studyUuid, AbstractNode parentNode, NetworkModificationNode newNode, InsertMode mode, AbstractNode newParentNode) throws Exception {

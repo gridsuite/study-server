@@ -2106,7 +2106,7 @@ public class StudyTest {
         var mess = output.receive(TIMEOUT);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
-        assertEquals(InsertMode.NEW_BRANCH.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
         return modificationNode;
     }
 
@@ -3890,7 +3890,7 @@ public class StudyTest {
 
         //now the tree looks like root -> modificationNode -> duplicatedNode2 -> node1 -> node2 -> duplicatedNode1
         //duplicate node1 in a new branch starting from duplicatedNode2
-        UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, node1.getId(), duplicatedNodeUuid2, InsertMode.NEW_BRANCH);
+        UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, node1.getId(), duplicatedNodeUuid2, InsertMode.CHILD);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         //expect to have modificationNode as a parent
         assertEquals(1, allNodes.stream()
