@@ -15,7 +15,6 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
@@ -1318,19 +1317,10 @@ public class StudyService {
         }
     }
 
-    public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
-        return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
-    }
-
     public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<Pair<UUID, String>> reportUuidsAndNames = getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
-        return reportUuidsAndNames.stream().map(reportInfo -> {
-            ReporterModel reporter = reportService.getReport(reportInfo.getLeft(), reportInfo.getRight());
-            ReporterModel newReporter = new ReporterModel(reporter.getTaskKey(), reportInfo.getRight(), reporter.getTaskValues());
-            reporter.getReports().forEach(newReporter::report);
-            reporter.getSubReporters().forEach(newReporter::addSubReporter);
-            return newReporter;
-        }).collect(Collectors.toList());
+        List<ReportingInfos> reportingInfos = networkModificationTreeService.getUppingReportInfos(nodeUuid, nodeOnlyReport);
+
+        return reportService.getReporterModels(reportingInfos);
     }
 
     public void deleteNodeReport(UUID nodeUuid) {
