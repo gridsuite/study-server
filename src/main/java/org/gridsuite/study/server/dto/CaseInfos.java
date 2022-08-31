@@ -10,11 +10,9 @@ package org.gridsuite.study.server.dto;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 
@@ -22,7 +20,6 @@ import org.springframework.data.annotation.TypeAlias;
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
  */
 @NoArgsConstructor
-@EqualsAndHashCode
 @Getter
 @Schema(description = "Case infos")
 @TypeAlias(value = "CaseInfos")
