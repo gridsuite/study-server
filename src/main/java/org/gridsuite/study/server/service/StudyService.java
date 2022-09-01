@@ -856,16 +856,9 @@ public class StudyService {
         }
     }
 
-    private void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
-        String sas = getSecurityAnalysisStatus(nodeUuid);
-        if (SecurityAnalysisStatus.RUNNING.name().equals(sas)) {
-            throw new StudyException(SECURITY_ANALYSIS_RUNNING);
-        }
-    }
-
     public void assertComputationNotRunning(UUID nodeUuid) {
         assertLoadFlowNotRunning(nodeUuid);
-        assertSecurityAnalysisNotRunning(nodeUuid);
+        securityAnalysisService.assertSecurityAnalysisNotRunning(nodeUuid);
     }
 
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
@@ -995,53 +988,12 @@ public class StudyService {
         return singleLineDiagramService.getNeworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth);
     }
 
-    public String getSecurityAnalysisStatus(UUID nodeUuid) {
-        String result = null;
-        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        try {
-            result = securityAnalysisService.getSecurityAnalysisStatus(resultUuidOpt.get());
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-            }
-            throw e;
-        }
-
-        return result;
-    }
-
     public void invalidateSecurityAnalysisStatus(UUID nodeUuid) {
         securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid));
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
         securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
-    }
-
-    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-
-        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return;
-        }
-
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        securityAnalysisService.stopSecurityAnalysis(resultUuidOpt.get(), receiver);
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
@@ -1211,10 +1163,6 @@ public class StudyService {
 
     public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid) {
         return networkModificationTreeService.getLoadFlowStatus(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
-    }
-
-    public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
     }
 
     public LoadFlowInfos getLoadFlowInfos(UUID studyUuid, UUID nodeUuid) {

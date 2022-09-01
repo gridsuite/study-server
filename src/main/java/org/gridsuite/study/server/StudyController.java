@@ -755,7 +755,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = studyService.getSecurityAnalysisStatus(nodeUuid);
+        String result = securityAnalysisService.getSecurityAnalysisStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -765,15 +765,14 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopSecurityAnalysis(studyUuid, nodeUuid);
+        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+    public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport));
     }
@@ -790,8 +789,7 @@ public class StudyController {
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
     @Operation(summary = "Delete node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> deleteNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+    public ResponseEntity<Void> deleteNodeReport(@Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.deleteNodeReport(nodeUuid);
         return ResponseEntity.ok().build();
     }

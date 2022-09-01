@@ -1,4 +1,15 @@
+/**
+ * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 package org.gridsuite.study.server.service;
+
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
@@ -32,6 +43,7 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
+    static final String NOT_FOUND = " not found";
 
     @Autowired
     private RestTemplate restTemplate;
@@ -74,7 +86,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + NOT_FOUND);
             } else {
                 throw e;
             }
@@ -102,7 +114,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForObject(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, voltageLevelId);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + NOT_FOUND);
             } else {
                 throw e;
             }
@@ -131,7 +143,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + NOT_FOUND);
             } else {
                 throw e;
             }
@@ -159,7 +171,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, substationId).getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
+                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + NOT_FOUND);
             } else {
                 throw e;
             }
