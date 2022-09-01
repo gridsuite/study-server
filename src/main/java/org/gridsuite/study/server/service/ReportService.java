@@ -91,41 +91,34 @@ public class ReportService {
             ReportingInfos info = definingNodesInfosByUuid.get(downingDefNodeUuid);
 
             ReporterModel mayReporter = seenBuildNodeToRootReporter.get(downingDefNodeUuid);
-            ReporterModel newReporter;
             boolean wantSubs = mayReporter == null;
             if (wantSubs) {
                 UUID buildNodeUuid = seenDefToBuildNodeUuuids.get(downingDefNodeUuid);
                 mayReporter = seenBuildNodeToRootReporter.get(buildNodeUuid);
             }
 
-            newReporter = filterAndAdaptReporter(groupToDefiningNode, downingDefNodeUuid, info,
+            ReporterModel newReporter = filterAndAdaptReporter(groupToDefiningNode, downingDefNodeUuid, info,
                 mayReporter, wantSubs);
 
-            if (newReporter != null) {
-                res.add(newReporter);
-            }
+            res.add(newReporter);
         }
 
         return res;
     }
 
     private static ReporterModel filterAndAdaptReporter(Map<UUID, UUID> groupToDefiningNode, UUID downingDefNodeUuid,
-            ReportingInfos info, ReporterModel mayReporter, boolean wantsSubs) {
+            ReportingInfos info, ReporterModel receivedReporter, boolean wantsSubs) {
 
-        ReporterModel newReporter = null;
+        ReporterModel newReporter = new ReporterModel(receivedReporter.getDefaultName(),
+            info.getDefiningNodeName(), receivedReporter.getTaskValues());
 
-        for (ReporterModel subReporter : mayReporter.getSubReporters()) {
+        for (ReporterModel subReporter : receivedReporter.getSubReporters()) {
             UUID groupUuid = getGroupUuidFromReporter(subReporter);
 
             boolean avoids = groupUuid == null ? wantsSubs : !Objects.equals(downingDefNodeUuid, groupToDefiningNode.get(groupUuid));
 
             if (avoids) {
                 continue;
-            }
-
-            if (newReporter == null) {
-                newReporter = new ReporterModel(mayReporter.getDefaultName(),
-                    info.getDefiningNodeName(), mayReporter.getTaskValues());
             }
 
             ReporterModel newSub = new ReporterModel(subReporter.getDefaultName(), subReporter.getDefaultName(), subReporter.getTaskValues());
@@ -170,15 +163,10 @@ public class ReportService {
 
                 if (groupUuid != null) {
                     UUID definingNodeUuid = groupToDefiningNode.get(groupUuid);
-                    if (definingNodeUuid == null) {
-                        LOGGER.warn("Unexpected group uuid {}", groupUuid);
-                    } else {
-                        UUID prev = seenDefToBuildNodeUuuids.get(definingNodeUuid);
-                        if (prev == null) {
-                            seenDefToBuildNodeUuuids.put(definingNodeUuid, buildNodeUuid);
-                        } else if (!Objects.equals(prev, buildNodeUuid)) {
-                            LOGGER.warn("Already found elsewhere {}", prev);
-                        }
+                    // can be null if build contains at least one unbuilt node as ancestor
+                    if (definingNodeUuid != null) {
+                        // First (downmost) wins. Can happen when an empty ancestor is built afterward
+                        seenDefToBuildNodeUuuids.putIfAbsent(definingNodeUuid, buildNodeUuid);
                     }
                 }
             }
