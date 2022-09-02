@@ -95,6 +95,7 @@ public class StudyService {
     static final String HEADER_RECEIVER = "receiver";
     static final String HEADER_ERROR_MESSAGE = "errorMessage";
     static final String HEADER_CASE_FORMAT = "caseFormat";
+    static final String HEADER_CASE_NAME = "caseName";
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
@@ -236,18 +237,6 @@ public class StudyService {
         Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return study != null ? study.getCaseName() : "";
-    }
-
-    public CaseInfos getCaseInfos(UUID caseUuid) {
-        String path;
-        path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/infos")
-                .buildAndExpand(caseUuid)
-                .toUriString();
-        try {
-            return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, CaseInfos.class, caseUuid).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw new StudyException(CASE_NOT_FOUND, e.getMessage());
-        }
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
@@ -1593,6 +1582,7 @@ public class StudyService {
             UUID networkUuid = UUID.fromString(message.getHeaders().get(NETWORK_UUID, String.class));
             String networkId = message.getHeaders().get(NETWORK_ID, String.class);
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
+            String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
             if (receiverString != null) {
@@ -1613,7 +1603,7 @@ public class StudyService {
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+                    insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, toEntity(loadFlowParameters), importReportUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {

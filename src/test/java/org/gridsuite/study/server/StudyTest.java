@@ -4084,41 +4084,6 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
     }
 
-    @Test
-    public void testCaseInfos() throws Exception {
-        //case format
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
-        String caseFormat = studyService.getCaseFormat(CASE_UUID, study1Uuid, "userId");
-        assertEquals("UCTE", caseFormat);
-
-        var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/format")));
-
-        UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
-        assertThrows(StudyException.class, () -> studyService.getCaseFormat(notExistingCase, study1Uuid, "userId"));
-        output.receive(TIMEOUT);
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/format")));
-
-        //case name
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-                status().isOk(),
-                content().string(TEST_FILE_UCTE));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
-                .andExpect(status().isNotFound());
-
-        // change study case name and trying to get no case name returned
-        StudyEntity study = studyRepository.findAll().get(0);
-        study.setCaseName(null);
-        studyRepository.save(study);
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-                status().isNoContent());
-
-    }
-
     @After
     public void tearDown() {
         cleanDB();
