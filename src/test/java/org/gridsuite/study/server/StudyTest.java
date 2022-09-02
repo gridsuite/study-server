@@ -29,11 +29,9 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.repositories.ReportUsageRepository;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -201,9 +199,6 @@ public class StudyTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private ReportUsageRepository reportsUsagesRepository;
-
-    @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
     //used by testGetStudyCreationRequests to control asynchronous case import
@@ -251,8 +246,7 @@ public class StudyTest {
     }
 
     private void cleanDB() {
-        reportsUsagesRepository.deleteAll();
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId(), null));
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
         equipmentInfosService.deleteAll(NETWORK_UUID);
@@ -1183,26 +1177,12 @@ public class StudyTest {
         assertEquals(NotificationService.MODIFICATIONS_UPDATING_FINISHED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
-        // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
-        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
-        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
-        assertEquals(NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
     private void checkStudyMetadataUpdatedMessagesReceived(UUID studyNameUserIdUuid) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    private void checkNodesInvalidationMessagesReceived(UUID studyNameUserIdUuid, List<UUID> invalidatedNodes) {
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, invalidatedNodes);
     }
 
     private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
@@ -1340,7 +1320,7 @@ public class StudyTest {
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
-            TestUtils.assertServerRequestsEmptyThenShutsown(server);
+            TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         } catch (IOException e) {

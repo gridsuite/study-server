@@ -1,10 +1,25 @@
+/**
+ * Copyright (c) 2021, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 package org.gridsuite.study.server.service;
+
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.SECURITY_ANALYSIS_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_RUNNING;
 
+import java.io.UncheckedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -12,6 +27,8 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.Receiver;
+import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -25,6 +42,9 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Service
 public class SecurityAnalysisService {
 
@@ -34,15 +54,19 @@ public class SecurityAnalysisService {
     @Autowired
     private RestTemplate restTemplate;
 
+    private final ObjectMapper objectMapper;
+
     private String securityAnalysisServerBaseUri;
 
     private final NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
     public SecurityAnalysisService(@Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
-            NetworkModificationTreeService networkModificationTreeService) {
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper) {
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -93,20 +117,53 @@ public class SecurityAnalysisService {
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSecurityAnalysisStatus(UUID resultUuid) {
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-                .buildAndExpand(resultUuid).toUriString();
+    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
 
-        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-    }
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
 
-    public void stopSecurityAnalysis(UUID resultUuid, String receiver) {
+        if (resultUuidOpt.isEmpty()) {
+            return;
+        }
+
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
         restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
+    }
+
+    public String getSecurityAnalysisStatus(UUID nodeUuid) {
+        String result = null;
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+
+        try {
+            String path = UriComponentsBuilder
+                    .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
+                    .buildAndExpand(resultUuidOpt.get()).toUriString();
+
+            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+            }
+            throw e;
+        }
+
+        return result;
     }
 
     public void deleteSaResult(UUID uuid) {
@@ -130,4 +187,12 @@ public class SecurityAnalysisService {
     public void setSecurityAnalysisServerBaseUri(String securityAnalysisServerBaseUri) {
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
     }
+
+    public void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
+        String sas = getSecurityAnalysisStatus(nodeUuid);
+        if (SecurityAnalysisStatus.RUNNING.name().equals(sas)) {
+            throw new StudyException(SECURITY_ANALYSIS_RUNNING);
+        }
+    }
+
 }

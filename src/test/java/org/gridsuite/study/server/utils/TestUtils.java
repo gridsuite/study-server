@@ -85,7 +85,7 @@ public final class TestUtils {
         }
     }
 
-    public static void assertServerRequestsEmptyThenShutsown(MockWebServer server) throws UncheckedInterruptedException, IOException {
+    public static void assertServerRequestsEmptyThenShutdown(MockWebServer server) throws UncheckedInterruptedException, IOException {
         Set<String> httpRequest = null;
 
         try {
