@@ -426,14 +426,13 @@ public class StudyService {
     @Transactional
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
-        List<UUID> buildReportsUuids = new ArrayList<>();
         UUID networkUuid = null;
         List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         if (studyCreationRequestEntity.isEmpty()) {
             networkUuid = networkStoreService.doGetNetworkUuid(studyUuid);
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
             studyRepository.findById(studyUuid).ifPresent(s -> {
-                networkModificationTreeService.doDeleteTree(studyUuid, buildReportsUuids);
+                networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
             });
@@ -442,7 +441,7 @@ public class StudyService {
         }
         notificationService.emitStudyDelete(studyUuid, userId);
 
-        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, nodesModificationInfos, buildReportsUuids)) : Optional.empty();
+        return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, nodesModificationInfos)) : Optional.empty();
     }
 
     @Transactional
@@ -457,7 +456,7 @@ public class StudyService {
 
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getBuildReportsUuids().forEach(reportService::deleteReport)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                     studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                     studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
                 );
@@ -1172,15 +1171,14 @@ public class StudyService {
         return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
     }
 
-    private BuildInfos fillBuildInfos(UUID nodeUuid) {
-        return networkModificationTreeService.prepareBuild(nodeUuid);
+    private BuildInfos getBuildInfos(UUID nodeUuid) {
+        return networkModificationTreeService.getBuildInfos(nodeUuid);
     }
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        BuildInfos buildInfos = fillBuildInfos(nodeUuid);
-        List<UUID> reportsUuids = buildInfos.getModificationReportUuids();
+        BuildInfos buildInfos = getBuildInfos(nodeUuid);
         networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
-        reportsUuids.forEach(reportService::deleteReport);
+        buildInfos.getReportUuids().forEach(reportService::deleteReport);
 
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
@@ -1334,7 +1332,7 @@ public class StudyService {
         }
     }
 
-    private List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
+    public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
         return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
     }
 

@@ -144,6 +144,8 @@ public class ConsumerService {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
                             Receiver.class);
 
+                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
+
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
