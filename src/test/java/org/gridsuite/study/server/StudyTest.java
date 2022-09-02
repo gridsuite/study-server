@@ -120,6 +120,7 @@ public class StudyTest {
 
     private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
+    private static final String TEST_FILE_UCTE = "testCase.ucte";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_WITH_ERRORS = "testCase_with_errors.xiidm";
     private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
@@ -654,10 +655,45 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-
+                    case "/v1/cases/" + CASE_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "\",\"name\":\"" + TEST_FILE_IMPORT_ERRORS + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + IMPORTED_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + NEW_STUDY_CASE_UUID + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_2_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_2_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_3_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_3_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_4_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_4_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_LOADFLOW_ERROR_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + CASE_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("UCTE")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
@@ -2147,7 +2183,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/infos", caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
         return studyUuid;
@@ -2196,7 +2232,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         Set<RequestWithBody> requests = getRequestsWithBodyDone(3);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/format", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/infos", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
         assertEquals(mapper.writeValueAsString(importParameters),
@@ -2393,7 +2429,7 @@ public class StudyTest {
         // assert that all http requests have been sent to remote services
         var requests = getRequestsDone(3);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
+        assertTrue(requests.contains(String.format("/v1/cases/%s/infos", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
@@ -3882,32 +3918,8 @@ public class StudyTest {
     }
 
     @Test
-    public void getCaseName() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-                status().isOk(),
-                content().string(CASE_NAME));
-
-        var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/name")));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
-                .andExpect(status().isNotFound());
-
-        // change study case uuid and trying to get case name : error
-        StudyEntity study = studyRepository.findAll().get(0);
-        study.setCaseUuid(UUID.fromString(NOT_EXISTING_CASE_UUID));
-        studyRepository.save(study);
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-            status().is4xxClientError());
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name")));
-    }
-
-    @Test
-    public void getCaseFormat() throws Exception {
+    public void testCaseInfos() throws Exception {
+        //case format
         UUID study1Uuid = createStudy("userId", CASE_UUID);
         String caseFormat = studyService.getCaseFormat(CASE_UUID, study1Uuid, "userId");
         assertEquals("UCTE", caseFormat);
@@ -3921,6 +3933,23 @@ public class StudyTest {
 
         requests = getRequestsWithBodyDone(1);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/format")));
+
+        //case name
+        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(TEST_FILE_UCTE));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
+                .andExpect(status().isNotFound());
+
+        // change study case name and trying to get no case name returned
+        StudyEntity study = studyRepository.findAll().get(0);
+        study.setCaseName(null);
+        studyRepository.save(study);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
+                status().isNoContent());
+
     }
 
     @After
