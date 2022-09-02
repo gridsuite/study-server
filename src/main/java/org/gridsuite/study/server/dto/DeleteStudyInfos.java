@@ -25,6 +25,4 @@ public class DeleteStudyInfos {
     private UUID networkUuid;
 
     private List<NodeModificationInfos> nodesModificationInfos;
-
-    private List<UUID> buildReportsUuids;
 }
