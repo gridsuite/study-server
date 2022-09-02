@@ -645,18 +645,13 @@ public class NetworkModificationTreeService {
         }
     }
 
-    private List<ReportingInfos> getUppingReportInfosFromNode(UUID nodeUuid, boolean nodeOnlyReport) {
+    @Transactional
+    public List<ReportingInfos> getUppingReportInfos(UUID nodeUuid, boolean nodeOnlyReport) {
         List<ReportingInfos> uppingReportInfos = new ArrayList<>();
         nodesRepository.findById(nodeUuid)
             .ifPresentOrElse(entity -> getUppingReportInfosFromNode(entity, nodeOnlyReport, uppingReportInfos), () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
             });
-        return uppingReportInfos;
-    }
-
-    @Transactional
-    public List<ReportingInfos> getUppingReportInfos(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<ReportingInfos> uppingReportInfos = getUppingReportInfosFromNode(nodeUuid, nodeOnlyReport);
         return uppingReportInfos;
     }
 

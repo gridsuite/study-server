@@ -43,7 +43,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class ReportService {
 
-    private static final Logger LOGGER    = LoggerFactory.getLogger(StudyService.class);
+    private static final Logger LOGGER    = LoggerFactory.getLogger(ReportService.class);
 
     private static final String DELIMITER = "/";
 
