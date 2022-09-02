@@ -204,7 +204,7 @@ public class CaseTest {
     }
 
     private void cleanDB() {
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId(), null));
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
     }
 
