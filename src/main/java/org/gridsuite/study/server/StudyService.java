@@ -232,14 +232,19 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public String getCaseName(UUID studyUuid) {
+    public String getStudyCaseName(UUID studyUuid) {
+        Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/name")
-                .buildAndExpand(study.getCaseUuid())
-                .toUriString();
+        return study != null ? study.getCaseName() : "";
+    }
 
+    public CaseInfos getCaseInfos(UUID caseUuid) {
+        String path;
+        path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/infos")
+                .buildAndExpand(caseUuid)
+                .toUriString();
         try {
-            return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
+            return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, CaseInfos.class, caseUuid).getBody();
         } catch (HttpStatusCodeException e) {
             throw new StudyException(CASE_NOT_FOUND, e.getMessage());
         }
@@ -490,9 +495,9 @@ public class StudyService {
     }
 
     private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
-            String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
+            String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, caseName, loadFlowParameters, importReportUuid));
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -511,7 +516,7 @@ public class StudyService {
         Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters);
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -1644,7 +1649,7 @@ public class StudyService {
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-            String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters,
+            String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
             UUID importReportUuid) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
@@ -1654,7 +1659,7 @@ public class StudyService {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 

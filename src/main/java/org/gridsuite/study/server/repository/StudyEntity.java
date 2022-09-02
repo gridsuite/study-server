@@ -52,6 +52,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "casePrivate",  nullable = false)
     private boolean casePrivate;
 
+    @Column(name = "caseName",  nullable = false)
+    private String caseName;
+
     @Column(name = "loadFlowProvider")
     private String loadFlowProvider;
 
