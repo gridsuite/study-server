@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -23,6 +23,10 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.stopped
         consumeBuildFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.failed
+        consumeCaseImportSucceeded-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
+        consumeCaseImportFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
       source: publishStudyUpdate
 
 network-store-server:
