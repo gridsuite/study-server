@@ -14,8 +14,6 @@ import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import lombok.NonNull;
 
 import org.gridsuite.study.server.dto.ReportingInfos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -23,7 +21,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -43,8 +40,6 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class ReportService {
 
-    private static final Logger LOGGER    = LoggerFactory.getLogger(ReportService.class);
-
     private static final String DELIMITER = "/";
 
     private String reportServerBaseUri;
@@ -63,11 +58,15 @@ public class ReportService {
         objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ReporterModelDeserializer.DICTIONARY_VALUE_ID, null)); //FIXME : remove with powsyble core
     }
 
-    public List<ReporterModel> getReporterModels(List<ReportingInfos> reportingInfos) {
+    /**
+     * From a sequence of ReportInfos from the deepest node to root, ask report server for reports
+     * and pack them by node/modification-group.
+     */
+    public List<ReporterModel> getReporterModels(List<ReportingInfos> uppingReportingInfos) {
         LinkedList<UUID> uppingNeededDefNodeUuids = new LinkedList<>();
         Map<UUID, UUID> groupToDefiningNode = new HashMap<>();
         Map<UUID, ReportingInfos> definingNodesInfosByUuid = new HashMap<>();
-        for (ReportingInfos reportingInfo : reportingInfos) {
+        for (ReportingInfos reportingInfo : uppingReportingInfos) {
             uppingNeededDefNodeUuids.add(reportingInfo.getDefiningNodeUuid());
 
             UUID modificationGroupUuid = reportingInfo.getModificationGroupUuid();
@@ -144,17 +143,8 @@ public class ReportService {
             ReportingInfos reportingInfo = definingNodesInfosByUuid.get(buildNodeUuid);
             UUID reportUuid = reportingInfo.getReportUuid();
 
-            ReporterModel reporter;
-            try {
-                reporter = this.getReport(reportUuid, "useless roundtrip string");
-            } catch (RestClientException ex) {
-                LOGGER.warn("while retrieving report", ex);
-                continue;
-            }
-
-            if (reporter == null) {
-                continue;
-            }
+            // getReport asks to silently return empty reportmodel if not found.
+            ReporterModel reporter = this.getReport(reportUuid, "useless roundtrip string");
 
             seenBuildNodeToRootReporter.put(buildNodeUuid, reporter);
 
@@ -163,7 +153,7 @@ public class ReportService {
 
                 if (groupUuid != null) {
                     UUID definingNodeUuid = groupToDefiningNode.get(groupUuid);
-                    // can be null if build contains at least one unbuilt node as ancestor
+                    // may be null if sub report happens to exhibit a UUID-like task-key
                     if (definingNodeUuid != null) {
                         // First (downmost) wins. Can happen when an empty ancestor is built afterward
                         seenDefToBuildNodeUuuids.putIfAbsent(definingNodeUuid, buildNodeUuid);

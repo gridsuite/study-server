@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.gridsuite.study.server.dto.ReportingInfos;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,29 +61,67 @@ import static org.junit.Assert.assertTrue;
 @AutoConfigureMockMvc
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+//@EnableAutoConfiguration(exclude={ DataSourceAutoConfiguration.class, DataSourceTransactionManagerAutoConfiguration.class, HibernateJpaAutoConfiguration.class, ElasticsearchDataAutoConfiguration.class})
 public class ReportServiceTest {
-    private static final Logger  LOGGER = LoggerFactory.getLogger(ReportServiceTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportServiceTest.class);
 
+    private static final String ROOT_NODE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String NODE1_UUID     = "10000000-0000-0000-0000-000000000000";
     private static final String NODE2_UUID     = "20000000-0000-0000-0000-000000000000";
+    private static final String NODE3_UUID     = "30000000-0000-0000-0000-000000000000";
+    private static final String NODEU_UUID     = "c0000000-0000-0000-0000-000000000000";
     private static final String MODGROUP1_UUID = "01000000-0000-0000-0000-000000000000";
     private static final String MODGROUP2_UUID = "02000000-0000-0000-0000-000000000000";
+    private static final String MODGROUP3_UUID = "02000000-0000-0000-0000-000000000000";
+    private static final String MODGROUPU_UUID = "0c000000-0000-0000-0000-000000000000";
+    private static final String SPURIOUS_MODGROUP_UUID = "0d000000-0000-0000-0000-000000000000";
     private static final String REPORT1_UUID   = "00100000-0000-0000-0000-000000000000";
     private static final String REPORT2_UUID   = "00200000-0000-0000-0000-000000000000";
+    private static final String REPORT3_UUID   = "00300000-0000-0000-0000-000000000000";
+    private static final String REPORTR_UUID   = "a0000000-0000-0000-0000-000000000000";
+    private static final String REPORTU_UUID   = "c0000000-0000-0000-0000-000000000000";
 
-    private static final ReporterModel REPORTER1 = makeReporter(MODGROUP1_UUID, REPORT1_UUID);
+    private static final String REPORT_FAILED_UUID   = "f0000000-0000-0000-0000-000000000000";
 
-    private static final ReporterModel REPORTER2 = makeReporter(MODGROUP2_UUID, REPORT2_UUID);
+    private static final ReporterModel REPORTER_R = makeRootReporter(REPORTR_UUID);
 
-    @NotNull private static ReporterModel makeReporter(String modgroupUuid, String reportUuid) {
+    private static final ReporterModel REPORTER1 = makeRootReporter(REPORT1_UUID,
+        makeNMReporter(MODGROUP1_UUID, null));
+
+    private static final ReporterModel REPORTER23 = makeRootReporter(REPORT3_UUID,
+        makeOtherReporter(MODGROUP2_UUID),
+        makeNMReporter(MODGROUP2_UUID, null),
+        makeOtherReporter(MODGROUP3_UUID),
+        makeNMReporter(MODGROUP3_UUID, null));
+
+    @NotNull
+    private static ReporterModel makeRootReporter(String reportUuid,
+        ReporterModel... networkModifications) {
+        ReporterModel outerReporter = new ReporterModel(reportUuid, reportUuid);
+        for (ReporterModel networkModification : networkModifications) {
+            outerReporter.addSubReporter(networkModification);
+        }
+        return outerReporter;
+    }
+
+    @NotNull
+    private static ReporterModel makeNMReporter(String modgroupUuid, String nodeType) {
         ReporterModel stepReporter = new ReporterModel("do" + modgroupUuid, "done");
         Report report = new Report("key" + modgroupUuid, "default", Map.of());
         stepReporter.report(report);
-        ReporterModel networkModification = new ReporterModel(modgroupUuid, "NetworkModification");
+        ReporterModel networkModification = new ReporterModel(modgroupUuid, nodeType != null ? nodeType : "NetworkModification");
         networkModification.addSubReporter(stepReporter);
-        ReporterModel outerReporter = new ReporterModel(reportUuid, reportUuid);
-        outerReporter.addSubReporter(networkModification);
-        return outerReporter;
+        return networkModification;
+    }
+
+    @NotNull
+    private static ReporterModel makeOtherReporter(String modgroupUuid) {
+        ReporterModel stepReporter = new ReporterModel("do" + modgroupUuid, "done");
+        Report report = new Report("key" + modgroupUuid, "default", Map.of());
+        stepReporter.report(report);
+        ReporterModel networkModification = new ReporterModel("NotUUID", "Other");
+        networkModification.addSubReporter(stepReporter);
+        return networkModification;
     }
 
     @Autowired
@@ -129,7 +168,22 @@ public class ReportServiceTest {
                 }
                 if (path.startsWith(prefix + REPORT2_UUID)) {
                     return new MockResponse().setResponseCode(200)
-                        .setBody(mapper.writeValueAsString(REPORTER2))
+                        .setBody(mapper.writeValueAsString(REPORTER23))
+                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                }
+                if (path.startsWith(prefix + REPORTR_UUID)) {
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(mapper.writeValueAsString(REPORTER_R))
+                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                }
+                if (path.startsWith(prefix + REPORTU_UUID)) {
+                    return new MockResponse().setResponseCode(200)
+                        .setBody(mapper.writeValueAsString(makeRootReporter(REPORTU_UUID,
+                            makeNMReporter(SPURIOUS_MODGROUP_UUID, "Not network modification"))))
+                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                }
+                if (path.startsWith(prefix + REPORT_FAILED_UUID)) {
+                    return new MockResponse().setResponseCode(500)
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 }
 
@@ -157,18 +211,59 @@ public class ReportServiceTest {
     }
 
     @Test
-    public void testLogsReport() {
+    public void testLogsReportSimple() {
 
         List<ReportingInfos> reportInfos = new ArrayList<>();
-        reportInfos.add(new ReportingInfos(UUID.fromString(NODE1_UUID), UUID.fromString(REPORT1_UUID), UUID.fromString(MODGROUP1_UUID), "buildNodeName"));
-        reportInfos.add(new ReportingInfos(UUID.fromString(NODE2_UUID), UUID.fromString(REPORT2_UUID), UUID.fromString(MODGROUP2_UUID), "defNodeName"));
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(NODE1_UUID), UUID.fromString(REPORT1_UUID), UUID.fromString(MODGROUP1_UUID),
+                "buildNode1Name"));
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(NODEU_UUID), UUID.fromString(REPORTU_UUID), UUID.fromString(MODGROUPU_UUID),
+                "unbuilt"));
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(NODE2_UUID), UUID.fromString(REPORT2_UUID), UUID.fromString(MODGROUP2_UUID),
+                "buildNode2Name"));
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(NODE3_UUID), UUID.fromString(REPORT3_UUID), UUID.fromString(MODGROUP3_UUID),
+                "defNodeName"));
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(ROOT_NODE_UUID), UUID.fromString(REPORTR_UUID), null, "root"));
 
         List<ReporterModel> res = reportService.getReporterModels(reportInfos);
 
-        assertEquals(2, res.size());
-        assertEquals("defNodeName", res.get(0).getDefaultName());
-        assertEquals("buildNodeName", res.get(1).getDefaultName());
-        assertTrue(getRequestsDone(2).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+        assertEquals(5, res.size());
+        assertEquals("root", res.get(0).getDefaultName());
+        assertEquals("defNodeName", res.get(1).getDefaultName());
+        assertEquals("buildNode2Name", res.get(2).getDefaultName());
+        assertEquals("unbuilt", res.get(3).getDefaultName());
+        assertEquals("buildNode1Name", res.get(4).getDefaultName());
+        // asks build node 1, get node 1
+        // then asks for unbuilt
+        // then asks node 2, gets node 2 and 3
+        // then asks for root
+        assertTrue(getRequestsDone(4).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+    }
+
+    @Test
+    public void testLogsReportOneFail() {
+
+        List<ReportingInfos> reportInfos = new ArrayList<>();
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(NODE1_UUID), UUID.fromString(REPORT1_UUID), UUID.fromString(MODGROUP1_UUID),
+                "buildNode1Name"));
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(NODE2_UUID), UUID.fromString(REPORT_FAILED_UUID), UUID.fromString(MODGROUP2_UUID),
+                "buildNode2Name"));
+        reportInfos.add(
+            new ReportingInfos(UUID.fromString(NODE3_UUID), UUID.fromString(REPORT2_UUID), UUID.fromString(MODGROUP3_UUID),
+                "defNodeName"));
+
+        try {
+            reportService.getReporterModels(reportInfos);
+            Assert.fail();
+        } catch (Exception ex) {
+            assertTrue(getRequestsDone(2).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+        }
     }
 
     @After
@@ -178,7 +273,7 @@ public class ReportServiceTest {
         try {
             httpRequest = getRequestsDone(1, 100);
         } catch (NullPointerException e) {
-            // Ignoring, especially as it is the "normal' way out
+            // Ignoring, especially as it is the "normal" way out
         }
 
         // Shut down the server. Instances cannot be reused.
