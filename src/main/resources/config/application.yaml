@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -29,6 +29,10 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.stopped
         consumeSensitivityAnalysisFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
+        consumeCaseImportSucceeded-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
+        consumeCaseImportFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
       source: publishStudyUpdate
 
 network-store-server:
