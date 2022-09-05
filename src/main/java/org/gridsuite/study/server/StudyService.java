@@ -1899,10 +1899,8 @@ public class StudyService {
     public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
         checkStudyContainsNode(studyUuid, nodeToCopyUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-
-        Pair<UUID, UUID> nodesUuid = networkModificationTreeService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
-        updateStatuses(studyUuid, nodesUuid.getRight());
-        notificationService.emitNodeInserted(studyUuid, nodesUuid.getLeft(), nodesUuid.getRight(), insertMode);
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
+        updateStatuses(studyUuid, duplicatedNodeUuid);
     }
 
     @Bean

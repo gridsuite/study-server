@@ -9,7 +9,6 @@ package org.gridsuite.study.server;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
@@ -95,9 +94,9 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public Pair<UUID, UUID> duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
-        Optional<NodeEntity> referenceNodeOpt = nodesRepository.findById(referenceNodeUuid);
-        NodeEntity referenceNodeEntity = referenceNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+    public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+        Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
+        NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
 
         Optional<NodeEntity> nodeToCopyOpt = nodesRepository.findById(nodeToCopyUuid);
         NodeEntity nodeToCopyEntity = nodeToCopyOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
@@ -108,18 +107,18 @@ public class NetworkModificationTreeService {
         //First we create the modification group
         networkModificationService.createModifications(modificationGroupUuid, newGroupUuid, newReportUuid);
 
-        if (insertMode.equals(InsertMode.BEFORE) && referenceNodeEntity.getType().equals(NodeType.ROOT)) {
+        if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
         NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
-                referenceNodeEntity.getParentNode() : referenceNodeEntity;
+                anchorNodeEntity.getParentNode() : anchorNodeEntity;
         //Then we create the node
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeToCopyEntity.getType(), referenceNodeEntity.getStudy()));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeToCopyEntity.getType(), anchorNodeEntity.getStudy()));
 
         if (insertMode.equals(InsertMode.BEFORE)) {
-            referenceNodeEntity.setParentNode(node);
+            anchorNodeEntity.setParentNode(node);
         } else if (insertMode.equals(InsertMode.AFTER)) {
-            nodesRepository.findAllByParentNodeIdNode(referenceNodeUuid).stream()
+            nodesRepository.findAllByParentNodeIdNode(anchorNodeUuid).stream()
                     .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                     .forEach(child -> child.setParentNode(node));
         }
@@ -135,13 +134,15 @@ public class NetworkModificationTreeService {
                 null,
                 BuildStatus.NOT_BUILT
         );
+        UUID studyUuid = anchorNodeEntity.getStudy().getId();
         newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
         newNetworkModificationNodeInfoEntity.setDescription(networkModificationNodeInfoEntity.getDescription());
         newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
         newNetworkModificationNodeInfoEntity.setReportUuid(newReportUuid);
         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
 
-        return new ImmutablePair<>(parent.getIdNode(), node.getIdNode());
+        notificationService.emitNodeInserted(studyUuid, parent.getIdNode(), node.getIdNode(), insertMode);
+        return node.getIdNode();
     }
 
     @Transactional
