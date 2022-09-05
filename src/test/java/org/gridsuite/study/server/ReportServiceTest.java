@@ -78,10 +78,11 @@ public class ReportServiceTest {
     private static final String REPORT1_UUID   = "00100000-0000-0000-0000-000000000000";
     private static final String REPORT2_UUID   = "00200000-0000-0000-0000-000000000000";
     private static final String REPORT3_UUID   = "00300000-0000-0000-0000-000000000000";
-    private static final String REPORTR_UUID   = "a0000000-0000-0000-0000-000000000000";
-    private static final String REPORTU_UUID   = "c0000000-0000-0000-0000-000000000000";
+    private static final String REPORTR_UUID   = "00a00000-0000-0000-0000-000000000000";
+    private static final String REPORTU_UUID   = "00c00000-0000-0000-0000-000000000000";
 
-    private static final String REPORT_FAILED_UUID   = "f0000000-0000-0000-0000-000000000000";
+    private static final String REPORT_FAILED_UUID = "00f00000-0000-0000-0000-000000000000";
+    private static final String SNEAKY_REPORT_UUID = "00d00000-0000-0000-0000-000000000000";
 
     private static final ReporterModel REPORTER_R = makeRootReporter(REPORTR_UUID);
 
@@ -186,6 +187,9 @@ public class ReportServiceTest {
                     return new MockResponse().setResponseCode(500)
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 }
+                if (path.startsWith(prefix + SNEAKY_REPORT_UUID)) {
+                    return new MockResponse().setResponseCode(200);
+                }
 
                 LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + path);
                 return new MockResponse().setResponseCode(418);
@@ -249,7 +253,7 @@ public class ReportServiceTest {
 
         List<ReportingInfos> reportInfos = new ArrayList<>();
         reportInfos.add(
-            new ReportingInfos(UUID.fromString(NODE1_UUID), UUID.fromString(REPORT1_UUID), UUID.fromString(MODGROUP1_UUID),
+            new ReportingInfos(UUID.fromString(NODE1_UUID), UUID.fromString(SNEAKY_REPORT_UUID), UUID.fromString(MODGROUP1_UUID),
                 "buildNode1Name"));
         reportInfos.add(
             new ReportingInfos(UUID.fromString(NODE2_UUID), UUID.fromString(REPORT_FAILED_UUID), UUID.fromString(MODGROUP2_UUID),

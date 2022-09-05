@@ -145,6 +145,9 @@ public class ReportService {
 
             // getReport asks to silently return empty reportmodel if not found.
             ReporterModel reporter = this.getReport(reportUuid, "useless roundtrip string");
+            if (reporter == null) {
+                continue;
+            }
 
             seenBuildNodeToRootReporter.put(buildNodeUuid, reporter);
 
