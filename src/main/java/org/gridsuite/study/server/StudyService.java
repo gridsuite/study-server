@@ -39,26 +39,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -93,10 +88,15 @@ public class StudyService {
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String RESULT_UUID = "resultUuid";
+    static final String NETWORK_UUID = "networkUuid";
+    static final String NETWORK_ID = "networkId";
 
     static final String QUERY_PARAM_RECEIVER = "receiver";
 
     static final String HEADER_RECEIVER = "receiver";
+    static final String HEADER_ERROR_MESSAGE = "errorMessage";
+    static final String HEADER_CASE_FORMAT = "caseFormat";
+    static final String HEADER_CASE_NAME = "caseName";
 
     static final String FIRST_VARIANT_ID = "first_variant_id";
 
@@ -129,9 +129,6 @@ public class StudyService {
 
     private final ObjectMapper objectMapper;
 
-    @Autowired
-    private TempFileService tempFileService;
-
     @Bean
     @Transactional
     public Consumer<Message<String>> consumeSaResult() {
@@ -139,10 +136,10 @@ public class StudyService {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
                             receiverObj.getNodeUuid());
@@ -237,17 +234,10 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public String getCaseName(UUID studyUuid) {
+    public String getStudyCaseName(UUID studyUuid) {
+        Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/name")
-                .buildAndExpand(study.getCaseUuid())
-                .toUriString();
-
-        try {
-            return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, String.class, studyUuid).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw new StudyException(CASE_NOT_FOUND, e.getMessage());
-        }
+        return study != null ? study.getCaseName() : "";
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
@@ -264,80 +254,33 @@ public class StudyService {
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos, importParameters));
-        return basicStudyInfos;
-    }
-
-    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos, Map<String, Object> importParameters) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
+        UUID importReportUuid = UUID.randomUUID();
         try {
-            UUID importReportUuid = UUID.randomUUID();
-            String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-            NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
-            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
+            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        } finally {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw e;
         }
+
+        return basicStudyInfos;
     }
 
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
-        // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
-        File tempFile = createTempFile(caseFile, basicStudyInfos);
-        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, caseFile.getOriginalFilename(), userId, basicStudyInfos));
+        try {
+            createStudyFromFile(caseFile, userId, basicStudyInfos);
+        } catch (Exception e) {
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw e;
+        }
         return basicStudyInfos;
     }
 
-    private File createTempFile(MultipartFile caseFile, BasicStudyInfos basicStudyInfos) {
-        File tempFile = null;
-        try {
-            tempFile = tempFileService.createTempFile(caseFile.getOriginalFilename());
-            caseFile.transferTo(tempFile);
-            return tempFile;
-        } catch (IOException e) {
-            LOGGER.error(e.toString(), e);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), basicStudyInfos.getUserId());
-            if (tempFile != null) {
-                deleteFile(tempFile);
-            }
-            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
-        }
-    }
-
-    private void deleteFile(@NonNull File file) {
-        try {
-            Files.delete(file.toPath());
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        }
-    }
-
-    private void createStudyAsync(File caseFile, String originalFilename, String userId, BasicStudyInfos basicStudyInfos) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
-        try {
-            UUID importReportUuid = UUID.randomUUID();
-            UUID caseUuid = importCase(caseFile, originalFilename, basicStudyInfos.getId(), userId);
-            if (caseUuid != null) {
-                String caseFormat = getCaseFormat(caseUuid, basicStudyInfos.getId(), userId);
-                NetworkInfos networkInfos = persistentStore(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
-                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, toEntity(loadFlowParameters), importReportUuid);
-            }
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        } finally {
-            deleteFile(caseFile);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+    private void createStudyFromFile(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
+        UUID importReportUuid = UUID.randomUUID();
+        UUID caseUuid = importCase(caseFile);
+        if (caseUuid != null) {
+            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
         }
     }
 
@@ -542,9 +485,9 @@ public class StudyService {
     }
 
     private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
-            String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
+            String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, caseName, loadFlowParameters, importReportUuid));
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -563,7 +506,7 @@ public class StudyService {
         Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters);
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -578,51 +521,36 @@ public class StudyService {
         return newStudy;
     }
 
-    public String getCaseFormat(UUID caseUuid, UUID studyUuid, String userId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/format")
-            .buildAndExpand(caseUuid)
-            .toUriString();
-
-        try {
-            return restTemplate.getForObject(caseServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e, "case-server");
-        }
-    }
-
-    private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
+    private StudyException handleStudyCreationError(HttpStatusCodeException httpException, String serverName) {
         HttpStatus httpStatusCode = httpException.getStatusCode();
         String errorMessage = httpException.getResponseBodyAsString();
         String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
                 : errorMessage;
 
+        LOGGER.error(errorToParse, httpException);
+
         try {
             JsonNode node = new ObjectMapper().readTree(errorToParse).path("message");
             if (!node.isMissingNode()) {
-                notificationService.emitStudyCreationError(studyUuid, userId, node.asText());
-            } else {
-                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
+                return new StudyException(STUDY_CREATION_FAILED, node.asText());
             }
         } catch (JsonProcessingException e) {
             if (!errorToParse.isEmpty()) {
-                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
+                return new StudyException(STUDY_CREATION_FAILED, errorToParse);
             }
         }
-
-        LOGGER.error(errorToParse, httpException);
 
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(File file, String originalFilename, UUID studyUuid, String userId) {
+    UUID importCase(MultipartFile multipartFile) {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         UUID caseUuid;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         try {
             multipartBodyBuilder
-                .part("file", new FileSystemResource(file))
-                .filename(originalFilename);
+                .part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
 
             HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
                     multipartBodyBuilder.build(), headers);
@@ -631,12 +559,11 @@ public class StudyService {
                 caseUuid = restTemplate.postForObject(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private",
                         request, UUID.class);
             } catch (HttpStatusCodeException e) {
-                throw handleStudyCreationError(studyUuid, userId, e, "case-server");
+                throw handleStudyCreationError(e, "case-server");
             }
         } catch (StudyException e) {
             throw e;
         } catch (Exception e) {
-            notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
             throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
 
@@ -710,33 +637,36 @@ public class StudyService {
         return result;
     }
 
-    private NetworkInfos persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+    private void persistentStoreAsync(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(
+                        new CaseImportReceiver(studyUuid, caseUuid, importReportUuid, userId, System.nanoTime()
+                    )),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-            .queryParam(CASE_UUID, caseUuid)
-            .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
-            .queryParam(REPORT_UUID, importReportUuid)
-            .buildAndExpand()
-            .toUriString();
+                .queryParam(CASE_UUID, caseUuid)
+                .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
+                .queryParam(REPORT_UUID, importReportUuid)
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
+                .buildAndExpand()
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
 
         try {
-            ResponseEntity<NetworkInfos> networkInfosResponse = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
-                    NetworkInfos.class);
-            NetworkInfos networkInfos = networkInfosResponse.getBody();
-            if (networkInfos == null) {
-                throw handleStudyCreationError(studyUuid, userId, new HttpClientErrorException(HttpStatus.BAD_REQUEST), "network-conversion-server");
-            }
-            return networkInfos;
+            restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
+                    Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
+            throw handleStudyCreationError(e, "network-conversion-server");
         } catch (Exception e) {
-            if (!(e instanceof StudyException)) {
-                notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
-            }
-            throw e;
+            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
 
     }
@@ -1334,7 +1264,7 @@ public class StudyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -1399,7 +1329,7 @@ public class StudyService {
         return contingencyListNames.stream().map(contingencyListName -> {
             var uriComponentsBuilder = UriComponentsBuilder
                     .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
-                    .queryParam("networkUuid", uuid);
+                    .queryParam(NETWORK_UUID, uuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
@@ -1582,7 +1512,7 @@ public class StudyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -1600,10 +1530,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -1626,10 +1556,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Security analysis failed for node '{}'", receiverObj.getNodeUuid());
 
@@ -1646,8 +1576,71 @@ public class StudyService {
         };
     }
 
+    @Bean
+    public Consumer<Message<String>> consumeCaseImportSucceeded() {
+        return message -> {
+            String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            UUID networkUuid = UUID.fromString(message.getHeaders().get(NETWORK_UUID, String.class));
+            String networkId = message.getHeaders().get(NETWORK_ID, String.class);
+            String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
+            String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
+            NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
+
+            if (receiverString != null) {
+                CaseImportReceiver receiver;
+                try {
+                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
+                            CaseImportReceiver.class);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                    return;
+                }
+
+                UUID caseUuid = receiver.getCaseUuid();
+                UUID studyUuid = receiver.getStudyUuid();
+                String userId = receiver.getUserId();
+                Long startTime = receiver.getStartTime();
+                UUID importReportUuid = receiver.getReportUuid();
+
+                try {
+                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
+                    insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, toEntity(loadFlowParameters), importReportUuid);
+                } catch (Exception e) {
+                    LOGGER.error(e.toString(), e);
+                } finally {
+                    self.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                    LOGGER.trace("Create study '{}' : {} seconds", studyUuid,
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeCaseImportFailed() {
+        return message -> {
+            String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_ERROR_MESSAGE, String.class);
+
+            if (receiverString != null) {
+                CaseImportReceiver receiver;
+                try {
+                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
+                            CaseImportReceiver.class);
+                    UUID studyUuid = receiver.getStudyUuid();
+                    String userId = receiver.getUserId();
+
+                    self.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                    notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+                } catch (Exception e) {
+                    LOGGER.error(e.toString(), e);
+                }
+            }
+        };
+    }
+
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-            String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters,
+            String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
             UUID importReportUuid) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
@@ -1657,7 +1650,7 @@ public class StudyService {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
@@ -1910,10 +1903,10 @@ public class StudyService {
             Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
@@ -1934,10 +1927,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -1958,10 +1951,10 @@ public class StudyService {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
-                Receiver receiverObj;
+                NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            Receiver.class);
+                            NodeReceiver.class);
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
