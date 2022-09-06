@@ -162,8 +162,9 @@ public class EquipmentInfosServiceTests {
         EquipmentInfos tw1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw1").name("name_tw1").type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl5").name("vl5").build())).build();
         EquipmentInfos tw2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw2").name("name_tw2").type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl6").name("vl6").build())).build();
         EquipmentInfos configuredBus = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus").name("name_bus").type("CONFIGURED_BUS").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl7").name("vl7").build())).build();
+        EquipmentInfos configuredBus2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_bus2").variantId("variant1").name("name_bus2").type("CONFIGURED_BUS").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl7").name("vl7").build())).build();
 
-        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus).forEach(equipmentInfosService::addEquipmentInfos);
+        Stream.of(generatorInfos, line1Infos, line2Infos, otherLineInfos, tw1Infos, tw2Infos, configuredBus, configuredBus2).forEach(equipmentInfosService::addEquipmentInfos);
 
         Set<EquipmentInfos> hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(LOAD)"));
         assertEquals(0, hits.size());
@@ -185,6 +186,10 @@ public class EquipmentInfosServiceTests {
 
         hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(CONFIGURED_BUS)"));
         assertEquals(1, hits.size());
+        assertTrue(hits.contains(configuredBus));
+
+        hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(CONFIGURED_BUS) AND variantId.keyword:(variant1)"));
+        assertEquals(2, hits.size());
         assertTrue(hits.contains(configuredBus));
     }
 
