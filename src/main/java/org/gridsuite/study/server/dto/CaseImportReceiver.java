@@ -7,15 +7,23 @@
 
 package org.gridsuite.study.server.dto;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
+
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Receiver {
-    private UUID nodeUuid;
+public class CaseImportReceiver {
+    private UUID studyUuid;
+    private UUID caseUuid;
+    private UUID reportUuid;
+    private String userId;
+    private Long startTime;
 }

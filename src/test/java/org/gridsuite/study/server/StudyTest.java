@@ -78,12 +78,16 @@ import org.springframework.web.util.NestedServletException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -121,6 +125,7 @@ public class StudyTest {
 
     private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
+    private static final String TEST_FILE_UCTE = "testCase.ucte";
     private static final String TEST_FILE = "testCase.xiidm";
     private static final String TEST_FILE_WITH_ERRORS = "testCase_with_errors.xiidm";
     private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
@@ -168,6 +173,8 @@ public class StudyTest {
     private static final String CASE_2_UUID_STRING = "656719f3-aaaa-48be-be46-ef7b93331e32";
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
     private static final String CASE_4_UUID_STRING = "196719f5-cccc-48be-be46-e92345951e32";
+    private static final String CASE_UUID_CAUSING_IMPORT_ERROR = "178719f5-cccc-48be-be46-e92345951e32";
+    private static final String CASE_UUID_CAUSING_STUDY_CREATION_ERROR = "278719f5-cccc-48be-be46-e92345951e32";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
     private static final String NETWORK_UUID_4_STRING = "33333333-cccc-48be-be46-e92345951e32";
@@ -180,6 +187,8 @@ public class StudyTest {
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final UUID NETWORK_LOADFLOW_ERROR_UUID = UUID.fromString(NETWORK_LOADFLOW_ERROR_UUID_STRING);
     private static final NetworkInfos NETWORK_LOADFLOW_ERROR_INFOS = new NetworkInfos(NETWORK_LOADFLOW_ERROR_UUID, "20140116_0830_2D4_UX1_pst");
+
+    private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -599,34 +608,58 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportSucceededMessage(path, NETWORK_INFOS, "UCTE");
+                    return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    return new MockResponse().setBody(String.valueOf(networkInfos2AsString)).setResponseCode(200)
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_2_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportSucceededMessage(path, NETWORK_INFOS_2, "UCTE");
+                    return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_3_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    return new MockResponse().setBody(String.valueOf(networkInfos3AsString)).setResponseCode(200)
+                    sendCaseImportSucceededMessage(path, NETWORK_INFOS_3, "UCTE");
+                    return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
                     return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                         .addHeader("Content-Type", "application/json; charset=utf-8")
                         .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'\",\"path\":\"/v1/networks\"}");
-                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    return new MockResponse().setBody(String.valueOf(networkLoadFlowErrorInfosAsString)).setResponseCode(200)
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_LOADFLOW_ERROR_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportSucceededMessage(path, NETWORK_LOADFLOW_ERROR_INFOS, "UCTE");
+                    return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    countDownLatch.await(2, TimeUnit.SECONDS);
-                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
-                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/reports/.*")) {
+                    // need asynchronous run to get study creation requests
+                    new Thread(() -> {
+                        try {
+                            countDownLatch.await();
+                            sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
+                        } catch (Exception e) {
+                            System.err.println(e);
+                        }
+                    }).start();
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportFailedMessage(path, STUDY_CREATION_ERROR_MESSAGE);
                     return new MockResponse().setResponseCode(200)
-                        .setBody(mapper.writeValueAsString(REPORT_TEST))
-                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")
-                           || path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")) {
-                    return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/reports/.*")) {
+                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(REPORT_TEST))
+                        .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    // need asynchronous run to get study creation requests
+                    new Thread(() -> {
+                        try {
+                            countDownLatch.await();
+                            sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
+                        } catch (Exception e) {
+                            System.err.println(e);
+                        }
+                    }).start();
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/networks\\?caseUuid=" + IMPORTED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
+                    sendCaseImportSucceededMessage(path, NETWORK_INFOS, "XIIDM");
+                    return new MockResponse().setResponseCode(200);
                 }
 
                 switch (path) {
@@ -648,13 +681,50 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_2_UUID_STRING + "/exists":
                     case "/v1/cases/" + CASE_3_UUID_STRING + "/exists":
                     case "/v1/cases/" + CASE_4_UUID_STRING + "/exists":
+                    case "/v1/cases/" + CASE_UUID_CAUSING_IMPORT_ERROR + "/exists":
+                    case "/v1/cases/" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "/exists":
                     case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/exists":
                         return new MockResponse().setResponseCode(200).setBody("true")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-
+                    case "/v1/cases/" + CASE_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_UUID_STRING + "\",\"name\":\"" + TEST_FILE_UCTE + "\",\"format\":\"UCTE\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "\",\"name\":\"" + TEST_FILE_IMPORT_ERRORS + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + IMPORTED_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + NEW_STUDY_CASE_UUID + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + IMPORTED_BLOCKING_CASE_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + IMPORTED_BLOCKING_CASE_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_2_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_2_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_3_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_3_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_4_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_4_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/cases/" + CASE_LOADFLOW_ERROR_UUID_STRING + "/infos":
+                        return new MockResponse().setResponseCode(200)
+                                .setBody("{\"uuid\":\"" + CASE_LOADFLOW_ERROR_UUID_STRING + "\",\"name\":\"" + CASE_NAME + "\",\"format\":\"XIIDM\"}")
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + CASE_UUID_STRING + "/format":
                         return new MockResponse().setResponseCode(200).setBody("UCTE")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/cases/" + IMPORTED_CASE_UUID_STRING + "/format":
                     case "/v1/cases/" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "/format":
                     case "/v1/cases/" + NEW_STUDY_CASE_UUID + "/format":
@@ -727,6 +797,11 @@ public class StudyTest {
                     case "/v1/networks?caseUuid=" + CASE_4_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfos4AsString)).setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks?caseUuid=" + CASE_UUID_CAUSING_IMPORT_ERROR + "&variantId=" + FIRST_VARIANT_ID:
+                        return new MockResponse().setResponseCode(500);
+                    case "/v1/networks?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID:
+                        sendCaseImportFailedMessage(path, "ERROR WHILE IMPORTING STUDY");
+                        return new MockResponse().setResponseCode(200);
                     case "/v1/networks?caseUuid=" + IMPORTED_CASE_WITH_ERRORS_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID:
                         return new MockResponse().setBody(String.valueOf(networkInfosAsString)).setResponseCode(500)
                             .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -884,6 +959,30 @@ public class StudyTest {
             }
         };
         server.setDispatcher(dispatcher);
+    }
+
+    private void sendCaseImportSucceededMessage(String requestPath, NetworkInfos networkInfos, String format) {
+        Pattern receiverPattern = Pattern.compile("receiver=(.*)");
+        Matcher matcher = receiverPattern.matcher(requestPath);
+        if (matcher.find()) {
+            String receiverUrlString = matcher.group(1);
+            input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
+                    .setHeader("networkUuid", networkInfos.getNetworkUuid().toString())
+                    .setHeader("networkId", networkInfos.getNetworkId())
+                    .setHeader("caseFormat", format)
+                    .build(), "case.import.succeeded");
+        }
+    }
+
+    private void sendCaseImportFailedMessage(String requestPath, String errorMessage) {
+        Pattern receiverPattern = Pattern.compile("receiver=(.*)");
+        Matcher matcher = receiverPattern.matcher(requestPath);
+        if (matcher.find()) {
+            String receiverUrlString = matcher.group(1);
+            input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
+                    .setHeader("errorMessage", errorMessage)
+                    .build(), "case.import.failed");
+        }
     }
 
     private Set<String> getRequestsDone(int n) {
@@ -2051,21 +2150,21 @@ public class StudyTest {
     @Test
     public void testCreationWithErrorBadCaseFile() throws Exception {
         // Create study with a bad case file -> error
-        createStudy("userId", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, false,
+        createStudyWithFileError("userId", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, false,
                 "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
     }
 
     @Test
     public void testCreationWithErrorBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
-        createStudy("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
+        createStudyWithFileError("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
     }
 
     @Test
     public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
         // Create study with a bad case file -> error when importing in the case server
         // without message in response body
-        createStudy("userId", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, false,
+        createStudyWithFileError("userId", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, false,
                 "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
     }
 
@@ -2142,10 +2241,9 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
-        var requests = getRequestsDone(3);
+        var requests = getRequestsDone(2);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
 
         return studyUuid;
     }
@@ -2191,9 +2289,8 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = getRequestsWithBodyDone(3);
+        Set<RequestWithBody> requests = getRequestsWithBodyDone(2);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/format", caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
         assertEquals(mapper.writeValueAsString(importParameters),
@@ -2251,13 +2348,120 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
-        var requests = getRequestsDone(caseUuid == null ? 1 : 3);
+        var requests = getRequestsDone(caseUuid == null ? 1 : 2);
         assertTrue(requests.contains("/v1/cases/private"));
         if (caseUuid != null) {
-            assertTrue(requests.contains(String.format("/v1/cases/%s/format", caseUuid)));
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         }
         return studyUuid;
+    }
+
+    private UUID createStudyWithFileError(String userId, String fileName, String caseUuid, boolean isPrivate, String errorMessage)
+            throws Exception {
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
+
+            mockMvc
+                    .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate).file(mockFile)
+                            .header("userId", userId).contentType(MediaType.MULTIPART_FORM_DATA))
+                    .andExpect(status().is5xxServerError()).andReturn();
+        }
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        // assert that all http requests have been sent to remote services
+        var requests = getRequestsDone(caseUuid == null ? 1 : 2);
+        assertTrue(requests.contains("/v1/cases/private"));
+
+        message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId"))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+
+        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() {
+        });
+
+        assertEquals(List.of(), bsiListResult);
+
+        if (caseUuid != null) {
+            assertTrue(requests.stream().anyMatch(r -> r.matches(
+                    "/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+        }
+        return null;
+    }
+
+    @Test
+    public void testCreateStudyWithErrorDuringCaseImport() throws Exception {
+        String userId = "userId";
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR).header("userId", userId))
+            .andExpect(status().is5xxServerError());
+
+       // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
+
+        assertEquals(List.of(), bsiListResult);
+
+        var requests = getRequestsDone(2);
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_IMPORT_ERROR)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_IMPORT_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
+    }
+
+    @Test
+    public void testCreateStudyWithErrorDuringStudyCreation() throws Exception {
+        String userId = "userId";
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_STUDY_CREATION_ERROR).header("userId", userId))
+            .andExpect(status().isOk());
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+
+        // study deletion
+        message = output.receive(TIMEOUT, "study.update");
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+
+        // study error message
+        message = output.receive(TIMEOUT, "study.update");
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(STUDY_CREATION_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
+
+        var requests = getRequestsDone(2);
+        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
     @Test
@@ -2292,12 +2496,13 @@ public class StudyTest {
 
         assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
+        // once we checked study creation requests, we can countDown latch to trigger study creation request
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);
-        // drop the broker message for study creation
-        output.receive(TIMEOUT);
+        // drop the broker message for study creation (3 times longer to prevent failure if study creation takes a little longer)
+        output.receive(TIMEOUT * 3);
         // drop the broker message for node creation
         output.receive(TIMEOUT);
         // drop the broker message for study creation request (deletion)
@@ -2324,14 +2529,13 @@ public class StudyTest {
         assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // assert that all http requests have been sent to remote services
-        var httpRequests = getRequestsDone(3);
+        var httpRequests = getRequestsDone(2);
         assertTrue(httpRequests.contains("/v1/cases/private"));
-        assertTrue(httpRequests.contains(String.format("/v1/cases/%s/format", IMPORTED_BLOCKING_CASE_UUID_STRING)));
         assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
 
         countDownLatch = new CountDownLatch(1);
 
-        //insert a study
+      //insert a study
         mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", NEW_STUDY_CASE_UUID, "false")
                 .header("userId", "userId"))
             .andExpect(status().isOk())
@@ -2360,17 +2564,17 @@ public class StudyTest {
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT);
         // drop the broker message for study creation
-        output.receive(TIMEOUT);
+        output.receive(TIMEOUT * 3);
         // drop the broker message for node creation
         output.receive(TIMEOUT);
         // drop the broker message for study creation request (deletion)
         output.receive(TIMEOUT);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
-            .header("userId", "userId")).andExpectAll(
-                    status().isOk(),
-                    content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
+                .header("userId", "userId")).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
 
         bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
@@ -2388,9 +2592,8 @@ public class StudyTest {
         assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // assert that all http requests have been sent to remote services
-        var requests = getRequestsDone(3);
+        var requests = getRequestsDone(2);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/format", NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
@@ -3876,48 +4079,6 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/" + modificationTypeUrl) && r.getBody().equals(generatorAttributesUpdated)));
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
-    }
-
-    @Test
-    public void getCaseName() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-                status().isOk(),
-                content().string(CASE_NAME));
-
-        var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/name")));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
-                .andExpect(status().isNotFound());
-
-        // change study case uuid and trying to get case name : error
-        StudyEntity study = studyRepository.findAll().get(0);
-        study.setCaseUuid(UUID.fromString(NOT_EXISTING_CASE_UUID));
-        studyRepository.save(study);
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-            status().is4xxClientError());
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name")));
-    }
-
-    @Test
-    public void getCaseFormat() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
-        String caseFormat = studyService.getCaseFormat(CASE_UUID, study1Uuid, "userId");
-        assertEquals("UCTE", caseFormat);
-
-        var requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/format")));
-
-        UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
-        assertThrows(StudyException.class, () -> studyService.getCaseFormat(notExistingCase, study1Uuid, "userId"));
-        output.receive(TIMEOUT);
-
-        requests = getRequestsWithBodyDone(1);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/format")));
     }
 
     @After
