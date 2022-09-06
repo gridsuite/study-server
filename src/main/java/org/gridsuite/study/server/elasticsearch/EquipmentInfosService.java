@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.lang.NonNull;
@@ -39,6 +40,8 @@ public interface EquipmentInfosService {
     void deleteAll(@NonNull UUID networkUuid);
 
     List<EquipmentInfos> searchEquipments(@NonNull final String query);
+
+    List<EquipmentInfos> searchEquipments(@NonNull final BoolQueryBuilder query);
 
     List<TombstonedEquipmentInfos> searchTombstonedEquipments(@NonNull final String query);
 }
