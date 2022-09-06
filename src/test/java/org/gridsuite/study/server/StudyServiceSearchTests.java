@@ -172,6 +172,18 @@ public class StudyServiceSearchTests {
         assertEquals(1, hits.size());
         assertTrue(hits.contains(load1Infos));
 
+        // Search lines with node of initial variant
+        hits.clear();
+        hits.addAll(studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
+        assertEquals(2, hits.size());
+        assertTrue(hits.contains(line1Infos));
+
+        // Search lines with node of new variant
+        hits.clear();
+        hits.addAll(studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
+        assertEquals(3, hits.size());
+        assertTrue(hits.contains(newLineInfos));
+
         // Search specific load with the wrong type -> expect no result
         hits.clear();
         hits.addAll(studyService.searchEquipments(STUDY_UUID, NODE_UUID, "loadId2", EquipmentInfosService.FieldSelector.ID, "LINE", false));
