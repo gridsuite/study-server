@@ -21,6 +21,13 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.service.CaseService;
+import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SingleLineDiagramService;
+import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
@@ -44,11 +51,25 @@ public class StudyController {
     private final StudyService studyService;
     private final NetworkService networkStoreService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final SingleLineDiagramService singleLineDiagramService;
+    private final NetworkConversionService networkConversionService;
+    private final SecurityAnalysisService securityAnalysisService;
+    private final CaseService caseService;
 
-    public StudyController(StudyService studyService, NetworkService networkStoreService, NetworkModificationTreeService networkModificationTreeService) {
+    public StudyController(StudyService studyService,
+            NetworkService networkStoreService,
+            NetworkModificationTreeService networkModificationTreeService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            SecurityAnalysisService securityAnalysisService,
+            CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
+        this.singleLineDiagramService = singleLineDiagramService;
+        this.networkConversionService = networkConversionService;
+        this.securityAnalysisService = securityAnalysisService;
+        this.caseService = caseService;
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
@@ -128,7 +149,7 @@ public class StudyController {
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestBody(required = false) Map<String, Object> importParameters,
                                                                              @RequestHeader("userId") String userId) {
-        studyService.assertCaseExists(caseUuid);
+        caseService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters);
         return ResponseEntity.ok().body(createStudy);
     }
@@ -585,7 +606,7 @@ public class StudyController {
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
     public ResponseEntity<String> getExportFormats() {
-        String formatsJson = studyService.getExportFormats();
+        String formatsJson = networkConversionService.getExportFormats();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
@@ -629,7 +650,7 @@ public class StudyController {
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "Limit types") @RequestParam(name = "limitType", required = false) List<String> limitTypes) {
         List<String> nonNullLimitTypes = limitTypes != null ? limitTypes : Collections.emptyList();
-        String result = studyService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes);
+        String result = securityAnalysisService.getSecurityAnalysisResult(nodeUuid, nonNullLimitTypes);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }
@@ -736,7 +757,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = studyService.getSecurityAnalysisStatus(nodeUuid);
+        String result = securityAnalysisService.getSecurityAnalysisStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -746,17 +767,16 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
     public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopSecurityAnalysis(studyUuid, nodeUuid);
+        securityAnalysisService.stopSecurityAnalysis(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+    public ResponseEntity<List<ReporterModel>> getNodeReport(@Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "Node only report") @RequestParam(value = "nodeOnlyReport", required = false, defaultValue = "true") boolean nodeOnlyReport) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(studyUuid, nodeUuid, nodeOnlyReport));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -771,9 +791,8 @@ public class StudyController {
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
     @Operation(summary = "Delete node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> deleteNodeReport(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.deleteNodeReport(studyUuid, nodeUuid);
+    public ResponseEntity<Void> deleteNodeReport(@Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.deleteNodeReport(nodeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -781,7 +800,7 @@ public class StudyController {
     @Operation(summary = "Get a list of the available svg component libraries")
     @ApiResponse(responseCode = "200", description = "The list of the available svg component libraries")
     public ResponseEntity<List<String>> getAvailableSvgComponentLibraries() {
-        List<String> libraries = studyService.getAvailableSvgComponentLibraries();
+        List<String> libraries = singleLineDiagramService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
@@ -1234,8 +1253,8 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/notification")
     @Operation(summary = "Create study related notification")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The notification has been sent"),
-            @ApiResponse(responseCode = "400", description = "The notification type is unknown")
+        @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
     public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid,
                                              @RequestParam("type") String notificationType) {

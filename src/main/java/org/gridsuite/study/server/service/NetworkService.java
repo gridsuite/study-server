@@ -4,13 +4,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
+
+import org.gridsuite.study.server.NetworkVariantsListener;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -47,7 +50,7 @@ public class NetworkService {
         this.studyRepository = studyRepository;
     }
 
-    UUID getNetworkUuid(UUID studyUuid) {
+    public UUID getNetworkUuid(UUID studyUuid) {
         UUID networkUuid = doGetNetworkUuid(studyUuid);
         if (networkUuid == null) {
             throw new StudyException(STUDY_NOT_FOUND);
