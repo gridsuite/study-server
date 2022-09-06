@@ -1896,6 +1896,7 @@ public class StudyService {
         networkModificationService.stopBuild(studyUuid, nodeUuid);
     }
 
+    @Transactional
     public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
         checkStudyContainsNode(studyUuid, nodeToCopyUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
