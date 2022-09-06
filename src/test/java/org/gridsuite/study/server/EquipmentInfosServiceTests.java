@@ -185,12 +185,12 @@ public class EquipmentInfosServiceTests {
         assertTrue(hits.contains(tw2Infos));
 
         hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(CONFIGURED_BUS)"));
-        assertEquals(1, hits.size());
+        assertEquals(2, hits.size());
         assertTrue(hits.contains(configuredBus));
 
         hits = new HashSet<>(equipmentInfosService.searchEquipments("equipmentType:(CONFIGURED_BUS) AND variantId.keyword:(variant1)"));
-        assertEquals(2, hits.size());
-        assertTrue(hits.contains(configuredBus));
+        assertEquals(1, hits.size());
+        assertTrue(hits.contains(configuredBus2));
     }
 
     @Test
