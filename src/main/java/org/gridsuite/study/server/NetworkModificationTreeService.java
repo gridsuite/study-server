@@ -93,6 +93,7 @@ public class NetworkModificationTreeService {
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
+    @Transactional
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
         NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));

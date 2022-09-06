@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.BuildInfos;
-import org.gridsuite.study.server.dto.Receiver;
+import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
@@ -362,7 +362,7 @@ public class NetworkModificationService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                 StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -385,7 +385,7 @@ public class NetworkModificationService {
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
