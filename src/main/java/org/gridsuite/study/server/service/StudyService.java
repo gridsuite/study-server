@@ -17,7 +17,6 @@ import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.TempFileService;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
@@ -36,16 +35,12 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -93,9 +88,6 @@ public class StudyService {
     private final ActionsService actionsService;
 
     private final ObjectMapper objectMapper;
-
-    @Autowired
-    private TempFileService tempFileService;
 
     @Autowired
     StudyService self;
@@ -175,10 +167,10 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public String getCaseName(UUID studyUuid) {
+    public String getStudyCaseName(UUID studyUuid) {
+        Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-
-        return caseService.getCaseName(study.getCaseUuid());
+        return study != null ? study.getCaseName() : "";
     }
 
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
@@ -195,90 +187,33 @@ public class StudyService {
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> createStudyAsync(caseUuid, userId, basicStudyInfos, importParameters));
-        return basicStudyInfos;
-    }
-
-    private void createStudyAsync(UUID caseUuid, String userId, BasicStudyInfos basicStudyInfos, Map<String, Object> importParameters) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
+        UUID importReportUuid = UUID.randomUUID();
         try {
-            UUID importReportUuid = UUID.randomUUID();
-            String caseFormat = getCaseFormatWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId);
-            NetworkInfos networkInfos = persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
-            LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-            insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, LoadflowService.toEntity(loadFlowParameters), importReportUuid);
+            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        } finally {
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw e;
         }
+
+        return basicStudyInfos;
     }
 
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        // Using temp file to store caseFile here because multipartfile are deleted once the request using it is over
-        // Since the next action is asynchronous, the multipartfile could be deleted before being read and cause exceptions
-        File tempFile = createTempFile(caseFile, basicStudyInfos);
-        studyServerExecutionService.runAsync(() -> createStudyAsync(tempFile, caseFile.getOriginalFilename(), userId, basicStudyInfos));
+        try {
+            createStudyFromFile(caseFile, userId, basicStudyInfos);
+        } catch (Exception e) {
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            throw e;
+        }
         return basicStudyInfos;
     }
 
-    private File createTempFile(MultipartFile caseFile, BasicStudyInfos basicStudyInfos) {
-        File tempFile = null;
-        try {
-            tempFile = tempFileService.createTempFile(caseFile.getOriginalFilename());
-            caseFile.transferTo(tempFile);
-            return tempFile;
-        } catch (IOException e) {
-            LOGGER.error(e.toString(), e);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), basicStudyInfos.getUserId());
-            if (tempFile != null) {
-                deleteFile(tempFile);
-            }
-            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
-        }
-    }
-
-    private void deleteFile(@NonNull File file) {
-        try {
-            Files.delete(file.toPath());
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        }
-    }
-
-    private void createStudyAsync(File caseFile, String originalFilename, String userId, BasicStudyInfos basicStudyInfos) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
-        try {
-            UUID importReportUuid = UUID.randomUUID();
-            UUID caseUuid = importCaseWithNotificationOnError(caseFile, originalFilename, basicStudyInfos.getId(), userId);
-
-            if (caseUuid != null) {
-                String caseFormat = getCaseFormatWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId);
-                NetworkInfos networkInfos = persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
-                LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                insertStudy(basicStudyInfos.getId(), userId, networkInfos, caseFormat, caseUuid, false, LoadflowService.toEntity(loadFlowParameters), importReportUuid);
-            }
-        } catch (Exception e) {
-            LOGGER.error(e.toString(), e);
-        } finally {
-            deleteFile(caseFile);
-            deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            LOGGER.trace("Create study '{}' : {} seconds", basicStudyInfos.getId(),
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
-    }
-
-    private UUID importCaseWithNotificationOnError(File caseFile, String originalFilename, UUID studyUuid, String userId) {
-        try {
-            return caseService.importCase(caseFile, originalFilename);
-        } catch (StudyException e) {
-            notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
-            throw e;
+    private void createStudyFromFile(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
+        UUID importReportUuid = UUID.randomUUID();
+        UUID caseUuid = caseService.importCase(caseFile);
+        if (caseUuid != null) {
+            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
         }
     }
 
@@ -482,10 +417,10 @@ public class StudyService {
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
-            String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
+    public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
+            String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, loadFlowParameters, importReportUuid));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, caseName, loadFlowParameters, importReportUuid));
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -504,7 +439,7 @@ public class StudyService {
         Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters);
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), userId, LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -519,34 +454,24 @@ public class StudyService {
         return newStudy;
     }
 
-    public String getCaseFormatWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId) {
-        try {
-            return caseService.getCaseFormat(caseUuid);
-        } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e, "case-server");
-        }
-    }
-
-    private StudyException handleStudyCreationError(UUID studyUuid, String userId, HttpStatusCodeException httpException, String serverName) {
+    private StudyException handleStudyCreationError(HttpStatusCodeException httpException, String serverName) {
         HttpStatus httpStatusCode = httpException.getStatusCode();
         String errorMessage = httpException.getResponseBodyAsString();
         String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
                 : errorMessage;
 
+        LOGGER.error(errorToParse, httpException);
+
         try {
             JsonNode node = new ObjectMapper().readTree(errorToParse).path("message");
             if (!node.isMissingNode()) {
-                notificationService.emitStudyCreationError(studyUuid, userId, node.asText());
-            } else {
-                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
+                return new StudyException(STUDY_CREATION_FAILED, node.asText());
             }
         } catch (JsonProcessingException e) {
             if (!errorToParse.isEmpty()) {
-                notificationService.emitStudyCreationError(studyUuid, userId, errorToParse);
+                return new StudyException(STUDY_CREATION_FAILED, errorToParse);
             }
         }
-
-        LOGGER.error(errorToParse, httpException);
 
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
@@ -567,20 +492,13 @@ public class StudyService {
         return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
     }
 
-    private NetworkInfos persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
         try {
-            NetworkInfos networkInfos = networkConversionService.persistentStore(caseUuid, importReportUuid, importParameters);
-            if (networkInfos == null) {
-                throw handleStudyCreationError(studyUuid, userId, new HttpClientErrorException(HttpStatus.BAD_REQUEST), "network-conversion-server");
-            }
-            return networkInfos;
+            networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, importParameters);
         } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(studyUuid, userId, e, "network-conversion-server");
+            throw handleStudyCreationError(e, "network-conversion-server");
         } catch (Exception e) {
-            if (!(e instanceof StudyException)) {
-                notificationService.emitStudyCreationError(studyUuid, userId, e.getMessage());
-            }
-            throw e;
+            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
     }
 
@@ -940,7 +858,7 @@ public class StudyService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -996,7 +914,7 @@ public class StudyService {
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-            String caseFormat, UUID caseUuid, boolean casePrivate, LoadFlowParametersEntity loadFlowParameters,
+            String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
             UUID importReportUuid) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
@@ -1006,7 +924,7 @@ public class StudyService {
         Objects.requireNonNull(caseUuid);
         Objects.requireNonNull(loadFlowParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, defaultLoadflowProvider, loadFlowParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, userId, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 

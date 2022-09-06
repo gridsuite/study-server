@@ -11,9 +11,6 @@ package org.gridsuite.study.server;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -28,7 +25,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -64,10 +60,8 @@ public class CaseTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CaseTest.class);
 
-    private static final long TIMEOUT = 200;
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     public static final String POST = "POST";
     private static final String CASE_NAME = "DefaultCaseName";
@@ -88,9 +82,6 @@ public class CaseTest {
 
     @Autowired
     private CaseService caseService;
-
-    @Autowired
-    private StudyService studyService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -120,17 +111,6 @@ public class CaseTest {
                 request.getBody();
 
                 switch (path) {
-                    case "/v1/cases/" + CASE_UUID_STRING + "/name":
-                        return new MockResponse().setResponseCode(200).setBody(CASE_NAME)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name":
-                        return new MockResponse().setResponseCode(424).setBody("notFoundCaseName");
-                    case "/v1/cases/" + CASE_UUID_STRING + "/format":
-                        return new MockResponse().setResponseCode(200).setBody("UCTE")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/cases/" + NOT_EXISTING_CASE_UUID + "/exists":
-                        return new MockResponse().setResponseCode(200).setBody("false")
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                         return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -144,50 +124,18 @@ public class CaseTest {
 
     @Test
     public void getCaseName() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, CASE_NAME);
         UUID study1Uuid = studyEntity.getId();
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(CASE_NAME));
-
-        var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/name")));
-
         mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", UUID.randomUUID()))
                 .andExpect(status().isNotFound());
 
-        // change study case uuid and trying to get case name : error
-        StudyEntity study = studyRepository.findAll().get(0);
-        study.setCaseUuid(UUID.fromString(NOT_EXISTING_CASE_UUID));
-        studyRepository.save(study);
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/case/name", study1Uuid)).andExpectAll(
-            status().is4xxClientError());
-
-        requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/name")));
     }
 
-    @Test
-    public void getCaseFormat() throws Exception {
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID study1Uuid = studyEntity.getId();
-        String caseFormat = studyService.getCaseFormatWithNotificationOnError(CASE_UUID, study1Uuid, "userId");
-        assertEquals("UCTE", caseFormat);
-
-        var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + CASE_UUID + "/format")));
-
-        UUID notExistingCase = UUID.fromString(NOT_EXISTING_CASE_UUID);
-        assertThrows(StudyException.class, () -> studyService.getCaseFormatWithNotificationOnError(notExistingCase, study1Uuid, "userId"));
-        output.receive(TIMEOUT, studyUpdateDestination);
-
-        requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/cases/" + NOT_EXISTING_CASE_UUID + "/format")));
-    }
-
-    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseName) {
         LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
                 .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
                 .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
@@ -197,7 +145,7 @@ public class CaseTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .build();
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

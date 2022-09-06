@@ -73,6 +73,18 @@ public final class TestUtils {
             .build();
     }
 
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity) {
+        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
+            .caseName(caseName)
+            .date(LocalDateTime.now())
+            .networkId("netId")
+            .networkUuid(networkUuid)
+            .userId("userId")
+            .loadFlowProvider(loadflowProvider)
+            .loadFlowParameters(loadFlowParametersEntity)
+            .build();
+    }
+
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
             destinations.forEach(destination -> {

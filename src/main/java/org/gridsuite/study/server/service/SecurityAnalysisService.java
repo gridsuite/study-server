@@ -27,7 +27,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.Receiver;
+import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -127,7 +127,7 @@ public class SecurityAnalysisService {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);

@@ -16,11 +16,15 @@ import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.NETWORK_CONVERSION_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.REPORT_UUID;
+
+import java.io.UncheckedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
+import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.gridsuite.study.server.dto.NetworkInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -33,34 +37,53 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Service
 public class NetworkConversionService {
 
-    static final String FIRST_VARIANT_ID = "first_variant_id";
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
+    private static final String QUERY_PARAM_RECEIVER = "receiver";
 
     @Autowired
     private RestTemplate restTemplate;
 
     private String networkConversionServerBaseUri;
 
-    public NetworkConversionService(@Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri) {
+    private final ObjectMapper objectMapper;
+
+    public NetworkConversionService(@Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
+            ObjectMapper objectMapper) {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
+        this.objectMapper = objectMapper;
     }
 
-    public NetworkInfos persistentStore(UUID caseUuid, UUID importReportUuid, Map<String, Object> importParameters) {
+    public void persistentStore(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(
+                        new CaseImportReceiver(studyUuid, caseUuid, importReportUuid, userId, System.nanoTime()
+                    )),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-            .queryParam(CASE_UUID, caseUuid)
-            .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
-            .queryParam(REPORT_UUID, importReportUuid)
-            .buildAndExpand()
-            .toUriString();
+                .queryParam(CASE_UUID, caseUuid)
+                .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
+                .queryParam(REPORT_UUID, importReportUuid)
+                .queryParam(QUERY_PARAM_RECEIVER, receiver)
+                .buildAndExpand()
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
 
-        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
-                    NetworkInfos.class).getBody();
+        restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
+                Void.class);
     }
 
     public String getExportFormats() {

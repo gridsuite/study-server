@@ -117,11 +117,13 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/case/name", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/case/name")
     @Operation(summary = "Get study case name")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study case name"),
+                           @ApiResponse(responseCode = "204", description = "The study has no case name attached")})
     public ResponseEntity<String> getStudyCaseName(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getCaseName(studyUuid));
+        String studyCaseName = studyService.getStudyCaseName(studyUuid);
+        return StringUtils.isEmpty(studyCaseName) ?  ResponseEntity.noContent().build() : ResponseEntity.ok().body(studyCaseName);
     }
 
     @GetMapping(value = "/study_creation_requests")

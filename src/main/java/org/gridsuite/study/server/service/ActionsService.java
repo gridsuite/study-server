@@ -35,6 +35,8 @@ public class ActionsService {
     @Autowired
     private RestTemplate restTemplate;
 
+    private static final String NETWORK_UUID = "networkUuid";
+
     private String actionsServerBaseUri;
 
     @Autowired
@@ -46,7 +48,7 @@ public class ActionsService {
         return contingencyListNames.stream().map(contingencyListName -> {
             var uriComponentsBuilder = UriComponentsBuilder
                     .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
-                    .queryParam("networkUuid", networkUuid);
+                    .queryParam(NETWORK_UUID, networkUuid);
             if (!StringUtils.isBlank(variantId)) {
                 uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
