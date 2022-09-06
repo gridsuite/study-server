@@ -33,6 +33,8 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -210,6 +212,9 @@ public class StudyTest {
 
     @Autowired
     private StudyRepository studyRepository;
+
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -1481,6 +1486,138 @@ public class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
 
         return duplicatedStudy;
+    }
+
+    @Test
+    public void testDuplicateNode() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1");
+        NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2");
+
+        // add modification on node "node1"
+        String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers", study1Uuid, node1.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createTwoWindingsTransformerAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), ImmutableSet.of("s2"));
+        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
+
+        var requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
+
+        // add modification on node "node2"
+        String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", study1Uuid, node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createLoadAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), ImmutableSet.of("s2"));
+        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
+
+        requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*")));
+
+        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
+        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        networkModificationTreeService.updateNode(study1Uuid, node2);
+        output.receive(TIMEOUT);
+
+        //node2 should not have any child
+        List<NodeEntity> allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(node2.getId())).count());
+
+        // duplicate the node1 after node2
+        UUID duplicatedNodeUuid = duplicateNode(study1Uuid, node1.getId(), node2.getId(), InsertMode.AFTER);
+
+        //node2 should now have 1 child
+        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        assertEquals(1, allNodes.stream()
+                .filter(nodeEntity -> nodeEntity.getParentNode() != null
+                        && nodeEntity.getIdNode().equals(duplicatedNodeUuid)
+                        && nodeEntity.getParentNode().getIdNode().equals(node2.getId()))
+                .count());
+
+        // duplicate the node2 before node1
+        UUID duplicatedNodeUuid2 = duplicateNode(study1Uuid, node2.getId(), node1.getId(), InsertMode.BEFORE);
+        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        assertEquals(1, allNodes.stream()
+                .filter(nodeEntity -> nodeEntity.getParentNode() != null
+                        && nodeEntity.getIdNode().equals(duplicatedNodeUuid2)
+                        && nodeEntity.getParentNode().getIdNode().equals(modificationNodeUuid))
+                .count());
+
+        //now the tree looks like root -> modificationNode -> duplicatedNode2 -> node1 -> node2 -> duplicatedNode1
+        //duplicate node1 in a new branch starting from duplicatedNode2
+        UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, node1.getId(), duplicatedNodeUuid2, InsertMode.CHILD);
+        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        //expect to have modificationNode as a parent
+        assertEquals(1, allNodes.stream()
+                .filter(nodeEntity -> nodeEntity.getParentNode() != null
+                        && nodeEntity.getIdNode().equals(duplicatedNodeUuid3)
+                        && nodeEntity.getParentNode().getIdNode().equals(duplicatedNodeUuid2))
+                .count());
+        //and expect that no other node has the new branch create node as parent
+        assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(duplicatedNodeUuid3)).count());
+
+        //try copy non existing node and expect not found
+        mockMvc.perform(post(STUDIES_URL +
+                        "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                study1Uuid, UUID.randomUUID(), node1.getId(), InsertMode.AFTER)
+                .header("userId", "userId"))
+                .andExpect(status().isNotFound());
+
+        //try to copy to a non existing position and expect expect not found
+        mockMvc.perform(post(STUDIES_URL +
+                        "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                study1Uuid, node1.getId(), UUID.randomUUID(), InsertMode.AFTER)
+                .header("userId", "userId"))
+                .andExpect(status().isNotFound());
+
+        //try to copy to before the root node and expect forbidden
+        mockMvc.perform(post(STUDIES_URL +
+                        "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                study1Uuid, node1.getId(), rootNode.getId(), InsertMode.BEFORE)
+                .header("userId", "userId"))
+                .andExpect(status().isForbidden());
+
+        var request = TestUtils.getRequestsDone(1, server);
+        assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+    }
+
+    public UUID duplicateNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) throws Exception {
+        List<NodeEntity> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(studyUuid);
+
+        mockMvc.perform(post(STUDIES_URL +
+                "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode)
+                .header("userId", "userId"))
+                .andExpect(status().isOk());
+
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+        output.receive(TIMEOUT);
+
+        var requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+
+        List<NodeEntity> allNodesAfterDuplication = networkModificationTreeService.getAllNodes(studyUuid);
+
+        List<NodeEntity> newNodeUuid;
+        //newNodeUuid = allNodesAfterDuplication.stream().filter(nodeEntity -> !allNodesBeforeDuplication.contains(nodeEntity)).collect(Collectors.toList());
+        allNodesAfterDuplication.removeIf(nodeEntity -> allNodesBeforeDuplication.stream().anyMatch(nodeEntity1 -> nodeEntity.getIdNode().equals(nodeEntity1.getIdNode())));
+
+        return allNodesAfterDuplication.get(0).getIdNode();
     }
 
     public void getDefaultLoadflowProvider() throws Exception {
