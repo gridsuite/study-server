@@ -394,7 +394,7 @@ public class StudyService {
                     VariantManagerConstants.INITIAL_VARIANT_ID, variantId);
             List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
 
-            return cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
+            return variantId == VariantManagerConstants.INITIAL_VARIANT_ID ? equipmentInfos : cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
         } else {
             String queryInitialVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid,
                     VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
@@ -447,7 +447,9 @@ public class StudyService {
     private BoolQueryBuilder buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
         WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
         TermsQueryBuilder networkUuidSearchQuery = termsQuery("networkUuid.keyword", networkUuid.toString());
-        TermsQueryBuilder variantIdSearchQuery = termsQuery("variantId.keyword", initialVariantId, variantId);
+        TermsQueryBuilder variantIdSearchQuery = variantId == VariantManagerConstants.INITIAL_VARIANT_ID ?
+                termsQuery("variantId.keyword", initialVariantId)
+                : termsQuery("variantId.keyword", initialVariantId, variantId);
 
         FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = new FunctionScoreQueryBuilder.FilterFunctionBuilder[ EQUIPMENT_TYPE_SCORES.size() + 1 ];
 
