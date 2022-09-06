@@ -1220,7 +1220,7 @@ public class StudyTest {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        = output.receive(TIMEOUT, studyUpdateDestination);
+        output.receive(TIMEOUT, studyUpdateDestination);
         // drop the broker message for study creation
         output.receive(TIMEOUT * 3, studyUpdateDestination);
         // drop the broker message for node creation
