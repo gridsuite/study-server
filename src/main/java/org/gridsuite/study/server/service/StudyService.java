@@ -4,23 +4,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.contingency.Contingency;
-import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.loadflow.LoadFlowResult;
-import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
@@ -36,22 +32,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
-import org.springframework.http.client.MultipartBodyBuilder;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -61,11 +49,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
@@ -78,28 +63,6 @@ public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
 
-    static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
-    static final String QUERY_PARAM_COMPONENT_LIBRARY = "componentLibrary";
-    static final String QUERY_PARAM_USE_NAME = "useName";
-    static final String QUERY_PARAM_CENTER_LABEL = "centerLabel";
-    static final String QUERY_PARAM_DIAGONAL_LABEL = "diagonalLabel";
-    static final String QUERY_PARAM_TOPOLOGICAL_COLORING = "topologicalColoring";
-    static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
-    static final String QUERY_PARAM_DEPTH = "depth";
-    static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
-    static final String RESULT_UUID = "resultUuid";
-    static final String NETWORK_UUID = "networkUuid";
-    static final String NETWORK_ID = "networkId";
-
-    static final String QUERY_PARAM_RECEIVER = "receiver";
-
-    static final String HEADER_RECEIVER = "receiver";
-    static final String HEADER_ERROR_MESSAGE = "errorMessage";
-    static final String HEADER_CASE_FORMAT = "caseFormat";
-    static final String HEADER_CASE_NAME = "caseName";
-
-    static final String FIRST_VARIANT_ID = "first_variant_id";
-
     @Autowired
     NotificationService notificationService;
 
@@ -107,16 +70,6 @@ public class StudyService {
 
     StudyServerExecutionService studyServerExecutionService;
 
-    @Autowired
-    private RestTemplate restTemplate;
-    private String caseServerBaseUri;
-    private String singleLineDiagramServerBaseUri;
-    private String networkConversionServerBaseUri;
-    private String geoDataServerBaseUri;
-    private String networkMapServerBaseUri;
-    private String loadFlowServerBaseUri;
-    private String securityAnalysisServerBaseUri;
-    private String actionsServerBaseUri;
     private String defaultLoadflowProvider;
 
     private final StudyRepository studyRepository;
@@ -126,49 +79,22 @@ public class StudyService {
     private final ReportService reportService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
+    private final LoadflowService loadflowService;
+    private final CaseService caseService;
+    private final SingleLineDiagramService singleLineDiagramService;
+    private final NetworkConversionService networkConversionService;
+    private final GeoDataService geoDataService;
+    private final NetworkMapService networkMapService;
+    private final SecurityAnalysisService securityAnalysisService;
+    private final ActionsService actionsService;
 
     private final ObjectMapper objectMapper;
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeSaResult() {
-        return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Security analysis result '{}' available for node '{}'", resultUuid,
-                            receiverObj.getNodeUuid());
-
-                    // update DB
-                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-                                // send notifications
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_RESULT);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
 
     @Autowired
     StudyService self;
 
     @Autowired
-    public StudyService(@Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri,
-        @Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri,
-        @Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
-        @Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri,
-        @Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri,
-        @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
-        @Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
-        @Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri,
+    public StudyService(
         @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
@@ -179,15 +105,15 @@ public class StudyService {
         @Lazy EquipmentInfosService equipmentInfosService,
         NetworkModificationTreeService networkModificationTreeService,
         ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService) {
-        this.caseServerBaseUri = caseServerBaseUri;
-        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
-        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
-        this.geoDataServerBaseUri = geoDataServerBaseUri;
-        this.networkMapServerBaseUri = networkMapServerBaseUri;
-        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
-        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
-        this.actionsServerBaseUri = actionsServerBaseUri;
+        StudyServerExecutionService studyServerExecutionService,
+        LoadflowService loadflowService,
+        CaseService caseService,
+        SingleLineDiagramService singleLineDiagramService,
+        NetworkConversionService networkConversionService,
+        GeoDataService geoDataService,
+        NetworkMapService networkMapService,
+        SecurityAnalysisService securityAnalysisService,
+        ActionsService actionsService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -199,6 +125,14 @@ public class StudyService {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.objectMapper = objectMapper;
         this.studyServerExecutionService = studyServerExecutionService;
+        this.loadflowService = loadflowService;
+        this.caseService = caseService;
+        this.singleLineDiagramService = singleLineDiagramService;
+        this.networkConversionService = networkConversionService;
+        this.geoDataService = geoDataService;
+        this.networkMapService = networkMapService;
+        this.securityAnalysisService = securityAnalysisService;
+        this.actionsService = actionsService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -246,7 +180,7 @@ public class StudyService {
 
     }
 
-    List<BasicStudyInfos> getStudiesCreationRequests() {
+    public List<BasicStudyInfos> getStudiesCreationRequests() {
         return studyCreationRequestRepository.findAll().stream()
                 .map(StudyService::toBasicStudyInfos)
                 .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
@@ -256,7 +190,7 @@ public class StudyService {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         try {
-            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
+            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
@@ -278,9 +212,9 @@ public class StudyService {
 
     private void createStudyFromFile(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
         UUID importReportUuid = UUID.randomUUID();
-        UUID caseUuid = importCase(caseFile);
+        UUID caseUuid = caseService.importCase(caseFile);
         if (caseUuid != null) {
-            persistentStoreAsync(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
+            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
         }
     }
 
@@ -291,7 +225,7 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
-        LoadFlowParameters sourceLoadFlowParameters = fromEntity(sourceStudy.getLoadFlowParameters());
+        LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, userId));
@@ -309,7 +243,7 @@ public class StudyService {
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, toEntity(newLoadFlowParameters), userId, clonedNetworkUuid);
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), userId, clonedNetworkUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -324,7 +258,7 @@ public class StudyService {
         return StudyService.toStudyInfos(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
-    List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
+    public List<CreatedStudyBasicInfos> searchStudies(@NonNull String query) {
         return studyInfosService.search(query);
     }
 
@@ -367,7 +301,7 @@ public class StudyService {
         return sb.toString();
     }
 
-    List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
+    public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
                                           @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                           boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
@@ -375,7 +309,7 @@ public class StudyService {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuidToSearchIn);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn);
 
         if (variantId.isEmpty()) {
             variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
@@ -484,7 +418,7 @@ public class StudyService {
         LOGGER.trace("Indexes deletion for network '{}' : {} seconds", networkUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
-    private CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
+    public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos,
             String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
                 studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, caseName, loadFlowParameters, importReportUuid));
@@ -543,382 +477,215 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
-    UUID importCase(MultipartFile multipartFile) {
-        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        UUID caseUuid;
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        try {
-            multipartBodyBuilder
-                .part("file", multipartFile.getBytes()).filename(multipartFile.getOriginalFilename());
-
-            HttpEntity<MultiValueMap<String, HttpEntity<?>>> request = new HttpEntity<>(
-                    multipartBodyBuilder.build(), headers);
-
-            try {
-                caseUuid = restTemplate.postForObject(caseServerBaseUri + "/" + CASE_API_VERSION + "/cases/private",
-                        request, UUID.class);
-            } catch (HttpStatusCodeException e) {
-                throw handleStudyCreationError(e, "case-server");
-            }
-        } catch (StudyException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
-        }
-
-        return caseUuid;
-    }
-
-    byte[] getVoltageLevelSvg(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
+    public byte[] getVoltageLevelSvg(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
             UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring());
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        var path = uriComponentsBuilder
-            .buildAndExpand(networkUuid, voltageLevelId)
-            .toUriString();
-
-        byte[] result;
-        try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
     }
 
-    String getVoltageLevelSvgAndMetadata(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
+    public String getVoltageLevelSvgAndMetadata(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
             UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                        + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring());
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        String result;
-        try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, voltageLevelId);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + " not found");
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
     }
 
-    private void persistentStoreAsync(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
-        String receiver;
+    private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(
-                        new CaseImportReceiver(studyUuid, caseUuid, importReportUuid, userId, System.nanoTime()
-                    )),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-                .queryParam(CASE_UUID, caseUuid)
-                .queryParam(QUERY_PARAM_VARIANT_ID, FIRST_VARIANT_ID)
-                .queryParam(REPORT_UUID, importReportUuid)
-                .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .buildAndExpand()
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
-
-        try {
-            restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
-                    Void.class);
+            networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, importParameters);
         } catch (HttpStatusCodeException e) {
             throw handleStudyCreationError(e, "network-conversion-server");
         } catch (Exception e) {
             throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
         }
-
     }
 
-    String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
+    public String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        String variantId = getVariantId(nodeUuid);
-
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
-            .queryParam(NETWORK_UUID, networkUuid);
-
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        var path = uriComponentsBuilder
-            .buildAndExpand()
-            .toUriString();
-
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
+        return geoDataService.getLinesGraphics(networkUuid, variantId);
     }
 
-    String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
-        String variantId = getVariantId(nodeUuid);
+    public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
-                .queryParam(NETWORK_UUID, networkUuid);
-
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
+        return geoDataService.getSubstationsGraphics(networkUuid, variantId);
     }
 
-    Boolean caseExists(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/exists")
-            .buildAndExpand(caseUuid)
-            .toUriString();
-
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, Boolean.class, caseUuid).getBody();
-    }
-
-    String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentPath) {
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath);
-        if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
-    }
-
-    String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentUuid}");
-        if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
-
-        String equipmentMapData;
-        try {
-            equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(EQUIPMENT_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return equipmentMapData;
-    }
-
-    String getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+    public String getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, "substations");
     }
 
-    String getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
+    public String getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 "substations", substationId);
     }
 
-    String getLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+    public String getLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, "lines");
     }
 
-    String getLineMapData(UUID studyUuid, UUID nodeUuid, String lineId, boolean inUpstreamBuiltParentNode) {
+    public String getLineMapData(UUID studyUuid, UUID nodeUuid, String lineId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
 
-        return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 "lines", lineId);
     }
 
-    String getTwoWindingsTransformersMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getTwoWindingsTransformersMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "2-windings-transformers");
     }
 
-    String getTwoWindingsTransformerMapData(UUID studyUuid, UUID nodeUuid, String twoWindingsTransformerId,
+    public String getTwoWindingsTransformerMapData(UUID studyUuid, UUID nodeUuid, String twoWindingsTransformerId,
             boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 "2-windings-transformers", twoWindingsTransformerId);
     }
 
-    String getThreeWindingsTransformersMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getThreeWindingsTransformersMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "3-windings-transformers");
     }
 
-    String getGeneratorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+    public String getGeneratorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, "generators");
     }
 
-    String getGeneratorMapData(UUID studyUuid, UUID nodeUuid, String generatorId, boolean inUpstreamBuiltParentNode) {
+    public String getGeneratorMapData(UUID studyUuid, UUID nodeUuid, String generatorId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
 
-        return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 "generators", generatorId);
     }
 
-    String getBatteriesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getBatteriesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "batteries");
     }
 
-    String getDanglingLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getDanglingLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "dangling-lines");
     }
 
-    String getHvdcLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getHvdcLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "hvdc-lines");
     }
 
-    String getLccConverterStationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getLccConverterStationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "lcc-converter-stations");
     }
 
-    String getVscConverterStationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getVscConverterStationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "vsc-converter-stations");
     }
 
-    String getLoadsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds,
+    public String getLoadsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds,
             boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
 
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, "loads");
     }
 
-    String getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId, boolean inUpstreamBuiltParentNode) {
+    public String getLoadMapData(UUID studyUuid, UUID nodeUuid, String loadId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
 
-        return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 "loads", loadId);
     }
 
-    String getShuntCompensatorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getShuntCompensatorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "shunt-compensators");
     }
 
-    String getShuntCompensatorMapData(UUID studyUuid, UUID nodeUuid, String shuntCompensatorId,
+    public String getShuntCompensatorMapData(UUID studyUuid, UUID nodeUuid, String shuntCompensatorId,
             boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
 
-        return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 "shunt-compensators", shuntCompensatorId);
     }
 
-    String getStaticVarCompensatorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getStaticVarCompensatorsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "static-var-compensators");
     }
 
-    String getVoltageLevelMapData(UUID studyUuid, UUID nodeUuid, String voltageLevelId,
+    public String getVoltageLevelMapData(UUID studyUuid, UUID nodeUuid, String voltageLevelId,
             boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 "voltage-levels", voltageLevelId);
     }
 
-    String getVoltageLevelsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+    public String getVoltageLevelsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuidToSearchIn),
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, "voltage-levels");
     }
 
-    String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
-        return getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), getVariantId(nodeUuid),
+    public String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "all");
     }
 
-    void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
+    public void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -938,7 +705,7 @@ public class StudyService {
     public void applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -955,97 +722,25 @@ public class StudyService {
         }
     }
 
-    private LoadFlowStatus computeLoadFlowStatus(LoadFlowResult result) {
-        return result.getComponentResults().stream()
-                .filter(cr -> cr.getConnectedComponentNum() == 0 && cr.getSynchronousComponentNum() == 0
-                        && cr.getStatus() == LoadFlowResult.ComponentResult.Status.CONVERGED)
-                .collect(Collectors.toList()).isEmpty() ? LoadFlowStatus.DIVERGED : LoadFlowStatus.CONVERGED;
-    }
-
     public void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
-        try {
-            LoadFlowResult result;
+        String provider = getLoadFlowProvider(studyUuid);
+        LoadFlowParameters loadflowParameters = getLoadFlowParameters(studyUuid);
 
-            UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            String provider = getLoadFlowProvider(studyUuid);
-            String variantId = getVariantId(nodeUuid);
-            UUID reportUuid = getReportUuid(nodeUuid);
-
-            var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                .queryParam("reportId", reportUuid.toString())
-                .queryParam("reportName", "loadflow");
-            if (!provider.isEmpty()) {
-                uriComponentsBuilder.queryParam("provider", provider);
-            }
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<>(getLoadFlowParameters(studyUuid),
-                headers);
-
-            setLoadFlowRunning(studyUuid, nodeUuid);
-            ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT,
-                httpEntity, LoadFlowResult.class);
-            result = resp.getBody();
-            updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
-        } catch (Exception e) {
-            updateLoadFlowStatus(nodeUuid, LoadFlowStatus.NOT_DONE);
-            throw e;
-        } finally {
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
-        }
-    }
-
-    public void setLoadFlowRunning(UUID studyUuid, UUID nodeUuid) {
-        updateLoadFlowStatus(nodeUuid, LoadFlowStatus.RUNNING);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-    }
-
-    public String getExportFormats() {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/export/formats")
-            .toUriString();
-
-        ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
-        };
-
-        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
+        loadflowService.runLoadFlow(studyUuid, nodeUuid, loadflowParameters, provider);
     }
 
     public ExportNetworkInfos exportNetwork(UUID studyUuid, UUID nodeUuid, String format, String paramatersJson) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
-            + "/networks/{networkUuid}/export/{format}");
-        if (!variantId.isEmpty()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
-        }
-        String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(paramatersJson, headers);
-
-        ResponseEntity<byte[]> responseEntity = restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST,
-            httpEntity, byte[].class);
-
-        byte[] bytes = responseEntity.getBody();
-        String filename = responseEntity.getHeaders().getContentDisposition().getFilename();
-        return new ExportNetworkInfos(filename, bytes);
+        return networkConversionService.exportNetwork(networkUuid, variantId, format, paramatersJson);
     }
 
     public void changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull String status,
             @NonNull UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1060,13 +755,6 @@ public class StudyService {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
-        }
-    }
-
-    public void assertCaseExists(UUID caseUuid) {
-        Boolean caseExists = caseExists(caseUuid);
-        if (Boolean.FALSE.equals(caseExists)) {
-            throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
         }
     }
 
@@ -1086,16 +774,9 @@ public class StudyService {
         }
     }
 
-    private void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
-        String sas = getSecurityAnalysisStatus(nodeUuid);
-        if (SecurityAnalysisStatus.RUNNING.name().equals(sas)) {
-            throw new StudyException(SECURITY_ANALYSIS_RUNNING);
-        }
-    }
-
     public void assertComputationNotRunning(UUID nodeUuid) {
         assertLoadFlowNotRunning(nodeUuid);
-        assertSecurityAnalysisNotRunning(nodeUuid);
+        securityAnalysisService.assertSecurityAnalysisNotRunning(nodeUuid);
     }
 
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
@@ -1130,101 +811,15 @@ public class StudyService {
         }
     }
 
-    public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
-        Objects.requireNonNull(parameters);
-        return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
-                parameters.isTransformerVoltageControlOn(),
-                parameters.isNoGeneratorReactiveLimits(),
-                parameters.isPhaseShifterRegulationOn(),
-                parameters.isTwtSplitShuntAdmittance(),
-                parameters.isShuntCompensatorVoltageControlOn(),
-                parameters.isReadSlackBus(),
-                parameters.isWriteSlackBus(),
-                parameters.isDc(),
-                parameters.isDistributedSlack(),
-                parameters.getBalanceType(),
-                parameters.isDcUseTransformerRatio(),
-                parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
-                parameters.getConnectedComponentMode(),
-                parameters.isHvdcAcEmulation());
-    }
-
-    public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
-        Objects.requireNonNull(entity);
-        return new LoadFlowParameters(entity.getVoltageInitMode(),
-            entity.isTransformerVoltageControlOn(),
-            entity.isNoGeneratorReactiveLimits(),
-            entity.isPhaseShifterRegulationOn(),
-            entity.isTwtSplitShuntAdmittance(),
-            entity.isShuntCompensatorVoltageControlOn(),
-            entity.isReadSlackBus(),
-            entity.isWriteSlackBus(),
-            entity.isDc(),
-            entity.isDistributedSlack(),
-            entity.getBalanceType(),
-            entity.isDcUseTransformerRatio(),
-            entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
-            entity.getConnectedComponentMode(),
-            entity.isHvdcAcEmulation()
-            );
-    }
-
-    public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
-        return result != null
-                ? new LoadFlowResultEntity(result.isOk(),
-                      result.getMetrics(),
-                      result.getLogs(),
-                      result.getComponentResults().stream().map(StudyService::toEntity).collect(Collectors.toList())) : null;
-    }
-
-    public static LoadFlowResult fromEntity(LoadFlowResultEntity entity) {
-        LoadFlowResult result = null;
-        if (entity != null) {
-            // This is a workaround to prepare the componentResultEmbeddables which will be used later in the webflux pipeline
-            // The goal is to avoid LazyInitializationException
-            @SuppressWarnings("unused")
-            int ignoreSize = entity.getComponentResults().size();
-            @SuppressWarnings("unused")
-            int ignoreSize2 = entity.getMetrics().size();
-
-            result = new LoadFlowResultImpl(entity.isOk(),
-                    entity.getMetrics(),
-                    entity.getLogs(),
-                    entity.getComponentResults().stream().map(StudyService::fromEntity).collect(Collectors.toList()));
-        }
-        return result;
-    }
-
-    public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
-        Objects.requireNonNull(componentResult);
-        return new ComponentResultEmbeddable(componentResult.getConnectedComponentNum(),
-            componentResult.getSynchronousComponentNum(),
-            componentResult.getStatus(),
-            componentResult.getIterationCount(),
-            componentResult.getSlackBusId(),
-            componentResult.getSlackBusActivePowerMismatch(),
-            componentResult.getDistributedActivePower());
-    }
-
-    public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
-        Objects.requireNonNull(entity);
-        return new LoadFlowResultImpl.ComponentResultImpl(entity.getConnectedComponentNum(),
-            entity.getSynchronousComponentNum(),
-            entity.getStatus(),
-            entity.getIterationCount(),
-            entity.getSlackBusId(),
-            entity.getSlackBusActivePowerMismatch(),
-            entity.getDistributedActivePower());
-    }
-
     public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-            .map(studyEntity -> fromEntity(studyEntity.getLoadFlowParameters()))
+            .map(studyEntity -> LoadflowService.fromEntity(studyEntity.getLoadFlowParameters()))
             .orElse(null);
     }
 
-    void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
-        updateLoadFlowParameters(studyUuid, toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
+    @Transactional
+    public void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
+        updateLoadFlowParameters(studyUuid, LoadflowService.toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
@@ -1259,8 +854,8 @@ public class StudyService {
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String provider = getLoadFlowProvider(studyUuid);
-        String variantId = getVariantId(nodeUuid);
-        UUID reportUuid = getReportUuid(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
         String receiver;
         try {
@@ -1269,52 +864,11 @@ public class StudyService {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportUuid.toString());
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder.queryParam("contingencyListName", contingencyListNames)
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
-
-        UUID result = restTemplate
-                .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, variantId, provider, contingencyListNames, parameters, receiver);
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        return result;
-    }
-
-    public String getSecurityAnalysisResult(UUID nodeUuid, List<String> limitTypes) {
-        Objects.requireNonNull(limitTypes);
-        String result = null;
-        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-                .queryParam("limitType", limitTypes).buildAndExpand(resultUuidOpt.get()).toUriString();
-        try {
-            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-
         return result;
     }
 
@@ -1323,320 +877,41 @@ public class StudyService {
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(nodeUuid);
 
-        UUID uuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        UUID networkuuid = networkStoreService.getNetworkUuid(studyUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        return contingencyListNames.stream().map(contingencyListName -> {
-            var uriComponentsBuilder = UriComponentsBuilder
-                    .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{contingencyListName}/export")
-                    .queryParam(NETWORK_UUID, uuid);
-            if (!StringUtils.isBlank(variantId)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-            var path = uriComponentsBuilder.buildAndExpand(contingencyListName).toUriString();
-
-            List<Contingency> contingencies = restTemplate.exchange(actionsServerBaseUri + path, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<Contingency>>() {
-                    }).getBody();
-
-            return contingencies.size();
-        }).reduce(0, Integer::sum);
+        return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
     }
 
-    byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
+    public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
             String substationLayout, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
-
-        byte[] result;
-        try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
     }
 
-    String getSubstationSvgAndMetadata(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
+    public String getSubstationSvgAndMetadata(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
             String substationLayout, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        String result;
-        try {
-            result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, substationId).getBody();
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + " not found");
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return singleLineDiagramService.getSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout);
     }
 
-    String getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
+    public String getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}")
-                .queryParam(QUERY_PARAM_DEPTH, depth)
-                .queryParam(QUERY_PARAM_VOLTAGE_LEVELS_IDS, voltageLevelsIds);
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder
-                .buildAndExpand(networkUuid)
-                .toUriString();
-
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
-    }
-
-    public String getSecurityAnalysisStatus(UUID nodeUuid) {
-        String result = null;
-        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
-
-        try {
-            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-            }
-            throw e;
-        }
-
-        return result;
-    }
-
-    private void invalidateSaStatus(List<UUID> uuids) {
-        if (!uuids.isEmpty()) {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/invalidate-status")
-                    .queryParam(RESULT_UUID, uuids).build().toUriString();
-
-            restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
-        }
+        return singleLineDiagramService.getNeworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth);
     }
 
     public void invalidateSecurityAnalysisStatus(UUID nodeUuid) {
-        invalidateSaStatus(networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid));
+        securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid));
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
-    }
-
-    void setCaseServerBaseUri(String caseServerBaseUri) {
-        this.caseServerBaseUri = caseServerBaseUri;
-    }
-
-    void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
-        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
-    }
-
-    void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
-        this.geoDataServerBaseUri = geoDataServerBaseUri;
-    }
-
-    void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
-        this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
-    }
-
-    void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
-        this.networkMapServerBaseUri = networkMapServerBaseUri;
-    }
-
-    void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
-        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
-    }
-
-    public void setSecurityAnalysisServerBaseUri(String securityAnalysisServerBaseUri) {
-        this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
-    }
-
-    public void setActionsServerBaseUri(String actionsServerBaseUri) {
-        this.actionsServerBaseUri = actionsServerBaseUri;
-    }
-
-    public void stopSecurityAnalysis(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-
-        Optional<UUID> resultUuidOpt = getSecurityAnalysisResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return;
-        }
-
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
-
-        restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeSaStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Security analysis stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete security analysis result in database
-                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                    // send notification for stopped computation
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeSaFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Security analysis failed for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete security analysis result in database
-                    updateSecurityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-                    // send notification for failed computation
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED);
-
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeCaseImportSucceeded() {
-        return message -> {
-            String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            UUID networkUuid = UUID.fromString(message.getHeaders().get(NETWORK_UUID, String.class));
-            String networkId = message.getHeaders().get(NETWORK_ID, String.class);
-            String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
-            String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
-            NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
-
-            if (receiverString != null) {
-                CaseImportReceiver receiver;
-                try {
-                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                            CaseImportReceiver.class);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                    return;
-                }
-
-                UUID caseUuid = receiver.getCaseUuid();
-                UUID studyUuid = receiver.getStudyUuid();
-                String userId = receiver.getUserId();
-                Long startTime = receiver.getStartTime();
-                UUID importReportUuid = receiver.getReportUuid();
-
-                try {
-                    LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, toEntity(loadFlowParameters), importReportUuid);
-                } catch (Exception e) {
-                    LOGGER.error(e.toString(), e);
-                } finally {
-                    self.deleteStudyIfNotCreationInProgress(studyUuid, userId);
-                    LOGGER.trace("Create study '{}' : {} seconds", studyUuid,
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
-                }
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeCaseImportFailed() {
-        return message -> {
-            String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_ERROR_MESSAGE, String.class);
-
-            if (receiverString != null) {
-                CaseImportReceiver receiver;
-                try {
-                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                            CaseImportReceiver.class);
-                    UUID studyUuid = receiver.getStudyUuid();
-                    String userId = receiver.getUserId();
-
-                    self.deleteStudyIfNotCreationInProgress(studyUuid, userId);
-                    notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
-                } catch (Exception e) {
-                    LOGGER.error(e.toString(), e);
-                }
-            }
-        };
+        securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
@@ -1676,47 +951,22 @@ public class StudyService {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
-    void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
-        networkModificationTreeService.updateLoadFlowStatus(nodeUuid, loadFlowStatus);
-    }
-
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(String userId, UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
                 studyUuid == null ? UUID.randomUUID() : studyUuid, userId, LocalDateTime.now(ZoneOffset.UTC));
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
-    private void updateLoadFlowResultAndStatus(UUID nodeUuid, LoadFlowResult loadFlowResult,
-            LoadFlowStatus loadFlowStatus, boolean updateChildren) {
-        networkModificationTreeService.updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus,
-                updateChildren);
-    }
-
-    @Transactional
     public void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowParameters(loadFlowParametersEntity));
-    }
-
-    List<String> getAvailableSvgComponentLibraries() {
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries").toUriString();
-
-        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<String>>() {
-                }).getBody();
-    }
-
-    // TODO remove
-    private String getVariantId(UUID nodeUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid);
     }
 
     public void createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType,
             UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1734,7 +984,7 @@ public class StudyService {
             UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1772,10 +1022,10 @@ public class StudyService {
         }
     }
 
-    void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
+    public void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
@@ -1793,20 +1043,11 @@ public class StudyService {
         }
     }
 
-    List<VoltageLevelInfos> getVoltageLevels(UUID studyUuid, UUID nodeUuid) {
+    public List<VoltageLevelInfos> getVoltageLevels(UUID studyUuid, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/voltage-levels");
-        if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        List<VoltageLevelMapData> voltageLevelsMapData = restTemplate.exchange(networkMapServerBaseUri + path,
-                HttpMethod.GET, null, new ParameterizedTypeReference<List<VoltageLevelMapData>>() {
-                }).getBody();
+        List<VoltageLevelMapData> voltageLevelsMapData = networkMapService.getVoltageLevelMapData(networkUuid, variantId);
 
         return voltageLevelsMapData != null ?
                 voltageLevelsMapData.stream().map(e -> VoltageLevelInfos.builder().id(e.getId()).name(e.getName())
@@ -1814,22 +1055,15 @@ public class StudyService {
                 : null;
     }
 
-    List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId,
+    public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId,
             String busPath) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
-                + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + busPath);
-        if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-            new ParameterizedTypeReference<List<IdentifiableInfos>>() { }, networkUuid, voltageLevelId).getBody();
+        return networkMapService.getVoltageLevelBusesOrBusbarSections(networkUuid, variantId, voltageLevelId, busPath);
     }
 
-    List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, Boolean inUpstreamBuiltParentNode) {
+    public List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
@@ -1837,7 +1071,7 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "configured-buses");
     }
 
-    List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, Boolean inUpstreamBuiltParentNode) {
+    public List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
@@ -1849,22 +1083,11 @@ public class StudyService {
         return networkModificationTreeService.getLoadFlowStatus(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
-    }
-
-    @Transactional(readOnly = true)
-    public UUID getStudyUuidFromNodeUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-    }
-
     public LoadFlowInfos getLoadFlowInfos(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
-        LoadFlowInfos lfInfos = networkModificationTreeService.getLoadFlowInfos(nodeUuid);
-
-        return lfInfos;
+        return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
     }
 
     private BuildInfos getBuildInfos(UUID nodeUuid) {
@@ -1873,20 +1096,20 @@ public class StudyService {
 
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         BuildInfos buildInfos = getBuildInfos(nodeUuid);
-        updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
+        networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
         buildInfos.getReportUuids().forEach(reportService::deleteReport);
 
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
         } catch (Exception e) {
-            updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
+            networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.NOT_BUILT);
             throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
         }
 
     }
 
     public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        networkModificationService.stopBuild(studyUuid, nodeUuid);
+        networkModificationService.stopBuild(nodeUuid);
     }
 
     @Transactional
@@ -1895,83 +1118,6 @@ public class StudyService {
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         updateStatuses(studyUuid, duplicatedNodeUuid);
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeBuildResult() {
-        return message -> {
-            Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
-
-                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
-
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeBuildStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
-                    // send notification
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_CANCELLED);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeBuildFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                            NodeReceiver.class);
-
-                    LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
-
-                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.NOT_BUILT);
-                    // send notification
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_FAILED);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
 
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
@@ -1983,7 +1129,7 @@ public class StudyService {
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
-                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult)),
+                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                 studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
 
@@ -2016,7 +1162,7 @@ public class StudyService {
     @Transactional
     public void changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid,
             @NonNull UUID modificationUuid, boolean active) {
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active);
@@ -2027,7 +1173,7 @@ public class StudyService {
     public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
-            if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
@@ -2037,14 +1183,6 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
-    }
-
-    private void deleteSaResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
 
     @Transactional
@@ -2058,7 +1196,7 @@ public class StudyService {
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
-            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(this::deleteSaResult)),
+            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
             studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
         );
 
@@ -2089,13 +1227,8 @@ public class StudyService {
             // reindex study in elasticsearch
             studyInfosService.recreateStudyInfos(studyInfos);
 
-            // reindex study network equipments in elasticsearch
-            String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
-                .buildAndExpand(networkUuid)
-                .toUriString();
-
             try {
-                restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
+                networkConversionService.reindexStudyNetworkEquipments(networkUuid);
             } catch (HttpStatusCodeException e) {
                 LOGGER.error(e.toString(), e);
                 throw e;
@@ -2121,20 +1254,16 @@ public class StudyService {
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
-        if (!getStudyUuidFromNodeUuid(nodeUuid).equals(studyUuid)) {
+        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
-    }
-
-    private UUID getReportUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
     public List<Pair<UUID, String>> getReportUuidsAndNames(UUID nodeUuid, boolean nodeOnlyReport) {
         return networkModificationTreeService.getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
     }
 
-    public List<ReporterModel> getNodeReport(UUID studyUuid, UUID nodeUuid, boolean nodeOnlyReport) {
+    public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
         List<Pair<UUID, String>> reportUuidsAndNames = getReportUuidsAndNames(nodeUuid, nodeOnlyReport);
         return reportUuidsAndNames.stream().map(reportInfo -> {
             ReporterModel reporter = reportService.getReport(reportInfo.getLeft(), reportInfo.getRight());
@@ -2145,12 +1274,8 @@ public class StudyService {
         }).collect(Collectors.toList());
     }
 
-    public void deleteNodeReport(UUID studyUuid, UUID nodeUuid) {
-        reportService.deleteReport(getReportUuid(nodeUuid));
-    }
-
-    private NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        return networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+    public void deleteNodeReport(UUID nodeUuid) {
+        reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
     }
 
     public String getDefaultLoadflowProviderValue() {
@@ -2168,7 +1293,7 @@ public class StudyService {
         try {
             Objects.requireNonNull(studyUuid);
             Objects.requireNonNull(lineSplitWithVoltageLevelAttributes);
-            NodeModificationInfos nodeInfos = getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();

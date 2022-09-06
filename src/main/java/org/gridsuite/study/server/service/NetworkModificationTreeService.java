@@ -4,12 +4,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
@@ -32,7 +33,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.FIRST_VARIANT_ID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -41,6 +41,7 @@ import static org.gridsuite.study.server.StudyService.FIRST_VARIANT_ID;
 public class NetworkModificationTreeService {
 
     public static final String ROOT_NODE_NAME = "Root";
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -154,6 +155,7 @@ public class NetworkModificationTreeService {
         notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
+    @Transactional(readOnly = true)
     public UUID getStudyUuidForNodeId(UUID id) {
         Optional<NodeEntity> node = nodesRepository.findById(id);
         return node.orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getStudy().getId();
