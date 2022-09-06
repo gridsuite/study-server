@@ -423,14 +423,17 @@ public class StudyService {
     private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
                                                                   EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant,
                                                                   String equipmentType) {
+        // Clean equipments that have been removed in the current variant
+        List<EquipmentInfos> cleanedEquipmentsInInitVariant = cleanRemovedEquipments(networkUuid, variantId, equipmentInfosInInitVariant);
+
+        // Get the equipments of the current variant
         String queryVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid, variantId, equipmentType);
         List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
 
-        List<EquipmentInfos> equipmentInfos = cleanRemovedEquipments(networkUuid, variantId, equipmentInfosInInitVariant);
+        // Add equipments of the current variant to the ones of the init variant
+        cleanedEquipmentsInInitVariant.addAll(addedEquipmentInfosInVariant);
 
-        equipmentInfos.addAll(addedEquipmentInfosInVariant);
-
-        return equipmentInfos;
+        return cleanedEquipmentsInInitVariant;
     }
 
     private String buildSearchEquipmentsByTypeQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
@@ -443,23 +446,25 @@ public class StudyService {
 
     private BoolQueryBuilder buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
         WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
-        MatchQueryBuilder networkUuidSearchQuery = matchQuery("networkUuid.keyword", networkUuid.toString());
+        TermsQueryBuilder networkUuidSearchQuery = termsQuery("networkUuid.keyword", networkUuid.toString());
         TermsQueryBuilder variantIdSearchQuery = termsQuery("variantId.keyword", initialVariantId, variantId);
 
-        List<FunctionScoreQueryBuilder.FilterFunctionBuilder> filterFunctionsForScoreQueries = new ArrayList<>();
-        filterFunctionsForScoreQueries.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = new FunctionScoreQueryBuilder.FilterFunctionBuilder[ EQUIPMENT_TYPE_SCORES.size() + 1 ];
+
+        int i = 0;
+        filterFunctionsForScoreQueries[i++] = new FunctionScoreQueryBuilder.FilterFunctionBuilder(
                 matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, escapeLucene(userInput)),
-                ScoreFunctionBuilders.weightFactorFunction(EQUIPMENT_TYPE_SCORES.entrySet().size())
-        ));
+                ScoreFunctionBuilders.weightFactorFunction(EQUIPMENT_TYPE_SCORES.size()));
 
-        EQUIPMENT_TYPE_SCORES.entrySet().forEach(equipmentTypeScore -> filterFunctionsForScoreQueries.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(
-                matchQuery("equipmentType", equipmentTypeScore.getKey()),
-                ScoreFunctionBuilders.weightFactorFunction(equipmentTypeScore.getValue())
-        )));
+        for (Map.Entry<String, Integer> equipmentTypeScore : EQUIPMENT_TYPE_SCORES.entrySet()) {
+            filterFunctionsForScoreQueries[i++] =
+                    new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                            matchQuery("equipmentType", equipmentTypeScore.getKey()),
+                            ScoreFunctionBuilders.weightFactorFunction(equipmentTypeScore.getValue())
+                    );
+        }
 
-        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueriesAsArray = new FunctionScoreQueryBuilder.FilterFunctionBuilder[ filterFunctionsForScoreQueries.size() ];
-        filterFunctionsForScoreQueries.toArray(filterFunctionsForScoreQueriesAsArray);
-        FunctionScoreQueryBuilder functionScoreBoostQuery = QueryBuilders.functionScoreQuery(filterFunctionsForScoreQueriesAsArray);
+        FunctionScoreQueryBuilder functionScoreBoostQuery = QueryBuilders.functionScoreQuery(filterFunctionsForScoreQueries);
 
         BoolQueryBuilder esQuery = QueryBuilders.boolQuery();
         esQuery.filter(equipmentSearchQuery).filter(networkUuidSearchQuery).filter(variantIdSearchQuery).must(functionScoreBoostQuery);
