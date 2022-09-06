@@ -4,15 +4,16 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
-import org.gridsuite.study.server.dto.Receiver;
+import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
@@ -38,7 +39,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.*;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -50,9 +50,11 @@ public class NetworkModificationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationService.class);
 
     private static final String DELIMITER = "/";
-    public static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
+    private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String GROUP = "group";
     private static final String MODIFICATIONS_PATH = "modifications";
+    private static final String QUERY_PARAM_RECEIVER = "receiver";
+
     private String networkModificationServerBaseUri;
 
     private final NetworkService networkStoreService;
@@ -70,7 +72,7 @@ public class NetworkModificationService {
         this.objectMapper = objectMapper;
     }
 
-    void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
+    public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri + DELIMITER;
     }
 
@@ -362,7 +364,7 @@ public class NetworkModificationService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                 StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -382,10 +384,10 @@ public class NetworkModificationService {
         restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public void stopBuild(@NonNull UUID nodeUuid) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new Receiver(nodeUuid)),
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
@@ -442,7 +444,7 @@ public class NetworkModificationService {
     public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
         ModificationType modificationType, UUID modificationUuid) {
         UriComponentsBuilder uriComponentsBuilder;
-        uriComponentsBuilder = UriComponentsBuilder.fromPath("modifications" + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
+        uriComponentsBuilder = UriComponentsBuilder.fromPath(MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER + ModificationType.getUriFromType(
             modificationType));
         var path = uriComponentsBuilder
             .buildAndExpand()
@@ -451,7 +453,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(lineSplitWithVoltageLevelAttributes, headers);
 
         try {
             restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, httpEntity, Void.class).getBody();
@@ -479,7 +481,7 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<String>(lineSplitWithVoltageLevelAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(lineSplitWithVoltageLevelAttributes, headers);
 
         try {
             result = restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<EquipmentModificationInfos>>() { }).getBody();
