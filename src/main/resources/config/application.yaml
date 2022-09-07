@@ -31,6 +31,9 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
+          group: importSuccessGroup
+          consumer:
+            concurrency: 1
         consumeCaseImportFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
       source: publishStudyUpdate
