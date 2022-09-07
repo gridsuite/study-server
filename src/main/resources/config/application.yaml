@@ -13,20 +13,28 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
         consumeSaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
+          group: studySaResultGroup
         consumeSaStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.stopped
+          group: studySaStoppedGroup
         consumeSaFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.failed
+          group: studySaFailedGroup
         consumeBuildResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.result
+          group: studyBuildResultGroup
         consumeBuildStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.stopped
+          group: studyBuildStoppedGroup
         consumeBuildFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.failed
+          group: studyBuildFailedGroup
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
+          group: studyCaseImportSucceededGroup
         consumeCaseImportFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
+          group: studyCaseImportFailedGroup
       source: publishStudyUpdate
 
 network-store-server:
