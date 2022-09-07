@@ -1313,7 +1313,7 @@ public class StudyService {
         }
     }
 
-    @Transactional()
+    @Transactional
     public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         String response;
