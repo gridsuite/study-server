@@ -16,7 +16,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.apache.commons.lang3.tuple.Pair;
-import org.gridsuite.study.server.SensitivityAnalysisService;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
@@ -36,17 +35,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.UncheckedIOException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -56,13 +52,10 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.service.ConsumerService.HEADER_RECEIVER;
-import static org.gridsuite.study.server.service.ConsumerService.RESULT_UUID;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
 
 /**
@@ -1163,10 +1156,6 @@ public class StudyService {
         return networkModificationTreeService.getLoadFlowStatus(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
-    public Optional<UUID> getSensitivityAnalysisResultUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
-    }
-
     @Transactional(readOnly = true)
     public UUID getStudyUuidFromNodeUuid(UUID nodeUuid) {
         return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
@@ -1444,99 +1433,6 @@ public class StudyService {
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         return result;
-    }
-
-    public String getSensitivityAnalysisResult(UUID nodeUuid) {
-        Objects.requireNonNull(nodeUuid);
-        return sensitivityAnalysisService.getSensitivityAnalysisResult(nodeUuid);
-    }
-
-    public String getSensitivityAnalysisStatus(UUID nodeUuid) {
-        return sensitivityAnalysisService.getSensitivityAnalysisStatus(nodeUuid);
-    }
-
-    public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid) {
-        Objects.requireNonNull(nodeUuid);
-        sensitivityAnalysisService.stopSensitivityAnalysis(nodeUuid);
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeSensitivityAnalysisResult() {
-        return message -> {
-            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Sensitivity analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
-
-                    // update DB
-                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
-
-                    // send notifications
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeSensitivityAnalysisStopped() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Sensitivity analysis stopped for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete sensitivity analysis result in database
-                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for stopped computation
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
-    }
-
-    @Bean
-    @Transactional
-    public Consumer<Message<String>> consumeSensitivityAnalysisFailed() {
-        return message -> {
-            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
-                NodeReceiver receiverObj;
-                try {
-                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
-
-                    LOGGER.info("Sensitivity analysis failed for node '{}'", receiverObj.getNodeUuid());
-
-                    // delete sensitivity analysis result in database
-                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
-
-                    // send notification for failed computation
-                    UUID studyUuid = getStudyUuidFromNodeUuid(receiverObj.getNodeUuid());
-
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED);
-                } catch (JsonProcessingException e) {
-                    LOGGER.error(e.toString());
-                }
-            }
-        };
     }
 }
 
