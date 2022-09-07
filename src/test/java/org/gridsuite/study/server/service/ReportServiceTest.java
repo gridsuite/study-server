@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +19,7 @@ import java.util.stream.IntStream;
 
 import java.io.IOException;
 
+import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.dto.ReportingInfos;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -60,7 +61,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
-@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+@ContextHierarchy({@ContextConfiguration(classes = { StudyApplication.class, TestChannelBinderConfiguration.class})})
 //@EnableAutoConfiguration(exclude={ DataSourceAutoConfiguration.class, DataSourceTransactionManagerAutoConfiguration.class, HibernateJpaAutoConfiguration.class, ElasticsearchDataAutoConfiguration.class})
 public class ReportServiceTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportServiceTest.class);
