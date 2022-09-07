@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
@@ -26,47 +26,47 @@ import java.util.UUID;
 @Service
 public class NotificationService {
 
-    static final String HEADER_ERROR = "error";
-    static final String HEADER_NODE = "node";
-    static final String HEADER_NODES = "nodes";
-    static final String HEADER_STUDY_UUID = "studyUuid";
-    static final String HEADER_UPDATE_TYPE = "updateType";
-    static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
-    static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
-    static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
-    static final String HEADER_USER_ID = "userId";
+    public static final String HEADER_ERROR = "error";
+    public static final String HEADER_NODE = "node";
+    public static final String HEADER_NODES = "nodes";
+    public static final String HEADER_STUDY_UUID = "studyUuid";
+    public static final String HEADER_UPDATE_TYPE = "updateType";
+    public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
+    public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
+    public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
+    public static final String HEADER_USER_ID = "userId";
 
-    static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
-    static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
-    static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
-    static final String UPDATE_TYPE_LINE = "line";
-    static final String UPDATE_TYPE_LOADFLOW = "loadflow";
-    static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
-    static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
-    static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
-    static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
-    static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT = "sensitivityAnalysisResult";
-    static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS = "sensitivityAnalysis_status";
-    static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED = "sensitivityAnalysis_failed";
-    static final String UPDATE_TYPE_STUDIES = "studies";
-    static final String UPDATE_TYPE_STUDY = "study";
-    static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
-    static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
-    static final String UPDATE_TYPE_SWITCH = "switch";
+    public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
+    public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
+    public static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
+    public static final String UPDATE_TYPE_LINE = "line";
+    public static final String UPDATE_TYPE_LOADFLOW = "loadflow";
+    public static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
+    public static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
+    public static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
+    public static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT = "sensitivityAnalysisResult";
+    public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS = "sensitivityAnalysis_status";
+    public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED = "sensitivityAnalysis_failed";
+    public static final String UPDATE_TYPE_STUDIES = "studies";
+    public static final String UPDATE_TYPE_STUDY = "study";
+    public static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
+    public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
+    public static final String UPDATE_TYPE_SWITCH = "switch";
 
-    static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
-    static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
-    static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
-    static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
+    public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
+    public static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
+    public static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
+    public static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
 
-    static final String HEADER_INSERT_MODE = "insertMode";
-    static final String HEADER_NEW_NODE = "newNode";
-    static final String HEADER_PARENT_NODE = "parentNode";
-    static final String HEADER_REMOVE_CHILDREN = "removeChildren";
+    public static final String HEADER_INSERT_MODE = "insertMode";
+    public static final String HEADER_NEW_NODE = "newNode";
+    public static final String HEADER_PARENT_NODE = "parentNode";
+    public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
 
-    static final String NODE_UPDATED = "nodeUpdated";
-    static final String NODE_DELETED = "nodeDeleted";
-    static final String NODE_CREATED = "nodeCreated";
+    public static final String NODE_UPDATED = "nodeUpdated";
+    public static final String NODE_DELETED = "nodeDeleted";
+    public static final String NODE_CREATED = "nodeCreated";
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 

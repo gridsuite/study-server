@@ -30,6 +30,8 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
@@ -38,6 +40,18 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeI
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.ActionsService;
+import org.gridsuite.study.server.service.CaseService;
+import org.gridsuite.study.server.service.GeoDataService;
+import org.gridsuite.study.server.service.LoadflowService;
+import org.gridsuite.study.server.service.NetworkConversionService;
+import org.gridsuite.study.server.service.NetworkMapService;
+import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NotificationService;
+import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
@@ -67,7 +81,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.NetworkModificationTreeService.*;
+import static org.gridsuite.study.server.service.NetworkModificationTreeService.*;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
@@ -115,7 +129,10 @@ public class NetworkModificationTreeTest {
     private LoadFlowResult loadFlowResult2;
 
     @Autowired
-    private StudyService studyService;
+    private CaseService caseService;
+
+    @Autowired
+    private NetworkConversionService networkConversionService;
 
     @Autowired
     private NetworkModificationService networkModificationService;
@@ -124,7 +141,31 @@ public class NetworkModificationTreeTest {
     private SensitivityAnalysisService sensitivityAnalysisService;
 
     @Autowired
+    private NetworkMapService networkMapService;
+
+    @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private SecurityAnalysisService securityAnalysisService;
+
+    @Autowired
+    private SingleLineDiagramService singleLineDiagramService;
+
+    @Autowired
+    private LoadflowService loadflowService;
+
+    @Autowired
+    private GeoDataService geoDataService;
+
+    @Autowired
+    private ActionsService actionsService;
+
+    @MockBean
+    private EquipmentInfosService equipmentInfosService;
+
+    @MockBean
+    private StudyInfosService studyInfosService;
 
     private MockWebServer server;
 
@@ -142,6 +183,8 @@ public class NetworkModificationTreeTest {
 
     @MockBean
     private Network network;
+
+    private String studyUpdateDestination = "study.update";
 
     @Before
     public void setUp() throws IOException {
@@ -195,14 +238,14 @@ public class NetworkModificationTreeTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        studyService.setCaseServerBaseUri(baseUrl);
-        studyService.setNetworkConversionServerBaseUri(baseUrl);
-        studyService.setSingleLineDiagramServerBaseUri(baseUrl);
-        studyService.setGeoDataServerBaseUri(baseUrl);
-        studyService.setNetworkMapServerBaseUri(baseUrl);
-        studyService.setLoadFlowServerBaseUri(baseUrl);
-        studyService.setSecurityAnalysisServerBaseUri(baseUrl);
-        studyService.setActionsServerBaseUri(baseUrl);
+        caseService.setCaseServerBaseUri(baseUrl);
+        networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
+        singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
+        geoDataService.setGeoDataServerBaseUri(baseUrl);
+        networkMapService.setNetworkMapServerBaseUri(baseUrl);
+        loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
+        actionsService.setActionsServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
@@ -241,7 +284,7 @@ public class NetworkModificationTreeTest {
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();
-        assertNull(output.receive(TIMEOUT));
+        assertNull(output.receive(TIMEOUT, studyUpdateDestination));
     }
 
     StudyEntity createDummyStudy(UUID networkUuid) {
@@ -413,7 +456,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren))
             .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         if (expectedDeletion != null) {
             Collection<UUID> deletedId = (Collection<UUID>) mess.getHeaders().get(NotificationService.HEADER_NODES);
             assertNotNull(deletedId);
@@ -516,7 +559,7 @@ public class NetworkModificationTreeTest {
         assertEquals(1, root.getChildren().size());
         assertNodeEquals(node1, root.getChildren().get(0));
 
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         var header = mess.getHeaders();
         assertEquals(root.getStudyId(), header.get(NotificationService.HEADER_STUDY_UUID));
@@ -533,7 +576,7 @@ public class NetworkModificationTreeTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(justeANameUpdate)))
             .andExpect(status().isOk());
-        output.receive(TIMEOUT).getHeaders();
+        output.receive(TIMEOUT, studyUpdateDestination).getHeaders();
 
         var newNode = getNode(root.getStudyId(), node1.getId());
         node1.setName(justeANameUpdate.getName());
@@ -628,7 +671,7 @@ public class NetworkModificationTreeTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(newNodeBodyJson))
             .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -651,7 +694,7 @@ public class NetworkModificationTreeTest {
                 .content(newNodeBodyJson))
             .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT);
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.NODE_CREATED, mess.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(newParentNode.getId(), mess.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
         assertEquals(mode.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
