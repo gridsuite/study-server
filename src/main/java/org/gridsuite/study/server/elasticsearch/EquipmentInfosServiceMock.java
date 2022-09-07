@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.lang.NonNull;
@@ -54,6 +55,11 @@ public class EquipmentInfosServiceMock implements EquipmentInfosService {
 
     @Override
     public List<EquipmentInfos> searchEquipments(@NonNull final String query) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<EquipmentInfos> searchEquipments(@NonNull final BoolQueryBuilder query) {
         return Collections.emptyList();
     }
 
