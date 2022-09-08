@@ -35,6 +35,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
@@ -161,6 +162,7 @@ public class StudyService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
                 .map(StudyService::toCreatedStudyBasicInfos)
@@ -168,26 +170,31 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public String getStudyCaseName(UUID studyUuid) {
         Objects.requireNonNull(studyUuid);
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return study != null ? study.getCaseName() : "";
     }
 
+    @Transactional(readOnly = true)
     public List<CreatedStudyBasicInfos> getStudiesMetadata(List<UUID> uuids) {
         return studyRepository.findAllById(uuids).stream().map(StudyService::toCreatedStudyBasicInfos)
                 .collect(Collectors.toList());
 
     }
 
+    @Transactional(readOnly = true)
     public List<BasicStudyInfos> getStudiesCreationRequests() {
         return studyCreationRequestRepository.findAll().stream()
                 .map(StudyService::toBasicStudyInfos)
                 .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
     }
 
+    @Transactional
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        caseService.assertCaseExists(caseUuid);
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(self.insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         try {
             persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
@@ -199,8 +206,9 @@ public class StudyService {
         return basicStudyInfos;
     }
 
+    @Transactional
     public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(self.insertStudyCreationRequest(userId, studyUuid));
         try {
             createStudyFromFile(caseFile, userId, basicStudyInfos);
         } catch (Exception e) {
@@ -218,6 +226,7 @@ public class StudyService {
         }
     }
 
+    @Transactional
     public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
 
@@ -227,7 +236,7 @@ public class StudyService {
         }
         LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
 
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(self.insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, userId));
         return basicStudyInfos;
     }
@@ -380,7 +389,7 @@ public class StudyService {
         return networkUuid != null ? Optional.of(new DeleteStudyInfos(networkUuid, nodesModificationInfos)) : Optional.empty();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         try {
@@ -449,7 +458,8 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
         StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(userId, studyUuid);
         notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
@@ -477,6 +487,7 @@ public class StudyService {
         return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
+    @Transactional(readOnly = true)
     public byte[] getVoltageLevelSvg(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
             UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
@@ -485,6 +496,7 @@ public class StudyService {
         return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
     }
 
+    @Transactional(readOnly = true)
     public String getVoltageLevelSvgAndMetadata(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
             UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
@@ -503,18 +515,21 @@ public class StudyService {
         }
     }
 
+    @Transactional(readOnly = true)
     public String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
         return geoDataService.getLinesGraphics(networkUuid, variantId);
     }
 
+    @Transactional(readOnly = true)
     public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
         return geoDataService.getSubstationsGraphics(networkUuid, variantId);
     }
 
+    @Transactional(readOnly = true)
     public String getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
@@ -524,6 +539,7 @@ public class StudyService {
                 substationsIds, "substations");
     }
 
+    @Transactional(readOnly = true)
     public String getSubstationMapData(UUID studyUuid, UUID nodeUuid, String substationId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
@@ -533,6 +549,7 @@ public class StudyService {
                 "substations", substationId);
     }
 
+    @Transactional(readOnly = true)
     public String getLinesMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
@@ -722,6 +739,7 @@ public class StudyService {
         }
     }
 
+    @Transactional
     public void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
         String provider = getLoadFlowProvider(studyUuid);
         LoadFlowParameters loadflowParameters = getLoadFlowParameters(studyUuid);
@@ -811,6 +829,7 @@ public class StudyService {
         }
     }
 
+    @Transactional(readOnly = true)
     public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
             .map(studyEntity -> LoadflowService.fromEntity(studyEntity.getLoadFlowParameters()))
@@ -1043,6 +1062,7 @@ public class StudyService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<VoltageLevelInfos> getVoltageLevels(UUID studyUuid, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
@@ -1055,6 +1075,7 @@ public class StudyService {
                 : null;
     }
 
+    @Transactional(readOnly = true)
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId,
             String busPath) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
@@ -1063,6 +1084,7 @@ public class StudyService {
         return networkMapService.getVoltageLevelBusesOrBusbarSections(networkUuid, variantId, voltageLevelId, busPath);
     }
 
+    @Transactional(readOnly = true)
     public List<IdentifiableInfos> getVoltageLevelBuses(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
@@ -1071,6 +1093,7 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(studyUuid, nodeUuidToSearchIn, voltageLevelId, "configured-buses");
     }
 
+    @Transactional(readOnly = true)
     public List<IdentifiableInfos> getVoltageLevelBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {

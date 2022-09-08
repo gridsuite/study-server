@@ -28,6 +28,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -178,6 +179,7 @@ public class LoadflowService {
                 parameters.isHvdcAcEmulation());
     }
 
+    @Transactional(readOnly = true)
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowParameters(entity.getVoltageInitMode(),

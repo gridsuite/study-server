@@ -149,7 +149,6 @@ public class StudyController {
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestBody(required = false) Map<String, Object> importParameters,
                                                                              @RequestHeader("userId") String userId) {
-        caseService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters);
         return ResponseEntity.ok().body(createStudy);
     }
@@ -201,9 +200,9 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes")
     @Operation(summary = "duplicate a node")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The node was successfully created"),
-            @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
-            @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
+        @ApiResponse(responseCode = "200", description = "The node was successfully created"),
+        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
+        @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
     public ResponseEntity<Void> duplicateNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
                                               @Parameter(description = "The reference node to where we want to copy") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
