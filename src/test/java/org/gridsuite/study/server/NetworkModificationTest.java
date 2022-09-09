@@ -28,15 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.gridsuite.study.server.dto.BuildInfos;
@@ -1562,20 +1554,23 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
 
+        // switch the 2 modifications order (modification1 is set at the end, after modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
-                        studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
-            .andExpect(status().isOk());
+                        studyNameUserIdUuid, modificationNodeUuid, modification1))
+                .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream()
-                .anyMatch(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
-            + "/modifications/move[?]modificationsToMove=.*" + modification1)));
+        Optional<RequestWithBody> switchModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid() + "[?]action=MOVE")).findFirst();
+        assertTrue(switchModificationRequest.isPresent());
+        List<UUID> modificationUuidList = Collections.singletonList(modification1);
+        String expectedBody = mapper.writeValueAsString(modificationUuidList);
+        assertEquals(expectedBody, switchModificationRequest.get().getBody()); // modification1 is in the request body
 
-        // update switch on first modification node
+        // switch back the 2 modifications order (modification1 is set before modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
             .andExpect(status().isOk());
@@ -1585,11 +1580,54 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream()
-                .anyMatch(r -> r.getPath()
-                        .matches("/v1/groups/" + modificationNode.getModificationGroupUuid()
-                                + "/modifications/move[?]modificationsToMove=.*" + modification1 + ".*&before="
-                                + modification2)));
+        Optional<RequestWithBody> switchBackModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + modificationNode.getModificationGroupUuid() + "[?]action=MOVE&before=" + modification2)).findFirst();
+        assertTrue(switchBackModificationRequest.isPresent());
+        assertEquals(expectedBody, switchBackModificationRequest.get().getBody()); // modification1 is still in the request body
+    }
+
+    @Test
+    public void testDuplicateModification() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1");
+        UUID nodeUuid1 = node1.getId();
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        String modificationUuidListBody = objectWriter.writeValueAsString(Arrays.asList(modification1, modification2));
+
+        // Random/bad studyId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+                        UUID.randomUUID(), rootNodeUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isForbidden());
+
+        // Random/bad nodeId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+                        studyUuid, UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isNotFound());
+
+        // duplicate 2 modifications in node1
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        var requests = TestUtils.getRequestsWithBodyDone(1, server);
+        Optional<RequestWithBody> duplicateModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + node1.getModificationGroupUuid() + "[?]action=DUPLICATE")).findFirst();
+        assertTrue(duplicateModificationRequest.isPresent());
+        List<UUID> expectedList = List.of(modification1, modification2);
+        String expectedBody = mapper.writeValueAsString(expectedList);
+        assertEquals(expectedBody, duplicateModificationRequest.get().getBody());
     }
 
     @Test
