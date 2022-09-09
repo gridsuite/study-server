@@ -400,25 +400,45 @@ public class NetworkModificationService {
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
 
-    public void reorderModification(UUID groupUuid, UUID modificationUuid, UUID beforeUuid) {
+    private HttpEntity<String> getModificationsUuidBody(List<UUID> modificationUuidList) {
+        HttpEntity<String> httpEntity;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            httpEntity = new HttpEntity<>(objectMapper.writeValueAsString(modificationUuidList), headers);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+        return httpEntity;
+    }
+
+    public void reorderModification(UUID groupUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
-        Objects.requireNonNull(modificationUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH
-                + DELIMITER + MODIFICATIONS_PATH + DELIMITER + "move")
-            .queryParam("modificationsToMove", modificationUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+            .queryParam("action", "MOVE");
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
 
+        HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
         try {
             restTemplate.put(getNetworkModificationServerURI(false)
-                            + path.buildAndExpand(groupUuid, modificationUuid).toUriString(), null);
+                            + path.buildAndExpand(groupUuid).toUriString(), httpEntity);
         } catch (HttpStatusCodeException e) {
             //Ignore because modification group does not exist if no modifications
             if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw e;
             }
         }
+    }
+
+    public String duplicateModification(UUID groupUuid, List<UUID> modificationUuidList) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+            .queryParam("action", "DUPLICATE");
+
+        HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
     }
 
     public void updateLineSplitWithVoltageLevel(String lineSplitWithVoltageLevelAttributes,
