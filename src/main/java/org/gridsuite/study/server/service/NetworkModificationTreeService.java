@@ -491,7 +491,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(getVariantId(nodeUuid));
-                getBuildInfos(entity, buildInfos, getReportUuid(entity.getIdNode()));
+                getBuildInfos(entity, buildInfos, getReportUuid(nodeUuid));
             }
         }, () -> {
                 throw new StudyException(ELEMENT_NOT_FOUND);
@@ -622,7 +622,6 @@ public class NetworkModificationTreeService {
     private void getUppingReportInfosFromNode(NodeEntity nodeEntity, boolean nodeOnlyReport,
         List<ReportingInfos> uppingRes) {
         UUID defNodeId = nodeEntity.getIdNode();
-        UUID reportUuid = getReportUuid(defNodeId);
         AbstractNode node = repositories.get(nodeEntity.getType()).getNode(defNodeId);
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modNode = (NetworkModificationNode) node;
@@ -630,7 +629,7 @@ public class NetworkModificationTreeService {
                 .definingNodeUuid(node.getId())
                 .definingNodeName(node.getName())
                 .modificationGroupUuid(modNode.getModificationGroupUuid())
-                .reportUuid(reportUuid)
+                .reportUuid(node.getReportUuid())
                 .build());
             if (!nodeOnlyReport) {
                 getUppingReportInfosFromNode(nodeEntity.getParentNode(), false, uppingRes);
@@ -640,7 +639,7 @@ public class NetworkModificationTreeService {
                 .definingNodeUuid(node.getId())
                 .definingNodeName(node.getName())
                 .modificationGroupUuid(null)
-                .reportUuid(reportUuid)
+                .reportUuid(node.getReportUuid())
                 .build());
         }
     }
