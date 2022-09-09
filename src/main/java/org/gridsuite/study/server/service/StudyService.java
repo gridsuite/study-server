@@ -1305,11 +1305,27 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
+            List<UUID> modificationUuidList = Collections.singletonList(modificationUuid);
+            networkModificationService.reorderModification(groupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+    }
+
+    @Transactional
+    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        String response;
+        try {
+            checkStudyContainsNode(studyUuid, nodeUuid);
+            UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            response = networkModificationService.duplicateModification(targetGroupUuid, modificationUuidList);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+        }
+        return response;
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {

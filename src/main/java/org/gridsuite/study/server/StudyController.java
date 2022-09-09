@@ -144,7 +144,7 @@ public class StudyController {
     @Operation(summary = "create a study from an existing case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-        @ApiResponse(responseCode = "409", description = "The study already exist or the case doesn't exists")})
+        @ApiResponse(responseCode = "409", description = "The study already exists or the case doesn't exist")})
     public ResponseEntity<BasicStudyInfos> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestBody(required = false) Map<String, Object> importParameters,
@@ -158,7 +158,7 @@ public class StudyController {
     @Operation(summary = "create a study and import the case")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-        @ApiResponse(responseCode = "409", description = "The study already exist"),
+        @ApiResponse(responseCode = "409", description = "The study already exists"),
         @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
     public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("caseFile") MultipartFile caseFile,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
@@ -591,6 +591,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For a list of network modifications passed in body, duplicate and append them to current node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
+    public ResponseEntity<String> duplicateModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestBody List<UUID> modificationsUuidList) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList));
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Change the given line status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Line status changed")})
@@ -988,7 +998,7 @@ public class StudyController {
     @RequestMapping(value = "/studies/{studyUuid}/nodes", method = RequestMethod.HEAD)
     @Operation(summary = "Test if a node name exists")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "node name exist"),
+        @ApiResponse(responseCode = "200", description = "node name exists"),
         @ApiResponse(responseCode = "204", description = "node name doesn't exist"),
     })
     public ResponseEntity<Void> nodeNameExists(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
