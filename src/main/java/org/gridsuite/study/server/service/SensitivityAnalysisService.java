@@ -74,7 +74,7 @@ public class SensitivityAnalysisService {
                                        String provider,
                                        List<UUID> variablesFiltersListUuids,
                                        List<UUID> contingencyListUuids,
-                                       List<UUID> quadFiltersListUuids,
+                                       List<UUID> branchFiltersListUuids,
                                        String parameters) {
         String receiver;
         try {
@@ -94,7 +94,7 @@ public class SensitivityAnalysisService {
         var path = uriComponentsBuilder
             .queryParam("variablesFiltersListUuid", variablesFiltersListUuids)
             .queryParam("contingencyListUuid", contingencyListUuids)
-            .queryParam("quadFiltersListUuid", quadFiltersListUuids)
+            .queryParam("branchFiltersListUuid", branchFiltersListUuids)
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .buildAndExpand(networkUuid).toUriString();
 

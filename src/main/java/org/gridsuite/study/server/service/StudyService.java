@@ -1436,13 +1436,13 @@ public class StudyService {
     public UUID runSensitivityAnalysis(UUID studyUuid,
                                        List<UUID> variablesFiltersListUuids,
                                        List<UUID> contingencyListUuids,
-                                       List<UUID> quadFiltersListUuids,
+                                       List<UUID> branchFiltersListUuids,
                                        String parameters,
                                        UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(variablesFiltersListUuids);
         Objects.requireNonNull(contingencyListUuids);
-        Objects.requireNonNull(quadFiltersListUuids);
+        Objects.requireNonNull(branchFiltersListUuids);
         Objects.requireNonNull(parameters);
         Objects.requireNonNull(nodeUuid);
 
@@ -1452,7 +1452,7 @@ public class StudyService {
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
         UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider,
-                                                                        variablesFiltersListUuids, contingencyListUuids, quadFiltersListUuids,
+                                                                        variablesFiltersListUuids, contingencyListUuids, branchFiltersListUuids,
                                                                         parameters);
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
