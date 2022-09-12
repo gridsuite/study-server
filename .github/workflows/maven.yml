@@ -60,7 +60,7 @@ jobs:
         run: >
           mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
           -Djib.httpTimeout=60000
-          -Djib.to.image=docker.io/gridsuite/study-server:${GITHUB_REF_NAME}
+          -Djib.to.image=docker.io/gridsuite/study-server:${GITHUB_REF_NAME:1}
           -Djib.to.auth.username=gridsuiteci
           -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
 
