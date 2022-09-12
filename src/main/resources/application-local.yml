@@ -7,6 +7,10 @@ spring:
   data:
     elasticsearch:
       host: localhost
+      user: elastic
+      password: elastic
+
+
 
 backing-services:
   case:
