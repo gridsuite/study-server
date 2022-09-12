@@ -12,6 +12,9 @@ import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.StudyService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -168,6 +171,18 @@ public class StudyServiceSearchTests {
         hits.addAll(studyService.searchEquipments(STUDY_UUID, NODE_UUID, "loadId1", EquipmentInfosService.FieldSelector.ID, "LOAD", false));
         assertEquals(1, hits.size());
         assertTrue(hits.contains(load1Infos));
+
+        // Search lines with node of initial variant
+        hits.clear();
+        hits.addAll(studyService.searchEquipments(STUDY_UUID, NODE_UUID, "id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
+        assertEquals(2, hits.size());
+        assertTrue(hits.contains(line1Infos));
+
+        // Search lines with node of new variant
+        hits.clear();
+        hits.addAll(studyService.searchEquipments(STUDY_UUID, VARIANT_NODE_UUID, "id", EquipmentInfosService.FieldSelector.ID, "LINE", false));
+        assertEquals(3, hits.size());
+        assertTrue(hits.contains(newLineInfos));
 
         // Search specific load with the wrong type -> expect no result
         hits.clear();

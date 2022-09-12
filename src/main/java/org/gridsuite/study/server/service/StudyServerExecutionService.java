@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;

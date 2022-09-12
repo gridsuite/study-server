@@ -10,30 +10,30 @@ package org.gridsuite.study.server;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-final class StudyConstants {
+public final class StudyConstants {
 
     private StudyConstants() {
     }
 
-    static final String CASE_API_VERSION = "v1";
-    static final String SINGLE_LINE_DIAGRAM_API_VERSION = "v1";
-    static final String NETWORK_CONVERSION_API_VERSION = "v1";
-    static final String GEO_DATA_API_VERSION = "v1";
-    static final String NETWORK_STORE_API_VERSION = "v1";
-    static final String NETWORK_MODIFICATION_API_VERSION = "v1";
-    static final String LOADFLOW_API_VERSION = "v1";
-    static final String SECURITY_ANALYSIS_API_VERSION = "v1";
-    static final String ACTIONS_API_VERSION = "v1";
-    static final String NETWORK_MAP_API_VERSION = "v1";
-    static final String REPORT_API_VERSION = "v1";
+    public static final String CASE_API_VERSION = "v1";
+    public static final String SINGLE_LINE_DIAGRAM_API_VERSION = "v1";
+    public static final String NETWORK_CONVERSION_API_VERSION = "v1";
+    public static final String GEO_DATA_API_VERSION = "v1";
+    public static final String NETWORK_STORE_API_VERSION = "v1";
+    public static final String NETWORK_MODIFICATION_API_VERSION = "v1";
+    public static final String LOADFLOW_API_VERSION = "v1";
+    public static final String SECURITY_ANALYSIS_API_VERSION = "v1";
+    public static final String ACTIONS_API_VERSION = "v1";
+    public static final String NETWORK_MAP_API_VERSION = "v1";
+    public static final String REPORT_API_VERSION = "v1";
 
-    static final String NETWORK_UUID = "networkUuid";
-    static final String CASE_UUID = "caseUuid";
+    public static final String NETWORK_UUID = "networkUuid";
+    public static final String CASE_UUID = "caseUuid";
 
-    static final String DELIMITER = "/";
-    static final String QUERY_PARAM_VARIANT_ID = "variantId";
-    static final String REPORT_UUID = "reportUuid";
-    static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
-    static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
-    static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
+    public static final String DELIMITER = "/";
+    public static final String QUERY_PARAM_VARIANT_ID = "variantId";
+    public static final String REPORT_UUID = "reportUuid";
+    public static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
+    public static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
+    public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
 }

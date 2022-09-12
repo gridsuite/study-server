@@ -4,12 +4,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.service;
 
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.AbstractNodeRepositoryProxy;
 import org.gridsuite.study.server.networkmodificationtree.NetworkModificationNodeInfoRepositoryProxy;
@@ -32,7 +33,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyService.FIRST_VARIANT_ID;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
@@ -41,6 +41,7 @@ import static org.gridsuite.study.server.StudyService.FIRST_VARIANT_ID;
 public class NetworkModificationTreeService {
 
     public static final String ROOT_NODE_NAME = "Root";
+    private static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final EnumMap<NodeType, AbstractNodeRepositoryProxy<?, ?, ?>> repositories = new EnumMap<>(NodeType.class);
 
@@ -94,6 +95,58 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+        Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
+        NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+
+        Optional<NodeEntity> nodeToCopyOpt = nodesRepository.findById(nodeToCopyUuid);
+        NodeEntity nodeToCopyEntity = nodeToCopyOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+
+        UUID newGroupUuid = UUID.randomUUID();
+        UUID modificationGroupUuid = getModificationGroupUuid(nodeToCopyUuid);
+        UUID newReportUuid = UUID.randomUUID();
+        //First we create the modification group
+        networkModificationService.createModifications(modificationGroupUuid, newGroupUuid, newReportUuid);
+
+        if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
+                anchorNodeEntity.getParentNode() : anchorNodeEntity;
+        //Then we create the node
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, parent, nodeToCopyEntity.getType(), anchorNodeEntity.getStudy()));
+
+        if (insertMode.equals(InsertMode.BEFORE)) {
+            anchorNodeEntity.setParentNode(node);
+        } else if (insertMode.equals(InsertMode.AFTER)) {
+            nodesRepository.findAllByParentNodeIdNode(anchorNodeUuid).stream()
+                    .filter(n -> !n.getIdNode().equals(node.getIdNode()))
+                    .forEach(child -> child.setParentNode(node));
+        }
+
+        //And the modification node info
+        NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findById(nodeToCopyUuid).orElseThrow(() -> new StudyException(GET_MODIFICATIONS_FAILED));
+        NetworkModificationNodeInfoEntity newNetworkModificationNodeInfoEntity = new NetworkModificationNodeInfoEntity(
+                newGroupUuid,
+                UUID.randomUUID().toString(),
+                new HashSet<>(),
+                LoadFlowStatus.NOT_DONE,
+                null,
+                null,
+                BuildStatus.NOT_BUILT
+        );
+        UUID studyUuid = anchorNodeEntity.getStudy().getId();
+        newNetworkModificationNodeInfoEntity.setName(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()));
+        newNetworkModificationNodeInfoEntity.setDescription(networkModificationNodeInfoEntity.getDescription());
+        newNetworkModificationNodeInfoEntity.setIdNode(node.getIdNode());
+        newNetworkModificationNodeInfoEntity.setReportUuid(newReportUuid);
+        networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
+
+        notificationService.emitNodeInserted(studyUuid, parent.getIdNode(), node.getIdNode(), insertMode);
+        return node.getIdNode();
+    }
+
+    @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
     public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         List<UUID> removedNodes = new ArrayList<>();
@@ -102,6 +155,7 @@ public class NetworkModificationTreeService {
         notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
     }
 
+    @Transactional(readOnly = true)
     public UUID getStudyUuidForNodeId(UUID id) {
         Optional<NodeEntity> node = nodesRepository.findById(id);
         return node.orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND)).getStudy().getId();
@@ -289,6 +343,21 @@ public class NetworkModificationTreeService {
             ++counter;
         }
 
+        return uniqueName;
+    }
+
+    public String getSuffixedNodeName(UUID studyUuid, String nodeName) {
+        List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
+                .stream()
+                .map(AbstractNodeInfoEntity::getName)
+                .collect(Collectors.toList());
+
+        String uniqueName = StringUtils.EMPTY;
+        int i = 1;
+        while (StringUtils.EMPTY.equals(uniqueName) || studyNodeNames.contains(uniqueName)) {
+            uniqueName = nodeName + " (" + i + ")";
+            i++;
+        }
         return uniqueName;
     }
 
