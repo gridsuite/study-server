@@ -338,7 +338,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")) {
+                } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && POST.equals(request.getMethod())) {
@@ -1483,7 +1483,7 @@ public class StudyTest {
 
         //Check requests to duplicate modification has been emitted
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
 
         return duplicatedStudy;
     }
@@ -1589,7 +1589,7 @@ public class StudyTest {
                 .andExpect(status().isForbidden());
 
         var request = TestUtils.getRequestsDone(1, server);
-        assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
     }
 
     public UUID duplicateNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) throws Exception {
@@ -1609,7 +1609,7 @@ public class StudyTest {
         output.receive(TIMEOUT);
 
         var requests = TestUtils.getRequestsDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
 
         List<NodeEntity> allNodesAfterDuplication = networkModificationTreeService.getAllNodes(studyUuid);
 

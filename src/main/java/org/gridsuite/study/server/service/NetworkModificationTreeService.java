@@ -105,7 +105,7 @@ public class NetworkModificationTreeService {
         UUID modificationGroupUuid = getModificationGroupUuid(nodeToCopyUuid);
         UUID newReportUuid = UUID.randomUUID();
         //First we create the modification group
-        networkModificationService.createModifications(modificationGroupUuid, newGroupUuid, newReportUuid);
+        networkModificationService.createModifications(modificationGroupUuid, newGroupUuid);
 
         if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
@@ -271,7 +271,7 @@ public class NetworkModificationTreeService {
                 model.setSecurityAnalysisResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
-                networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
+                networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
             }
             if (nextParentId != null) {
                 cloneStudyTree(sourceNode, nextParentId, study);

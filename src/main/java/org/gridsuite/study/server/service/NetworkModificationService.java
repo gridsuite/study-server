@@ -492,13 +492,12 @@ public class NetworkModificationService {
         return result;
     }
 
-    public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
+    public void createModifications(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups")
                 .queryParam("duplicateFrom", sourceGroupUuid)
                 .queryParam("groupUuid", groupUuid)
-                .queryParam("reportUuid", reportUuid)
                 .buildAndExpand(groupUuid)
                 .toUriString();
 
