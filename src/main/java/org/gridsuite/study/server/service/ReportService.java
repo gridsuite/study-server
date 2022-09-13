@@ -108,40 +108,6 @@ public class ReportService {
     }
 
     /**
-     * For given defining node uuid, craft a ReportModel extracted from reports that were found by fillMapsOfSeenNodes,
-     * giving it the name of the defining node.
-     * @param groupToDefiningNode mapping from modification group uuid to defining node uuid. Not mutated.
-     * @param downingDefNodeUuid the uuid of the defining node for which to craft the ReportModel
-     * @param info the record giving the node for the defining node.
-     * @param receivedReporter the reporter from which to craft the new report.
-     * @param wantsSubs are sub reporters having no modification group associated to be copied over ?
-     * @return a ReportModel with the defining node name as (default, i.e. shown) name.
-     */
-    private static ReporterModel filterAndAdaptReporter(Map<UUID, UUID> groupToDefiningNode, UUID downingDefNodeUuid,
-            ReportingInfos info, ReporterModel receivedReporter, boolean wantsSubs) {
-
-        ReporterModel newReporter = new ReporterModel(receivedReporter.getDefaultName(),
-            info.getDefiningNodeName(), receivedReporter.getTaskValues());
-
-        for (ReporterModel subReporter : receivedReporter.getSubReporters()) {
-            UUID groupUuid = getGroupUuidFromReporter(subReporter);
-
-            boolean avoids = groupUuid == null ? wantsSubs : !Objects.equals(downingDefNodeUuid, groupToDefiningNode.get(groupUuid));
-
-            if (avoids) {
-                continue;
-            }
-
-            ReporterModel newSub = new ReporterModel(subReporter.getDefaultName(), subReporter.getDefaultName(), subReporter.getTaskValues());
-            newReporter.addSubReporter(newSub);
-            subReporter.getReports().forEach(newSub::report);
-            subReporter.getSubReporters().forEach(newSub::addSubReporter);
-        }
-
-        return newReporter;
-    }
-
-    /**
      * Ask report server reports from build nodes, noticing for each definition node encountered in them
      * the first (in leaf to root order) building node for which the report mentions the definition node.
      * @param neededDefiningNodeUuids the uuids of needed definition nodes, in leaf to root order. Not mutated.
@@ -192,6 +158,41 @@ public class ReportService {
             }
 
         }
+    }
+
+    /**
+     * For given defining node uuid, craft a ReportModel extracted from reports that were found by fillMapsOfSeenNodes,
+     * giving it the name of the defining node.
+     * @param groupToDefiningNode mapping from modification group uuid to defining node uuid. Not mutated.
+     * @param downingDefNodeUuid the uuid of the defining node for which to craft the ReportModel
+     * @param info the record giving the node for the defining node.
+     * @param receivedReporter the reporter from which to craft the new report.
+     * @param wantsSubs are sub reporters having no modification group associated to be copied over ?
+     * @return a ReportModel with the defining node name as (default, i.e. shown) name.
+     */
+    private static ReporterModel filterAndAdaptReporter(Map<UUID, UUID> groupToDefiningNode, UUID downingDefNodeUuid,
+        ReportingInfos info, ReporterModel receivedReporter, boolean wantsSubs) {
+
+        ReporterModel newReporter = new ReporterModel(receivedReporter.getDefaultName(),
+            info.getDefiningNodeName(), receivedReporter.getTaskValues());
+
+        for (ReporterModel subReporter : receivedReporter.getSubReporters()) {
+            UUID groupUuid = getGroupUuidFromReporter(subReporter);
+
+            // if no group uuid gotten : can not filter on it + considered part only of a build node not unbuilt nodes.
+            boolean avoids = groupUuid == null ? wantsSubs : !Objects.equals(downingDefNodeUuid, groupToDefiningNode.get(groupUuid));
+
+            if (avoids) {
+                continue;
+            }
+
+            ReporterModel newSub = new ReporterModel(subReporter.getDefaultName(), subReporter.getDefaultName(), subReporter.getTaskValues());
+            newReporter.addSubReporter(newSub);
+            subReporter.getReports().forEach(newSub::report);
+            subReporter.getSubReporters().forEach(newSub::addSubReporter);
+        }
+
+        return newReporter;
     }
 
     /**
