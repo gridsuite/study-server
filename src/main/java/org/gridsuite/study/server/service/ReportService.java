@@ -60,7 +60,7 @@ public class ReportService {
 
     /**
      * From a sequence of ReportInfos from the deepest node to root, ask report server for reports
-     * and pack them by node/modification-group.
+     * and pack them by node/modification-group, putting the name of the defining node as the name of the corresponding report.
      */
     public List<ReporterModel> getReporterModels(List<ReportingInfos> uppingReportingInfos) {
         LinkedList<UUID> uppingNeededDefNodeUuids = new LinkedList<>();
@@ -77,14 +77,16 @@ public class ReportService {
             definingNodesInfosByUuid.put(reportingInfo.getDefiningNodeUuid(), reportingInfo);
         }
 
+        // ask report server reports from build nodes, noticing for each definition node encountered in them
+        // the first (in leaf to root order) building node for which the report mentions the definition node.
         Map<UUID, UUID> seenDefToBuildNodeUuuids = new HashMap<>();
         Map<UUID, ReporterModel> seenBuildNodeToRootReporter = new HashMap<>();
-
         this.fillMapsOfSeenNodes(uppingNeededDefNodeUuids, groupToDefiningNode, definingNodesInfosByUuid,
             seenDefToBuildNodeUuuids, seenBuildNodeToRootReporter);
 
+        // from root to leaf defining nodes, filters in sub reports that where marked (via modification group uuid in task key)
+        // as related to the defining node and translate modification group (found) in report to the node name associated.
         List<ReporterModel> res = new ArrayList<>();
-
         while (!uppingNeededDefNodeUuids.isEmpty()) {
             UUID downingDefNodeUuid = uppingNeededDefNodeUuids.removeLast();
             ReportingInfos info = definingNodesInfosByUuid.get(downingDefNodeUuid);
@@ -105,6 +107,16 @@ public class ReportService {
         return res;
     }
 
+    /**
+     * For given defining node uuid, craft a ReportModel extracted from reports that were found by fillMapsOfSeenNodes,
+     * giving it the name of the defining node.
+     * @param groupToDefiningNode mapping from modification group uuid to defining node uuid. Not mutated.
+     * @param downingDefNodeUuid the uuid of the defining node for which to craft the ReportModel
+     * @param info the record giving the node for the defining node.
+     * @param receivedReporter the reporter from which to craft the new report.
+     * @param wantsSubs are sub reporters having no modification group associated to be copied over ?
+     * @return a ReportModel with the defining node name as (default, i.e. shown) name.
+     */
     private static ReporterModel filterAndAdaptReporter(Map<UUID, UUID> groupToDefiningNode, UUID downingDefNodeUuid,
             ReportingInfos info, ReporterModel receivedReporter, boolean wantsSubs) {
 
@@ -129,13 +141,25 @@ public class ReportService {
         return newReporter;
     }
 
+    /**
+     * Ask report server reports from build nodes, noticing for each definition node encountered in them
+     * the first (in leaf to root order) building node for which the report mentions the definition node.
+     * @param neededDefiningNodeUuids the uuids of needed definition nodes, in leaf to root order. Not mutated.
+     * @param groupToDefiningNode mapping from modification group uuid to defining node uuid. Not Mutated.
+     * @param definingNodesInfosByUuid mapping of definition nodes from their uuid. Not mutated.
+     * @param seenDefToBuildNodeUuuids built mapping from definition node uuid to the (first) build node uuid.
+     * @param seenBuildNodeToRootReporter built mapping from building node uuid to its root reporter.
+     */
     private void fillMapsOfSeenNodes(List<UUID> neededDefiningNodeUuids,
             Map<UUID, UUID> groupToDefiningNode,
             Map<UUID, ReportingInfos> definingNodesInfosByUuid,
             Map<UUID, UUID> seenDefToBuildNodeUuuids,
             Map<UUID, ReporterModel> seenBuildNodeToRootReporter) {
 
+        // try each needed definition node as if building node,
         for (UUID buildNodeUuid : neededDefiningNodeUuids) {
+            // but if we already have a build node (and a reporter, by construction),
+            // bypass (because it will not be considered as a build node afterward in the loop)
             if (seenDefToBuildNodeUuuids.containsKey(buildNodeUuid)) {
                 continue;
             }
@@ -149,8 +173,11 @@ public class ReportService {
                 continue;
             }
 
+            // we found an associated reporter for the current build node. Keep that association
             seenBuildNodeToRootReporter.put(buildNodeUuid, reporter);
 
+            // scan sub reporter to extract modification group uuid to find back definition node
+            // and keep association for each such defining node to the building node it was found in the report.
             for (ReporterModel subReport : reporter.getSubReporters()) {
                 UUID groupUuid = getGroupUuidFromReporter(subReport);
 
@@ -167,6 +194,11 @@ public class ReportService {
         }
     }
 
+    /**
+     * Extract and convert the task key of a ReportModel to a UUID.
+     * @param subReport a report model (found as sub report, but does not really matter)
+     * @return the convert UUID from subReport taskKey string, or null if conversion failed.
+     */
     private static UUID getGroupUuidFromReporter(ReporterModel subReport) {
         String taskKey = subReport.getTaskKey();
         UUID groupUuid;
