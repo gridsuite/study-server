@@ -27,7 +27,7 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
         consumeCaseImportFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
-      source: publishStudyUpdate
+      output-bindings: publishStudyUpdate
 
 network-store-server:
   preloading-strategy: COLLECTION
