@@ -16,6 +16,9 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
 import org.apache.commons.lang3.tuple.Pair;
+import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
+import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
@@ -51,7 +54,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -62,6 +67,16 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
+
+    static final String EQUIPMENT_NAME = "equipmentName.fullascii";
+
+    static final String EQUIPMENT_ID = "equipmentId.fullascii";
+
+    static final String NETWORK_UUID = "networkUuid.keyword";
+
+    static final String VARIANT_ID = "variantId.keyword";
+
+    static final String EQUIPMENT_TYPE = "equipmentType.keyword";
 
     @Autowired
     NotificationService notificationService;
@@ -315,48 +330,92 @@ public class StudyService {
             variantId = VariantManagerConstants.INITIAL_VARIANT_ID;
         }
 
-        String queryInitialVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid,
-                VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
-        List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
+        if (equipmentType == null) {
+            BoolQueryBuilder query = buildSearchAllEquipmentsQuery(userInput, fieldSelector, networkUuid,
+                    VariantManagerConstants.INITIAL_VARIANT_ID, variantId);
+            List<EquipmentInfos> equipmentInfos = equipmentInfosService.searchEquipments(query);
 
-        return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) ? equipmentInfosInInitVariant
-                : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector,
-                        equipmentInfosInInitVariant, equipmentType);
+            return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
+        } else {
+            String queryInitialVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid,
+                    VariantManagerConstants.INITIAL_VARIANT_ID, equipmentType);
+
+            List<EquipmentInfos> equipmentInfosInInitVariant = equipmentInfosService.searchEquipments(queryInitialVariant);
+
+            return (variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID)) ? equipmentInfosInInitVariant
+                    : completeSearchWithCurrentVariant(networkUuid, variantId, userInput, fieldSelector,
+                    equipmentInfosInInitVariant, equipmentType);
+        }
     }
 
-    private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
-                                                                  EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant,
-                                                                  String equipmentType) {
+    private List<EquipmentInfos> cleanRemovedEquipments(UUID networkUuid, String variantId, List<EquipmentInfos> equipmentInfos) {
         String queryTombstonedEquipments = buildTombstonedEquipmentSearchQuery(networkUuid, variantId);
         Set<String> removedEquipmentIdsInVariant = equipmentInfosService.searchTombstonedEquipments(queryTombstonedEquipments)
                 .stream()
                 .map(TombstonedEquipmentInfos::getId)
                 .collect(Collectors.toSet());
 
-        String queryVariant = buildEquipmentSearchQuery(userInput, fieldSelector, networkUuid, variantId,
-                equipmentType);
-        List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
-
-        List<EquipmentInfos> equipmentInfos = equipmentInfosInInitVariant
+        return equipmentInfos
                 .stream()
                 .filter(ei -> !removedEquipmentIdsInVariant.contains(ei.getId()))
                 .collect(Collectors.toList());
-
-        equipmentInfos.addAll(addedEquipmentInfosInVariant);
-
-        return equipmentInfos;
     }
 
-    private String buildEquipmentSearchQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
-        String query = "networkUuid.keyword:(%s) AND variantId.keyword:(%s) AND %s:(*%s*)"
-                + (equipmentType == null ? "" : " AND equipmentType.keyword:(%s)");
+    private List<EquipmentInfos> completeSearchWithCurrentVariant(UUID networkUuid, String variantId, String userInput,
+                                                                  EquipmentInfosService.FieldSelector fieldSelector, List<EquipmentInfos> equipmentInfosInInitVariant,
+                                                                  String equipmentType) {
+        // Clean equipments that have been removed in the current variant
+        List<EquipmentInfos> cleanedEquipmentsInInitVariant = cleanRemovedEquipments(networkUuid, variantId, equipmentInfosInInitVariant);
+
+        // Get the equipments of the current variant
+        String queryVariant = buildSearchEquipmentsByTypeQuery(userInput, fieldSelector, networkUuid, variantId, equipmentType);
+        List<EquipmentInfos> addedEquipmentInfosInVariant = equipmentInfosService.searchEquipments(queryVariant);
+
+        // Add equipments of the current variant to the ones of the init variant
+        cleanedEquipmentsInInitVariant.addAll(addedEquipmentInfosInVariant);
+
+        return cleanedEquipmentsInInitVariant;
+    }
+
+    private String buildSearchEquipmentsByTypeQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
+        String query = NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s) AND %s:(*%s*)"
+                + (equipmentType == null ? "" : " AND " + EQUIPMENT_TYPE + ":(%s)");
         return String.format(query, networkUuid, variantId,
-                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? "equipmentName.fullascii" : "equipmentId.fullascii",
+                fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID,
                 escapeLucene(userInput), equipmentType);
     }
 
+    private BoolQueryBuilder buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
+        WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
+        TermsQueryBuilder networkUuidSearchQuery = termsQuery(NETWORK_UUID, networkUuid.toString());
+        TermsQueryBuilder variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
+                termsQuery(VARIANT_ID, initialVariantId)
+                : termsQuery(VARIANT_ID, initialVariantId, variantId);
+
+        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = new FunctionScoreQueryBuilder.FilterFunctionBuilder[ EQUIPMENT_TYPE_SCORES.size() + 1 ];
+
+        int i = 0;
+        filterFunctionsForScoreQueries[i++] = new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                matchQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, escapeLucene(userInput)),
+                ScoreFunctionBuilders.weightFactorFunction(EQUIPMENT_TYPE_SCORES.size()));
+
+        for (Map.Entry<String, Integer> equipmentTypeScore : EQUIPMENT_TYPE_SCORES.entrySet()) {
+            filterFunctionsForScoreQueries[i++] =
+                    new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                            matchQuery("equipmentType", equipmentTypeScore.getKey()),
+                            ScoreFunctionBuilders.weightFactorFunction(equipmentTypeScore.getValue())
+                    );
+        }
+
+        FunctionScoreQueryBuilder functionScoreBoostQuery = QueryBuilders.functionScoreQuery(filterFunctionsForScoreQueries);
+
+        BoolQueryBuilder esQuery = QueryBuilders.boolQuery();
+        esQuery.filter(equipmentSearchQuery).filter(networkUuidSearchQuery).filter(variantIdSearchQuery).must(functionScoreBoostQuery);
+        return esQuery;
+    }
+
     private String buildTombstonedEquipmentSearchQuery(UUID networkUuid, String variantId) {
-        return String.format("networkUuid.keyword:(%s) AND variantId.keyword:(%s)", networkUuid, variantId);
+        return String.format(NETWORK_UUID + ":(%s) AND " + VARIANT_ID + ":(%s)", networkUuid, variantId);
     }
 
     @Transactional
@@ -675,6 +734,15 @@ public class StudyService {
         }
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, "voltage-levels");
+    }
+
+    public String getVoltageLevelsAndEquipment(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+        }
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
+                substationsIds, "voltage-levels-equipments");
     }
 
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
@@ -1246,11 +1314,27 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.reorderModification(groupUuid, modificationUuid, beforeUuid);
+            List<UUID> modificationUuidList = Collections.singletonList(modificationUuid);
+            networkModificationService.reorderModification(groupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+    }
+
+    @Transactional
+    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        String response;
+        try {
+            checkStudyContainsNode(studyUuid, nodeUuid);
+            UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            response = networkModificationService.duplicateModification(targetGroupUuid, modificationUuidList);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+        }
+        return response;
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
