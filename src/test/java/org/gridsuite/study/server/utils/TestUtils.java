@@ -74,13 +74,12 @@ public final class TestUtils {
             .build();
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, ShortCircuitParametersEntity shortCircuitParametersEntity) {
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
                 .date(LocalDateTime.now())
                 .networkId("netId")
                 .networkUuid(networkUuid)
                 .userId("userId")
-                .loadFlowProvider(loadflowProvider)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .build();
     }

@@ -512,7 +512,6 @@ public class StudyService {
         Objects.requireNonNull(sourceStudy.getCaseFormat());
         Objects.requireNonNull(sourceStudy.getCaseUuid());
         Objects.requireNonNull(newLoadFlowParameters);
-        Objects.requireNonNull(newLoadFlowParameters);
         Objects.requireNonNull(newShortCircuitParameters);
 
         UUID reportUuid = UUID.randomUUID();

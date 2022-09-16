@@ -216,7 +216,7 @@ public class ShortCircuitTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         ShortCircuitParametersEntity shortCircuitParameters = ShortCircuitService.toEntity(new ShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, shortCircuitParameters);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", shortCircuitParameters);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
