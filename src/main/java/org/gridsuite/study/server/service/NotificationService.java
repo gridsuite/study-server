@@ -42,6 +42,8 @@ public class NotificationService {
     public static final String UPDATE_TYPE_LINE = "line";
     public static final String UPDATE_TYPE_LOADFLOW = "loadflow";
     public static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
+    public static final String UPDATE_TYPE_SHORT_CIRCUIT = "shortcircuit";
+    public static final String UPDATE_TYPE_SHORT_CIRCUIT_STATUS = "shortcircuit_status";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";

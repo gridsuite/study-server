@@ -638,6 +638,18 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run")
+    @Operation(summary = "run short circuit analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has started")})
+    public ResponseEntity<Void> runShortCircuit(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertLoadFlowRunnable(nodeUuid);
+        studyService.runShortCircuit(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})

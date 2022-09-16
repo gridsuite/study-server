@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.shortcircuit.ShortCircuitAnalysisResult;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -411,6 +412,15 @@ public class NetworkModificationTreeService {
             nodesRepository.findAllByParentNodeIdNode(nodeUuid)
                 .forEach(child -> updateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
         }
+    }
+
+    public void updateShortCircuitAnalysisResultAndStatus(UUID nodeUuid, ShortCircuitAnalysisResult shortCircuitAnalysisResult, boolean updateChildren) {
+        //TODO
+//        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus));
+//        if (updateChildren) {
+//            nodesRepository.findAllByParentNodeIdNode(nodeUuid)
+//                    .forEach(child -> updateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
+//        }
     }
 
     @Transactional
