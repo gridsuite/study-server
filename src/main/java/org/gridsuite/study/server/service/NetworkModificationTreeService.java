@@ -439,6 +439,12 @@ public class NetworkModificationTreeService {
         nodes.forEach(n -> updateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
     }
 
+    @Transactional
+    public void updateStudyShortCircuitStatus(UUID studyUuid, ShortCircuitStatus shortCircuitStatus) {
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> updateStudyShortCircuitStatus(n.getIdNode(), shortCircuitStatus));
+    }
+
     @Transactional(readOnly = true)
     public Optional<UUID> getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSecurityAnalysisResultUuid(nodeUuid));

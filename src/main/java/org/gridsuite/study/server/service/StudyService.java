@@ -923,8 +923,21 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
     }
 
+    @Transactional
+    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters) {
+        updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitParameters.load()));
+        invalidateShortCircuitStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+//        invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
+//        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+    }
+
     public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
+    }
+
+    public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
+        networkModificationTreeService.updateStudyShortCircuitStatus(studyUuid, ShortCircuitStatus.NOT_DONE);
     }
 
     public String getLoadFlowProvider(UUID studyUuid) {
@@ -1057,6 +1070,11 @@ public class StudyService {
     public void updateLoadFlowParameters(UUID studyUuid, LoadFlowParametersEntity loadFlowParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowParameters(loadFlowParametersEntity));
+    }
+
+    public void updateShortCircuitParameters(UUID studyUuid, ShortCircuitParametersEntity shortCircuitParametersEntity) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
     }
 
     public void createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType,
