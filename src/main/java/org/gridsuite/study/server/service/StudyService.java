@@ -265,7 +265,7 @@ public class StudyService {
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters newShortCircuitParameters = null;
-            if(sourceShortCircuitParameters != null) {
+            if (sourceShortCircuitParameters != null) {
                 newShortCircuitParameters = new ShortCircuitParameters();
                 newShortCircuitParameters.setStudyType(sourceShortCircuitParameters.getStudyType());
                 newShortCircuitParameters.setWithFeederResult(sourceShortCircuitParameters.isWithFeederResult());

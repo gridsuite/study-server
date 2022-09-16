@@ -241,7 +241,7 @@ public class ConsumerService {
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), importReportUuid);
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), null, importReportUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {

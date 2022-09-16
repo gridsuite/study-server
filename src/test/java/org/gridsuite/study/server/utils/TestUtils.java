@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
@@ -71,6 +72,17 @@ public final class TestUtils {
             .loadFlowProvider(loadflowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
             .build();
+    }
+
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, ShortCircuitParametersEntity shortCircuitParametersEntity) {
+        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
+                .date(LocalDateTime.now())
+                .networkId("netId")
+                .networkUuid(networkUuid)
+                .userId("userId")
+                .loadFlowProvider(loadflowProvider)
+                .shortCircuitParameters(shortCircuitParametersEntity)
+                .build();
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity) {

@@ -106,13 +106,13 @@ public class ShortCircuitService {
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        return new ShortCircuitParameters(entity.isWithLimitViolations(),
-                entity.isWithVoltageMap(),
-                entity.isWithFeederResult(),
-                entity.getStudyType(),
-                entity.getMinVoltageDropProportionalThreshold(),
-        );
-        return new ShortCircuitParameters();
+        ShortCircuitParameters parameters = new ShortCircuitParameters();
+        parameters.setWithLimitViolations(entity.isWithLimitViolations());
+        parameters.setWithVoltageMap(entity.isWithVoltageMap());
+        parameters.setWithFeederResult(entity.isWithFeederResult());
+        parameters.setStudyType(entity.getStudyType());
+        parameters.setMinVoltageDropProportionalThreshold(entity.getMinVoltageDropProportionalThreshold());
+        return parameters;
     }
 
     public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
@@ -124,6 +124,9 @@ public class ShortCircuitService {
                 parameters.getStudyType(),
                 parameters.getMinVoltageDropProportionalThreshold()
         );
+    }
 
+    public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
+        this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
     }
 }

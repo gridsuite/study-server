@@ -7,12 +7,10 @@
 
 package org.gridsuite.study.server.repository;
 
-import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.StudyType;
 import lombok.*;
 
 import javax.persistence.*;
-import java.util.Set;
 import java.util.UUID;
 
 /**
