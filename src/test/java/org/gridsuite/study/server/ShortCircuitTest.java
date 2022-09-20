@@ -171,7 +171,7 @@ public class ShortCircuitTest {
     }
 
     @Test
-    public void testLoadFlow() throws Exception {
+    public void testShortCircuit() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         //insert a study
