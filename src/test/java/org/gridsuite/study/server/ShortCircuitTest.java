@@ -17,7 +17,6 @@ import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
@@ -49,7 +48,6 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -81,24 +79,21 @@ import okhttp3.mockwebserver.RecordedRequest;
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class ShortCircuitTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LoadflowTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ShortCircuitTest.class);
 
     private static final String CASE_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
 
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
 
-    private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
+//    private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
 
-    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.7\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
+//    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.7\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
     private static final String VARIANT_ID = "variant_1";
 
-    private static final String VARIANT_ID_3 = "variant_3";
+    private static final String VARIANT_ID_2 = "variant_2";
 
     private static final long TIMEOUT = 1000;
-
-    @Value("${loadflow.default-provider}")
-    String defaultLoadflowProvider;
 
     @Autowired
     private MockMvc mockMvc;
@@ -146,6 +141,9 @@ public class ShortCircuitTest {
 //                List.of(new LoadFlowResultImpl.ComponentResultImpl(0, 0, LoadFlowResult.ComponentResult.Status.CONVERGED, 10, "bus_1", 5., 3.5),
 //                        new LoadFlowResultImpl.ComponentResultImpl(1, 1, LoadFlowResult.ComponentResult.Status.FAILED, 20, "bus_2", 10., 2.78)));
 //        String loadFlowOKString = mapper.writeValueAsString(loadFlowOK);
+        //TODO
+        ShortCircuitAnalysisResult shortCircuitAnalysisResult = new ShortCircuitAnalysisResult(List.of());
+        String shortCircuitAnalysisResultStr = mapper.writeValueAsString(shortCircuitAnalysisResult);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -155,9 +153,9 @@ public class ShortCircuitTest {
                 String path = Objects.requireNonNull(request.getPath());
                 request.getBody();
 
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=shortcircuit&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
-                            .setBody("TODO")
+                            .setBody(shortCircuitAnalysisResultStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -185,7 +183,7 @@ public class ShortCircuitTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 3");
+                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         // run a short circuit on root node (not allowed)
@@ -193,25 +191,26 @@ public class ShortCircuitTest {
                 .andExpect(status().isForbidden());
 
         //run a short circuit
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid,
-                modificationNode2Uuid)).andExpect(
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid))
+                .andExpect(
                 status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
+//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
 
-        // check short circuit status
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
-                        modificationNode2Uuid)).andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        ShortCircuitAnalysisResult shortCircuitAnalysisResult = mapper.readValue(resultAsString, ShortCircuitAnalysisResult.class);
-
-        assertTrue(shortCircuitAnalysisResult.getFaultResult("TODO").getShortCircuitPower() > 200.0);
+//        // check short circuit status
+//        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/infos", studyNameUserIdUuid,
+//                        modificationNode2Uuid)).andExpectAll(
+//                        status().isOk(),
+//                        content().contentType(MediaType.APPLICATION_JSON))
+//                .andReturn();
+//        resultAsString = mvcResult.getResponse().getContentAsString();
+//        ShortCircuitAnalysisResult shortCircuitAnalysisResult = mapper.readValue(resultAsString, ShortCircuitAnalysisResult.class);
+//
+//        assertTrue(shortCircuitAnalysisResult.getFaultResult("TODO").getShortCircuitPower() > 200.0);
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
@@ -273,8 +272,7 @@ public class ShortCircuitTest {
     }
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT);
     }
 
     private void cleanDB() {

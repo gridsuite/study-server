@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.powsybl.contingency.json.ContingencyJsonModule;
 import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import com.powsybl.loadflow.json.LoadFlowResultJsonModule;
+import com.powsybl.shortcircuit.converter.ShortCircuitAnalysisJsonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -49,6 +50,7 @@ public class RestTemplateConfig {
         objectMapper.registerModule(new ContingencyJsonModule());
         objectMapper.registerModule(new LoadFlowResultJsonModule());
         objectMapper.registerModule(new LoadFlowParametersJsonModule());
+        objectMapper.registerModule(new ShortCircuitAnalysisJsonModule());
         return objectMapper;
     }
 
