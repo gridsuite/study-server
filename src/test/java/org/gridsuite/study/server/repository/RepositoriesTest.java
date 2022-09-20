@@ -108,6 +108,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity)
+                .shortCircuitParameters(new ShortCircuitParametersEntity())
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
@@ -120,6 +121,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity2)
+                .shortCircuitParameters(new ShortCircuitParametersEntity())
                 .build();
 
         StudyEntity studyEntity3 = StudyEntity.builder()
@@ -132,6 +134,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity3)
+                .shortCircuitParameters(new ShortCircuitParametersEntity())
                 .build();
 
         studyRepository.save(studyEntity1);
