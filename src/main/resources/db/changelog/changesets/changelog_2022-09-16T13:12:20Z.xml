@@ -22,16 +22,4 @@
     <changeSet author="homereti (generated)" id="1663333959597-7">
         <addForeignKeyConstraint baseColumnNames="short_circuit_parameters_entity_id" baseTableName="study" constraintName="shortCircuitParameters_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="short_circuit_parameters" validate="true"/>
     </changeSet>
-    <changeSet author="homereti (generated)" id="1663333959597-1">
-        <addNotNullConstraint columnDataType="varchar(255)" columnName="case_name" tableName="study" validate="true"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1663333959597-2">
-        <dropDefaultValue columnDataType="varchar(255)" columnName="connected_component_mode" tableName="load_flow_parameters"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1663333959597-3">
-        <dropNotNullConstraint columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1663333959597-4">
-        <dropDefaultValue columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
-    </changeSet>
 </databaseChangeLog>
