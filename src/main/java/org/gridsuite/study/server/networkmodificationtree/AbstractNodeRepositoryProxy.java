@@ -74,6 +74,13 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
+    public void updateSensitivityAnalysisResultUuid(AbstractNode node, UUID sensitivityAnalysisResultUuid) {
+    }
+
+    public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
+        return null;
+    }
+
     public void handleExcludeModification(AbstractNode node, UUID modificationUuid, boolean active) {
     }
 
@@ -170,6 +177,14 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
+        updateSensitivityAnalysisResultUuid(getNode(nodeUuid), sensitivityAnalysisResultUuid);
+    }
+
+    public UUID getSensitivityAnalysisResultUuid(UUID nodeUuid) {
+        return getSensitivityAnalysisResultUuid(getNode(nodeUuid));
     }
 
     public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus, List<UUID> changedNodes) {
