@@ -41,8 +41,8 @@ network-store-server:
   preloading-strategy: COLLECTION
 
 powsybl-ws:
-  postgres:
-    dbName: study
+  database:
+    name: study
 
 
 # default values for loadflow providers "Hades2" or "OpenLoadFlow"
