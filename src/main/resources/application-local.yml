@@ -11,7 +11,9 @@ spring:
       # user:
       # password:
 
-
+powsybl-ws:
+  database:
+    host: localhost
 
 backing-services:
   case:

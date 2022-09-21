@@ -40,7 +40,9 @@ spring:
 network-store-server:
   preloading-strategy: COLLECTION
 
-dbName: study
+powsybl-ws:
+  postgres:
+    dbName: study
 
 
 # default values for loadflow providers "Hades2" or "OpenLoadFlow"
