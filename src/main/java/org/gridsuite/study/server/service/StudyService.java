@@ -102,6 +102,7 @@ public class StudyService {
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ActionsService actionsService;
 
     private final ObjectMapper objectMapper;
@@ -129,7 +130,8 @@ public class StudyService {
         GeoDataService geoDataService,
         NetworkMapService networkMapService,
         SecurityAnalysisService securityAnalysisService,
-        ActionsService actionsService) {
+        ActionsService actionsService,
+        SensitivityAnalysisService sensitivityAnalysisService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -141,6 +143,7 @@ public class StudyService {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.objectMapper = objectMapper;
         this.studyServerExecutionService = studyServerExecutionService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.loadflowService = loadflowService;
         this.caseService = caseService;
         this.singleLineDiagramService = singleLineDiagramService;
@@ -848,6 +851,7 @@ public class StudyService {
     public void assertComputationNotRunning(UUID nodeUuid) {
         assertLoadFlowNotRunning(nodeUuid);
         securityAnalysisService.assertSecurityAnalysisNotRunning(nodeUuid);
+        sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(nodeUuid);
     }
 
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
@@ -894,7 +898,9 @@ public class StudyService {
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
+        invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
     }
 
     public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
@@ -923,7 +929,7 @@ public class StudyService {
 
     @Transactional
     public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters) {
-        updateShortCircuitParameters(studyUuid, ShortCircuitAnalysisService.toEntity(parameters != null ? parameters : ShortCircuitParameters.load()));
+        updateShortCircuitParameters(studyUuid, ShortCircuitAnalysisService.toEntity(parameters != null ? parameters : ShortCircuitAnalysisService.getDefaultShortCircuitParamters()));
     }
 
     @Transactional
@@ -996,6 +1002,10 @@ public class StudyService {
         securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
     }
 
+    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(networkModificationTreeService.getStudySensitivityAnalysisResultUuids(studyUuid));
+    }
+
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
             String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
             UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters) {
@@ -1032,6 +1042,10 @@ public class StudyService {
 
     void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
+    }
+
+    void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
+        networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(String userId, UUID studyUuid) {
@@ -1171,6 +1185,11 @@ public class StudyService {
         return networkModificationTreeService.getLoadFlowStatus(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
+    public UUID getStudyUuidFromNodeUuid(UUID nodeUuid) {
+        return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
+    }
+
     public LoadFlowInfos getLoadFlowInfos(UUID studyUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
@@ -1218,6 +1237,7 @@ public class StudyService {
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
                 studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
 
@@ -1245,6 +1265,7 @@ public class StudyService {
         invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
     }
 
     @Transactional
@@ -1285,6 +1306,7 @@ public class StudyService {
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
             studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+            studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
             studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
         );
 
@@ -1428,6 +1450,34 @@ public class StudyService {
         } else {
             throw new StudyException(UNKNOWN_NOTIFICATION_TYPE);
         }
+    }
+
+    @Transactional
+    public UUID runSensitivityAnalysis(UUID studyUuid,
+                                       List<UUID> variablesFiltersListUuids,
+                                       List<UUID> contingencyListUuids,
+                                       List<UUID> branchFiltersListUuids,
+                                       String parameters,
+                                       UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(variablesFiltersListUuids);
+        Objects.requireNonNull(contingencyListUuids);
+        Objects.requireNonNull(branchFiltersListUuids);
+        Objects.requireNonNull(parameters);
+        Objects.requireNonNull(nodeUuid);
+
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        String provider = getLoadFlowProvider(studyUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
+
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider,
+                                                                        variablesFiltersListUuids, contingencyListUuids, branchFiltersListUuids,
+                                                                        parameters);
+
+        updateSensitivityAnalysisResultUuid(nodeUuid, result);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        return result;
     }
 }
 

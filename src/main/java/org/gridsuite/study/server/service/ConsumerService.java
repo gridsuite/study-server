@@ -277,11 +277,91 @@ public class ConsumerService {
         };
     }
 
+    @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisResult() {
+        return message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Sensitivity analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
+
+                    // update DB
+                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+
+                    // send notifications
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Sensitivity analysis stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete sensitivity analysis result in database
+                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for stopped computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeSensitivityAnalysisFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Sensitivity analysis failed for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete sensitivity analysis result in database
+                    updateSensitivityAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for failed computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
     void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
     private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
+    }
+
+    void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
+        networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
     }
 }

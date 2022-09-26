@@ -28,6 +28,7 @@ public class RestResponseEntityExceptionHandler {
                 case STUDY_NOT_FOUND:
                 case NODE_NOT_FOUND:
                 case SECURITY_ANALYSIS_NOT_FOUND:
+                case SENSITIVITY_ANALYSIS_NOT_FOUND:
                 case EQUIPMENT_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getType());
                 case CASE_NOT_FOUND:
@@ -40,6 +41,8 @@ public class RestResponseEntityExceptionHandler {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(LOADFLOW_RUNNING);
                 case SECURITY_ANALYSIS_RUNNING:
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(SECURITY_ANALYSIS_RUNNING);
+                case SENSITIVITY_ANALYSIS_RUNNING:
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(SENSITIVITY_ANALYSIS_RUNNING);
                 case NOT_ALLOWED:
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(studyException.getMessage());
                 case CANT_DELETE_ROOT_NODE:
