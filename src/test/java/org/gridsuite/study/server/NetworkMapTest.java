@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.powsybl.shortcircuit.StudyType;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkMapService;
@@ -383,8 +385,14 @@ public class NetworkMapTest {
             .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
-
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitParametersEntity.builder()
+                .studyType(StudyType.STEADY_STATE)
+                .minVoltageDropProportionalThreshold(0)
+                .withFeederResult(false)
+                .withLimitViolations(false)
+                .withVoltageMap(false)
+                .build();
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

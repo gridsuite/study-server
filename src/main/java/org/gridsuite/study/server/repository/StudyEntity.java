@@ -66,6 +66,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             ), nullable = false)
     private LoadFlowParametersEntity loadFlowParameters;
 
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name  =  "shortCircuitParametersEntity_id",
+            referencedColumnName  =  "id",
+            foreignKey = @ForeignKey(
+                    name = "shortCircuitParameters_id_fk"
+            ), nullable = false)
+    private ShortCircuitParametersEntity shortCircuitParameters;
+
     @Value
     public static class StudyNetworkUuid {
         UUID networkUuid;

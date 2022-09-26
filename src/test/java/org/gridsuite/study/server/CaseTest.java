@@ -20,7 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.powsybl.shortcircuit.StudyType;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.CaseService;
@@ -145,7 +147,14 @@ public class CaseTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .build();
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitParametersEntity.builder()
+                .studyType(StudyType.STEADY_STATE)
+                .minVoltageDropProportionalThreshold(0)
+                .withFeederResult(false)
+                .withLimitViolations(false)
+                .withVoltageMap(false)
+                .build();
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

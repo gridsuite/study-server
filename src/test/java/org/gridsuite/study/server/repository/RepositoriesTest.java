@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.shortcircuit.StudyType;
 import org.apache.commons.collections4.map.HashedMap;
 import org.junit.After;
 import org.junit.Test;
@@ -83,6 +84,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
+        ShortCircuitParametersEntity shortCircuitParametersEntity = new ShortCircuitParametersEntity(false, false, false, StudyType.TRANSIENT, 1);
 
         countriesTemp.add("IT");
         LoadFlowParametersEntity loadFlowParametersEntity2 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -90,6 +92,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
+        ShortCircuitParametersEntity shortCircuitParametersEntity2 = new ShortCircuitParametersEntity(true, true, true, StudyType.STEADY_STATE, 0);
 
         countriesTemp.add("DE");
         LoadFlowParametersEntity loadFlowParametersEntity3 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -97,6 +100,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
+        ShortCircuitParametersEntity shortCircuitParametersEntity3 = new ShortCircuitParametersEntity(true, false, true, StudyType.SUB_TRANSIENT, 10);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
@@ -108,6 +112,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity)
+                .shortCircuitParameters(shortCircuitParametersEntity)
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
@@ -120,6 +125,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity2)
+                .shortCircuitParameters(shortCircuitParametersEntity2)
                 .build();
 
         StudyEntity studyEntity3 = StudyEntity.builder()
@@ -132,6 +138,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity3)
+                .shortCircuitParameters(shortCircuitParametersEntity3)
                 .build();
 
         studyRepository.save(studyEntity1);
@@ -147,10 +154,12 @@ public class RepositoriesTest {
 
         // updates
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
+        savedStudyEntity1.setShortCircuitParameters(shortCircuitParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
         StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
+        assertNotNull(savedStudyEntity1Updated.getShortCircuitParameters());
 
         studyRepository.save(savedStudyEntity1Updated);
         savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
