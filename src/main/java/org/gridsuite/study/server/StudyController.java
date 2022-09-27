@@ -46,7 +46,7 @@ import java.util.*;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Tag(name = "Study server")
-public class StudyController {
+public class    StudyController {
 
     private final StudyService studyService;
     private final NetworkService networkStoreService;

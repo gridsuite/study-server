@@ -504,7 +504,7 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, String userId, UUID clonedNetworkUuid) {
+        public CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, String userId, UUID clonedNetworkUuid) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
         Objects.requireNonNull(clonedNetworkUuid);
