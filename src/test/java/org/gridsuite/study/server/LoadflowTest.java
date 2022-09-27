@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.powsybl.shortcircuit.StudyType;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -46,6 +45,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.LoadflowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
+import org.gridsuite.study.server.service.ShortCircuitAnalysisService;
 import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -365,13 +365,7 @@ public class LoadflowTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .build();
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitParametersEntity.builder()
-                .studyType(StudyType.STEADY_STATE)
-                .minVoltageDropProportionalThreshold(0)
-                .withFeederResult(false)
-                .withLimitViolations(false)
-                .withVoltageMap(false)
-                .build();
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitAnalysisService.toEntity(ShortCircuitAnalysisService.getDefaultShortCircuitParamters());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
