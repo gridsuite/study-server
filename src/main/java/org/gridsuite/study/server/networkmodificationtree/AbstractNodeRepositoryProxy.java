@@ -12,6 +12,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
+import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
@@ -67,6 +68,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
     }
 
+    public void updateShortCircuitStatus(AbstractNode node, ShortCircuitStatus shortCircuitStatus) {
+    }
+
+    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {
+    }
+
     public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
     }
 
@@ -78,6 +85,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
+        return null;
+    }
+
+    public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
         return null;
     }
 
@@ -167,6 +178,14 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         updateLoadFlowStatus(getNode(nodeUuid), loadFlowStatus);
     }
 
+    public void updateShortCircuitStatus(UUID nodeUuid, ShortCircuitStatus shortCircuitStatus) {
+        updateShortCircuitStatus(getNode(nodeUuid), shortCircuitStatus);
+    }
+
+    public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
+    }
+
     public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
         return getLoadFlowInfos(getNode(nodeUuid));
     }
@@ -185,6 +204,10 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getSensitivityAnalysisResultUuid(UUID nodeUuid) {
         return getSensitivityAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public UUID getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
+        return getShortCircuitAnalysisResultUuid(getNode(nodeUuid));
     }
 
     public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus, List<UUID> changedNodes) {

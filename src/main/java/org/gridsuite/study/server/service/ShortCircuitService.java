@@ -7,30 +7,29 @@
 
 package org.gridsuite.study.server.service;
 
-/**
- * @author Etienne Homer <etienne.homer at rte-france.com>
- */
-
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
-import com.powsybl.shortcircuit.ShortCircuitAnalysisResult;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALYSIS_NOT_FOUND;
 
+/**
+ * @author Etienne Homer <etienne.homer at rte-france.com>
+ */
 @Service
 public class ShortCircuitService {
     private String shortCircuitServerBaseUri;
@@ -55,10 +54,8 @@ public class ShortCircuitService {
         this.networkModificationTreeService = networkModificationTreeService;
     }
 
-    public void runShortCircuit(UUID studyUuid, UUID nodeUuid, ShortCircuitParameters shortCircuitParameters, String provider) {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, ShortCircuitParameters shortCircuitParameters, String provider) {
         try {
-            ShortCircuitAnalysisResult result;
-
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             String variantId = getVariantId(nodeUuid);
             UUID reportUuid = getReportUuid(nodeUuid);
@@ -80,21 +77,48 @@ public class ShortCircuitService {
 
             HttpEntity<ShortCircuitParameters> httpEntity = new HttpEntity<>(shortCircuitParameters, headers);
 
-//            setLoadFlowRunning(studyUuid, nodeUuid);
-            ResponseEntity<ShortCircuitAnalysisResult> resp = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT,
-                    httpEntity, ShortCircuitAnalysisResult.class);
+            ResponseEntity<UUID> resp = restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT,
+                    httpEntity, UUID.class);
+            UUID result;
             result = resp.getBody();
-            updatShortCircuitResultAndStatus(nodeUuid, result, false);
+            updateShortCircuitResultAndStatus(nodeUuid, result);
+            return result;
         } catch (Exception e) {
-            //updateShortCircuitStatus(nodeUuid, ShortCircuitStatus.NOT_DONE);
+            updateShortCircuitStatus(nodeUuid, ShortCircuitStatus.NOT_DONE);
             throw e;
         } finally {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT);
         }
     }
 
-    private void updatShortCircuitResultAndStatus(UUID nodeUuid, ShortCircuitAnalysisResult shortCircuitAnalysisResult, boolean updateChildren) {
-        networkModificationTreeService.updateShortCircuitAnalysisResultAndStatus(nodeUuid, shortCircuitAnalysisResult, updateChildren);
+    public String getShortCircuitAnalysisResult(UUID nodeUuid) {
+        String result;
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}")
+                .buildAndExpand(resultUuidOpt.get()).toUriString();
+        try {
+            result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    private void updateShortCircuitResultAndStatus(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
+        networkModificationTreeService.updateShortCircuitStatus(nodeUuid, ShortCircuitStatus.DONE);
+    }
+
+    void updateShortCircuitStatus(UUID nodeUuid, ShortCircuitStatus shortCircuitStatus) {
+        networkModificationTreeService.updateShortCircuitStatus(nodeUuid, shortCircuitStatus);
     }
 
     private String getVariantId(UUID nodeUuid) {

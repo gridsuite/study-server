@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 import java.util.HashSet;
@@ -41,6 +42,10 @@ public class NetworkModificationNode extends AbstractNode {
     LoadFlowStatus loadFlowStatus;
 
     LoadFlowResult loadFlowResult;
+
+    ShortCircuitStatus shortCircuitStatus;
+
+    UUID shortCircuitAnalysisResultUuid;
 
     UUID securityAnalysisResultUuid;
 

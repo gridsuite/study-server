@@ -1484,11 +1484,11 @@ public class StudyService {
         return result;
     }
 
-    public void runShortCircuit(UUID studyUuid, UUID nodeUuid) {
-        String provider = getLoadFlowProvider(studyUuid);
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid) {
+        //TODO
+        String provider = "Provider";
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-
-        shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, provider);
+        return shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, provider);
     }
 
     public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {

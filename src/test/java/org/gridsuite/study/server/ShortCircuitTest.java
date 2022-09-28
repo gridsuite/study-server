@@ -22,10 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitAnalysisResult;
@@ -92,8 +89,12 @@ public class ShortCircuitTest {
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
 
+    private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = "1b6cc22c-3f33-11ed-b878-0242ac120002";
+
     public static final String SHORT_CIRCUIT_PARAMETERS_JSON = "{\"version\":\"1.0\",\"withLimitViolations\":true,\"withVoltageMap\":true,\"withFeederResult\":true,\"studyType\":\"TRANSIENT\",\"minVoltageDropProportionalThreshold\":20.0}";
     public static final String SHORT_CIRCUIT_PARAMETERS_JSON2 = "{\"version\":\"1.0\",\"studyType\":\"SUB_TRANSIENT\",\"minVoltageDropProportionalThreshold\":1.0}";
+
+    private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]";
     private static final String VARIANT_ID = "variant_1";
 
     private static final String VARIANT_ID_2 = "variant_2";
@@ -148,7 +149,7 @@ public class ShortCircuitTest {
 //        String loadFlowOKString = mapper.writeValueAsString(loadFlowOK);
         //TODO
         ShortCircuitAnalysisResult shortCircuitAnalysisResult = new ShortCircuitAnalysisResult(List.of());
-        String shortCircuitAnalysisResultStr = objectMapper.writeValueAsString(shortCircuitAnalysisResult);
+        String shortCircuitAnalysisResultUuidStr = objectMapper.writeValueAsString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -157,10 +158,12 @@ public class ShortCircuitTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 request.getBody();
-
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=shortcircuit&variantId=.*")) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=shortcircuit&provider=.*&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
-                            .setBody(shortCircuitAnalysisResultStr)
+                            .setBody(shortCircuitAnalysisResultUuidStr)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -229,36 +232,28 @@ public class ShortCircuitTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid))
                 .andExpect(status().isForbidden());
 
+//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT);
+
         //run a short circuit
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid))
-                .andExpect(
-                        status().isOk());
+        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid))
+                .andExpect(status().isOk())
+                .andReturn();
 
-//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
+//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=shortcircuit&provider=.*&variantId=" + VARIANT_ID_2)));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
+        assertEquals(uuidResponse, UUID.fromString(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
 
-//        // check short circuit status
-//        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/infos", studyNameUserIdUuid,
-//                        modificationNode2Uuid)).andExpectAll(
-//                        status().isOk(),
-//                        content().contentType(MediaType.APPLICATION_JSON))
-//                .andReturn();
-//        resultAsString = mvcResult.getResponse().getContentAsString();
-//        ShortCircuitAnalysisResult shortCircuitAnalysisResult = mapper.readValue(resultAsString, ShortCircuitAnalysisResult.class);
-//
-//        assertTrue(shortCircuitAnalysisResult.getFaultResult("TODO").getShortCircuitPower() > 200.0);
+        // get short circuit result
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
     }
-
-//    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-//        ShortCircuitParametersEntity shortCircuitParameters = ShortCircuitService.toEntity(new ShortCircuitParameters());
-//        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", shortCircuitParameters);
-//        var study = studyRepository.save(studyEntity);
-//        networkModificationTreeService.createRoot(studyEntity, null);
-//        return study;
-//    }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
         LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
@@ -278,7 +273,6 @@ public class ShortCircuitTest {
     }
 
     private RootNode getRootNode(UUID study) throws Exception {
-
         return objectMapper.readValue(mockMvc.perform(get("/v1/studies/{uuid}/tree", study))
                 .andExpect(status().isOk())
                 .andReturn()
