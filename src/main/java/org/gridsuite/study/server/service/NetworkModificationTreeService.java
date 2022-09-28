@@ -258,6 +258,7 @@ public class NetworkModificationTreeService {
     public void cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity study) {
         UUID rootId = null;
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
+            //rootId = createRoot(study, UUID.randomUUID()).getIdNode();
             rootId = getStudyRootNodeUuid(study.getId());
         }
         UUID referenceParentNodeId = rootId != null ? rootId : nodeParentId;

@@ -236,17 +236,15 @@ public class StudyService {
         }
     }
 
-    public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
-        Objects.requireNonNull(sourceStudyUuid);
+    public BasicStudyInfos createStudy(@NonNull UUID sourceStudyUuid, @NonNull UUID studyUuid, @NonNull String userId) {
+        StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
-        if (sourceStudy == null) {
-            return null;
-        }
         LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+
         studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, userId));
+
         return basicStudyInfos;
     }
 
