@@ -59,8 +59,7 @@ public class ConsumerService {
     public ConsumerService(ObjectMapper objectMapper,
             NotificationService notificationService,
             StudyService studyService,
-            NetworkModificationTreeService networkModificationTreeService,
-            LoadflowService loadflowService) {
+            NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -242,7 +241,8 @@ public class ConsumerService {
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(new ShortCircuitParameters()), importReportUuid);
+                    ShortCircuitParameters shortCircuitParameters = ShortCircuitAnalysisService.getDefaultShortCircuitParamters();
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitAnalysisService.toEntity(shortCircuitParameters), importReportUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {

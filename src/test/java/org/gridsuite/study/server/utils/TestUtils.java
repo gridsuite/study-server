@@ -22,13 +22,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.LoadflowService;
-import org.gridsuite.study.server.service.ShortCircuitService;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
@@ -67,40 +63,29 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity) {
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-            .date(LocalDateTime.now())
-            .networkId("netId")
-            .networkUuid(networkUuid)
-            .userId("userId")
-            .loadFlowProvider(loadflowProvider)
-            .loadFlowParameters(loadFlowParametersEntity)
-            .shortCircuitParameters(ShortCircuitService.toEntity(new ShortCircuitParameters()))
-            .build();
-    }
-
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, ShortCircuitParametersEntity shortCircuitParametersEntity) {
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
                 .date(LocalDateTime.now())
                 .networkId("netId")
                 .networkUuid(networkUuid)
                 .userId("userId")
-                .loadFlowParameters(LoadflowService.toEntity(LoadFlowParameters.load()))
+                .loadFlowProvider(loadflowProvider)
+                .loadFlowParameters(loadFlowParametersEntity)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .build();
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-            .caseName(caseName)
-            .date(LocalDateTime.now())
-            .networkId("netId")
-            .networkUuid(networkUuid)
-            .userId("userId")
-            .loadFlowProvider(loadflowProvider)
-            .loadFlowParameters(loadFlowParametersEntity)
-            .shortCircuitParameters(shortCircuitParametersEntity)
-            .build();
+                .caseName(caseName)
+                .date(LocalDateTime.now())
+                .networkId("netId")
+                .networkUuid(networkUuid)
+                .userId("userId")
+                .loadFlowProvider(loadflowProvider)
+                .loadFlowParameters(loadFlowParametersEntity)
+                .shortCircuitParameters(shortCircuitParametersEntity)
+                .build();
     }
 
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {

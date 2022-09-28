@@ -1,10 +1,9 @@
 /**
- * Copyright (c) 2020, RTE (http://www.rte-france.com)
+ * Copyright (c) 2022, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.repository;
 
 import com.powsybl.shortcircuit.StudyType;
@@ -14,9 +13,8 @@ import javax.persistence.*;
 import java.util.UUID;
 
 /**
- * @author Etienne Homer <etienne.homer at rte-france.com>
+ * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,6 +23,10 @@ import java.util.UUID;
 @Entity
 @Table(name = "shortCircuitParameters")
 public class ShortCircuitParametersEntity {
+
+    public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageMap, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold) {
+        this(null, withLimitViolations, withVoltageMap, withFeederResult, studyType, minVoltageDropProportionalThreshold);
+    }
 
     @Id
     @GeneratedValue(strategy  =  GenerationType.AUTO)
@@ -46,5 +48,4 @@ public class ShortCircuitParametersEntity {
 
     @Column(name = "minVoltageDropProportionalThreshold")
     private double minVoltageDropProportionalThreshold;
-
 }

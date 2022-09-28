@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
+ * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
 import static org.junit.Assert.assertEquals;
@@ -17,6 +18,7 @@ import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
@@ -25,18 +27,20 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitAnalysisResult;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
+import org.gridsuite.study.server.service.ShortCircuitAnalysisService;
 import org.gridsuite.study.server.service.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -48,6 +52,7 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -81,14 +86,14 @@ public class ShortCircuitTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ShortCircuitTest.class);
 
-    private static final String CASE_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
+    private static final String CASE_SHORT_CIRCUIT_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
 
-    private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+    private static final UUID CASE_SHORT_CIRCUIT_UUID = UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING);
 
-//    private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
 
-//    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.7\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"noGeneratorReactiveLimits\":false,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
+    public static final String SHORT_CIRCUIT_PARAMETERS_JSON = "{\"version\":\"1.0\",\"withLimitViolations\":true,\"withVoltageMap\":true,\"withFeederResult\":true,\"studyType\":\"TRANSIENT\",\"minVoltageDropProportionalThreshold\":20.0}";
+    public static final String SHORT_CIRCUIT_PARAMETERS_JSON2 = "{\"version\":\"1.0\",\"studyType\":\"SUB_TRANSIENT\",\"minVoltageDropProportionalThreshold\":1.0}";
     private static final String VARIANT_ID = "variant_1";
 
     private static final String VARIANT_ID_2 = "variant_2";
@@ -104,9 +109,12 @@ public class ShortCircuitTest {
     private OutputDestination output;
 
     @Autowired
-    private ObjectMapper mapper;
+    private ObjectMapper objectMapper;
 
     private ObjectWriter objectWriter;
+
+    @Value("${loadflow.default-provider}")
+    String defaultLoadflowProvider;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -117,9 +125,6 @@ public class ShortCircuitTest {
     @Autowired
     private StudyRepository studyRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     //output destinations
     private String studyUpdateDestination = "study.update";
 
@@ -127,7 +132,7 @@ public class ShortCircuitTest {
     public void setup() throws IOException {
         server = new MockWebServer();
 
-        objectWriter = mapper.writer().withDefaultPrettyPrinter();
+        objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         // Start the server.
         server.start();
@@ -143,7 +148,7 @@ public class ShortCircuitTest {
 //        String loadFlowOKString = mapper.writeValueAsString(loadFlowOK);
         //TODO
         ShortCircuitAnalysisResult shortCircuitAnalysisResult = new ShortCircuitAnalysisResult(List.of());
-        String shortCircuitAnalysisResultStr = mapper.writeValueAsString(shortCircuitAnalysisResult);
+        String shortCircuitAnalysisResultStr = objectMapper.writeValueAsString(shortCircuitAnalysisResult);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -169,11 +174,45 @@ public class ShortCircuitTest {
     }
 
     @Test
+    public void testShortCircuitAnalysisParameters() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), UUID.fromString(CASE_SHORT_CIRCUIT_UUID_STRING));
+        UUID studyNameUserIdUuid = studyEntity.getId();
+
+        //get default ShortCircuitParameters
+        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SHORT_CIRCUIT_PARAMETERS_JSON));
+
+        //setting short-circuit analysis Parameters
+        //passing self made json because shortCircuitParameter serializer removes the parameters with default value
+        String shortCircuitParameterBodyJson = "{\n" +
+                "  \"version\" : \"1.0\",\n" +
+                "  \"studyType\" : \"SUB_TRANSIENT\",\n" +
+                "  \"minVoltageDropProportionalThreshold\" : 1.0,\n" +
+                "  \"withVoltageMap\" : false,\n" +
+                "  \"withFeederResult\" : false,\n" +
+                "  \"withLimitViolations\" : false\n" +
+                "}";
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shortCircuitParameterBodyJson)).andExpect(
+                status().isOk());
+
+        //getting set values
+        mockMvc.perform(get("/v1/studies/{studyUuid}/short-circuit-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SHORT_CIRCUIT_PARAMETERS_JSON2));
+    }
+
+    @Test
     public void testShortCircuit() throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         //insert a study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
@@ -193,7 +232,7 @@ public class ShortCircuitTest {
         //run a short circuit
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid))
                 .andExpect(
-                status().isOk());
+                        status().isOk());
 
 //        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 //        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
@@ -213,9 +252,26 @@ public class ShortCircuitTest {
 //        assertTrue(shortCircuitAnalysisResult.getFaultResult("TODO").getShortCircuitPower() > 200.0);
     }
 
+//    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+//        ShortCircuitParametersEntity shortCircuitParameters = ShortCircuitService.toEntity(new ShortCircuitParameters());
+//        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", shortCircuitParameters);
+//        var study = studyRepository.save(studyEntity);
+//        networkModificationTreeService.createRoot(studyEntity, null);
+//        return study;
+//    }
+
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        ShortCircuitParametersEntity shortCircuitParameters = ShortCircuitService.toEntity(new ShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", shortCircuitParameters);
+        LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
+                .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
+                .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
+                .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                .readSlackBus(true)
+                .distributedSlack(true)
+                .dcUseTransformerRatio(true)
+                .hvdcAcEmulation(true)
+                .build();
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitAnalysisService.toEntity(ShortCircuitAnalysisService.getDefaultShortCircuitParamters());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
