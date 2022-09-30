@@ -1226,6 +1226,31 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach-to-split-line")
+    @Operation(summary = "attach a line to a split line")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was attached to the voltage level")})
+    public ResponseEntity<Void> lineAttachToSplitLine(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestBody String lineAttachToSplitLineAttributes) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.createEquipment(studyUuid, lineAttachToSplitLineAttributes, ModificationType.LINE_ATTACH_TO_SPLIT_LINE, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach-to-split-line")
+    @Operation(summary = "update a line attach to a voltage level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line attach to a voltage level has been updated.")})
+    public ResponseEntity<Void> updateLineAttachToSplitLine(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @PathVariable("modificationUuid") UUID modificationUuid,
+                                                               @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @RequestBody String lineAttachToSplitLineAttributes) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.updateEquipmentCreation(studyUuid, lineAttachToSplitLineAttributes, ModificationType.LINE_ATTACH_TO_SPLIT_LINE, nodeUuid, modificationUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
     @Operation(summary = "get the load flow information (status and result) on study")
     @ApiResponses(value = {

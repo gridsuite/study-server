@@ -29,7 +29,8 @@ public enum ModificationType {
     LINE_ATTACH_TO_VOLTAGE_LEVEL,
     GROOVY_SCRIPT,
     BRANCH_STATUS,
-    SHUNT_COMPENSATOR_CREATION;
+    SHUNT_COMPENSATOR_CREATION,
+    LINE_ATTACH_TO_SPLIT_LINE;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
