@@ -12,7 +12,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
@@ -66,9 +65,6 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     }
 
     public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
-    }
-
-    public void updateShortCircuitStatus(AbstractNode node, ShortCircuitStatus shortCircuitStatus) {
     }
 
     public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisResultUuid) {

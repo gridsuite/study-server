@@ -421,15 +421,6 @@ public class NetworkModificationTreeService {
         }
     }
 
-//    public void updateShortCircuitAnalysisResult(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid, boolean updateChildren) {
-//        //TODO
-//        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowResultAndStatus(nodeUuid, loadFlowResult, loadFlowStatus));
-//        if (updateChildren) {
-//            nodesRepository.findAllByParentNodeIdNode(nodeUuid)
-//                    .forEach(child -> updateLoadFlowResultAndStatus(child.getIdNode(), loadFlowResult, loadFlowStatus, updateChildren));
-//        }
-//    }
-
     @Transactional
     public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));

@@ -62,7 +62,7 @@ public class ShortCircuitService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, ShortCircuitParameters shortCircuitParameters, String provider) {
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, ShortCircuitParameters shortCircuitParameters) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
@@ -71,9 +71,6 @@ public class ShortCircuitService {
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", reportUuid.toString())
                 .queryParam("reportName", "shortcircuit");
-        if (!provider.isEmpty()) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
