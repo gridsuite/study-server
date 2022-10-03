@@ -903,7 +903,6 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
-        invalidateShortCircuitStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
     }
@@ -1499,9 +1498,5 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         return result;
-    }
-
-    public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
-        networkModificationTreeService.updateStudyShortCircuitStatus(studyUuid, ShortCircuitStatus.NOT_DONE);
     }
 }
