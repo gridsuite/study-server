@@ -12,7 +12,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -58,7 +57,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getModificationsToExclude(),
             modificationNode.getLoadFlowStatus(),
             LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
-            modificationNode.getShortCircuitStatus(),
             modificationNode.getShortCircuitAnalysisResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
@@ -75,7 +73,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getModificationsToExclude(),
             node.getLoadFlowStatus(),
             LoadflowService.fromEntity(node.getLoadFlowResult()),
-            node.getShortCircuitStatus(),
             node.getShortCircuitAnalysisResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
@@ -144,13 +141,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void updateLoadFlowStatus(AbstractNode node, LoadFlowStatus loadFlowStatus) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setLoadFlowStatus(loadFlowStatus);
-        updateNode(modificationNode);
-    }
-
-    @Override
-    public void updateShortCircuitStatus(AbstractNode node, ShortCircuitStatus shortCircuitStatus) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setShortCircuitStatus(shortCircuitStatus);
         updateNode(modificationNode);
     }
 

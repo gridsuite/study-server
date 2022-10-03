@@ -12,7 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
 
@@ -65,10 +64,6 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
             name = "loadFlowResult_id_fk"
         ))
     private LoadFlowResultEntity loadFlowResult;
-
-    @Column(name = "shortCircuitStatus")
-    @Enumerated(EnumType.STRING)
-    private ShortCircuitStatus shortCircuitStatus;
 
     @Column(name = "shortCircuitAnalysisResultUuid")
     private UUID shortCircuitAnalysisResultUuid;

@@ -11,5 +11,6 @@ package org.gridsuite.study.server.dto;
  */
 public enum ShortCircuitStatus {
     NOT_DONE,
-    DONE
+    RUNNING,
+    COMPLETED
 }

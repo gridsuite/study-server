@@ -5,9 +5,4 @@
             <column name="short_circuit_analysis_result_uuid" type="uuid"/>
         </addColumn>
     </changeSet>
-    <changeSet author="homereti (generated)" id="1664373638434-6">
-        <addColumn tableName="network_modification_node_info">
-            <column name="short_circuit_status" type="varchar(255)"/>
-        </addColumn>
-    </changeSet>
 </databaseChangeLog>

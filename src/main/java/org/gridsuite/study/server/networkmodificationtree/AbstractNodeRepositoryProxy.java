@@ -178,10 +178,6 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         updateLoadFlowStatus(getNode(nodeUuid), loadFlowStatus);
     }
 
-    public void updateShortCircuitStatus(UUID nodeUuid, ShortCircuitStatus shortCircuitStatus) {
-        updateShortCircuitStatus(getNode(nodeUuid), shortCircuitStatus);
-    }
-
     public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         updateShortCircuitAnalysisResultUuid(getNode(nodeUuid), shortCircuitAnalysisResultUuid);
     }

@@ -132,7 +132,6 @@ public class NetworkModificationTreeService {
                 new HashSet<>(),
                 LoadFlowStatus.NOT_DONE,
                 null,
-                ShortCircuitStatus.NOT_DONE,
                 null,
                 null,
                 null,
@@ -434,11 +433,6 @@ public class NetworkModificationTreeService {
     @Transactional
     public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
-    }
-
-    @Transactional
-    public void updateShortCircuitStatus(UUID nodeUuid, ShortCircuitStatus shortCircuitStatus) {
-        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateShortCircuitStatus(nodeUuid, shortCircuitStatus));
     }
 
     @Transactional
