@@ -903,6 +903,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+        invalidateShortCircuitStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
     }
@@ -1050,6 +1051,10 @@ public class StudyService {
 
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
         networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
+    }
+
+    void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(String userId, UUID studyUuid) {
@@ -1486,9 +1491,14 @@ public class StudyService {
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid) {
         //TODO
-        String provider = "Provider";
+        String provider = "courtcirc";
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-        return shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, provider);
+        UUID result =  shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, provider);
+
+        updateShortCircuitAnalysisResultUuid(nodeUuid, result);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+
+        return result;
     }
 
     public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
