@@ -50,7 +50,6 @@ public class RestTemplateConfig {
         objectMapper.registerModule(new ContingencyJsonModule());
         objectMapper.registerModule(new LoadFlowResultJsonModule());
         objectMapper.registerModule(new LoadFlowParametersJsonModule());
-        objectMapper.registerModule(new ShortCircuitAnalysisJsonModule());
         return objectMapper;
     }
 
