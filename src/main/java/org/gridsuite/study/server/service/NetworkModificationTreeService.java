@@ -394,11 +394,6 @@ public class NetworkModificationTreeService {
         List<NodeModificationInfos> nodesModificationInfos = new ArrayList<>();
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> {
-            AbstractNode nodeDto = repositories.get(n.getType()).getNode(n.getIdNode());
-            if (nodeDto instanceof NetworkModificationNode) {
-                NetworkModificationNode node = (NetworkModificationNode) nodeDto;
-            }
-
             NodeModificationInfos nodeModificationInfos = repositories.get(n.getType()).getNodeModificationInfos(n.getIdNode());
             if (nodeModificationInfos != null) {
                 nodesModificationInfos.add(nodeModificationInfos);
