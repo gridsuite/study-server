@@ -59,7 +59,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "loadFlowResultEntity_id",
-        referencedColumnName  =  "id",
+        referencedColumnName = "id",
         foreignKey = @ForeignKey(
             name = "loadFlowResult_id_fk"
         ))
