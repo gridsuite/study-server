@@ -23,7 +23,7 @@ public class NodeModificationInfos {
 
     private UUID reportUuid;
 
-    private UUID lastSecurityAnalysisUuid;
+    private UUID securityAnalysisUuid;
 
-    private UUID lastSensitivityAnalysisUuid;
+    private UUID sensitivityAnalysisUuid;
 }

@@ -208,8 +208,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
             .reportUuid(networkModificationNode.getReportUuid())
-            .lastSecurityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
-            .lastSensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
+            .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
+            .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
             .build();
     }
 }
