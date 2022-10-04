@@ -32,6 +32,8 @@ public class DeleteNodeInfos {
 
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
+
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);
     }
@@ -46,5 +48,9 @@ public class DeleteNodeInfos {
 
     public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {
         securityAnalysisResultUuids.add(securityAnalysisResultUuid);
+    }
+
+    public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
+        sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
     }
 }

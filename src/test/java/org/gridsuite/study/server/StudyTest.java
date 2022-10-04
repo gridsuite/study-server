@@ -45,6 +45,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.RequestWithBody;
@@ -142,8 +143,6 @@ public class StudyTest {
     private static final String NEW_STUDY_CASE_UUID = "11888888-0000-0000-0000-000000000000";
     private static final String DUPLICATED_STUDY_UUID = "11888888-0000-0000-0000-111111111111";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
-    private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
-    private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String HEADER_UPDATE_TYPE = "updateType";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
@@ -189,6 +188,9 @@ public class StudyTest {
 
     @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private SensitivityAnalysisService sensitivityAnalysisService;
 
     @Autowired
     private SecurityAnalysisService securityAnalysisService;
@@ -293,6 +295,7 @@ public class StudyTest {
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
 
         // FIXME: remove lines when dicos will be used on the front side
         mapper.registerModule(new ReporterModelJsonModule() {
@@ -561,9 +564,6 @@ public class StudyTest {
                         return new MockResponse().setResponseCode(200).addHeader("Content-Disposition", "attachment; filename=fileName").setBody("byteData")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status":
-                        return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_2:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_3:
@@ -1333,6 +1333,7 @@ public class StudyTest {
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
@@ -1440,6 +1441,7 @@ public class StudyTest {
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2);
         output.receive(TIMEOUT, studyUpdateDestination);
 
@@ -1476,10 +1478,12 @@ public class StudyTest {
         assertEquals(LoadFlowStatus.NOT_DONE, ((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowStatus());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowResult());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSecurityAnalysisResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSensitivityAnalysisResultUuid());
 
         assertEquals(LoadFlowStatus.NOT_DONE, ((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowStatus());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResult());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSecurityAnalysisResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
 
         //Check requests to duplicate modification has been emitted
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
