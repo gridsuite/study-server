@@ -56,7 +56,7 @@ public class StudyException extends RuntimeException {
         INVALIDATE_BUILD_FAILED,
         UNKNOWN_NOTIFICATION_TYPE,
         GET_MODIFICATIONS_FAILED,
-        LINE_ATTACH_TO_SPLIT_LINE,
+        LINES_ATTACH_TO_SPLIT_LINES,
     }
 
     private final Type type;
