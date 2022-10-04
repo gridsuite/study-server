@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -29,6 +29,15 @@ spring:
         consumeBuildFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.failed
           group: studyBuildFailedGroup
+        consumeSensitivityAnalysisResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.result
+          group: studySensitivityAnalysisResultGroup
+        consumeSensitivityAnalysisStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.stopped
+          group: studySensitivityAnalysisStoppedGroup
+        consumeSensitivityAnalysisFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
+          group: studySensitivityAnalysisFailedGroup
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
           group: studyCaseImportSucceededGroup
@@ -40,7 +49,9 @@ spring:
 network-store-server:
   preloading-strategy: COLLECTION
 
-dbName: study
+powsybl-ws:
+  database:
+    name: study
 
 
 # default values for loadflow providers "Hades2" or "OpenLoadFlow"

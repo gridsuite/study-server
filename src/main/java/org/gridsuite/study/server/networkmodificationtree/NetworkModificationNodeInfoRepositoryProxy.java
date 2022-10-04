@@ -58,6 +58,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getLoadFlowStatus(),
             LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
             modificationNode.getSecurityAnalysisResultUuid(),
+            modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getBuildStatus());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
@@ -72,6 +73,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getLoadFlowStatus(),
             LoadflowService.fromEntity(node.getLoadFlowResult()),
             node.getSecurityAnalysisResultUuid(),
+            node.getSensitivityAnalysisResultUuid(),
             node.getBuildStatus()));
     }
 
@@ -156,6 +158,18 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public UUID getSecurityAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getSecurityAnalysisResultUuid();
+    }
+
+    @Override
+    public void updateSensitivityAnalysisResultUuid(AbstractNode node, UUID sensitivityAnalysisResultUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
+        updateNode(modificationNode);
+    }
+
+    @Override
+    public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getSensitivityAnalysisResultUuid();
     }
 
     private void updateNode(NetworkModificationNode node, List<UUID> changedNodes) {
