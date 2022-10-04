@@ -1057,8 +1057,6 @@ public class StudyService {
             Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
             updateStatuses(studyUuid, nodeUuid);
-        } catch (Exception e) {
-            System.out.println(e);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
