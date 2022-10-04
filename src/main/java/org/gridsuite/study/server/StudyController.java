@@ -1239,7 +1239,7 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach-to-split-line")
-    @Operation(summary = "update a line attach to a voltage level")
+    @Operation(summary = "update a line attach to a split line")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line attach to a voltage level has been updated.")})
     public ResponseEntity<Void> updateLineAttachToSplitLine(@PathVariable("studyUuid") UUID studyUuid,
                                                                @PathVariable("modificationUuid") UUID modificationUuid,

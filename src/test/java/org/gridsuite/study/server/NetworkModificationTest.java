@@ -239,6 +239,13 @@ public class NetworkModificationTest {
         List<EquipmentModificationInfos> lineAttachResponseInfos = new ArrayList<>();
         lineAttachResponseInfos.add(lineToAttachTo);
 
+        EquipmentModificationInfos lineToAttachToSplitLine = EquipmentModificationInfos.builder()
+                .type(ModificationType.LINE_ATTACH_TO_SPLIT_LINE)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> lineToAttachToSplitLineResponseInfos = new ArrayList<>();
+        lineAttachResponseInfos.add(lineToAttachToSplitLine);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -350,6 +357,14 @@ public class NetworkModificationTest {
                     } else {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(mapper.writeValueAsString(lineAttachResponseInfos))
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach-to-split-line[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(mapper.writeValueAsString(lineToAttachToSplitLineResponseInfos))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
@@ -1509,6 +1524,45 @@ public class NetworkModificationTest {
         assertTrue(updateRequest.isPresent());
         assertEquals(createLineAttachToVoltageLevelAttributes, creationRequest.get().getBody());
         assertEquals(createLineAttachToVoltageLevelAttributes, updateRequest.get().getBody());
+    }
+
+    @SneakyThrows
+    @Test
+    public void testLineAttachToSplitLine() {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node");
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String createLineAttachToSplitLineAttributes = "{\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"attachedLineId\":\"line3\",\"existingVoltageLevelId\":\"vl1\",\"bbsOrBusId\":\"v1bbs\",\"newLine1Id\":\"newLine1Id\",\"newLine1Name\":\"newLine1Name\",\"newLine2Id\":\"newLine2Id\",\"newLine2Name\":\"newLine2Name\"}";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach-to-split-line",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createLineAttachToSplitLineAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Collections.EMPTY_SET);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach-to-split-line",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createLineAttachToSplitLineAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        var requests = TestUtils.getRequestsWithBodyDone(2, server);
+        assertEquals(2, requests.size());
+        Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach-to-split-line\\?group=.*")).findFirst();
+        Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/line-attach-to-split-line-creation")).findFirst();
+        assertTrue(creationRequest.isPresent());
+        assertTrue(updateRequest.isPresent());
+        assertEquals(createLineAttachToSplitLineAttributes, creationRequest.get().getBody());
+        assertEquals(createLineAttachToSplitLineAttributes, updateRequest.get().getBody());
     }
 
     @Test

@@ -648,7 +648,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NodeModificationInfos getNodeModificationInfos(UUID nodeUuid) {
-        NodeModificationInfos nodeModificationInfos = nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid)).orElse(null);
+        NodeModificationInfos nodeModificationInfos = nodesRepository
+                .findById(nodeUuid)
+                .map(n -> repositories.get(n.getType()).getNodeModificationInfos(nodeUuid))
+                .orElse(null);
         if (nodeModificationInfos == null) {
             throw new StudyException(ELEMENT_NOT_FOUND);
         }
