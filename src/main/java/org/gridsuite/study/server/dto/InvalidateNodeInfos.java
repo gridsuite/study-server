@@ -30,6 +30,8 @@ public class InvalidateNodeInfos {
 
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
+
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
     }
@@ -40,5 +42,9 @@ public class InvalidateNodeInfos {
 
     public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {
         securityAnalysisResultUuids.add(securityAnalysisResultUuid);
+    }
+
+    public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
+        sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
     }
 }

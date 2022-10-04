@@ -53,6 +53,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.ReportService;
 import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.utils.RequestWithBody;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -137,6 +138,9 @@ public class NetworkModificationTest {
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
+    private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
+    private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+
     private static final String POST = "POST";
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
@@ -178,6 +182,9 @@ public class NetworkModificationTest {
     @Autowired
     private SecurityAnalysisService securityAnalysisService;
 
+    @Autowired
+    private SensitivityAnalysisService sensitivityAnalysisService;
+
     @MockBean
     private NetworkStoreService networkStoreService;
 
@@ -213,6 +220,7 @@ public class NetworkModificationTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
+        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
 
         String substationModificationListAsString = mapper.writeValueAsString(List.of(
                 EquipmentModificationInfos.builder().substationIds(Set.of()).uuid(UUID.fromString(MODIFICATION_UUID)).build()));
@@ -343,7 +351,7 @@ public class NetworkModificationTest {
                             .setBody(voltageLevelDataAsString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
-                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits[?]group=.*") && POST.equals(request.getMethod())) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-splits[?]group=.*") && POST.equals(request.getMethod())) {
                     if (body.peek().readUtf8().equals("bogus")) {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
@@ -351,7 +359,7 @@ public class NetworkModificationTest {
                                 .setBody(mapper.writeValueAsString(lineSplitResponseInfos))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
-                }  else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach[?]group=.*") && POST.equals(request.getMethod())) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/line-attach[?]group=.*") && POST.equals(request.getMethod())) {
                     if (body.peek().readUtf8().equals("bogus")) {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     } else {
@@ -443,6 +451,18 @@ public class NetworkModificationTest {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse().setResponseCode(200).setBody(SECURITY_ANALYSIS_STATUS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                    return new MockResponse().setResponseCode(500);
+                } else if (("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
+                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
+                        "application/json; charset=utf-8");
+                } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
+                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
+                    if (request.getMethod().equals("DELETE")) {
+                        return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                     return new MockResponse().setResponseCode(500);
                 } else {
@@ -624,6 +644,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
                         studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        output.receive(TIMEOUT, studyUpdateDestination);
         output.receive(TIMEOUT, studyUpdateDestination);
         output.receive(TIMEOUT, studyUpdateDestination);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1722,6 +1743,7 @@ public class NetworkModificationTest {
         UUID node3ReportUuid = UUID.randomUUID();
         modificationNode1.setReportUuid(node1ReportUuid);
         modificationNode1.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
+        modificationNode1.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         modificationNode3.setReportUuid(node3ReportUuid);
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
@@ -1740,10 +1762,11 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        var requests = TestUtils.getRequestsWithBodyDone(5, server);
+        var requests = TestUtils.getRequestsWithBodyDone(7, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/" + modificationTypeUrl) && r.getBody().equals(generatorAttributesUpdated)));
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
     }
 
     private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, int nbReportExpected) throws Exception {
@@ -1878,6 +1901,7 @@ public class NetworkModificationTest {
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
     }
 
     private void checkEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
