@@ -1558,6 +1558,20 @@ public class NetworkModificationTest {
         assertTrue(updateRequest.isPresent());
         assertEquals(createLinesAttachToSplitLinesAttributes, creationRequest.get().getBody());
         assertEquals(createLinesAttachToSplitLinesAttributes, updateRequest.get().getBody());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines-attach-to-split-lines",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                        .content("bogus"))
+                .andExpect(status().is5xxServerError());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-attach-to-split-lines",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content("bogus"))
+                .andExpectAll(status().is5xxServerError());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        TestUtils.getRequestsWithBodyDone(2, server);
     }
 
     @Test
