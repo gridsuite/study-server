@@ -72,10 +72,7 @@ public class SensitivityAnalysisService {
                                        String variantId,
                                        UUID reportUuid,
                                        String provider,
-                                       List<UUID> variablesFiltersListUuids,
-                                       List<UUID> contingencyListUuids,
-                                       List<UUID> branchFiltersListUuids,
-                                       String parameters) {
+                                       String sensitivityInput) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -92,16 +89,13 @@ public class SensitivityAnalysisService {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var path = uriComponentsBuilder
-            .queryParam("variablesFiltersListUuid", variablesFiltersListUuids)
-            .queryParam("contingencyListUuid", contingencyListUuids)
-            .queryParam("branchFiltersListUuid", branchFiltersListUuids)
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(sensitivityInput, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
