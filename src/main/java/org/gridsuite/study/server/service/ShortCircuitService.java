@@ -67,10 +67,19 @@ public class ShortCircuitService {
         String variantId = getVariantId(nodeUuid);
         UUID reportUuid = getReportUuid(nodeUuid);
 
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", reportUuid.toString())
+                .queryParam("receiver", receiver)
                 .queryParam("reportName", "shortcircuit");
+
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
