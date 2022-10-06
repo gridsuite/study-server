@@ -1307,9 +1307,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started")})
     public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                       @RequestBody String sensitivityInput) {
+                                                       @RequestBody String sensitivityAnalysisInput) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid, sensitivityInput));
+        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid, sensitivityAnalysisInput));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")

@@ -72,7 +72,7 @@ public class SensitivityAnalysisService {
                                        String variantId,
                                        UUID reportUuid,
                                        String provider,
-                                       String sensitivityInput) {
+                                       String sensitivityAnalysisInput) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -95,7 +95,7 @@ public class SensitivityAnalysisService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(sensitivityInput, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(sensitivityAnalysisInput, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
