@@ -7,6 +7,13 @@ spring:
   data:
     elasticsearch:
       host: localhost
+      ## to fill if authentication is needed
+      # user:
+      # password:
+
+powsybl-ws:
+  database:
+    host: localhost
 
 backing-services:
   case:

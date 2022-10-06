@@ -44,12 +44,14 @@ spring:
         consumeCaseImportFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
           group: studyCaseImportFailedGroup
-      source: publishStudyUpdate
+      output-bindings: publishStudyUpdate
 
 network-store-server:
   preloading-strategy: COLLECTION
 
-dbName: study
+powsybl-ws:
+  database:
+    name: study
 
 
 # default values for loadflow providers "Hades2" or "OpenLoadFlow"

@@ -222,6 +222,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
             .reportUuid(networkModificationNode.getReportUuid())
+            .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
+            .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
             .build();
     }
 }
