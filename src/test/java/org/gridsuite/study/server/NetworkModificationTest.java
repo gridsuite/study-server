@@ -7,44 +7,34 @@
 
 package org.gridsuite.study.server;
 
-import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
-
-/**
- * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
- */
-
-import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
-
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.collect.ImmutableSet;
+import com.powsybl.commons.datasource.ReadOnlyDataSource;
+import com.powsybl.commons.datasource.ResourceDataSource;
+import com.powsybl.commons.datasource.ResourceSet;
+import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.VariantManagerConstants;
+import com.powsybl.iidm.xml.XMLImporter;
+import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import lombok.SneakyThrows;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+import okio.Buffer;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.modification.BusbarSectionCreationInfos;
-import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
-import org.gridsuite.study.server.dto.modification.LineSplitWithVoltageLevelInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
-import org.gridsuite.study.server.dto.modification.VoltageLevelCreationInfos;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -81,29 +71,18 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.collect.ImmutableSet;
-import com.powsybl.commons.datasource.ReadOnlyDataSource;
-import com.powsybl.commons.datasource.ResourceDataSource;
-import com.powsybl.commons.datasource.ResourceSet;
-import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.VariantManagerConstants;
-import com.powsybl.iidm.xml.XMLImporter;
-import com.powsybl.loadflow.LoadFlowParameters;
-import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
-import lombok.SneakyThrows;
-import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
-import okio.Buffer;
+import static org.gridsuite.study.server.StudyException.Type.LINE_MODIFICATION_FAILED;
+import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -243,6 +222,13 @@ public class NetworkModificationTest {
         List<EquipmentModificationInfos> lineAttachResponseInfos = new ArrayList<>();
         lineAttachResponseInfos.add(lineToAttachTo);
 
+        EquipmentModificationInfos linesToAttachToSplitLines = EquipmentModificationInfos.builder()
+                .type(ModificationType.LINES_ATTACH_TO_SPLIT_LINES)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> linesToAttachToSplitLinesResponseInfos = new ArrayList<>();
+        lineAttachResponseInfos.add(linesToAttachToSplitLines);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -354,6 +340,14 @@ public class NetworkModificationTest {
                     } else {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(mapper.writeValueAsString(lineAttachResponseInfos))
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines-attach-to-split-lines[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(mapper.writeValueAsString(linesToAttachToSplitLinesResponseInfos))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
@@ -1526,6 +1520,59 @@ public class NetworkModificationTest {
         assertTrue(updateRequest.isPresent());
         assertEquals(createLineAttachToVoltageLevelAttributes, creationRequest.get().getBody());
         assertEquals(createLineAttachToVoltageLevelAttributes, updateRequest.get().getBody());
+    }
+
+    @SneakyThrows
+    @Test
+    public void testLinesAttachToSplitLines() {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node");
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String createLinesAttachToSplitLinesAttributes = "{\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"attachedLineId\":\"line3\",\"voltageLevelId\":\"vl1\",\"bbsBusId\":\"v1bbs\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name\",\"replacingLine2Id\":\"replacingLine2Id\",\"replacingLine2Name\":\"replacingLine2Name\"}";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines-attach-to-split-lines",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createLinesAttachToSplitLinesAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Collections.EMPTY_SET);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-attach-to-split-lines",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createLinesAttachToSplitLinesAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        var requests = TestUtils.getRequestsWithBodyDone(2, server);
+        assertEquals(2, requests.size());
+        Optional<RequestWithBody> creationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/lines-attach-to-split-lines\\?group=.*")).findFirst();
+        Optional<RequestWithBody> updateRequest = requests.stream().filter(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/lines-attach-to-split-lines-creation")).findFirst();
+        assertTrue(creationRequest.isPresent());
+        assertTrue(updateRequest.isPresent());
+        assertEquals(createLinesAttachToSplitLinesAttributes, creationRequest.get().getBody());
+        assertEquals(createLinesAttachToSplitLinesAttributes, updateRequest.get().getBody());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines-attach-to-split-lines",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                        .content("bogus"))
+                .andExpect(status().is5xxServerError());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-attach-to-split-lines",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content("bogus"))
+                .andExpectAll(status().is5xxServerError());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        TestUtils.getRequestsWithBodyDone(2, server);
     }
 
     @Test
