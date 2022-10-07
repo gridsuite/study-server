@@ -75,7 +75,7 @@ public class ShortCircuitService {
         }
 
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run")
+                .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportId", reportUuid.toString())
                 .queryParam("receiver", receiver)
                 .queryParam("reportName", "shortcircuit");
