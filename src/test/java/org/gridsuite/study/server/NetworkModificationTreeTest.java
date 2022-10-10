@@ -30,7 +30,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
-import org.gridsuite.study.server.dto.ReportingInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -835,19 +834,5 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications", root.getStudyId(), node.getId()))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
-    }
-
-    @Test
-    @SneakyThrows
-    public void testGetUppingReportInfosFromNode() {
-        RootNode root = createRoot();
-        final NetworkModificationNode hypo = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), BuildStatus.NOT_BUILT);
-        createNode(root.getStudyId(), root, hypo);
-
-        List<ReportingInfos> uppingRes = networkModificationTreeService.getUppingReportInfos(hypo.getId(), false);
-
-        assertEquals(2, uppingRes.size());
-        assertEquals(hypo.getId(), uppingRes.get(0).getDefiningNodeUuid());
-        assertEquals(root.getId(), uppingRes.get(1).getDefiningNodeUuid());
     }
 }

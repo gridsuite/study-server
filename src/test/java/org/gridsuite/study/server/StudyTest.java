@@ -98,7 +98,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -149,8 +149,9 @@ public class StudyTest {
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_WITH_ERRORS_UUID = UUID.fromString(IMPORTED_CASE_WITH_ERRORS_UUID_STRING);
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
+    private static final UUID REPORT_UUID = UUID.randomUUID();
+    private static final ReporterModel ROOT_REPORT_TEST = new ReporterModel(REPORT_UUID.toString(), REPORT_UUID.toString());
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
-    private static final ReporterModel REPORT_TEST_ROOT_NODE = new ReporterModel("test", "Root");
     private static final String VARIANT_ID = "variant_1";
     public static final String POST = "POST";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -325,6 +326,8 @@ public class StudyTest {
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
+        ROOT_REPORT_TEST.addSubReporter(REPORT_TEST);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -405,7 +408,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(REPORT_TEST))
+                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(ROOT_REPORT_TEST))
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     // need asynchronous run to get study creation requests
@@ -859,7 +862,7 @@ public class StudyTest {
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<ReporterModel> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReporterModel>>() { });
 
-        assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST_ROOT_NODE));
+        assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report", studyUuid, rootNodeUuid).header("userId", "userId"))

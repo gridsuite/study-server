@@ -15,7 +15,11 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-import org.elasticsearch.index.query.*;
+import org.apache.commons.lang3.tuple.Pair;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermsQueryBuilder;
+import org.elasticsearch.index.query.WildcardQueryBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyException;
@@ -35,7 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -52,10 +56,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
+import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.service.ReportService.NETWORK_MODIFICATION_TYPE_REPORT;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -950,7 +957,7 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
-        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, variantId, provider, contingencyListNames, parameters, receiver);
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, parameters, receiver);
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1064,7 +1071,7 @@ public class StudyService {
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
             List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
-                    .createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
+                    .createEquipment(studyUuid, createEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid, nodeInfos.getId().toString());
             Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
             updateStatuses(studyUuid, nodeUuid);
@@ -1188,14 +1195,10 @@ public class StudyService {
         return networkModificationTreeService.getLoadFlowInfos(nodeUuid);
     }
 
-    private BuildInfos getBuildInfos(UUID nodeUuid) {
-        return networkModificationTreeService.getBuildInfos(nodeUuid);
-    }
-
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        BuildInfos buildInfos = getBuildInfos(nodeUuid);
+        BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid);
         networkModificationTreeService.updateBuildStatus(nodeUuid, BuildStatus.BUILDING);
-        buildInfos.getReportUuids().forEach(reportService::deleteReport);
+        reportService.deleteReport(buildInfos.getReportUuid());
 
         try {
             networkModificationService.buildNode(studyUuid, nodeUuid, buildInfos);
@@ -1376,10 +1379,50 @@ public class StudyService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<ReportingInfos> reportingInfos = networkModificationTreeService.getUppingReportInfos(nodeUuid, nodeOnlyReport);
+        return getSubReportersByNode(nodeUuid, nodeOnlyReport);
+    }
 
-        return reportService.getReporterModels(reportingInfos);
+    private List<ReporterModel> getSubReportersByNode(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<ReporterModel> subReporters = getSubReportersByNode(nodeUuid);
+        if (subReporters.isEmpty()) {
+            return subReporters;
+        } else if (nodeOnlyReport) {
+            return List.of(subReporters.get(subReporters.size() - 1));
+        } else {
+            if (subReporters.get(0).getTaskKey().equals(ROOT_NODE_NAME)) {
+                return subReporters;
+            }
+            networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
+            Optional<UUID> parentUuid =  networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
+            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNode(parentUuid.get(), false).stream(), subReporters.stream()).collect(Collectors.toList());
+        }
+    }
+
+    private List<ReporterModel> getSubReportersByNode(UUID nodeUuid) {
+        AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
+        ReporterModel reporter = reportService.getReport(nodeInfos.getReportUuid(), nodeInfos.getId().toString());
+        Map<String, Pair<List<ReporterModel>, List<ReporterModel>>> subReportersByNode = new LinkedHashMap<>();
+        reporter.getSubReporters().forEach(subReporter -> subReportersByNode.put(getNodeIdFromReportKey(subReporter), Pair.of(new ArrayList<>(), new ArrayList<>())));
+        reporter.getSubReporters().forEach(subReporter -> {
+            if (subReporter.getTaskKey().endsWith(NETWORK_MODIFICATION_TYPE_REPORT)) {
+                subReportersByNode.get(getNodeIdFromReportKey(subReporter)).getLeft().addAll(subReporter.getSubReporters());
+            } else {
+                subReportersByNode.get(getNodeIdFromReportKey(subReporter)).getRight().addAll(subReporter.getSubReporters());
+            }
+        });
+        return subReportersByNode.keySet().stream().map(nodeId -> {
+            ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId);
+            Pair<List<ReporterModel>, List<ReporterModel>> nodeSubReporters = subReportersByNode.get(nodeId);
+            nodeSubReporters.getLeft().forEach(newSubReporter::addSubReporter);
+            nodeSubReporters.getRight().forEach(newSubReporter::addSubReporter);
+            return newSubReporter;
+        }).collect(Collectors.toList());
+    }
+
+    private String getNodeIdFromReportKey(ReporterModel reporter) {
+        return Arrays.stream(reporter.getTaskKey().split("@")).findFirst().orElseThrow();
     }
 
     public void deleteNodeReport(UUID nodeUuid) {

@@ -539,7 +539,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode2 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 2);
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 1);
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
@@ -550,7 +550,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode3 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 3);
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 1);
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
@@ -967,7 +967,7 @@ public class NetworkModificationTest {
             .andExpect(status().isOk());
 
         AtomicReference<AbstractNode> node = new AtomicReference<>();
-        node.set(networkModificationTreeService.getSimpleNode(modificationNode1.getId()));
+        node.set(networkModificationTreeService.getNode(modificationNode1.getId()));
         NetworkModificationNode modificationNode = (NetworkModificationNode) node.get();
         assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
 
@@ -979,7 +979,7 @@ public class NetworkModificationTest {
                         studyUuid, modificationNode1.getId(), modificationUuid))
             .andExpect(status().isOk());
 
-        node.set(networkModificationTreeService.getSimpleNode(modificationNode1.getId()));
+        node.set(networkModificationTreeService.getNode(modificationNode1.getId()));
         modificationNode = (NetworkModificationNode) node.get();
         assertTrue(modificationNode.getModificationsToExclude().isEmpty());
 

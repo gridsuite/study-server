@@ -40,6 +40,7 @@ public class RootNodeInfoRepositoryProxy extends AbstractNodeRepositoryProxy<Roo
     @Override
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         return NodeModificationInfos.builder()
+            .id(node.getId())
             .variantId("")      // we will use the network initial variant
             .reportUuid(node.getReportUuid())
             .build();

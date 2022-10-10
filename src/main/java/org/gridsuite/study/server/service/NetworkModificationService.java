@@ -224,7 +224,7 @@ public class NetworkModificationService {
     }
 
     public List<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes,
-            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid, String reporterId) {
         List<EquipmentModificationInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createEquipmentAttributes);
@@ -234,7 +234,8 @@ public class NetworkModificationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
                 .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid);
+                .queryParam(REPORT_UUID, reportUuid)
+                .queryParam(REPORTER_ID, reporterId);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }

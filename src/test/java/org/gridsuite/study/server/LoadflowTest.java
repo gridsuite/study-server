@@ -170,11 +170,11 @@ public class LoadflowTest {
                 String path = Objects.requireNonNull(request.getPath());
                 request.getBody();
 
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
                             .setBody(loadFlowOKString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=(Hades2|OpenLoadFlow)&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
                             .setBody(loadFlowErrorString)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -204,7 +204,7 @@ public class LoadflowTest {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_LOADFLOW_ERROR_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
 
         // check load flow status
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
@@ -249,7 +249,7 @@ public class LoadflowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
 
         // check load flow status
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
@@ -302,7 +302,7 @@ public class LoadflowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID)));
 
         // get default load flow provider
         mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyNameUserIdUuid)).andExpectAll(
@@ -338,7 +338,7 @@ public class LoadflowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_LOADFLOW);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=loadflow&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID_3)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=.*&provider=" + defaultLoadflowProvider + "&variantId=" + VARIANT_ID_3)));
 
         // check load flow status
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos", studyNameUserIdUuid,
