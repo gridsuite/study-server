@@ -12,6 +12,7 @@ package org.gridsuite.study.server;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
+import static org.gridsuite.study.server.service.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -49,11 +50,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -88,10 +91,14 @@ public class ShortCircuitTest {
 
     private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = "1b6cc22c-3f33-11ed-b878-0242ac120002";
 
+    private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
+
     public static final String SHORT_CIRCUIT_PARAMETERS_JSON = "{\"version\":\"1.0\",\"withLimitViolations\":true,\"withVoltageMap\":true,\"withFeederResult\":true,\"studyType\":\"TRANSIENT\",\"minVoltageDropProportionalThreshold\":20.0}";
     public static final String SHORT_CIRCUIT_PARAMETERS_JSON2 = "{\"version\":\"1.0\",\"studyType\":\"SUB_TRANSIENT\",\"minVoltageDropProportionalThreshold\":1.0}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]";
+
+    private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
 
     private static final String VARIANT_ID_2 = "variant_2";
@@ -105,6 +112,9 @@ public class ShortCircuitTest {
 
     @Autowired
     private OutputDestination output;
+
+    @Autowired
+    private InputDestination input;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -122,6 +132,9 @@ public class ShortCircuitTest {
 
     //output destinations
     private String studyUpdateDestination = "study.update";
+    private String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
+    private String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
+    private String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
 
     @Before
     public void setup() throws IOException {
@@ -152,6 +165,18 @@ public class ShortCircuitTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")) {
+                    return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop.*")
+                        || path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID + "/stop.*")) {
+                    String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID : SHORT_CIRCUIT_ANALYSIS_RESULT_UUID;
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", resultUuid)
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .build(), shortCircuitAnalysisStoppedDestination);
+                    return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -238,6 +263,23 @@ public class ShortCircuitTest {
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
+
+        // get short circuit status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode3Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status")));
+
+        // stop short circuit analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
+
+        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
@@ -313,7 +355,7 @@ public class ShortCircuitTest {
 
     @After
     public void tearDown() {
-        List<String> destinations = List.of(studyUpdateDestination);
+        List<String> destinations = List.of(studyUpdateDestination, shortCircuitAnalysisResultDestination, shortCircuitAnalysisStoppedDestination, shortCircuitAnalysisFailedDestination);
 
         cleanDB();
 
