@@ -36,7 +36,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.NotificationService;
-import org.gridsuite.study.server.service.ShortCircuitAnalysisService;
 import org.gridsuite.study.server.service.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -254,7 +253,7 @@ public class ShortCircuitTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .build();
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitAnalysisService.toEntity(ShortCircuitAnalysisService.getDefaultShortCircuitParamters());
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParamters());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider", defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);

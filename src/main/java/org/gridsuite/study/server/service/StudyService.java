@@ -248,7 +248,7 @@ public class StudyService {
             return null;
         }
         LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
-        ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitAnalysisService.fromEntity(sourceStudy.getShortCircuitParameters());
+        ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, copiedShortCircuitParameters, userId));
@@ -266,8 +266,8 @@ public class StudyService {
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
-            ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitAnalysisService.getDefaultShortCircuitParamters();
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitAnalysisService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid);
+            ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParamters();
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -936,13 +936,13 @@ public class StudyService {
 
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(studyEntity -> ShortCircuitAnalysisService.fromEntity(studyEntity.getShortCircuitParameters()))
+                .map(studyEntity -> ShortCircuitService.fromEntity(studyEntity.getShortCircuitParameters()))
                 .orElse(null);
     }
 
     @Transactional
     public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters) {
-        updateShortCircuitParameters(studyUuid, ShortCircuitAnalysisService.toEntity(parameters != null ? parameters : ShortCircuitAnalysisService.getDefaultShortCircuitParamters()));
+        updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParamters()));
     }
 
     @Transactional

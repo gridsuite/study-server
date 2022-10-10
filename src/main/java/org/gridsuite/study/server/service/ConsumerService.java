@@ -241,8 +241,8 @@ public class ConsumerService {
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    ShortCircuitParameters shortCircuitParameters = ShortCircuitAnalysisService.getDefaultShortCircuitParamters();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitAnalysisService.toEntity(shortCircuitParameters), importReportUuid);
+                    ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParamters();
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {
