@@ -146,7 +146,7 @@ public class ShortCircuitTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 request.getBody();
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportId=.*&reportName=shortcircuit&variantId=.*")) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=.*")) {
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -226,7 +226,7 @@ public class ShortCircuitTest {
                 .andReturn();
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportId=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
 
         resultAsString = mvcResult.getResponse().getContentAsString();
         UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);

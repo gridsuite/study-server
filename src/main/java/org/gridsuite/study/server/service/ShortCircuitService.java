@@ -78,7 +78,7 @@ public class ShortCircuitService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportId", reportUuid.toString())
+                .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("receiver", receiver)
                 .queryParam("reportName", "shortcircuit");
 
@@ -195,11 +195,11 @@ public class ShortCircuitService {
                 parameters.getMinVoltageDropProportionalThreshold());
     }
 
-    public static ShortCircuitParameters getDefaultShortCircuitParamters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, true);
-    }
-
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
         this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
+    }
+
+    public static ShortCircuitParameters getDefaultShortCircuitParamters() {
+        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, true);
     }
 }
