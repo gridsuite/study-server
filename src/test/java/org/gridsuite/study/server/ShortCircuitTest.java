@@ -220,16 +220,13 @@ public class ShortCircuitTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid))
                 .andExpect(status().isForbidden());
 
-//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT);
-
         //run a short circuit
         mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid))
                 .andExpect(status().isOk())
                 .andReturn();
 
-//        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run\\?reportId=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportId=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
 
         resultAsString = mvcResult.getResponse().getContentAsString();
         UUID uuidResponse = objectMapper.readValue(resultAsString, UUID.class);
