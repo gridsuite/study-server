@@ -26,6 +26,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -103,7 +104,7 @@ public class SensitivityAnalysisService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResult(UUID nodeUuid) {
+    public String getSensitivityAnalysisResultNaive(UUID nodeUuid) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
         if (resultUuidOpt.isEmpty()) {
@@ -114,6 +115,29 @@ public class SensitivityAnalysisService {
             .buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public String getSensitivityAnalysisResult(UUID nodeUuid, String selector) {
+        String result;
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+
+        // initializing from uri string (not from path string) allows build() to escape selector content
+        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString(), "tabbed")
+            .queryParam("selector", selector).build().toUri();
+        try {
+            result = restTemplate.getForObject(uri, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
