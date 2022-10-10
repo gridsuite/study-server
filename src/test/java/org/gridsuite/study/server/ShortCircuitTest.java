@@ -160,6 +160,10 @@ public class ShortCircuitTest {
                 String path = Objects.requireNonNull(request.getPath());
                 request.getBody();
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=.*")) {
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse().setResponseCode(200)
                             .setBody(shortCircuitAnalysisResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -241,16 +245,30 @@ public class ShortCircuitTest {
                 modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
 
-        // run a short circuit on root node (not allowed)
+        // run a short circuit analysis on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid))
                 .andExpect(status().isForbidden());
 
-        //run a short circuit
+        //run a short circuit analysis
         mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, modificationNode3Uuid))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, updateType);
+
+        Message<byte[]> shortCircuitAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) shortCircuitAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT, updateType);
+
+        shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, updateType);
+
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
 
         resultAsString = mvcResult.getResponse().getContentAsString();
@@ -274,9 +292,9 @@ public class ShortCircuitTest {
         // stop short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
 
-        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        String updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
         assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
