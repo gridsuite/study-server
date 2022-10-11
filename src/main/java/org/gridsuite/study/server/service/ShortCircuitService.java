@@ -96,27 +96,14 @@ public class ShortCircuitService {
     }
 
     public String getShortCircuitAnalysisResult(UUID nodeUuid) {
-        String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}")
-                .buildAndExpand(resultUuidOpt.get()).toUriString();
-        try {
-            result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "");
     }
 
     public String getShortCircuitAnalysisStatus(UUID nodeUuid) {
+        return getShortCircuitAnalysisResultOrStatus(nodeUuid, "/status");
+    }
+
+    public String getShortCircuitAnalysisResultOrStatus(UUID nodeUuid, String suffix) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
 
@@ -124,7 +111,7 @@ public class ShortCircuitService {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/status")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}" + suffix)
                 .buildAndExpand(resultUuidOpt.get()).toUriString();
         try {
             result = restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
