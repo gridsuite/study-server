@@ -93,6 +93,8 @@ public class ShortCircuitTest {
 
     private static final String SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
 
+    private static final String NO_RESULT_UUID = "1b6cc22c-3f33-11ed-b878-0242ac120002";
+
     private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
     public static final String SHORT_CIRCUIT_PARAMETERS_JSON = "{\"version\":\"1.0\",\"withLimitViolations\":true,\"withVoltageMap\":true,\"withFeederResult\":true,\"studyType\":\"TRANSIENT\",\"minVoltageDropProportionalThreshold\":20.0}";
@@ -104,6 +106,8 @@ public class ShortCircuitTest {
     private static final String VARIANT_ID = "variant_1";
 
     private static final String VARIANT_ID_2 = "variant_2";
+
+    private static final String VARIANT_ID_3 = "variant_3";
 
     private static final long TIMEOUT = 1000;
 
@@ -249,12 +253,18 @@ public class ShortCircuitTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
+
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
+
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
                 modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
+
+        NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
+                modificationNode3Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 4");
+        UUID modificationNode4Uuid = modificationNode4  .getId();
 
         // run a short circuit analysis on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid))
@@ -326,6 +336,17 @@ public class ShortCircuitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=" + VARIANT_ID)));
+
+        // No short circuit result
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, modificationNode4Uuid)).andExpectAll(
+                status().isNoContent());
+
+        // No short circuit status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, modificationNode4Uuid)).andExpectAll(
+                status().isNoContent());
+
+        // stop non existing short circuit analysis
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode4Uuid)).andExpect(status().isOk());
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
