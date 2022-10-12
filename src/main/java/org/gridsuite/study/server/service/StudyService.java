@@ -1216,7 +1216,8 @@ public class StudyService {
         checkStudyContainsNode(studyUuid, nodeToCopyUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
-        updateStatuses(studyUuid, duplicatedNodeUuid);
+        boolean invalidateBuild = !"[]".equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
+        updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
     }
 
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
@@ -1254,7 +1255,13 @@ public class StudyService {
     }
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
+        updateStatuses(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus, true);
+    }
+
+    private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateBuild) {
+        if (invalidateBuild) {
+            invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
+        }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
