@@ -1612,8 +1612,9 @@ public class StudyTest {
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
 
-        var requests = TestUtils.getRequestsDone(1, server);
+        var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
         List<NodeEntity> allNodesAfterDuplication = networkModificationTreeService.getAllNodes(studyUuid);
 
