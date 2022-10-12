@@ -34,7 +34,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "userId", nullable = false)
     private String userId;
 
-    @Column(name = "creationDate",  nullable = false)
+    @Column(name = "creationDate", nullable = false)
     private LocalDateTime date;
 
     @Column(name = "networkUuid", nullable = false)
@@ -43,24 +43,24 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "networkId", nullable = false)
     private String networkId;
 
-    @Column(name = "caseFormat",  nullable = false)
+    @Column(name = "caseFormat", nullable = false)
     private String caseFormat;
 
     @Column(name = "caseUuid", nullable = false)
     private UUID caseUuid;
 
-    @Column(name = "casePrivate",  nullable = false)
+    @Column(name = "casePrivate", nullable = false)
     private boolean casePrivate;
 
-    @Column(name = "caseName",  nullable = false)
+    @Column(name = "caseName", nullable = false)
     private String caseName;
 
     @Column(name = "loadFlowProvider")
     private String loadFlowProvider;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name  =  "loadFlowParametersEntity_id",
-            referencedColumnName  =  "id",
+    @JoinColumn(name = "loadFlowParametersEntity_id",
+            referencedColumnName = "id",
             foreignKey = @ForeignKey(
                     name = "loadFlowParameters_id_fk"
             ), nullable = false)
