@@ -98,7 +98,7 @@ public class ShortCircuitTest {
     private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
     public static final String SHORT_CIRCUIT_PARAMETERS_JSON = "{\"version\":\"1.0\",\"withLimitViolations\":true,\"withVoltageMap\":true,\"withFeederResult\":true,\"studyType\":\"TRANSIENT\",\"minVoltageDropProportionalThreshold\":20.0}";
-    public static final String SHORT_CIRCUIT_PARAMETERS_JSON2 = "{\"version\":\"1.0\",\"studyType\":\"SUB_TRANSIENT\",\"minVoltageDropProportionalThreshold\":1.0}";
+    public static final String SHORT_CIRCUIT_PARAMETERS_JSON2 = "{\"version\":\"1.0\",\"withLimitViolations\":false,\"withVoltageMap\":false,\"withFeederResult\":false,\"studyType\":\"SUB_TRANSIENT\",\"minVoltageDropProportionalThreshold\":1.0}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]";
 
