@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
+ * Copyright (c) 2022, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -14,10 +14,8 @@ import com.powsybl.shortcircuit.ShortCircuitParameters;
 
 import java.io.IOException;
 
-import static com.powsybl.shortcircuit.ShortCircuitConstants.*;
-
 /**
- * @author Boubakeur Brahimi
+ * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 //TODO: to be removed when fix is done in powsybl-core
 public class ShortCircuitParametersSerializer extends StdSerializer<ShortCircuitParameters> {
@@ -30,9 +28,9 @@ public class ShortCircuitParametersSerializer extends StdSerializer<ShortCircuit
     public void serialize(ShortCircuitParameters parameters, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         jsonGenerator.writeStartObject();
         jsonGenerator.writeStringField("version", ShortCircuitParameters.VERSION);
-        JsonUtil.writeOptionalBooleanField(jsonGenerator, "withLimitViolations", parameters.isWithLimitViolations(), DEFAULT_WITH_LIMIT_VIOLATIONS);
-        JsonUtil.writeOptionalBooleanField(jsonGenerator, "withVoltageMap", parameters.isWithVoltageMap(), DEFAULT_WITH_VOLTAGE_MAP);
-        JsonUtil.writeOptionalBooleanField(jsonGenerator, "withFeederResult", parameters.isWithFeederResult(), DEFAULT_WITH_FEEDER_RESULT);
+        jsonGenerator.writeBooleanField("withLimitViolations", parameters.isWithLimitViolations());
+        jsonGenerator.writeBooleanField("withVoltageMap", parameters.isWithVoltageMap());
+        jsonGenerator.writeBooleanField("withFeederResult", parameters.isWithFeederResult());
         jsonGenerator.writeStringField("studyType", parameters.getStudyType().name());
         JsonUtil.writeOptionalDoubleField(jsonGenerator, "minVoltageDropProportionalThreshold", parameters.getMinVoltageDropProportionalThreshold());
         JsonUtil.writeExtensions(parameters, jsonGenerator, serializerProvider, JsonShortCircuitParameters.getExtensionSerializers());
