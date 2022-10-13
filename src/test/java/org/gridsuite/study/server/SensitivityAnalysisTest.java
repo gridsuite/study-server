@@ -145,6 +145,8 @@ public class SensitivityAnalysisTest {
     private String sensitivityAnalysisStoppedDestination = "sensitivityanalysis.stopped";
     private String sensitivityAnalysisFailedDestination = "sensitivityanalysis.failed";
 
+    private boolean shouldNotFind = false;
+
     @Before
     public void setup() throws IOException {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
@@ -196,6 +198,7 @@ public class SensitivityAnalysisTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
+                System.out.println(path + " shouldNotFind " + shouldNotFind);
                 request.getBody();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
@@ -235,12 +238,18 @@ public class SensitivityAnalysisTest {
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/tabbed\\?.*")
                     || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/tabbed\\?.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
+                    if (shouldNotFind) {
+                        return new MockResponse().setResponseCode(404);
+                    } else {
+                        return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
+                    } else if (shouldNotFind) {
+                            return new MockResponse().setResponseCode(404);
                     } else {
                         return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -264,7 +273,7 @@ public class SensitivityAnalysisTest {
         String resultAsString;
 
         // sensitivity analysis not found
-        mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
+        //mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
         // run sensitivity analysis
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
@@ -343,6 +352,27 @@ public class SensitivityAnalysisTest {
 
         testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result",
+                studyNameUserIdUuid, NOT_FOUND_SENSITIVITY_ANALYSIS_UUID))
+            .andExpectAll(status().isNoContent());
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
+                studyNameUserIdUuid, NOT_FOUND_SENSITIVITY_ANALYSIS_UUID, "fakeJsonSelector"))
+            .andExpectAll(status().isNoContent());
+
+        shouldNotFind = true;
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?a",
+                studyNameUserIdUuid, modificationNode1Uuid))
+            .andExpectAll(status().isNotFound());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s", SENSITIVITY_ANALYSIS_RESULT_UUID)));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
+                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
+            .andExpectAll(status().isNotFound());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("tabbed")));
     }
 
     // test sensitivity analysis on network 2 will fail
