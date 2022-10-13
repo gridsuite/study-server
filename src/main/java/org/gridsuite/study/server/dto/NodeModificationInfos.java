@@ -8,7 +8,6 @@ package org.gridsuite.study.server.dto;
 
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.util.UUID;
 
@@ -16,7 +15,6 @@ import java.util.UUID;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Getter
-@Setter
 @Builder
 public class NodeModificationInfos {
     private UUID modificationGroupUuid;
@@ -24,4 +22,8 @@ public class NodeModificationInfos {
     private String variantId;
 
     private UUID reportUuid;
+
+    private UUID securityAnalysisUuid;
+
+    private UUID sensitivityAnalysisUuid;
 }
