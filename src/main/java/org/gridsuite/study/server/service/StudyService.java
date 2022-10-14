@@ -263,7 +263,7 @@ public class StudyService {
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
-            ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitAnalysisService.getDefaultShortCircuitParamters();
+            ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitAnalysisService.getDefaultShortCircuitParameters();
             insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitAnalysisService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -939,7 +939,7 @@ public class StudyService {
 
     @Transactional
     public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters) {
-        updateShortCircuitParameters(studyUuid, ShortCircuitAnalysisService.toEntity(parameters != null ? parameters : ShortCircuitAnalysisService.getDefaultShortCircuitParamters()));
+        updateShortCircuitParameters(studyUuid, ShortCircuitAnalysisService.toEntity(parameters != null ? parameters : ShortCircuitAnalysisService.getDefaultShortCircuitParameters()));
     }
 
     @Transactional

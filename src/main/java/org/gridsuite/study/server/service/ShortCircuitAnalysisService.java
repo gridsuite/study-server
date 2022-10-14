@@ -49,7 +49,7 @@ public final class ShortCircuitAnalysisService {
         return shortCircuitParametersCopy;
     }
 
-    public static ShortCircuitParameters getDefaultShortCircuitParamters() {
+    public static ShortCircuitParameters getDefaultShortCircuitParameters() {
         return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, true);
     }
 }
