@@ -777,7 +777,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
 
             List<EquipmentModificationInfos> equipmentModificationsInfos = networkModificationService
-                    .changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid);
+                    .changeSwitchState(studyUuid, switchId, open, groupUuid, variantId, reportUuid, nodeUuid.toString());
             Set<String> substationIds = getSubstationIds(equipmentModificationsInfos);
 
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
@@ -797,7 +797,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
 
             List<ModificationInfos> modificationsInfos = networkModificationService.applyGroovyScript(studyUuid,
-                    groovyScript, groupUuid, variantId, reportUuid);
+                    groovyScript, groupUuid, variantId, reportUuid, nodeUuid.toString());
 
             Set<String> substationIds = getSubstationIds(modificationsInfos);
 
@@ -832,7 +832,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
 
             List<ModificationInfos> modificationInfosList = networkModificationService.changeLineStatus(studyUuid, lineId,
-                    status, groupUuid, variantId, reportUuid);
+                    status, groupUuid, variantId, reportUuid, nodeUuid.toString());
 
             Set<String> substationIds = getSubstationIds(modificationInfosList);
 
@@ -1090,7 +1090,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
 
             List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
-                    .modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid);
+                    .modifyEquipment(studyUuid, modifyEquipmentAttributes, groupUuid, modificationType, variantId, reportUuid, nodeUuid.toString());
             Set<String> substationIds = getSubstationIds(equipmentModificationInfosList);
 
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
@@ -1131,7 +1131,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
 
             List<EquipmentDeletionInfos> equipmentDeletionInfosList = networkModificationService.deleteEquipment(studyUuid,
-                    equipmentType, equipmentId, groupUuid, variantId, reportUuid);
+                    equipmentType, equipmentId, groupUuid, variantId, reportUuid, nodeUuid.toString());
 
             equipmentDeletionInfosList.forEach(deletionInfo ->
                     notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
@@ -1394,7 +1394,6 @@ public class StudyService {
             if (subReporters.get(0).getTaskKey().equals(ROOT_NODE_NAME)) {
                 return subReporters;
             }
-            networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
             Optional<UUID> parentUuid =  networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
             return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNode(parentUuid.get(), false).stream(), subReporters.stream()).collect(Collectors.toList());
         }
@@ -1451,7 +1450,7 @@ public class StudyService {
             List<EquipmentModificationInfos> modifications = List.of();
             if (modificationUuid == null) {
                 modifications = networkModificationService.splitLineWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes,
-                        groupUuid, modificationType, variantId, reportUuid);
+                        groupUuid, modificationType, variantId, reportUuid, nodeUuid.toString());
             } else {
                 networkModificationService.updateLineSplitWithVoltageLevel(lineSplitWithVoltageLevelAttributes,
                         modificationType, modificationUuid);
