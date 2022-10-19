@@ -154,6 +154,15 @@ public class ShortCircuitService {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
 
+    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
+        Objects.requireNonNull(parameters);
+        return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
+                parameters.isWithVoltageMap(),
+                parameters.isWithFeederResult(),
+                parameters.getStudyType(),
+                parameters.getMinVoltageDropProportionalThreshold());
+    }
+
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
         return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageMap());
@@ -173,13 +182,8 @@ public class ShortCircuitService {
         return shortCircuitParametersCopy;
     }
 
-    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
-        Objects.requireNonNull(parameters);
-        return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
-                parameters.isWithVoltageMap(),
-                parameters.isWithFeederResult(),
-                parameters.getStudyType(),
-                parameters.getMinVoltageDropProportionalThreshold());
+    public static ShortCircuitParameters getDefaultShortCircuitParameters() {
+        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false);
     }
 
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {

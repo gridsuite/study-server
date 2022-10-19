@@ -174,12 +174,12 @@ public class ShortCircuitTest {
                             .setBody(shortCircuitAnalysisResultUuidStr)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=" + VARIANT_ID)) {
-                        input.send(MessageBuilder.withPayload("")
-                                .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
-                                .build(), shortCircuitAnalysisFailedDestination);
-                        return new MockResponse().setResponseCode(200)
-                                .setBody(shortCircuitAnalysisErrorResultUuidStr)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D")
+                            .build(), shortCircuitAnalysisFailedDestination);
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(shortCircuitAnalysisErrorResultUuidStr)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)) {
                     return new MockResponse().setResponseCode(200).setBody(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");

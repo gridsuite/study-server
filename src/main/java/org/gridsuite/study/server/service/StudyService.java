@@ -1023,8 +1023,8 @@ public class StudyService {
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-                                          String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters) {
+            String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
+            UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);

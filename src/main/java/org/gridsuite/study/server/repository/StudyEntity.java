@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
+import org.gridsuite.study.server.service.ShortCircuitService;
 
 import javax.persistence.*;
 
@@ -71,8 +72,15 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             referencedColumnName  =  "id",
             foreignKey = @ForeignKey(
                     name = "shortCircuitParameters_id_fk"
-            ), nullable = false)
+            ))
     private ShortCircuitParametersEntity shortCircuitParameters;
+
+    public ShortCircuitParametersEntity getShortCircuitParameters() {
+        if (this.shortCircuitParameters == null) {
+            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters()));
+        }
+        return this.shortCircuitParameters;
+    }
 
     @Value
     public static class StudyNetworkUuid {

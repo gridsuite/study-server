@@ -14,9 +14,7 @@
     </changeSet>
     <changeSet author="hedhiliabd (generated)" id="1663936600243-6">
         <addColumn tableName="study">
-            <column name="short_circuit_parameters_entity_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
+            <column name="short_circuit_parameters_entity_id" type="uuid"/>
         </addColumn>
     </changeSet>
     <changeSet author="hedhiliabd (generated)" id="1663936600243-7">

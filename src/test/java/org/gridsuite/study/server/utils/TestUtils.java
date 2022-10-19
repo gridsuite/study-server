@@ -65,27 +65,27 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-                .date(LocalDateTime.now())
-                .networkId("netId")
-                .networkUuid(networkUuid)
-                .userId("userId")
-                .loadFlowProvider(loadflowProvider)
-                .loadFlowParameters(loadFlowParametersEntity)
-                .shortCircuitParameters(shortCircuitParametersEntity)
-                .build();
+            .date(LocalDateTime.now())
+            .networkId("netId")
+            .networkUuid(networkUuid)
+            .userId("userId")
+            .loadFlowProvider(loadflowProvider)
+            .loadFlowParameters(loadFlowParametersEntity)
+            .shortCircuitParameters(shortCircuitParametersEntity)
+            .build();
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-                .caseName(caseName)
-                .date(LocalDateTime.now())
-                .networkId("netId")
-                .networkUuid(networkUuid)
-                .userId("userId")
-                .loadFlowProvider(loadflowProvider)
-                .loadFlowParameters(loadFlowParametersEntity)
-                .shortCircuitParameters(shortCircuitParametersEntity)
-                .build();
+            .caseName(caseName)
+            .date(LocalDateTime.now())
+            .networkId("netId")
+            .networkUuid(networkUuid)
+            .userId("userId")
+            .loadFlowProvider(loadflowProvider)
+            .loadFlowParameters(loadFlowParametersEntity)
+            .shortCircuitParameters(shortCircuitParametersEntity)
+            .build();
     }
 
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
