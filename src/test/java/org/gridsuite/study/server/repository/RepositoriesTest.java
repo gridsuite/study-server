@@ -148,15 +148,8 @@ public class RepositoriesTest {
         List<StudyEntity> findAllStudies = studyRepository.findAll();
         assertEquals(3, findAllStudies.size());
 
-        StudyEntity savedStudyEntity1 = findAllStudies.stream().filter(e -> {
-            assert studyEntity1.getId() != null;
-            return studyEntity1.getId().equals(e.getId());
-        }).findFirst().orElse(null);
-
-        StudyEntity savedStudyEntity2 = findAllStudies.stream().filter(e -> {
-            assert studyEntity2.getId() != null;
-            return studyEntity2.getId().equals(e.getId());
-        }).findFirst().orElse(null);
+        StudyEntity savedStudyEntity1 = findAllStudies.stream().filter(e -> studyEntity1.getId() != null && studyEntity1.getId().equals(e.getId())).findFirst().orElse(null);
+        StudyEntity savedStudyEntity2 = findAllStudies.stream().filter(e -> studyEntity2.getId() != null && studyEntity2.getId().equals(e.getId())).findFirst().orElse(null);
 
         assertNotNull(savedStudyEntity1);
         assertNotNull(savedStudyEntity2);
