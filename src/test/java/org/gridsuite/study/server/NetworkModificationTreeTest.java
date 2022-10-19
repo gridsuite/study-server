@@ -38,6 +38,7 @@ import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkMo
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.ActionsService;
@@ -295,6 +296,7 @@ public class NetworkModificationTreeTest {
             .networkUuid(networkUuid)
             .userId("userId")
             .loadFlowParameters(new LoadFlowParametersEntity())
+            .shortCircuitParameters(new ShortCircuitParametersEntity())
             .build();
     }
 
