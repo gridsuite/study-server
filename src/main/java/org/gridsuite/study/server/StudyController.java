@@ -50,7 +50,6 @@ public class StudyController {
     private final NetworkConversionService networkConversionService;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
-
     private final ShortCircuitService shortCircuitService;
     private final CaseService caseService;
 
