@@ -41,19 +41,7 @@ import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.ActionsService;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.GeoDataService;
-import org.gridsuite.study.server.service.LoadflowService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkMapService;
-import org.gridsuite.study.server.service.NetworkModificationService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NotificationService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.SensitivityAnalysisService;
-import org.gridsuite.study.server.service.SingleLineDiagramService;
+import org.gridsuite.study.server.service.*;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
@@ -150,6 +138,9 @@ public class NetworkModificationTreeTest {
 
     @Autowired
     private SecurityAnalysisService securityAnalysisService;
+
+    @Autowired
+    private ShortCircuitService shortCircuitService;
 
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
@@ -251,6 +242,7 @@ public class NetworkModificationTreeTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
+        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
