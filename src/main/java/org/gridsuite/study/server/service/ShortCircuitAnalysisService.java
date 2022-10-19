@@ -50,6 +50,6 @@ public final class ShortCircuitAnalysisService {
     }
 
     public static ShortCircuitParameters getDefaultShortCircuitParameters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, true);
+        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false);
     }
 }
