@@ -1334,6 +1334,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
@@ -1442,6 +1443,7 @@ public class StudyTest {
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
+        node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2);
         output.receive(TIMEOUT, studyUpdateDestination);
 
