@@ -189,8 +189,4 @@ public class ShortCircuitService {
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
         this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
     }
-
-    public static ShortCircuitParameters getDefaultShortCircuitParamters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, true);
-    }
 }
