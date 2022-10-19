@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -737,6 +738,24 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is returned")})
     public ResponseEntity<String> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
+    public ResponseEntity<Void> setShortCircuitParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters) {
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @Operation(summary = "Get short-circuit analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
+    public ResponseEntity<ShortCircuitParameters> getShortCircuitParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getShortCircuitParameters(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")

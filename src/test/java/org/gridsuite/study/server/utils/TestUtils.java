@@ -21,7 +21,9 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.ShortCircuitAnalysisService;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
@@ -63,7 +65,7 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity) {
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .date(LocalDateTime.now())
             .networkId("netId")
@@ -71,6 +73,7 @@ public final class TestUtils {
             .userId("userId")
             .loadFlowProvider(loadflowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
+            .shortCircuitParameters(shortCircuitParametersEntity)
             .build();
     }
 
@@ -84,6 +87,7 @@ public final class TestUtils {
             .dcUseTransformerRatio(true)
             .hvdcAcEmulation(true)
             .build();
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitAnalysisService.toEntity(ShortCircuitAnalysisService.getDefaultShortCircuitParameters());
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .caseName(caseName)
             .date(LocalDateTime.now())
@@ -92,6 +96,7 @@ public final class TestUtils {
             .userId("userId")
             .loadFlowProvider(loadFlowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
+            .shortCircuitParameters(defaultShortCircuitParametersEntity)
             .build();
     }
 
