@@ -77,6 +77,7 @@ public class StudyService {
     static final String VARIANT_ID = "variantId.keyword";
 
     static final String EQUIPMENT_TYPE = "equipmentType.keyword";
+    public static final String EMPTY_ARRAY = "[]";
 
     @Autowired
     NotificationService notificationService;
@@ -1216,7 +1217,7 @@ public class StudyService {
         checkStudyContainsNode(studyUuid, nodeToCopyUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
-        boolean invalidateBuild = !"[]".equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
+        boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
         updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
     }
 
