@@ -21,6 +21,7 @@ import com.powsybl.shortcircuit.StudyType;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,7 +32,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALYSIS_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -39,6 +40,7 @@ import static org.gridsuite.study.server.StudyException.Type.SHORT_CIRCUIT_ANALY
  */
 @Service
 public class ShortCircuitService {
+    static final String RESULT_UUID = "resultUuid";
     private String shortCircuitServerBaseUri;
 
     @Autowired
@@ -188,5 +190,20 @@ public class ShortCircuitService {
 
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
         this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
+    }
+
+    public void deleteShortCircuitAnalysisResult(UUID uuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}")
+                .buildAndExpand(uuid)
+                .toUriString();
+
+        restTemplate.delete(shortCircuitServerBaseUri + path);
+    }
+
+    public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
+        String sas = getShortCircuitAnalysisStatus(nodeUuid);
+        if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
+            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
+        }
     }
 }

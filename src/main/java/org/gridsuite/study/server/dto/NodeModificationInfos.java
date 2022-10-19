@@ -26,4 +26,6 @@ public class NodeModificationInfos {
     private UUID securityAnalysisUuid;
 
     private UUID sensitivityAnalysisUuid;
+
+    private UUID shortCircuitAnalysisUuid;
 }
