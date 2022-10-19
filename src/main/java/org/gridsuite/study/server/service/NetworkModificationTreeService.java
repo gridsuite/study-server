@@ -195,6 +195,11 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
             }
 
+            UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getShortCircuitAnalysisResultUuid(id);
+            if (shortCircuitAnalysisResultUuid != null) {
+                deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
+            }
+
             if (!deleteChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
@@ -278,6 +283,7 @@ public class NetworkModificationTreeService {
                 model.setLoadFlowResult(null);
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
+                model.setShortCircuitAnalysisResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId, newReportUuid);
@@ -558,6 +564,11 @@ public class NetworkModificationTreeService {
         if (sensitivityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
         }
+
+        UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getShortCircuitAnalysisResultUuid(node.getIdNode());
+        if (shortCircuitAnalysisResultUuid != null) {
+            invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
+        }
     }
 
     @Transactional
@@ -595,6 +606,7 @@ public class NetworkModificationTreeService {
             nodeRepository.updateLoadFlowResultAndStatus(childUuid, null, LoadFlowStatus.NOT_DONE);
             nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
+            nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
         }
     }
 
