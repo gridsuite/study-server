@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -58,8 +59,7 @@ public class ConsumerService {
     public ConsumerService(ObjectMapper objectMapper,
             NotificationService notificationService,
             StudyService studyService,
-            NetworkModificationTreeService networkModificationTreeService,
-            LoadflowService loadflowService) {
+            NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -241,7 +241,8 @@ public class ConsumerService {
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), importReportUuid);
+                    ShortCircuitParameters shortCircuitParameters = ShortCircuitAnalysisService.getDefaultShortCircuitParameters();
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitAnalysisService.toEntity(shortCircuitParameters), importReportUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {
