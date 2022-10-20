@@ -16,12 +16,14 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.shortcircuit.ShortCircuitAnalysis;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.shortcircuit.StudyType;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
+import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,7 +42,6 @@ import static org.gridsuite.study.server.StudyException.Type.*;
  */
 @Service
 public class ShortCircuitService {
-    static final String RESULT_UUID = "resultUuid";
     private String shortCircuitServerBaseUri;
 
     @Autowired
@@ -201,8 +202,8 @@ public class ShortCircuitService {
     }
 
     public void assertShortCircuitAnalysisNotRunning(UUID nodeUuid) {
-        String sas = getShortCircuitAnalysisStatus(nodeUuid);
-        if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
+        String scs = getShortCircuitAnalysisStatus(nodeUuid);
+        if (ShortCircuitStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
         }
     }
