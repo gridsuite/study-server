@@ -55,7 +55,6 @@ import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
@@ -273,20 +272,11 @@ public class ShortCircuitTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        String updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, updateType);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
-        Message<byte[]> shortCircuitAnalysisUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        updateType = (String) shortCircuitAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT, updateType);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
-        shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, updateType);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=" + VARIANT_ID_2)));
 
@@ -311,10 +301,7 @@ public class ShortCircuitTest {
         // stop short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop", studyNameUserIdUuid, modificationNode3Uuid)).andExpect(status().isOk());
 
-        shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyNameUserIdUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertTrue(updateType.equals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS) || updateType.equals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT));
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
 
@@ -326,14 +313,26 @@ public class ShortCircuitTest {
 
         assertEquals(SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID, uuidResponse.toString());
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, updateType);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reportName=shortcircuit&variantId=" + VARIANT_ID)));
+    }
+
+    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
+        checkUpdateModelStatusMessagesReceived(studyUuid, updateTypeToCheck, null);
+    }
+
+    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
+        Message<byte[]> shortCircuitAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, shortCircuitAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) shortCircuitAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
+        if (otherUpdateTypeToCheck == null) {
+            assertEquals(updateTypeToCheck, updateType);
+        } else {
+            assertTrue(updateType.equals(updateTypeToCheck) || updateType.equals(otherUpdateTypeToCheck));
+        }
     }
 
     @Test
@@ -381,18 +380,6 @@ public class ShortCircuitTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString(), new TypeReference<>() { });
-    }
-
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
-        // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStatus.getPayload()));
-        MessageHeaders headersStatus = messageStatus.getHeaders();
-        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
-        if (nodeUuid != null) {
-            assertEquals(nodeUuid, headersStatus.get(NotificationService.HEADER_NODE));
-        }
-        assertEquals(updateType, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
