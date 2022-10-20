@@ -16,7 +16,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import lombok.NonNull;
-import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermsQueryBuilder;
@@ -63,7 +62,6 @@ import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
-import static org.gridsuite.study.server.service.ReportService.NETWORK_MODIFICATION_TYPE_REPORT;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -1402,11 +1400,11 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<ReporterModel> getNodeReport(UUID nodeUuid, boolean nodeOnlyReport) {
-        return getSubReportersByNode(nodeUuid, nodeOnlyReport);
+        return getSubReportersByNodeFrom(nodeUuid, nodeOnlyReport);
     }
 
-    private List<ReporterModel> getSubReportersByNode(UUID nodeUuid, boolean nodeOnlyReport) {
-        List<ReporterModel> subReporters = getSubReportersByNode(nodeUuid);
+    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid, boolean nodeOnlyReport) {
+        List<ReporterModel> subReporters = getSubReportersByNodeFrom(nodeUuid);
         if (subReporters.isEmpty()) {
             return subReporters;
         } else if (nodeOnlyReport) {
@@ -1416,27 +1414,21 @@ public class StudyService {
                 return subReporters;
             }
             Optional<UUID> parentUuid =  networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
-            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNode(parentUuid.get(), false).stream(), subReporters.stream()).collect(Collectors.toList());
+            return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNodeFrom(parentUuid.get(), false).stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
 
-    private List<ReporterModel> getSubReportersByNode(UUID nodeUuid) {
+    private List<ReporterModel> getSubReportersByNodeFrom(UUID nodeUuid) {
         AbstractNode nodeInfos = networkModificationTreeService.getNode(nodeUuid);
         ReporterModel reporter = reportService.getReport(nodeInfos.getReportUuid(), nodeInfos.getId().toString());
-        Map<String, Pair<List<ReporterModel>, List<ReporterModel>>> subReportersByNode = new LinkedHashMap<>();
-        reporter.getSubReporters().forEach(subReporter -> subReportersByNode.put(getNodeIdFromReportKey(subReporter), Pair.of(new ArrayList<>(), new ArrayList<>())));
-        reporter.getSubReporters().forEach(subReporter -> {
-            if (subReporter.getTaskKey().endsWith(NETWORK_MODIFICATION_TYPE_REPORT)) {
-                subReportersByNode.get(getNodeIdFromReportKey(subReporter)).getLeft().addAll(subReporter.getSubReporters());
-            } else {
-                subReportersByNode.get(getNodeIdFromReportKey(subReporter)).getRight().addAll(subReporter.getSubReporters());
-            }
-        });
+        Map<String, List<ReporterModel>> subReportersByNode = new LinkedHashMap<>();
+        reporter.getSubReporters().forEach(subReporter -> subReportersByNode.putIfAbsent(getNodeIdFromReportKey(subReporter), new ArrayList<>()));
+        reporter.getSubReporters().forEach(subReporter ->
+            subReportersByNode.get(getNodeIdFromReportKey(subReporter)).addAll(subReporter.getSubReporters())
+        );
         return subReportersByNode.keySet().stream().map(nodeId -> {
             ReporterModel newSubReporter = new ReporterModel(nodeId, nodeId);
-            Pair<List<ReporterModel>, List<ReporterModel>> nodeSubReporters = subReportersByNode.get(nodeId);
-            nodeSubReporters.getLeft().forEach(newSubReporter::addSubReporter);
-            nodeSubReporters.getRight().forEach(newSubReporter::addSubReporter);
+            subReportersByNode.get(nodeId).forEach(newSubReporter::addSubReporter);
             return newSubReporter;
         }).collect(Collectors.toList());
     }
