@@ -16,6 +16,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.ShortCircuitAnalysisService;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -71,6 +72,16 @@ public class ShortCircuitTest {
     @Before
     public void setup() throws IOException {
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
+    }
+
+    private void cleanDB() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+    }
+
+    @After
+    public void tearDown() {
+        cleanDB();
     }
 
     @Test
