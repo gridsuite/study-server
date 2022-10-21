@@ -92,11 +92,12 @@ public class SecurityAnalysisService {
         return result;
     }
 
-    public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, String variantId, String provider, List<String> contingencyListNames, String parameters,
+    public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames, String parameters,
             String receiver) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportUuid.toString());
+                .queryParam("reportUuid", reportUuid.toString())
+                .queryParam("reporterId", nodeUuid.toString());
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }

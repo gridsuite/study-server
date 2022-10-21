@@ -205,6 +205,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         return NodeModificationInfos.builder()
+            .id(networkModificationNode.getId())
             .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
             .reportUuid(networkModificationNode.getReportUuid())
