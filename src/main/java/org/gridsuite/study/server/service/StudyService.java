@@ -1137,6 +1137,16 @@ public class StudyService {
         }
     }
 
+    public void updateEquipmentDeletion(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid, UUID modificationUuid) {
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
+        try {
+            networkModificationService.updateEquipmentDeletion(equipmentType, equipmentId, modificationUuid);
+            updateStatuses(studyUuid, nodeUuid, false);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+        }
+    }
+
     public List<VoltageLevelInfos> getVoltageLevels(UUID studyUuid, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
