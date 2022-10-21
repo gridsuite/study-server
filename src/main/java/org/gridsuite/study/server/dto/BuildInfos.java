@@ -29,15 +29,17 @@ public class BuildInfos {
 
     private String destinationVariantId;
 
+    private UUID reportUuid;
+
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
-    private List<UUID> reportUuids = new ArrayList<>();
+    private List<String> reporterIds = new ArrayList<>();
 
     private Set<UUID> modificationsToExclude = new HashSet<>();
 
-    public void insertModificationGroupAndReport(UUID modificationGroupUuid, UUID reportUuid) {
+    public void insertModificationInfos(UUID modificationGroupUuid, String reporterId) {
         modificationGroupUuids.add(0, modificationGroupUuid);
-        reportUuids.add(0, reportUuid);
+        reporterIds.add(0, reporterId);
     }
 
     public void addModificationsToExclude(Set<UUID> modificationsUuid) {
