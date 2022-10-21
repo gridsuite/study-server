@@ -1325,8 +1325,6 @@ public class NetworkModificationTest {
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         String createSubstationAttributes2 = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
