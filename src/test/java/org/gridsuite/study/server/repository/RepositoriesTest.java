@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
+import com.powsybl.shortcircuit.StudyType;
 import org.apache.commons.collections4.map.HashedMap;
 import org.junit.After;
 import org.junit.Test;
@@ -83,6 +84,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
+        ShortCircuitParametersEntity shortCircuitParametersEntity = new ShortCircuitParametersEntity(false, false, false, StudyType.TRANSIENT, 1);
 
         countriesTemp.add("IT");
         LoadFlowParametersEntity loadFlowParametersEntity2 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -90,6 +92,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
+        ShortCircuitParametersEntity shortCircuitParametersEntity2 = new ShortCircuitParametersEntity(true, true, true, StudyType.STEADY_STATE, 0);
 
         countriesTemp.add("DE");
         LoadFlowParametersEntity loadFlowParametersEntity3 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -97,6 +100,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false);
+        ShortCircuitParametersEntity shortCircuitParametersEntity3 = new ShortCircuitParametersEntity(true, false, true, StudyType.SUB_TRANSIENT, 10);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
@@ -108,6 +112,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity)
+                .shortCircuitParameters(shortCircuitParametersEntity)
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
@@ -120,6 +125,7 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity2)
+                .shortCircuitParameters(shortCircuitParametersEntity2)
                 .build();
 
         StudyEntity studyEntity3 = StudyEntity.builder()
@@ -132,25 +138,32 @@ public class RepositoriesTest {
                 .caseUuid(UUID.randomUUID())
                 .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity3)
+                .shortCircuitParameters(shortCircuitParametersEntity3)
                 .build();
 
         studyRepository.save(studyEntity1);
         studyRepository.save(studyEntity2);
         studyRepository.save(studyEntity3);
-        assertEquals(3, studyRepository.findAll().size());
 
-        StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
-        StudyEntity savedStudyEntity2 = studyRepository.findAll().get(1);
+        List<StudyEntity> findAllStudies = studyRepository.findAll();
+        assertEquals(3, findAllStudies.size());
 
+        StudyEntity savedStudyEntity1 = findAllStudies.stream().filter(e -> studyEntity1.getId() != null && studyEntity1.getId().equals(e.getId())).findFirst().orElse(null);
+        StudyEntity savedStudyEntity2 = findAllStudies.stream().filter(e -> studyEntity2.getId() != null && studyEntity2.getId().equals(e.getId())).findFirst().orElse(null);
+
+        assertNotNull(savedStudyEntity1);
+        assertNotNull(savedStudyEntity2);
         assertEquals(studyEntity1.getUserId(), savedStudyEntity1.getUserId());
         assertEquals(studyEntity2.getUserId(), savedStudyEntity2.getUserId());
 
         // updates
         savedStudyEntity1.setLoadFlowParameters(loadFlowParametersEntity);
+        savedStudyEntity1.setShortCircuitParameters(shortCircuitParametersEntity);
         studyRepository.save(savedStudyEntity1);
 
         StudyEntity savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
         assertNotNull(savedStudyEntity1Updated.getLoadFlowParameters());
+        assertNotNull(savedStudyEntity1Updated.getShortCircuitParameters());
 
         studyRepository.save(savedStudyEntity1Updated);
         savedStudyEntity1Updated = studyRepository.findById(studyEntity1.getId()).get();
@@ -169,4 +182,35 @@ public class RepositoriesTest {
         assertTrue(studyCreationRequestRepository.findById(studyUuid).isPresent());
     }
 
+    @Test
+    @Transactional
+    public void testStudyDefaultShortCircuitParameters() {
+
+        StudyEntity studyEntity1 = StudyEntity.builder()
+                .id(UUID.randomUUID())
+                .userId("foo")
+                .date(LocalDateTime.now(ZoneOffset.UTC))
+                .networkUuid(UUID.randomUUID())
+                .networkId("networkId")
+                .caseFormat("caseFormat")
+                .caseUuid(UUID.randomUUID())
+                .casePrivate(true)
+                .loadFlowParameters(LoadFlowParametersEntity.builder().build())
+                .shortCircuitParameters(null) // intentionally set to null
+                .build();
+
+        ShortCircuitParametersEntity shortCircuitParamFromEntity1 = studyEntity1.getShortCircuitParameters();
+        assertNotNull(shortCircuitParamFromEntity1);
+
+        assertEquals(20., shortCircuitParamFromEntity1.getMinVoltageDropProportionalThreshold(), 0.001); // 20 is the default value
+        assertEquals(20., studyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
+        studyEntity1.getShortCircuitParameters().setMinVoltageDropProportionalThreshold(30.);
+        assertEquals(30., studyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
+
+        studyRepository.save(studyEntity1);
+
+        StudyEntity savedStudyEntity1 = studyRepository.findAll().get(0);
+        assertNotNull(savedStudyEntity1.getShortCircuitParameters());
+        assertEquals(30., savedStudyEntity1.getShortCircuitParameters().getMinVoltageDropProportionalThreshold(), 0.001);
+    }
 }
