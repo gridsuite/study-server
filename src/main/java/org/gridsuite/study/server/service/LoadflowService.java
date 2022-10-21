@@ -73,7 +73,7 @@ public class LoadflowService {
             var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
                 .queryParam("reportId", reportUuid.toString())
-                .queryParam("reportName", "loadflow");
+                .queryParam("reportName", nodeUuid.toString());
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }

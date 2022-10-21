@@ -17,6 +17,8 @@ import java.util.UUID;
 @Getter
 @Builder
 public class NodeModificationInfos {
+    private UUID id;
+
     private UUID modificationGroupUuid;
 
     private String variantId;

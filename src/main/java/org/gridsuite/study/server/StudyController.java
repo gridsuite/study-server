@@ -1062,8 +1062,8 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "simplified nodes (without children"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                      @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
-        AbstractNode node = networkModificationTreeService.getSimpleNode(nodeId);
+                                                @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
+        AbstractNode node = networkModificationTreeService.getNode(nodeId);
         return node != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
