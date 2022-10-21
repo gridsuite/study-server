@@ -98,7 +98,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -149,8 +149,9 @@ public class StudyTest {
     private static final UUID IMPORTED_CASE_UUID = UUID.fromString(IMPORTED_CASE_UUID_STRING);
     private static final UUID IMPORTED_CASE_WITH_ERRORS_UUID = UUID.fromString(IMPORTED_CASE_WITH_ERRORS_UUID_STRING);
     private static final NetworkInfos NETWORK_INFOS = new NetworkInfos(NETWORK_UUID, "20140116_0830_2D4_UX1_pst");
+    private static final UUID REPORT_UUID = UUID.randomUUID();
+    private static final ReporterModel ROOT_REPORT_TEST = new ReporterModel(REPORT_UUID.toString(), REPORT_UUID.toString());
     private static final ReporterModel REPORT_TEST = new ReporterModel("test", "test");
-    private static final ReporterModel REPORT_TEST_ROOT_NODE = new ReporterModel("test", "Root");
     private static final String VARIANT_ID = "variant_1";
     public static final String POST = "POST";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -165,6 +166,7 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS_2 = new NetworkInfos(UUID.fromString(NETWORK_UUID_2_STRING), "file_2.xiidm");
     private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
     private static final String CASE_NAME = "DefaultCaseName";
+    private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
 
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
 
@@ -325,6 +327,8 @@ public class StudyTest {
         String importedCaseWithErrorsUuidAsString = mapper.writeValueAsString(IMPORTED_CASE_WITH_ERRORS_UUID);
         String importedBlockingCaseUuidAsString = mapper.writeValueAsString(IMPORTED_BLOCKING_CASE_UUID_STRING);
 
+        ROOT_REPORT_TEST.addSubReporter(REPORT_TEST);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -333,7 +337,11 @@ public class StudyTest {
                 String path = Objects.requireNonNull(request.getPath());
                 Buffer body = request.getBody();
 
-                if (path.matches("/v1/groups/.*") ||
+                if (path.matches("/v1/groups/" + EMPTY_MODIFICATION_GROUP_UUID + "/.*")) {
+                    return new MockResponse().setResponseCode(200)
+                            .setBody(new JSONArray(List.of()).toString())
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/groups/.*") ||
                     path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true") ||
                     path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID) ||
                     path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID_2)) {
@@ -341,7 +349,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .setBody(new JSONArray(List.of(jsonObject)).toString())
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")) {
+                } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && POST.equals(request.getMethod())) {
@@ -405,7 +413,7 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(REPORT_TEST))
+                    return new MockResponse().setResponseCode(200).setBody(mapper.writeValueAsString(ROOT_REPORT_TEST))
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
                     // need asynchronous run to get study creation requests
@@ -859,7 +867,7 @@ public class StudyTest {
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<ReporterModel> reporterModel = mapper.readValue(resultAsString, new TypeReference<List<ReporterModel>>() { });
 
-        assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST_ROOT_NODE));
+        assertThat(reporterModel.get(0), new MatcherReport(REPORT_TEST));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/report", studyUuid, rootNodeUuid).header("userId", "userId"))
@@ -1487,7 +1495,7 @@ public class StudyTest {
 
         //Check requests to duplicate modification has been emitted
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
 
         return duplicatedStudy;
     }
@@ -1499,6 +1507,8 @@ public class StudyTest {
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1");
         NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2");
+        NetworkModificationNode node3 = createNetworkModificationNode(study1Uuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node3", BuildStatus.BUILT);
+        NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode");
 
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
@@ -1578,7 +1588,7 @@ public class StudyTest {
                 .header("userId", "userId"))
                 .andExpect(status().isNotFound());
 
-        //try to copy to a non existing position and expect expect not found
+        //try to copy to a non existing position and expect not found
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, node1.getId(), UUID.randomUUID(), InsertMode.AFTER)
@@ -1593,7 +1603,13 @@ public class StudyTest {
                 .andExpect(status().isForbidden());
 
         var request = TestUtils.getRequestsDone(1, server);
-        assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
+
+        // Test Built status when duplicating an empty node
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
+
+        duplicateNode(study1Uuid, emptyNode.getId(), node3.getId(), InsertMode.BEFORE);
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
     }
 
     public UUID duplicateNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) throws Exception {
@@ -1612,8 +1628,9 @@ public class StudyTest {
         output.receive(TIMEOUT);
         output.receive(TIMEOUT);
 
-        var requests = TestUtils.getRequestsDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*&reportUuid=.*")));
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
         List<NodeEntity> allNodesAfterDuplication = networkModificationTreeService.getAllNodes(studyUuid);
 

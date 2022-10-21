@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -739,6 +740,24 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
+    public ResponseEntity<Void> setShortCircuitParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters) {
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @Operation(summary = "Get short-circuit analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
+    public ResponseEntity<ShortCircuitParameters> getShortCircuitParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getShortCircuitParameters(studyUuid));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
@@ -1004,8 +1023,8 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "simplified nodes (without children"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                      @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
-        AbstractNode node = networkModificationTreeService.getSimpleNode(nodeId);
+                                                @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
+        AbstractNode node = networkModificationTreeService.getNode(nodeId);
         return node != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
