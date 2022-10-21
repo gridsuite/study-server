@@ -1160,7 +1160,7 @@ public class StudyService {
     }
 
     public void updateEquipmentDeletion(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid, UUID modificationUuid) {
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentDeletion(equipmentType, equipmentId, modificationUuid);
             updateStatuses(studyUuid, nodeUuid, false);
