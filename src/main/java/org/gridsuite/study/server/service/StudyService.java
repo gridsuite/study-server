@@ -101,7 +101,7 @@ public class StudyService {
     private final EquipmentInfosService equipmentInfosService;
     private final LoadflowService loadflowService;
     private final ShortCircuitService shortCircuitService;
-    private final CaseService caseService;
+
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
@@ -152,7 +152,6 @@ public class StudyService {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.loadflowService = loadflowService;
         this.shortCircuitService = shortCircuitService;
-        this.caseService = caseService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
         this.geoDataService = geoDataService;
