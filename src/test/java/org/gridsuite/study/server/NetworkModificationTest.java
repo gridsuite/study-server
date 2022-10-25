@@ -36,6 +36,7 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
@@ -115,6 +116,9 @@ public class NetworkModificationTest {
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
+    private static final String SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d64-4fc6-11ed-bdc3-0242ac120002";
+    private static final String SHORTCIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+
     private static final String POST = "POST";
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
@@ -159,6 +163,9 @@ public class NetworkModificationTest {
     @Autowired
     private SensitivityAnalysisService sensitivityAnalysisService;
 
+    @Autowired
+    private ShortCircuitService shortCircuitService;
+
     @MockBean
     private NetworkStoreService networkStoreService;
 
@@ -195,6 +202,7 @@ public class NetworkModificationTest {
         reportService.setReportServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
+        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
 
         String substationModificationListAsString = mapper.writeValueAsString(List.of(
                 EquipmentModificationInfos.builder().substationIds(Set.of()).uuid(UUID.fromString(MODIFICATION_UUID)).build()));
@@ -439,6 +447,18 @@ public class NetworkModificationTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                     return new MockResponse().setResponseCode(500);
+                } else if (("/v1/results/invalidate-status?resultUuid=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
+                    return new MockResponse().setResponseCode(200).addHeader("Content-Type",
+                            "application/json; charset=utf-8");
+                } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
+                    return new MockResponse().setResponseCode(200).setBody(SHORTCIRCUIT_ANALYSIS_STATUS_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
+                    if (request.getMethod().equals("DELETE")) {
+                        return new MockResponse().setResponseCode(200).setBody(SHORTCIRCUIT_ANALYSIS_STATUS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                    return new MockResponse().setResponseCode(500);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -539,7 +559,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode2 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 2);
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode2.getId(), 1);
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode3.getId()));
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
@@ -550,7 +570,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode3 and stop build
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 3);
+        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode3.getId(), 1);
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode4.getId()));
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
@@ -618,6 +638,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
                         studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        output.receive(TIMEOUT, studyUpdateDestination);
         output.receive(TIMEOUT, studyUpdateDestination);
         output.receive(TIMEOUT, studyUpdateDestination);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -967,7 +988,7 @@ public class NetworkModificationTest {
             .andExpect(status().isOk());
 
         AtomicReference<AbstractNode> node = new AtomicReference<>();
-        node.set(networkModificationTreeService.getSimpleNode(modificationNode1.getId()));
+        node.set(networkModificationTreeService.getNode(modificationNode1.getId()));
         NetworkModificationNode modificationNode = (NetworkModificationNode) node.get();
         assertEquals(Set.of(modificationUuid), modificationNode.getModificationsToExclude());
 
@@ -979,7 +1000,7 @@ public class NetworkModificationTest {
                         studyUuid, modificationNode1.getId(), modificationUuid))
             .andExpect(status().isOk());
 
-        node.set(networkModificationTreeService.getSimpleNode(modificationNode1.getId()));
+        node.set(networkModificationTreeService.getNode(modificationNode1.getId()));
         modificationNode = (NetworkModificationNode) node.get();
         assertTrue(modificationNode.getModificationsToExclude().isEmpty());
 
@@ -1732,6 +1753,7 @@ public class NetworkModificationTest {
         modificationNode1.setReportUuid(node1ReportUuid);
         modificationNode1.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         modificationNode1.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        modificationNode1.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         modificationNode3.setReportUuid(node3ReportUuid);
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
@@ -1750,11 +1772,12 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        var requests = TestUtils.getRequestsWithBodyDone(7, server);
+        var requests = TestUtils.getRequestsWithBodyDone(9, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/modifications/" + MODIFICATION_UUID + "/" + modificationTypeUrl) && r.getBody().equals(generatorAttributesUpdated)));
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
     }
 
     private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, int nbReportExpected) throws Exception {
@@ -1890,6 +1913,7 @@ public class NetworkModificationTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
     }
 
     private void checkEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
@@ -2024,7 +2048,8 @@ public class NetworkModificationTest {
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
                 .build();
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseFormat, defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseFormat, defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
