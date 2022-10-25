@@ -95,7 +95,7 @@ public class CaseTest {
         // Start the server.
         server.start();
 
-     // Ask the server for its URL. You'll need this to make HTTP requests.
+        // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         caseService.setCaseServerBaseUri(baseUrl);

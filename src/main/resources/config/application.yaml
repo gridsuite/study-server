@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -38,6 +38,15 @@ spring:
         consumeSensitivityAnalysisFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.failed
           group: studySensitivityAnalysisFailedGroup
+        consumeShortCircuitAnalysisResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.result
+          group: studyShortCircuitAnalysisResultGroup
+        consumeShortCircuitAnalysisStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.stopped
+          group: studyShortCircuitAnalysisStoppedGroup
+        consumeShortCircuitAnalysisFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.failed
+          group: studyShortCircuitAnalysisFailedGroup
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
           group: studyCaseImportSucceededGroup

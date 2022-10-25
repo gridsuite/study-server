@@ -32,6 +32,8 @@ public class InvalidateNodeInfos {
 
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
+
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
     }
@@ -46,5 +48,9 @@ public class InvalidateNodeInfos {
 
     public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
         sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
+    }
+
+    public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
+        shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
     }
 }

@@ -27,6 +27,7 @@ public final class StudyConstants {
     public static final String ACTIONS_API_VERSION = "v1";
     public static final String NETWORK_MAP_API_VERSION = "v1";
     public static final String REPORT_API_VERSION = "v1";
+    public static final String SHORT_CIRCUIT_API_VERSION = "v1";
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
