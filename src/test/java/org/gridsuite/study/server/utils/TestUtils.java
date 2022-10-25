@@ -23,7 +23,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificatio
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.ShortCircuitAnalysisService;
+import org.gridsuite.study.server.service.ShortCircuitService;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
@@ -87,7 +87,7 @@ public final class TestUtils {
             .dcUseTransformerRatio(true)
             .hvdcAcEmulation(true)
             .build();
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitAnalysisService.toEntity(ShortCircuitAnalysisService.getDefaultShortCircuitParameters());
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .caseName(caseName)
             .date(LocalDateTime.now())
