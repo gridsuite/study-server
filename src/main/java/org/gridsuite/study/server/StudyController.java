@@ -32,7 +32,6 @@ import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -155,19 +154,6 @@ public class StudyController {
                                                                              @RequestHeader("userId") String userId) {
         caseService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters);
-        return ResponseEntity.ok().body(createStudy);
-    }
-
-    @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "create a study and import the case")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-        @ApiResponse(responseCode = "409", description = "The study already exists"),
-        @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("caseFile") MultipartFile caseFile,
-                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
-                                                             @RequestHeader("userId") String userId) {
-        BasicStudyInfos createStudy = studyService.createStudy(caseFile, userId, studyUuid);
         return ResponseEntity.ok().body(createStudy);
     }
 

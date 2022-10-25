@@ -715,18 +715,6 @@ public class StudyTest {
         assertThat(createdStudyBasicInfosList.get(0),
                         createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
 
-        //insert a study with a case (multipartfile)
-        UUID s2Uuid = createStudy("userId", TEST_FILE, IMPORTED_CASE_UUID_STRING, true);
-
-        // check the study s2
-        result = mockMvc.perform(get("/v1/studies/{studyUuid}", s2Uuid).header("userId", "userId"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-
-        resultAsString = result.getResponse().getContentAsString();
-        StudyInfos studyInfos = mapper.readValue(resultAsString, StudyInfos.class);
-
-        assertThat(studyInfos, createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
-
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
         mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header("userId", "userId"))
@@ -735,22 +723,6 @@ public class StudyTest {
                 jsonPath("$").value(STUDY_NOT_FOUND.name()));
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-
-        //delete existing study s2
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", s2Uuid).header("userId", "userId"))
-                .andExpect(status().isOk());
-
-        // assert that the broker message has been sent
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
-        assertEquals("userId", headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(s2Uuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
-
-        var httpRequests = TestUtils.getRequestsDone(3, server);
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/groups/.*")));
-        assertEquals(2, httpRequests.stream().filter(p -> p.matches("/v1/reports/.*")).count());
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
@@ -866,27 +838,6 @@ public class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-    }
-
-    @Test
-    public void testCreationWithErrorBadCaseFile() throws Exception {
-        // Create study with a bad case file -> error
-        createStudyWithFileError("userId", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, false,
-                "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
-    }
-
-    @Test
-    public void testCreationWithErrorBadExistingCase() throws Exception {
-        // Create study with a bad case file -> error when importing in the case server
-        createStudyWithFileError("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
-    }
-
-    @Test
-    public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
-        // Create study with a bad case file -> error when importing in the case server
-        // without message in response body
-        createStudyWithFileError("userId", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, false,
-                "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid, String variantId, String nodeName) throws Exception {
@@ -1191,31 +1142,12 @@ public class StudyTest {
         String resultAsString;
         countDownLatch = new CountDownLatch(1);
 
-        //insert a study with a case (multipartfile)
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", "blockingCaseFile",
-                    "text/xml", is);
-
-            mvcResult = mockMvc
-                    .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", "true").file(mockFile)
-                            .header("userId", "userId").contentType(MediaType.MULTIPART_FORM_DATA))
-                    .andExpect(status().isOk()).andReturn();
-            resultAsString = mvcResult.getResponse().getContentAsString();
-            BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
-
-            assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
-        }
-
-        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
-
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-
-        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         // once we checked study creation requests, we can countDown latch to trigger study creation request
         countDownLatch.countDown();
@@ -1247,13 +1179,6 @@ public class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
-        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
-
-        // assert that all http requests have been sent to remote services
-        var httpRequests = TestUtils.getRequestsDone(2, server);
-        assertTrue(httpRequests.contains("/v1/cases/private"));
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
-
         countDownLatch = new CountDownLatch(1);
 
       //insert a study
@@ -1267,8 +1192,6 @@ public class StudyTest {
 
         assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
 
-        studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
-
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests", NEW_STUDY_CASE_UUID, "false")
                 .header("userId", "userId")).andExpectAll(
                         status().isOk(),
@@ -1277,8 +1200,6 @@ public class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
 
         bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-
-        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         countDownLatch.countDown();
 
@@ -1309,8 +1230,6 @@ public class StudyTest {
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-
-        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(2, server);

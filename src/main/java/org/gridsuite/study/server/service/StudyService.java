@@ -40,7 +40,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -215,25 +214,6 @@ public class StudyService {
         }
 
         return basicStudyInfos;
-    }
-
-    public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        try {
-            createStudyFromFile(caseFile, userId, basicStudyInfos);
-        } catch (Exception e) {
-            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            throw e;
-        }
-        return basicStudyInfos;
-    }
-
-    private void createStudyFromFile(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
-        UUID importReportUuid = UUID.randomUUID();
-        UUID caseUuid = caseService.importCase(caseFile);
-        if (caseUuid != null) {
-            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
-        }
     }
 
     public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
