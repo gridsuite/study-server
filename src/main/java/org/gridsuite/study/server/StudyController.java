@@ -1102,6 +1102,22 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/equipments-deletion/type/{equipmentType}/id/{equipmentId}")
+    @Operation(summary = "Update an equipment deletion in a study network")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The equipment deletion was updated"),
+            @ApiResponse(responseCode = "404", description = "The study was not found")})
+    public ResponseEntity<Void> updateDeleteEquipment(
+            @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Modification UUID") @PathVariable("modificationUuid") UUID modificationUuid,
+            @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
+            @Parameter(description = "Equipment ID") @PathVariable("equipmentId") String equipmentId) {
+        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
+        studyService.updateEquipmentDeletion(studyUuid, equipmentType, equipmentId, nodeUuid, modificationUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators")
     @Operation(summary = "create a generator in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator has been created")})
