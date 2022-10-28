@@ -1363,13 +1363,7 @@ public class StudyService {
         }
 
         if (invalidateChildrenBuild) {
-            childrenNodes.forEach(nodeEntity -> {
-                System.out.println("========================= Node info =============================");
-                System.out.println(nodeEntity.getIdNode());
-                System.out.println("========================= Node info =============================");
-
-                invalidateBuild(studyUuid, nodeEntity.getIdNode(), false);
-            });
+            childrenNodes.forEach(nodeEntity -> updateStatuses(studyUuid, nodeEntity.getIdNode(), false, true));
         }
     }
 
