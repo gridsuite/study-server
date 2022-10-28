@@ -71,7 +71,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.service.NetworkModificationTreeService.*;
 import static org.gridsuite.study.server.service.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
