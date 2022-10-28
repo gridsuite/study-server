@@ -118,15 +118,6 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyDelete(UUID studyUuid, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE)
-                .build());
-    }
-
-    @PostCompletion
     public void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
         sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
