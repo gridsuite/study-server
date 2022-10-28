@@ -365,6 +365,29 @@ public class NetworkModificationService {
         return result;
     }
 
+    public void updateEquipmentDeletion(String equipmentType, String equipmentId, UUID modificationUuid) {
+
+        Objects.requireNonNull(modificationUuid);
+        Objects.requireNonNull(equipmentType);
+        Objects.requireNonNull(equipmentId);
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
+                MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER
+                        + "equipments-deletion" + DELIMITER
+                        + "type" + DELIMITER + equipmentType + DELIMITER
+                        + "id" + DELIMITER + equipmentId);
+
+        String path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, null, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, DELETE_EQUIPMENT_FAILED);
+        }
+    }
+
     void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String receiver;
