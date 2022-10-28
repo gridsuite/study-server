@@ -22,14 +22,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.SensitivityAnalysisService;
-import org.gridsuite.study.server.service.SingleLineDiagramService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.*;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
@@ -57,6 +50,7 @@ public class StudyController {
     private final NetworkConversionService networkConversionService;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final ShortCircuitService shortCircuitService;
     private final CaseService caseService;
 
     public StudyController(StudyService studyService,
@@ -66,6 +60,7 @@ public class StudyController {
             NetworkConversionService networkConversionService,
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
+            ShortCircuitService shortCircuitService,
             CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -74,6 +69,7 @@ public class StudyController {
         this.networkConversionService = networkConversionService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.shortCircuitService = shortCircuitService;
         this.caseService = caseService;
     }
 
@@ -643,6 +639,49 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run")
+    @Operation(summary = "run short circuit analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has started")})
+    public ResponseEntity<UUID> runShortCircuit(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
+    @Operation(summary = "stop security analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
+    public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result")
+    @Operation(summary = "Get a short circuit analysis result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result"),
+            @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+    public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status")
+    @Operation(summary = "Get the short circuit analysis status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis status"),
+            @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
+    public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
@@ -1060,6 +1099,22 @@ public class StudyController {
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/equipments-deletion/type/{equipmentType}/id/{equipmentId}")
+    @Operation(summary = "Update an equipment deletion in a study network")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The equipment deletion was updated"),
+            @ApiResponse(responseCode = "404", description = "The study was not found")})
+    public ResponseEntity<Void> updateDeleteEquipment(
+            @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Modification UUID") @PathVariable("modificationUuid") UUID modificationUuid,
+            @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
+            @Parameter(description = "Equipment ID") @PathVariable("equipmentId") String equipmentId) {
+        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
+        studyService.updateEquipmentDeletion(studyUuid, equipmentType, equipmentId, nodeUuid, modificationUuid);
         return ResponseEntity.ok().build();
     }
 
