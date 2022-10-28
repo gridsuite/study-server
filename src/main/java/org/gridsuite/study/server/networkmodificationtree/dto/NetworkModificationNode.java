@@ -42,6 +42,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     LoadFlowResult loadFlowResult;
 
+    UUID shortCircuitAnalysisResultUuid;
+
     UUID securityAnalysisResultUuid;
 
     UUID sensitivityAnalysisResultUuid;

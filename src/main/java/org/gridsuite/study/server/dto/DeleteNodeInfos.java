@@ -34,6 +34,8 @@ public class DeleteNodeInfos {
 
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
+
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);
     }
@@ -52,5 +54,9 @@ public class DeleteNodeInfos {
 
     public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
         sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
+    }
+
+    public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
+        shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
     }
 }

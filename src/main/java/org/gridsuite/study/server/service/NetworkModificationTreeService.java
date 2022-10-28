@@ -133,6 +133,7 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
+                null,
                 BuildStatus.NOT_BUILT
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
@@ -191,6 +192,11 @@ public class NetworkModificationTreeService {
             UUID sensitivityAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getSensitivityAnalysisResultUuid(id);
             if (sensitivityAnalysisResultUuid != null) {
                 deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
+            }
+
+            UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getShortCircuitAnalysisResultUuid(id);
+            if (shortCircuitAnalysisResultUuid != null) {
+                deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
             }
 
             if (!deleteChildren) {
@@ -276,6 +282,7 @@ public class NetworkModificationTreeService {
                 model.setLoadFlowResult(null);
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
+                model.setShortCircuitAnalysisResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
@@ -424,6 +431,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid));
+    }
+
+    @Transactional
     public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowStatus(nodeUuid, loadFlowStatus));
     }
@@ -452,6 +464,11 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Optional<UUID> getSensitivityAnalysisResultUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getSensitivityAnalysisResultUuid(nodeUuid));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));
     }
 
     @Transactional(readOnly = true)
@@ -551,6 +568,11 @@ public class NetworkModificationTreeService {
         if (sensitivityAnalysisResultUuid != null) {
             invalidateNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
         }
+
+        UUID shortCircuitAnalysisResultUuid = repositories.get(node.getType()).getShortCircuitAnalysisResultUuid(node.getIdNode());
+        if (shortCircuitAnalysisResultUuid != null) {
+            invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
+        }
     }
 
     @Transactional
@@ -588,6 +610,7 @@ public class NetworkModificationTreeService {
             nodeRepository.updateLoadFlowResultAndStatus(childUuid, null, LoadFlowStatus.NOT_DONE);
             nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
+            nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
         }
     }
 
