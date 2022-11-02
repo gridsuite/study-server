@@ -53,7 +53,6 @@ public class NotificationService {
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_FAILED = "shortCircuitAnalysis_failed";
     public static final String UPDATE_TYPE_STUDIES = "studies";
     public static final String UPDATE_TYPE_STUDY = "study";
-    public static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     public static final String UPDATE_TYPE_SWITCH = "switch";
 
