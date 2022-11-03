@@ -428,7 +428,6 @@ public class StudyService {
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
-        notificationService.emitStudyDelete(studyUuid, userId);
 
         if (deleteStudyInfos == null) {
             return Optional.empty();

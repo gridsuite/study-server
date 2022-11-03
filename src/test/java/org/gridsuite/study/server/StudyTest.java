@@ -732,6 +732,11 @@ public class StudyTest {
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
+
+        var httpRequests = TestUtils.getRequestsDone(3, server);
+        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/groups/.*")));
+        assertEquals(2, httpRequests.stream().filter(p -> p.matches("/v1/reports/.*")).count());
+
         // expect only 1 study (public one) since the other is private and we use
         // another userId
         result = mockMvc.perform(get("/v1/studies").header("userId", "a"))
@@ -911,15 +916,6 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
 
-        // assert that the broker message has been sent a study creation request message
-        // for deletion
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
-
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
@@ -958,15 +954,6 @@ public class StudyTest {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
-
-        // assert that the broker message has been sent a study creation request message
-        // for deletion
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
@@ -1018,15 +1005,6 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
 
-        // assert that the broker message has been sent a study creation request message
-        // for deletion
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
-
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(caseUuid == null ? 1 : 2, server);
         assertTrue(requests.contains("/v1/cases/private"));
@@ -1058,12 +1036,6 @@ public class StudyTest {
         var requests = TestUtils.getRequestsDone(caseUuid == null ? 1 : 2, server);
         assertTrue(requests.contains("/v1/cases/private"));
 
-        message = output.receive(TIMEOUT);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
-
         MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
@@ -1093,12 +1065,6 @@ public class StudyTest {
         assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
-
         MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
@@ -1125,12 +1091,6 @@ public class StudyTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
-
-        // study deletion
-        message = output.receive(TIMEOUT, "study.update");
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
 
         // study error message
         message = output.receive(TIMEOUT, "study.update");
