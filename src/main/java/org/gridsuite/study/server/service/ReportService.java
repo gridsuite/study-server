@@ -12,9 +12,9 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelDeserializer;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import lombok.NonNull;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -34,8 +35,6 @@ import static org.gridsuite.study.server.StudyConstants.*;
 public class ReportService {
 
     private static final String DELIMITER = "/";
-
-    public static final String NETWORK_MODIFICATION_TYPE_REPORT = "NetworkModification";
 
     private String reportServerBaseUri;
 
@@ -69,7 +68,14 @@ public class ReportService {
             .toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), ReporterModel.class).getBody();
+        List<ReporterModel> reporters = restTemplate.exchange(this.getReportServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReporterModel>>() {
+        }).getBody();
+        // TODO : Remove this hack when fix to avoid key collision in hades2 will be done
+        ReporterModel reporter = new ReporterModel(reportUuid.toString(), reportUuid.toString());
+        if (reporters != null) {
+            reporters.forEach(reporter::addSubReporter);
+        }
+        return reporter;
     }
 
     public void deleteReport(@NonNull UUID reportUuid) {
