@@ -692,7 +692,7 @@ public class StudyTest {
 
         //insert a study with a non existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
-                NOT_EXISTING_CASE_UUID, "false").header("userId", "userId"))
+                        NOT_EXISTING_CASE_UUID, "false").header("userId", "userId"))
                 .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
@@ -721,21 +721,16 @@ public class StudyTest {
                 });
 
         assertThat(createdStudyBasicInfosList.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
+                createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
 
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
         mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header("userId", "userId"))
-            .andExpectAll(status().isNotFound(),
-                content().contentType(MediaType.APPLICATION_JSON),
-                jsonPath("$").value(STUDY_NOT_FOUND.name()));
+                .andExpectAll(status().isNotFound(),
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        jsonPath("$").value(STUDY_NOT_FOUND.name()));
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-
-
-        var httpRequests = TestUtils.getRequestsDone(3, server);
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/groups/.*")));
-        assertEquals(2, httpRequests.stream().filter(p -> p.matches("/v1/reports/.*")).count());
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
@@ -762,21 +757,21 @@ public class StudyTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, rootNodeUuid, "XIIDM"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
         TestUtils.getRequestsDone(1, server); // just consume it
 
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 3");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
-            .andExpect(status().isInternalServerError());
+                .andExpect(status().isInternalServerError());
 
         modificationNode1.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
     }
