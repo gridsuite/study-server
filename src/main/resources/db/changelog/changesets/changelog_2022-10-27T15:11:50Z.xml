@@ -5,8 +5,6 @@
         <dropColumn  tableName="study">
             <column  name="user_id"/>
         </dropColumn>
-    </changeSet>
-    <changeSet author="drissiana (generated)" id="1666883542965-2">
         <dropIndex tableName="study_creation_request" indexName="studyCreationRequest_userId_index"/>
         <dropColumn  tableName="study_creation_request">
             <column  name="user_id"/>

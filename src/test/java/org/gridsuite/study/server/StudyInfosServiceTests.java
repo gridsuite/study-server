@@ -52,8 +52,8 @@ public class StudyInfosServiceTests {
 
     @Test
     public void testAddDeleteStudyInfos() {
-        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher1 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_1, "userId1", "UCTE");
-        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher2 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_2, "userId2", "UCTE");
+        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher1 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_1, "UCTE");
+        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher2 = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(STUDY_UUID_2, "UCTE");
         assertThat(studyInfosService.add(matcher1.getReference()), matcher1);
         assertThat(studyInfosService.add(matcher2.getReference()), matcher2);
         assertEquals(2, Iterables.size(studyInfosService.findAll()));

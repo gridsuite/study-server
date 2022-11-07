@@ -25,15 +25,12 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Builder
-@Table(name = "study", indexes = {@Index(name = "studyEntity_userId_index", columnList = "userId")})
+@Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
     @Id
     @Column(name = "id")
     private UUID id;
-
-    @Column(name = "userId", nullable = false)
-    private String userId;
 
     @Column(name = "creationDate", nullable = false)
     private LocalDateTime date;

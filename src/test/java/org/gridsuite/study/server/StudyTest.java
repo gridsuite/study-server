@@ -688,7 +688,7 @@ public class StudyTest {
         resultAsString = result.getResponse().getContentAsString();
         StudyInfos infos = mapper.readValue(resultAsString, StudyInfos.class);
 
-        assertThat(infos, createMatcherStudyInfos(studyUuid, "userId", "UCTE"));
+        assertThat(infos, createMatcherStudyInfos(studyUuid, "UCTE"));
 
         //insert a study with a non existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
@@ -707,7 +707,7 @@ public class StudyTest {
                 new TypeReference<List<CreatedStudyBasicInfos>>() {
                 });
 
-        assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "UCTE"));
+        assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
 
         //insert the same study but with another user (should work)
         //even with the same name should work
@@ -721,7 +721,7 @@ public class StudyTest {
                 });
 
         assertThat(createdStudyBasicInfosList.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
+                        createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
 
         //insert a study with a case (multipartfile)
         UUID s2Uuid = createStudy("userId", TEST_FILE, IMPORTED_CASE_UUID_STRING, true);
@@ -733,7 +733,7 @@ public class StudyTest {
         resultAsString = result.getResponse().getContentAsString();
         StudyInfos studyInfos = mapper.readValue(resultAsString, StudyInfos.class);
 
-        assertThat(studyInfos, createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
+        assertThat(studyInfos, createMatcherStudyInfos(s2Uuid, "XIIDM"));
 
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
@@ -838,9 +838,9 @@ public class StudyTest {
         if (!createdStudyBasicInfosList.get(0).getId().equals(oldStudyUuid)) {
             Collections.reverse(createdStudyBasicInfosList);
         }
-        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "userId", "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid,  "UCTE")
                 .matchesSafely(createdStudyBasicInfosList.get(0)));
-        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid,  "UCTE")
                 .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 
@@ -1211,7 +1211,7 @@ public class StudyTest {
             resultAsString = mvcResult.getResponse().getContentAsString();
             BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
 
-            assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
+            assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId()));
         }
 
         UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
@@ -1223,7 +1223,7 @@ public class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
 
-        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
+        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid));
 
         // once we checked study creation requests, we can countDown latch to trigger study creation request
         countDownLatch.countDown();
@@ -1255,7 +1255,7 @@ public class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
-        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
+        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid,  "XIIDM"));
 
         // assert that all http requests have been sent to remote services
         var httpRequests = TestUtils.getRequestsDone(2, server);
@@ -1273,7 +1273,7 @@ public class StudyTest {
 
         BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
 
-        assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
+        assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId()));
 
         studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
 
@@ -1286,7 +1286,7 @@ public class StudyTest {
 
         bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
 
-        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
+        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid));
 
         countDownLatch.countDown();
 
@@ -1318,7 +1318,7 @@ public class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
-        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
+        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid,  "XIIDM"));
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(2, server);
