@@ -53,7 +53,6 @@ public class NotificationService {
     public static final String UPDATE_TYPE_SHORT_CIRCUIT_FAILED = "shortCircuitAnalysis_failed";
     public static final String UPDATE_TYPE_STUDIES = "studies";
     public static final String UPDATE_TYPE_STUDY = "study";
-    public static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
     public static final String UPDATE_TYPE_SWITCH = "switch";
 
@@ -117,15 +116,6 @@ public class NotificationService {
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
-                .build());
-    }
-
-    @PostCompletion
-    public void emitStudyDelete(UUID studyUuid, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE)
                 .build());
     }
 
