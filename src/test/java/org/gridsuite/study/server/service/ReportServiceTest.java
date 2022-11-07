@@ -101,6 +101,11 @@ public class ReportServiceTest {
 
     private static final long TIMEOUT = 1000;
 
+    private void cleanDB() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+    }
+
     @Before
     public void setup() throws IOException {
         server = new MockWebServer();
@@ -143,6 +148,7 @@ public class ReportServiceTest {
     public void tearDown() {
         TestUtils.assertQueuesEmptyThenClear(List.of(STUDY_UPDATE_DESTINATION), output);
         try {
+            cleanDB();
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
