@@ -211,6 +211,10 @@ public class NetworkModificationTreeService {
         });
     }
 
+    public List<NodeEntity> getChildrenByParentUuid(UUID parentUuid) {
+        return nodesRepository.findAllByParentNodeIdNode(parentUuid);
+    }
+
     @Transactional
     public void doDeleteTree(UUID studyId) {
         try {
