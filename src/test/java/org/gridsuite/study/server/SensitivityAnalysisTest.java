@@ -382,8 +382,7 @@ public class SensitivityAnalysisTest {
         difficultyOfFind = 2;
         try {
             mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?a",
-                    studyNameUserIdUuid, modificationNode1Uuid))
-                .andExpectAll(status().isNotFound());
+                    studyNameUserIdUuid, modificationNode1Uuid));
 
             fail("should have thrown");
         } catch (Exception e) {
@@ -393,8 +392,7 @@ public class SensitivityAnalysisTest {
 
         try {
             mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
-                    studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
-                .andExpectAll(status().isNotFound());
+                    studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"));
 
             fail("should have thrown");
         } catch (Exception e) {
