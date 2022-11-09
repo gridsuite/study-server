@@ -101,6 +101,11 @@ public class ReportServiceTest {
 
     private static final long TIMEOUT = 1000;
 
+    private void cleanDB() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+    }
+
     @Before
     public void setup() throws IOException {
         server = new MockWebServer();
@@ -127,7 +132,7 @@ public class ReportServiceTest {
                 String path = Objects.requireNonNull(request.getPath());
                 if (path.matches("/v1/reports/.*")) {
                     return new MockResponse().setResponseCode(HttpStatus.OK.value())
-                        .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME))))
+                        .setBody(mapper.writeValueAsString(getNodeReport(Objects.requireNonNull(request.getRequestUrl()).pathSegments().get(2), request.getRequestUrl().queryParameter(QUERY_PARAM_REPORT_DEFAULT_NAME)).getSubReporters()))
                         .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -141,6 +146,7 @@ public class ReportServiceTest {
 
     @After
     public void tearDown() {
+        cleanDB();
         TestUtils.assertQueuesEmptyThenClear(List.of(STUDY_UPDATE_DESTINATION), output);
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
