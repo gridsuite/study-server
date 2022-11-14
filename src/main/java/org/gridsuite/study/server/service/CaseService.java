@@ -38,7 +38,7 @@ public class CaseService {
         this.caseServerBaseUri = caseServerBaseUri;
     }
 
-    public Boolean caseExists(UUID caseUuid) {
+    private Boolean caseExists(UUID caseUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/exists")
             .buildAndExpand(caseUuid)
             .toUriString();
