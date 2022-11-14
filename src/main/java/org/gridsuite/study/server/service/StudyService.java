@@ -131,7 +131,6 @@ public class StudyService {
             StudyServerExecutionService studyServerExecutionService,
             LoadflowService loadflowService,
             ShortCircuitService shortCircuitService,
-            CaseService caseService,
             SingleLineDiagramService singleLineDiagramService,
             NetworkConversionService networkConversionService,
             GeoDataService geoDataService,
