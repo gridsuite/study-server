@@ -1453,8 +1453,8 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments-data")
-    @Operation(summary = "Get Network map essential data")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines data")})
+    @Operation(summary = "Get network map equipments data")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The lists of lines and substations data")})
     public ResponseEntity<String> getMapEquipmentsData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
