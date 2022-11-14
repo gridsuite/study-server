@@ -361,7 +361,6 @@ public class NetworkMapTest {
                 .contains(String.format("/v1/networks/%s/map-equipments-data", NETWORK_UUID_STRING)));
     }
 
-
     @Test
     public void testGetBusesOrBusbarSections() throws Exception {
         MvcResult mvcResult;
