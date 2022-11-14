@@ -1452,4 +1452,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments-data")
+    @Operation(summary = "Get Network map essential data")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines data")})
+    public ResponseEntity<String> getMapEquipmentsData(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getMapEquipmentsMapData(studyUuid, nodeUuid, inUpstreamBuiltParentNode, substationsIds));
+    }
+
 }
