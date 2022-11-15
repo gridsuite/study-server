@@ -74,17 +74,13 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.util.ResourceUtils;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
@@ -692,7 +688,7 @@ public class StudyTest {
 
         //insert a study with a non existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
-                NOT_EXISTING_CASE_UUID, "false").header("userId", "userId"))
+      NOT_EXISTING_CASE_UUID, "false").header("userId", "userId"))
                 .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
@@ -721,19 +717,7 @@ public class StudyTest {
                 });
 
         assertThat(createdStudyBasicInfosList.get(0),
-                        createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
-
-        //insert a study with a case (multipartfile)
-        UUID s2Uuid = createStudy("userId", TEST_FILE, IMPORTED_CASE_UUID_STRING, true);
-
-        // check the study s2
-        result = mockMvc.perform(get("/v1/studies/{studyUuid}", s2Uuid).header("userId", "userId"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-
-        resultAsString = result.getResponse().getContentAsString();
-        StudyInfos studyInfos = mapper.readValue(resultAsString, StudyInfos.class);
-
-        assertThat(studyInfos, createMatcherStudyInfos(s2Uuid, "userId", "XIIDM"));
+                createMatcherCreatedStudyBasicInfos(studyUuid, "userId2", "UCTE"));
 
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
@@ -743,14 +727,6 @@ public class StudyTest {
                 jsonPath("$").value(STUDY_NOT_FOUND.name()));
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-
-        //delete existing study s2
-        mockMvc.perform(delete("/v1/studies/{studyUuid}", s2Uuid).header("userId", "userId"))
-                .andExpect(status().isOk());
-
-        var httpRequests = TestUtils.getRequestsDone(3, server);
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/groups/.*")));
-        assertEquals(2, httpRequests.stream().filter(p -> p.matches("/v1/reports/.*")).count());
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
@@ -868,27 +844,6 @@ public class StudyTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
-    @Test
-    public void testCreationWithErrorBadCaseFile() throws Exception {
-        // Create study with a bad case file -> error
-        createStudyWithFileError("userId", TEST_FILE_WITH_ERRORS, IMPORTED_CASE_WITH_ERRORS_UUID_STRING, false,
-                "The network 20140116_0830_2D4_UX1_pst already contains an object 'GeneratorImpl' with the id 'BBE3AA1 _generator'");
-    }
-
-    @Test
-    public void testCreationWithErrorBadExistingCase() throws Exception {
-        // Create study with a bad case file -> error when importing in the case server
-        createStudyWithFileError("userId", TEST_FILE_IMPORT_ERRORS, null, false, "Error during import in the case server");
-    }
-
-    @Test
-    public void testCreationWithErrorNoMessageBadExistingCase() throws Exception {
-        // Create study with a bad case file -> error when importing in the case server
-        // without message in response body
-        createStudyWithFileError("userId", TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY, null, false,
-                "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-    }
-
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid, UUID.randomUUID(), variantId, nodeName);
     }
@@ -1002,92 +957,6 @@ public class StudyTest {
         return studyUuid;
     }
 
-    private UUID createStudy(String userId, String fileName, String caseUuid, boolean isPrivate,
-            String... errorMessage) throws Exception {
-        final UUID studyUuid;
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
-
-            MvcResult result = mockMvc
-                    .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate).file(mockFile)
-                            .header("userId", userId).contentType(MediaType.MULTIPART_FORM_DATA))
-                    .andExpect(status().isOk()).andReturn();
-
-            String resultAsString = result.getResponse().getContentAsString();
-            BasicStudyInfos infos = mapper.readValue(resultAsString, BasicStudyInfos.class);
-
-            studyUuid = infos.getId();
-        }
-
-        // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
-
-        if (errorMessage.length == 0) {
-            output.receive(TIMEOUT, studyUpdateDestination);   // message for first modification node creation
-        }
-
-        // assert that the broker message has been sent a study creation message for
-        // creation
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
-        assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
-
-        // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(caseUuid == null ? 1 : 2, server);
-        assertTrue(requests.contains("/v1/cases/private"));
-        if (caseUuid != null) {
-            assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
-        }
-        return studyUuid;
-    }
-
-    private UUID createStudyWithFileError(String userId, String fileName, String caseUuid, boolean isPrivate, String errorMessage)
-            throws Exception {
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
-
-            mockMvc
-                    .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", isPrivate).file(mockFile)
-                            .header("userId", userId).contentType(MediaType.MULTIPART_FORM_DATA))
-                    .andExpect(status().is5xxServerError()).andReturn();
-        }
-
-        // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT);
-        assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
-
-        // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(caseUuid == null ? 1 : 2, server);
-        assertTrue(requests.contains("/v1/cases/private"));
-
-        MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        String resultAsString = mvcResult.getResponse().getContentAsString();
-
-        List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() {
-        });
-
-        assertEquals(List.of(), bsiListResult);
-
-        if (caseUuid != null) {
-            assertTrue(requests.stream().anyMatch(r -> r.matches(
-                    "/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
-        }
-        return null;
-    }
-
     @Test
     public void testCreateStudyWithErrorDuringCaseImport() throws Exception {
         String userId = "userId";
@@ -1146,31 +1015,12 @@ public class StudyTest {
         String resultAsString;
         countDownLatch = new CountDownLatch(1);
 
-        //insert a study with a case (multipartfile)
-        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:testCase.xiidm"))) {
-            MockMultipartFile mockFile = new MockMultipartFile("caseFile", "blockingCaseFile",
-                    "text/xml", is);
-
-            mvcResult = mockMvc
-                    .perform(multipart(STUDIES_URL + "?isPrivate={isPrivate}", "true").file(mockFile)
-                            .header("userId", "userId").contentType(MediaType.MULTIPART_FORM_DATA))
-                    .andExpect(status().isOk()).andReturn();
-            resultAsString = mvcResult.getResponse().getContentAsString();
-            BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
-
-            assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
-        }
-
-        UUID studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
-
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-
-        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         // once we checked study creation requests, we can countDown latch to trigger study creation request
         countDownLatch.countDown();
@@ -1202,13 +1052,6 @@ public class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
-        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
-
-        // assert that all http requests have been sent to remote services
-        var httpRequests = TestUtils.getRequestsDone(2, server);
-        assertTrue(httpRequests.contains("/v1/cases/private"));
-        assertTrue(httpRequests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + IMPORTED_BLOCKING_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
-
         countDownLatch = new CountDownLatch(1);
 
       //insert a study
@@ -1222,8 +1065,6 @@ public class StudyTest {
 
         assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId(), "userId"));
 
-        studyUuid = studyCreationRequestRepository.findAll().get(0).getId();
-
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests", NEW_STUDY_CASE_UUID, "false")
                 .header("userId", "userId")).andExpectAll(
                         status().isOk(),
@@ -1232,8 +1073,6 @@ public class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
 
         bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-
-        assertThat(bsiListResult.get(0), createMatcherStudyBasicInfos(studyUuid, "userId"));
 
         countDownLatch.countDown();
 
@@ -1264,8 +1103,6 @@ public class StudyTest {
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-
-        assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "userId", "XIIDM"));
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(2, server);
