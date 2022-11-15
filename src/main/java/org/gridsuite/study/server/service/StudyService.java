@@ -956,12 +956,10 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
-        SecurityAnalysisParameters securityAnalysisParameters = new SecurityAnalysisParameters();
+        SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
         if (StringUtils.isEmpty(parameters)) {
             LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
-            if (loadFlowParameters != null) {
-                securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
-            }
+            securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
         } else {
             try {
                 securityAnalysisParameters = objectMapper.readValue(parameters, SecurityAnalysisParameters.class);
