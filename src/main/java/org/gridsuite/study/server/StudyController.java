@@ -185,17 +185,31 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes")
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes", params = {"nodeToCopyUuid", "referenceNodeUuid", "insertMode"})
     @Operation(summary = "duplicate a node")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The node was successfully created"),
-            @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
-            @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
+        @ApiResponse(responseCode = "200", description = "The node was successfully created"),
+        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
+        @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
     public ResponseEntity<Void> duplicateNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
-                                              @Parameter(description = "The reference node to where we want to copy") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "the position where the node will be copied relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
+                                              @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
         studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes", params = {"nodeToCutUuid", "referenceNodeUuid", "insertMode"})
+    @Operation(summary = "cut and paste a node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The node was successfully created"),
+        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
+        @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
+    public ResponseEntity<Void> cutAndPasteNode(@PathVariable("studyUuid") UUID studyUuid,
+                                              @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,
+                                              @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
+        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode);
         return ResponseEntity.ok().build();
     }
 

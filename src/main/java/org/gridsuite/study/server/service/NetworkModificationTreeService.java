@@ -148,6 +148,40 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void moveStudyNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+        Optional<NodeEntity> nodeToMoveOpt = nodesRepository.findById(nodeToMoveUuid);
+        NodeEntity nodeToMoveEntity = nodeToMoveOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+
+        nodesRepository.findAllByParentNodeIdNode(nodeToMoveUuid).stream()
+            .forEach(child -> child.setParentNode(nodeToMoveEntity.getParentNode()));
+
+        Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
+        NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+
+        if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
+        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
+                anchorNodeEntity.getParentNode() : anchorNodeEntity;
+
+        if (insertMode.equals(InsertMode.BEFORE)) {
+            anchorNodeEntity.setParentNode(nodeToMoveEntity);
+        } else if (insertMode.equals(InsertMode.AFTER)) {
+            nodesRepository.findAllByParentNodeIdNode(anchorNodeUuid).stream()
+                    .filter(n -> !n.getIdNode().equals(nodeToMoveEntity.getIdNode()))
+                    .forEach(child -> child.setParentNode(nodeToMoveEntity));
+        }
+
+        nodeToMoveEntity.setParentNode(parent);
+
+        UUID studyUuid = anchorNodeEntity.getStudy().getId();
+
+        notificationService.emitNodesDeleted(studyUuid, List.of(nodeToMoveUuid), false);
+        notificationService.emitNodeInserted(studyUuid, parent.getIdNode(), nodeToMoveEntity.getIdNode(), insertMode);
+    }
+
+    @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
     public void doDeleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         List<UUID> removedNodes = new ArrayList<>();
