@@ -665,110 +665,110 @@ public class StudyTest {
     public void test() throws Exception {
         MvcResult result;
         String resultAsString;
-    
+
         //empty list
         mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(status().isOk(),
             content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
-    
+
         //empty list
         mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(status().isOk(),
             content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
-    
+
         //insert a study
         UUID studyUuid = createStudy("userId", CASE_UUID);
-    
+
         // check the study
         result = mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header("userId", "userId"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-    
+
         resultAsString = result.getResponse().getContentAsString();
         StudyInfos infos = mapper.readValue(resultAsString, StudyInfos.class);
-    
+
         assertThat(infos, createMatcherStudyInfos(studyUuid, "UCTE"));
-    
+
         //insert a study with a non existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}",
                 NOT_EXISTING_CASE_UUID, "false").header("userId", "userId"))
                      .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
-    
+
         assertTrue(TestUtils.getRequestsDone(1, server)
                        .contains(String.format("/v1/cases/%s/exists", NOT_EXISTING_CASE_UUID)));
-    
+
         result = mockMvc.perform(get("/v1/studies").header("userId", "userId"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-    
+
         resultAsString = result.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString,
             new TypeReference<List<CreatedStudyBasicInfos>>() {
             });
-    
+
         assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
-    
+
         //insert the same study but with another user (should work)
         //even with the same name should work
         studyUuid = createStudy("userId2", CASE_UUID);
-    
+
         resultAsString = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn().getResponse().getContentAsString();
-    
+
         createdStudyBasicInfosList = mapper.readValue(resultAsString,
             new TypeReference<List<CreatedStudyBasicInfos>>() {
             });
-    
+
         assertThat(createdStudyBasicInfosList.get(0),
             createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
-    
+
         UUID randomUuid = UUID.randomUUID();
         //get a non existing study -> 404 not found
         mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header("userId", "userId"))
             .andExpectAll(status().isNotFound(),
                 content().contentType(MediaType.APPLICATION_JSON),
                 jsonPath("$").value(STUDY_NOT_FOUND.name()));
-    
+
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
-    
+
         // expect only 1 study (public one) since the other is private and we use
         // another userId
         result = mockMvc.perform(get("/v1/studies").header("userId", "a"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-    
+
         resultAsString = result.getResponse().getContentAsString();
         createdStudyBasicInfosList = mapper.readValue(resultAsString,
             new TypeReference<List<CreatedStudyBasicInfos>>() {
             });
         assertEquals(2, createdStudyBasicInfosList.size());
-    
+
         //get available export format
         mockMvc.perform(get("/v1/export-network-formats")).andExpectAll(status().isOk(),
             content().string("[\"CGMES\",\"UCTE\",\"XIIDM\"]"));
-    
+
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/export/formats"));
-    
+
         //export a network
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, rootNodeUuid, "XIIDM"))
             .andExpect(status().isOk());
-    
+
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM", NETWORK_UUID_STRING)));
-    
+
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}?formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, rootNodeUuid, "XIIDM"))
             .andExpect(status().isOk());
         TestUtils.getRequestsDone(1, server); // just consume it
-    
+
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 3");
         UUID modificationNode1Uuid = modificationNode1.getId();
-    
+
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isInternalServerError());
-    
+
         modificationNode1.setBuildStatus(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT, studyUpdateDestination);
-    
+
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
             .andExpect(status().isOk());
-    
+
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
     }
 
@@ -1014,17 +1014,17 @@ public class StudyTest {
         MvcResult mvcResult;
         String resultAsString;
         countDownLatch = new CountDownLatch(1);
-    
+
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<BasicStudyInfos> bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-    
+
         // once we checked study creation requests, we can countDown latch to trigger study creation request
         countDownLatch.countDown();
-    
+
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT, studyUpdateDestination);
         // drop the broker message for study creation
@@ -1033,49 +1033,49 @@ public class StudyTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // drop the broker message for study creation request (deletion)
         output.receive(TIMEOUT, studyUpdateDestination);
-    
+
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
-    
+
         resultAsString = mvcResult.getResponse().getContentAsString();
         bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-    
+
         assertEquals(List.of(), bsiListResult);
-    
+
         mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
-    
+
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-    
+
         countDownLatch = new CountDownLatch(1);
-    
+
         //insert a study
         mvcResult = mockMvc.perform(post("/v1/studies/cases/{caseUuid}?isPrivate={isPrivate}", NEW_STUDY_CASE_UUID, "false")
                                         .header("userId", "userId"))
                         .andExpect(status().isOk())
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-    
+
         BasicStudyInfos bsiResult = mapper.readValue(resultAsString, BasicStudyInfos.class);
-    
+
         assertThat(bsiResult, createMatcherStudyBasicInfos(studyCreationRequestRepository.findAll().get(0).getId()));
-    
+
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests", NEW_STUDY_CASE_UUID, "false")
                                         .header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-    
+
         bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-    
+
         countDownLatch.countDown();
-    
+
         // drop the broker message for study creation request (creation)
         output.receive(TIMEOUT, studyUpdateDestination);
         // drop the broker message for study creation
@@ -1084,18 +1084,18 @@ public class StudyTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // drop the broker message for study creation request (deletion)
         output.receive(TIMEOUT, studyUpdateDestination);
-    
+
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
                                         .header("userId", "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-    
+
         bsiListResult = mapper.readValue(resultAsString, new TypeReference<List<BasicStudyInfos>>() { });
-    
+
         assertEquals(List.of(), bsiListResult);
-    
+
         mvcResult = mockMvc.perform(get("/v1/studies")
                                         .header("userId", "userId")).andExpectAll(
                 status().isOk(),
@@ -1103,7 +1103,7 @@ public class StudyTest {
                         .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
-    
+
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
