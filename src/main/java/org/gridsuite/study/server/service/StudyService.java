@@ -1253,6 +1253,15 @@ public class StudyService {
         updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
     }
 
+    @Transactional
+    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+        checkStudyContainsNode(studyUuid, nodeToMoveUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
+        boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
+        updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
+    }
+
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
