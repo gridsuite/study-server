@@ -14,8 +14,10 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
+import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import lombok.NonNull;
+import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermsQueryBuilder;
@@ -44,7 +46,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -103,7 +104,7 @@ public class StudyService {
     private final EquipmentInfosService equipmentInfosService;
     private final LoadflowService loadflowService;
     private final ShortCircuitService shortCircuitService;
-    private final CaseService caseService;
+
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
@@ -132,7 +133,6 @@ public class StudyService {
             StudyServerExecutionService studyServerExecutionService,
             LoadflowService loadflowService,
             ShortCircuitService shortCircuitService,
-            CaseService caseService,
             SingleLineDiagramService singleLineDiagramService,
             NetworkConversionService networkConversionService,
             GeoDataService geoDataService,
@@ -154,7 +154,6 @@ public class StudyService {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.loadflowService = loadflowService;
         this.shortCircuitService = shortCircuitService;
-        this.caseService = caseService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
         this.geoDataService = geoDataService;
@@ -222,25 +221,6 @@ public class StudyService {
         }
 
         return basicStudyInfos;
-    }
-
-    public BasicStudyInfos createStudy(MultipartFile caseFile, String userId, UUID studyUuid) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        try {
-            createStudyFromFile(caseFile, userId, basicStudyInfos);
-        } catch (Exception e) {
-            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
-            throw e;
-        }
-        return basicStudyInfos;
-    }
-
-    private void createStudyFromFile(MultipartFile caseFile, String userId, BasicStudyInfos basicStudyInfos) {
-        UUID importReportUuid = UUID.randomUUID();
-        UUID caseUuid = caseService.importCase(caseFile);
-        if (caseUuid != null) {
-            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, null);
-        }
     }
 
     public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
@@ -951,8 +931,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters,
-                                    UUID nodeUuid) {
+    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
         Objects.requireNonNull(parameters);
@@ -966,7 +945,7 @@ public class StudyService {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                    StandardCharsets.UTF_8);
+                StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -974,7 +953,19 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
-        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, parameters, receiver);
+        SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
+        if (StringUtils.isEmpty(parameters)) {
+            LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
+            securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
+        } else {
+            try {
+                securityAnalysisParameters = objectMapper.readValue(parameters, SecurityAnalysisParameters.class);
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, securityAnalysisParameters, receiver);
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1257,6 +1248,15 @@ public class StudyService {
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
         updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
+    }
+
+    @Transactional
+    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+        checkStudyContainsNode(studyUuid, nodeToMoveUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
+        boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
+        updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
     }
 
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {

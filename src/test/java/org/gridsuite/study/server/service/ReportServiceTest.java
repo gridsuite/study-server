@@ -101,6 +101,11 @@ public class ReportServiceTest {
 
     private static final long TIMEOUT = 1000;
 
+    private void cleanDB() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+    }
+
     @Before
     public void setup() throws IOException {
         server = new MockWebServer();
@@ -141,6 +146,7 @@ public class ReportServiceTest {
 
     @After
     public void tearDown() {
+        cleanDB();
         TestUtils.assertQueuesEmptyThenClear(List.of(STUDY_UPDATE_DESTINATION), output);
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
