@@ -18,5 +18,4 @@ import java.util.UUID;
 
 @Repository
 public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
-    //List<StudyEntity> findAllByUserId(String userId);
 }
