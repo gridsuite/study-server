@@ -33,7 +33,7 @@ public class StudyInfosServiceMockTests {
 
     @Test
     public void testAddDeleteStudyInfos() {
-        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(UUID.fromString("11888888-0000-0000-0000-000000000000"), "userId", "UCTE");
+        MatcherCreatedStudyBasicInfos<CreatedStudyBasicInfos> matcher = MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos(UUID.fromString("11888888-0000-0000-0000-000000000000"), "UCTE");
         assertThat(studyInfosService.add(matcher.getReference()), matcher);
         assertEquals(0, Iterables.size(studyInfosService.findAll()));
     }

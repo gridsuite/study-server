@@ -15,7 +15,5 @@ import java.util.UUID;
 public interface BasicStudyEntity {
     UUID getId();
 
-    String getUserId();
-
     LocalDateTime getDate();
 }
