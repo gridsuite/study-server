@@ -148,7 +148,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void moveStudyNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+    public void moveStudyNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {        //if we try to move a node around itself, nothing happens
+        if (nodeToMoveUuid.equals(anchorNodeUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
         Optional<NodeEntity> nodeToMoveOpt = nodesRepository.findById(nodeToMoveUuid);
         NodeEntity nodeToMoveEntity = nodeToMoveOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
 
