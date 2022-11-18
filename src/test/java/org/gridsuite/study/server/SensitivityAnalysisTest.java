@@ -199,7 +199,7 @@ public class SensitivityAnalysisTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                System.out.println(path + " shouldNotFind " + difficultyOfFind);
+                LOGGER.debug(path + " shouldNotFind " + difficultyOfFind);
                 request.getBody();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
