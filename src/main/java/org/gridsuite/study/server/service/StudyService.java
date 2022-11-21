@@ -1398,12 +1398,11 @@ public class StudyService {
     }
 
     @Transactional
-    public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
+    public void moveModification(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            List<UUID> modificationUuidList = Collections.singletonList(modificationUuid);
             networkModificationService.reorderModification(groupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {

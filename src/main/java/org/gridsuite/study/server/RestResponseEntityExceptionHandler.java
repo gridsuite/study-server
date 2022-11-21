@@ -72,7 +72,8 @@ public class RestResponseEntityExceptionHandler {
                 case SVG_NOT_FOUND:
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getMessage());
                 case UNKNOWN_NOTIFICATION_TYPE:
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION_TYPE);
+                case UNKNOWN_ACTION_TYPE:
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(studyException.getType());
                 default:
             }
         } else if (exception instanceof ServerWebInputException) {
