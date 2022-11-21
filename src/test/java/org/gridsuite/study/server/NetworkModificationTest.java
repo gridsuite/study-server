@@ -1664,21 +1664,21 @@ public class NetworkModificationTest {
         String modificationUuidListBody = objectWriter.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         UUID.randomUUID(), rootNodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
                 .andExpect(status().isForbidden());
 
         // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
                 .andExpect(status().isNotFound());
 
         // duplicate 2 modifications in node1
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
@@ -1694,6 +1694,51 @@ public class NetworkModificationTest {
         List<UUID> expectedList = List.of(modification1, modification2);
         String expectedBody = mapper.writeValueAsString(expectedList);
         assertEquals(expectedBody, duplicateModificationRequest.get().getBody());
+    }
+
+    @Test
+    public void testCutAndPasteModification() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1");
+        UUID nodeUuid1 = node1.getId();
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        String modificationUuidListBody = objectWriter.writeValueAsString(Arrays.asList(modification1, modification2));
+
+        // Random/bad studyId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=CUT",
+                        UUID.randomUUID(), rootNodeUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isForbidden());
+
+        // Random/bad nodeId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=CUT",
+                        studyUuid, UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isNotFound());
+
+        // move 2 modifications to node1
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=CUT",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        var requests = TestUtils.getRequestsWithBodyDone(1, server);
+        Optional<RequestWithBody> moveModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + node1.getModificationGroupUuid() + "[?]action=MOVE")).findFirst();
+        assertTrue(moveModificationRequest.isPresent());
+        List<UUID> expectedList = List.of(modification1, modification2);
+        String expectedBody = mapper.writeValueAsString(expectedList);
+        assertEquals(expectedBody, moveModificationRequest.get().getBody());
     }
 
     @Test

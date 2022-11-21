@@ -55,7 +55,7 @@ public class StudyController {
     private final CaseService caseService;
 
     enum UpdateModificationAction {
-        CUT, DUPLICATE
+        CUT, COPY
     }
 
     public StudyController(StudyService studyService,
@@ -619,11 +619,11 @@ public class StudyController {
                                                          @RequestBody List<UUID> modificationsToCopyUuidList) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         switch (action) {
-            case DUPLICATE:
+            case COPY:
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList));
             case CUT:
                 studyService.moveModification(studyUuid, nodeUuid, modificationsToCopyUuidList, null);
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
+                return ResponseEntity.ok().build();
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
