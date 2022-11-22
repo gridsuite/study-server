@@ -542,7 +542,7 @@ public class NetworkModificationTest {
         assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
 
         modificationNode3.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode3 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, null);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         buildInfos = networkModificationTreeService.getBuildInfos(modificationNode4.getId());
@@ -552,13 +552,13 @@ public class NetworkModificationTest {
         assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroupUuids());
 
         modificationNode2.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode2 as not built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         modificationNode4.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode4 as built invalid
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode4, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         modificationNode5.setBuildStatus(BuildStatus.BUILT);  // mark node modificationNode5 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode5, null);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode2 and stop build
@@ -569,7 +569,7 @@ public class NetworkModificationTest {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode5.getId()));
 
         modificationNode3.setBuildStatus(BuildStatus.NOT_BUILT);  // mark node modificationNode3 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, null);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // build modificationNode3 and stop build
@@ -632,10 +632,10 @@ public class NetworkModificationTest {
 
         // test build status on switch modification
         modificationNode1.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode1 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         modificationNode2.setBuildStatus(BuildStatus.BUILT);  // mark modificationNode2 as built
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, null);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
@@ -766,7 +766,7 @@ public class NetworkModificationTest {
 
         String createGeneratorAttributes2 = "{\"generatorId\":\"generatorId3\",\"generatorName\":\"generatorName3\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"100.0\",\"maxActivePower\":\"200.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create generator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
@@ -815,7 +815,7 @@ public class NetworkModificationTest {
 
         String createShuntCompensatorAttributes2 = "{\"shuntCompensatorId\":\"shuntCompensatorId3\",\"shuntCompensatorName\":\"shuntCompensatorName3\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create shunt compensator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
@@ -894,7 +894,7 @@ public class NetworkModificationTest {
                 + "\"voltageLevelId1\":\"idVL1\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create line on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
@@ -954,7 +954,7 @@ public class NetworkModificationTest {
 
         String createTwoWindingsTransformerAttributes2 = "{\"equipmentId\":\"2wtId3\",\"equipmentName\":\"2wtName3\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create Two Windings Transformer on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
@@ -1187,7 +1187,7 @@ public class NetworkModificationTest {
 
         String createLoadAttributes2 = "{\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         modificationNode3.setBuildStatus(BuildStatus.BUILDING);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create load on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
@@ -1349,7 +1349,7 @@ public class NetworkModificationTest {
 
         String createSubstationAttributes2 = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create substation on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
@@ -1417,7 +1417,7 @@ public class NetworkModificationTest {
         String createVoltageLevelAttributes2 = "{\"voltageLevelId\":\"voltageLevelId3\",\"voltageLevelName\":\"voltageLevelName3\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create voltage level on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
@@ -1768,9 +1768,9 @@ public class NetworkModificationTest {
         modificationNode1.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         modificationNode3.setReportUuid(node3ReportUuid);
 
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, null);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         var modificationType = ModificationType.GENERATOR_MODIFICATION;

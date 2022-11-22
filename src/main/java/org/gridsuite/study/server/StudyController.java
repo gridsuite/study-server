@@ -194,8 +194,9 @@ public class StudyController {
     public ResponseEntity<Void> duplicateNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
-        studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
+                                              @RequestHeader("userId") String userId) {
+        studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -208,8 +209,9 @@ public class StudyController {
     public ResponseEntity<Void> cutAndPasteNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
-        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode);
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
+                                              @RequestHeader("userId") String userId) {
+        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -574,9 +576,10 @@ public class StudyController {
     public ResponseEntity<Void> changeSwitchState(@PathVariable("studyUuid") UUID studyUuid,
                                                         @PathVariable("switchId") String switchId,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @Parameter(description = "Switch open state") @RequestParam("open") boolean open) {
+                                                        @Parameter(description = "Switch open state") @RequestParam("open") boolean open,
+                                                        @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.changeSwitchState(studyUuid, switchId, open, nodeUuid);
+        studyService.changeSwitchState(studyUuid, switchId, open, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -585,9 +588,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment is updated")})
     public ResponseEntity<Void> applyGroovyScript(@PathVariable("studyUuid") UUID studyUuid,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @RequestBody String groovyScript) {
+                                                        @RequestBody String groovyScript,
+                                                        @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid);
+        studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid, userId);
 
         return ResponseEntity.ok().build();
     }
@@ -598,9 +602,10 @@ public class StudyController {
     public ResponseEntity<Void> moveModification(@PathVariable("studyUuid") UUID studyUuid,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
-                                                        @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid) {
+                                                        @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
+                                                        @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.reorderModification(studyUuid, nodeUuid, modificationUuid, beforeUuid);
+        studyService.reorderModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -609,9 +614,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
     public ResponseEntity<String> duplicateModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody List<UUID> modificationsUuidList) {
+                                                         @RequestBody List<UUID> modificationsUuidList,
+                                                         @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -621,9 +627,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("lineId") String lineId,
-            @RequestBody String status) {
+            @RequestBody String status,
+            @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid);
+        studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -750,8 +757,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) LoadFlowParameters lfParameter) {
-        studyService.setLoadFlowParameters(studyUuid, lfParameter);
+            @RequestBody(required = false) LoadFlowParameters lfParameter,
+            @RequestHeader("userId") String userId) {
+        studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -767,8 +775,9 @@ public class StudyController {
     @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
     public ResponseEntity<Void> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                          @RequestBody(required = false) String provider) {
-        studyService.updateLoadFlowProvider(studyUuid, provider);
+                                                          @RequestBody(required = false) String provider,
+                                                          @RequestHeader("userId") String userId) {
+        studyService.updateLoadFlowProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -784,8 +793,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters) {
-        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters);
+            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters,
+            @RequestHeader("userId") String userId) {
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -907,9 +917,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been created")})
     public ResponseEntity<Void> createLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLoadAttributes) {
+                                                 @RequestBody String createLoadAttributes,
+                                                 @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid);
+        studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -918,9 +929,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been modified")})
     public ResponseEntity<Void> modifyLoad(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String modifyLoadAttributes) {
+                                                 @RequestBody String modifyLoadAttributes,
+                                                 @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.modifyEquipment(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid);
+        studyService.modifyEquipment(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -930,9 +942,10 @@ public class StudyController {
     public ResponseEntity<Void> updateLoadCreation(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("modificationUuid") UUID modificationUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLoadAttributes) {
+                                                 @RequestBody String createLoadAttributes,
+                                                 @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -942,9 +955,10 @@ public class StudyController {
     public ResponseEntity<Void> updateLoadModification(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("modificationUuid") UUID modificationUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String modifyLoadAttributes) {
+                                                         @RequestBody String modifyLoadAttributes,
+                                                         @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -955,9 +969,10 @@ public class StudyController {
                                                                   @PathVariable("modificationUuid") UUID modificationUuid,
                                                                   @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @PathVariable("typeModification") ModificationType typeModification,
-                                                                  @RequestBody String modifyEquipmentAttributes) {
+                                                                  @RequestBody String modifyEquipmentAttributes,
+                                                                  @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.updateEquipmentModification(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid, modificationUuid);
+        studyService.updateEquipmentModification(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -967,9 +982,10 @@ public class StudyController {
     public ResponseEntity<Void> modifyEquipment(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @PathVariable("typeModification") ModificationType typeModification,
-                                                      @RequestBody String modifyEquipmentAttributes) {
+                                                      @RequestBody String modifyEquipmentAttributes,
+                                                      @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.modifyEquipment(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid);
+        studyService.modifyEquipment(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -978,9 +994,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications have been deleted")})
     public ResponseEntity<Void> deleteModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                           @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @RequestParam(value = "modificationsUuids") List<UUID> modificationsUuids) {
+                                                          @RequestParam(value = "modificationsUuids") List<UUID> modificationsUuids,
+                                                          @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteModifications(studyUuid, nodeUuid, modificationsUuids);
+        studyService.deleteModifications(studyUuid, nodeUuid, modificationsUuids, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1017,8 +1034,9 @@ public class StudyController {
     public ResponseEntity<AbstractNode> createNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
-                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode));
+                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode,
+                                                         @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode, userId));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
@@ -1028,8 +1046,9 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
-                                                 @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
-        studyService.deleteNode(studyUuid, nodeId, deleteChildren);
+                                                 @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
+                                                 @RequestHeader("userId") String userId) {
+        studyService.deleteNode(studyUuid, nodeId, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1051,8 +1070,9 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "the node has been updated"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> updateNode(@RequestBody AbstractNode node,
-                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        networkModificationTreeService.updateNode(studyUuid, node);
+                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestHeader("userId") String userId) {
+        networkModificationTreeService.updateNode(studyUuid, node, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1096,9 +1116,10 @@ public class StudyController {
     public ResponseEntity<Void> deleteEquipment(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                       @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
-                                                      @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
+                                                      @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId,
+                                                      @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid);
+        studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1112,9 +1133,10 @@ public class StudyController {
             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Modification UUID") @PathVariable("modificationUuid") UUID modificationUuid,
             @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
-            @Parameter(description = "Equipment ID") @PathVariable("equipmentId") String equipmentId) {
+            @Parameter(description = "Equipment ID") @PathVariable("equipmentId") String equipmentId,
+            @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentDeletion(studyUuid, equipmentType, equipmentId, nodeUuid, modificationUuid);
+        studyService.updateEquipmentDeletion(studyUuid, equipmentType, equipmentId, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1123,9 +1145,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator has been created")})
     public ResponseEntity<Void> createGenerator(@PathVariable("studyUuid") UUID studyUuid,
                                                       @PathVariable("nodeUuid") UUID nodeUuid,
-                                                      @RequestBody String createGeneratorAttributes) {
+                                                      @RequestBody String createGeneratorAttributes,
+                                                      @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid);
+        studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1135,9 +1158,10 @@ public class StudyController {
     public ResponseEntity<Void> updateGeneratorCreation(@PathVariable("studyUuid") UUID studyUuid,
                                                               @PathVariable("modificationUuid") UUID modificationUuid,
                                                               @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String createGeneratorAttributes) {
+                                                         @RequestBody String createGeneratorAttributes,
+                                                         @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1146,9 +1170,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The shunt-compensator has been created")})
     public ResponseEntity<Void> createShuntCompensator(@PathVariable("studyUuid") UUID studyUuid,
                                                              @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestBody String createShuntCompensatorAttributes) {
+                                                             @RequestBody String createShuntCompensatorAttributes,
+                                                             @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid);
+        studyService.createEquipment(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1158,9 +1183,10 @@ public class StudyController {
     public ResponseEntity<Void> updateShuntCompensatorCreation(@PathVariable("studyUuid") UUID studyUuid,
                                                                      @PathVariable("modificationUuid") UUID modificationUuid,
                                                                      @PathVariable("nodeUuid") UUID nodeUuid,
-                                                              @RequestBody String createShuntCompensatorAttributes) {
+                                                              @RequestBody String createShuntCompensatorAttributes,
+                                                              @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1169,9 +1195,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line has been created")})
     public ResponseEntity<Void> createLine(@PathVariable("studyUuid") UUID studyUuid,
                                                  @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLineAttributes) {
+                                                 @RequestBody String createLineAttributes,
+                                                 @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid);
+        studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1181,9 +1208,10 @@ public class StudyController {
     public ResponseEntity<Void> updateLineCreation(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("modificationUuid") UUID modificationUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                     @RequestBody String createLineAttributes) {
+                                                         @RequestBody String createLineAttributes,
+                                                         @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1192,9 +1220,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The two windings transformer has been created")})
     public ResponseEntity<Void> createTwoWindingsTransformer(@PathVariable("studyUuid") UUID studyUuid,
                                                                    @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                   @RequestBody String createTwoWindingsTransformerAttributes) {
+                                                                   @RequestBody String createTwoWindingsTransformerAttributes,
+                                                                   @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid);
+        studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1204,9 +1233,10 @@ public class StudyController {
     public ResponseEntity<Void> updateTwoWindingsTransformerCreation(@PathVariable("studyUuid") UUID studyUuid,
                                                                            @PathVariable("modificationUuid") UUID modificationUuid,
                                                                            @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String createTwoWindingsTransformerAttributes) {
+                                                         @RequestBody String createTwoWindingsTransformerAttributes,
+                                                         @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1215,9 +1245,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation has been created")})
     public ResponseEntity<Void> createSubstation(@PathVariable("studyUuid") UUID studyUuid,
                                                                    @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                   @RequestBody String createSubstationAttributes) {
+                                                                   @RequestBody String createSubstationAttributes,
+                                                                   @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid);
+        studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1227,9 +1258,10 @@ public class StudyController {
     public ResponseEntity<Void> updateSubstationCreation(@PathVariable("studyUuid") UUID studyUuid,
                                                                @PathVariable("modificationUuid") UUID modificationUuid,
                                                                @PathVariable("nodeUuid") UUID nodeUuid,
-                                                       @RequestBody String createSubstationAttributes) {
+                                                       @RequestBody String createSubstationAttributes,
+                                                       @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1238,9 +1270,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level has been created")})
     public ResponseEntity<Void> createVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
         @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String createVoltageLevelAttributes) {
+        @RequestBody String createVoltageLevelAttributes,
+        @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid);
+        studyService.createEquipment(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1250,9 +1283,10 @@ public class StudyController {
     public ResponseEntity<Void> updateVoltageLevelCreation(@PathVariable("studyUuid") UUID studyUuid,
         @PathVariable("modificationUuid") UUID modificationUuid,
         @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String createVoltageLevelAttributes) {
+        @RequestBody String createVoltageLevelAttributes,
+        @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1261,9 +1295,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was split at a voltage level ok")})
     public ResponseEntity<Void> lineSplitWithVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
         @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String lineSplitWithVoltageLevelAttributes) {
+        @RequestBody String lineSplitWithVoltageLevelAttributes,
+        @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, null);
+        studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, null, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1273,9 +1308,10 @@ public class StudyController {
     public ResponseEntity<Void> updateLineSplitWithVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
         @PathVariable("modificationUuid") UUID modificationUuid,
         @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String lineSplitWithVoltageLevelAttributes) {
+        @RequestBody String lineSplitWithVoltageLevelAttributes,
+        @RequestHeader("userId") String userId) {
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, modificationUuid);
+        studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1284,10 +1320,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was attached to the voltage level")})
     public ResponseEntity<Void> lineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
                                                                @PathVariable("nodeUuid") UUID nodeUuid,
-                                                               @RequestBody String lineAttachToVoltageLevelAttributes) {
+                                                               @RequestBody String lineAttachToVoltageLevelAttributes,
+                                                               @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
-        studyService.createEquipment(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid);
+        studyService.createEquipment(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1297,10 +1334,11 @@ public class StudyController {
     public ResponseEntity<Void> updateLineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
                                                                       @PathVariable("modificationUuid") UUID modificationUuid,
                                                                       @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                      @RequestBody String lineAttachToVoltageLevelAttributes) {
+                                                                      @RequestBody String lineAttachToVoltageLevelAttributes,
+                                                                      @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1309,10 +1347,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Attaching lines to spliting lines successfully")})
     public ResponseEntity<Void> linesAttachToSplitLines(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String linesAttachToSplitLinesAttributes) {
+                                                         @RequestBody String linesAttachToSplitLinesAttributes,
+                                                         @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
-        studyService.createEquipment(studyUuid, linesAttachToSplitLinesAttributes, ModificationType.LINES_ATTACH_TO_SPLIT_LINES, nodeUuid);
+        studyService.createEquipment(studyUuid, linesAttachToSplitLinesAttributes, ModificationType.LINES_ATTACH_TO_SPLIT_LINES, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1322,10 +1361,11 @@ public class StudyController {
     public ResponseEntity<Void> updateLinesAttachToSplitLines(@PathVariable("studyUuid") UUID studyUuid,
                                                                @PathVariable("modificationUuid") UUID modificationUuid,
                                                                @PathVariable("nodeUuid") UUID nodeUuid,
-                                                               @RequestBody String linesAttachToSplitLinesAttributes) {
+                                                               @RequestBody String linesAttachToSplitLinesAttributes,
+                                                               @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.assertComputationNotRunning(nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, linesAttachToSplitLinesAttributes, ModificationType.LINES_ATTACH_TO_SPLIT_LINES, nodeUuid, modificationUuid);
+        studyService.updateEquipmentCreation(studyUuid, linesAttachToSplitLinesAttributes, ModificationType.LINES_ATTACH_TO_SPLIT_LINES, nodeUuid, modificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1368,7 +1408,8 @@ public class StudyController {
     public ResponseEntity<Void> changeModificationActiveState(@PathVariable("studyUuid") UUID studyUuid,
                                                                     @PathVariable("nodeUuid") UUID nodeUuid,
                                                                     @PathVariable("modificationUuid") UUID modificationUuid,
-                                                                    @Parameter(description = "active") @RequestParam("active") boolean active) {
+                                                                    @Parameter(description = "active") @RequestParam("active") boolean active,
+                                                                    @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active);
         return ResponseEntity.ok().build();

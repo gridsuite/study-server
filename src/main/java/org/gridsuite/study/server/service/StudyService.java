@@ -753,7 +753,7 @@ public class StudyService {
                 substationsIds, "all");
     }
 
-    public void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid) {
+    public void changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID nodeUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -771,9 +771,10 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid) {
+    public void applyGroovyScript(UUID studyUuid, String groovyScript, UUID nodeUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -791,6 +792,7 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
@@ -808,7 +810,7 @@ public class StudyService {
     }
 
     public void changeLineStatus(@NonNull UUID studyUuid, @NonNull String lineId, @NonNull String status,
-                                 @NonNull UUID nodeUuid) {
+                                 @NonNull UUID nodeUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -827,6 +829,7 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void assertLoadFlowRunnable(UUID nodeUuid) {
@@ -891,7 +894,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
+    public void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters, String userId) {
         updateLoadFlowParameters(studyUuid, LoadflowService.toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -899,6 +902,7 @@ public class StudyService {
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
@@ -912,11 +916,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateLoadFlowProvider(UUID studyUuid, String provider) {
+    public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
@@ -926,8 +931,9 @@ public class StudyService {
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters) {
+    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId) {
         updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters()));
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -1081,7 +1087,7 @@ public class StudyService {
     }
 
     public void createEquipment(UUID studyUuid, String createEquipmentAttributes, ModificationType modificationType,
-                                UUID nodeUuid) {
+                                UUID nodeUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -1096,10 +1102,11 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType,
-                                UUID nodeUuid) {
+                                UUID nodeUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -1116,10 +1123,11 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void updateEquipmentCreation(UUID studyUuid, String createEquipmentAttributes,
-                                        ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+                                        ModificationType modificationType, UUID nodeUuid, UUID modificationUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentCreation(createEquipmentAttributes, modificationType,
@@ -1128,9 +1136,10 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+    public void updateEquipmentModification(UUID studyUuid, String modifyEquipmentAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentModification(modifyEquipmentAttributes, modificationType, modificationUuid);
@@ -1138,9 +1147,10 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid) {
+    public void deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -1159,9 +1169,10 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void updateEquipmentDeletion(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid, UUID modificationUuid) {
+    public void updateEquipmentDeletion(UUID studyUuid, String equipmentType, String equipmentId, UUID nodeUuid, UUID modificationUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateEquipmentDeletion(equipmentType, equipmentId, modificationUuid);
@@ -1169,6 +1180,7 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public List<VoltageLevelInfos> getVoltageLevels(UUID studyUuid, UUID nodeUuid) {
@@ -1242,21 +1254,23 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+    public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         checkStudyContainsNode(studyUuid, nodeToCopyUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
         updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
         networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
         updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
@@ -1319,7 +1333,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
+    public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
@@ -1332,10 +1346,11 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+    public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
@@ -1371,6 +1386,8 @@ public class StudyService {
         if (invalidateChildrenBuild) {
             childrenNodes.forEach(nodeEntity -> updateStatuses(studyUuid, nodeEntity.getIdNode(), false, true));
         }
+
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void reindexStudy(UUID studyUuid) {
@@ -1398,7 +1415,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
+    public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
@@ -1409,10 +1426,11 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
+    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         String response;
         try {
@@ -1423,6 +1441,7 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
         return response;
     }
 
@@ -1485,7 +1504,7 @@ public class StudyService {
     }
 
     public void lineSplitWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
-                                          ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+                                          ModificationType modificationType, UUID nodeUuid, UUID modificationUuid, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             Objects.requireNonNull(studyUuid);
@@ -1513,6 +1532,7 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID studyUuid) {

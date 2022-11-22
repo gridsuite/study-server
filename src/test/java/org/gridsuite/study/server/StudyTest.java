@@ -763,7 +763,7 @@ public class StudyTest {
             .andExpect(status().isInternalServerError());
 
         modificationNode1.setBuildStatus(BuildStatus.BUILT);
-        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
+        networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, null);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/export-network/{format}", studyNameUserIdUuid, modificationNode1Uuid, "XIIDM"))
@@ -1236,7 +1236,7 @@ public class StudyTest {
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
-        networkModificationTreeService.updateNode(study1Uuid, node2);
+        networkModificationTreeService.updateNode(study1Uuid, node2, null);
         output.receive(TIMEOUT, studyUpdateDestination);
 
         // duplicate the study
@@ -1335,7 +1335,7 @@ public class StudyTest {
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
-        networkModificationTreeService.updateNode(study1Uuid, node2);
+        networkModificationTreeService.updateNode(study1Uuid, node2, null);
         output.receive(TIMEOUT);
 
         // node2 should not have any child
@@ -1529,7 +1529,7 @@ public class StudyTest {
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
-        networkModificationTreeService.updateNode(study1Uuid, node2);
+        networkModificationTreeService.updateNode(study1Uuid, node2, null);
         output.receive(TIMEOUT);
 
         //node2 should not have any child
