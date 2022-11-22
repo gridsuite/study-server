@@ -428,7 +428,7 @@ public class NetworkModificationTreeService {
 
     // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
-    public String getNetworkModifications(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public String getNetworkModifications(@NonNull UUID nodeUuid) {
         return networkModificationService.getModifications(getModificationGroupUuid(nodeUuid));
     }
 

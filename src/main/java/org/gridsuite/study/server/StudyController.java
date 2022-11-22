@@ -568,30 +568,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, substationsIds));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}")
-    @Operation(summary = "update a switch position")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The switch is updated")})
-    public ResponseEntity<Void> changeSwitchState(@PathVariable("studyUuid") UUID studyUuid,
-                                                        @PathVariable("switchId") String switchId,
-                                                        @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @Parameter(description = "Switch open state") @RequestParam("open") boolean open) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.changeSwitchState(studyUuid, switchId, open, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy")
-    @Operation(summary = "change an equipment state in the network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment is updated")})
-    public ResponseEntity<Void> applyGroovyScript(@PathVariable("studyUuid") UUID studyUuid,
-                                                        @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @RequestBody String groovyScript) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.applyGroovyScript(studyUuid, groovyScript, nodeUuid);
-
-        return ResponseEntity.ok().build();
-    }
-
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
     @Operation(summary = "move network modification before another")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order is updated")})
@@ -612,19 +588,6 @@ public class StudyController {
                                                          @RequestBody List<UUID> modificationsUuidList) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList));
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
-    @Operation(summary = "Change the given line status")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Line status changed")})
-    public ResponseEntity<Void> changeLineStatus(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @PathVariable("lineId") String lineId,
-            @RequestBody String status) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.changeLineStatus(studyUuid, lineId, status, nodeUuid);
-        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
@@ -877,13 +840,13 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications", produces = MediaType.TEXT_PLAIN_VALUE)
-    @Operation(summary = "Get node network modifications")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node network modifications"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<String> getNodeNetworkModifications(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                              @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Get modifications from the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications has been returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<String> getNetworkModifications(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                          @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         // Return json string because modification dtos are not available here
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(studyUuid, nodeUuid));
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
@@ -902,85 +865,42 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads")
-    @Operation(summary = "create a load in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been created")})
-    public ResponseEntity<Void> createLoad(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLoadAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads")
-    @Operation(summary = "modify a load in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load has been modified")})
-    public ResponseEntity<Void> modifyLoad(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String modifyLoadAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.modifyEquipment(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation")
-    @Operation(summary = "update a load creation in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load creation has been updated")})
-    public ResponseEntity<Void> updateLoadCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @PathVariable("modificationUuid") UUID modificationUuid,
-                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLoadAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createLoadAttributes, ModificationType.LOAD_CREATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-modification")
-    @Operation(summary = "update a load modification in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load modification has been updated")})
-    public ResponseEntity<Void> updateLoadModification(@PathVariable("studyUuid") UUID studyUuid,
-                                                         @PathVariable("modificationUuid") UUID modificationUuid,
-                                                         @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String modifyLoadAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentModification(studyUuid, modifyLoadAttributes, ModificationType.LOAD_MODIFICATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{typeModification}/{modificationUuid}")
-    @Operation(summary = "update an equipment modification in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment modification has been updated")})
-    public ResponseEntity<Void> updateEquipmentModification(@PathVariable("studyUuid") UUID studyUuid,
-                                                                  @PathVariable("modificationUuid") UUID modificationUuid,
-                                                                  @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                  @PathVariable("typeModification") ModificationType typeModification,
-                                                                  @RequestBody String modifyEquipmentAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.updateEquipmentModification(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{typeModification}")
-    @Operation(summary = "modify a generator in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been modified")})
-    public ResponseEntity<Void> modifyEquipment(@PathVariable("studyUuid") UUID studyUuid,
-                                                      @PathVariable("nodeUuid") UUID nodeUuid,
-                                                      @PathVariable("typeModification") ModificationType typeModification,
-                                                      @RequestBody String modifyEquipmentAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.modifyEquipment(studyUuid, modifyEquipmentAttributes, typeModification, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification")
-    @Operation(summary = "delete network modifications")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications have been deleted")})
-    public ResponseEntity<Void> deleteModifications(@PathVariable("studyUuid") UUID studyUuid,
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
+    @Operation(summary = "Create a modification in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> createNetworkModification(@PathVariable("studyUuid") UUID studyUuid,
                                                           @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @RequestParam(value = "modificationsUuids") List<UUID> modificationsUuids) {
+                                                          @RequestParam("typeModification") ModificationType typeModification,
+                                                          @RequestBody String modificationAttributes) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteModifications(studyUuid, nodeUuid, modificationsUuids);
+        studyService.createModification(studyUuid, modificationAttributes, typeModification, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}")
+    @Operation(summary = "Update a modification in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been updated"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> updateNetworkModification(@PathVariable("studyUuid") UUID studyUuid,
+                                                          @PathVariable("nodeUuid") UUID nodeUuid,
+                                                          @PathVariable("modificationUuid") UUID modificationUuid,
+                                                          @RequestParam("typeModification") ModificationType typeModification,
+                                                          @RequestBody String modificationAttributes) {
+        //TODO quelles asserts utiliser?
+//        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+//        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
+        studyService.updateModification(studyUuid, modificationAttributes, typeModification, nodeUuid, modificationUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuids}")
+    @Operation(summary = "Delete modifications in the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications have been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> deleteNetworkModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                           @PathVariable("nodeUuid") UUID nodeUuid,
+                                                           @PathVariable("modificationUuids") List<UUID> modificationUuids) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.deleteModifications(studyUuid, nodeUuid, modificationUuids);
         return ResponseEntity.ok().build();
     }
 
@@ -1088,245 +1008,6 @@ public class StudyController {
     public ResponseEntity<String> getUniqueNodeName(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
 
         return ResponseEntity.ok().body(networkModificationTreeService.getUniqueNodeName(studyUuid));
-    }
-
-    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}")
-    @Operation(summary = "Delete equipment in study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The equipment was deleted"), @ApiResponse(responseCode = "404", description = "The study not found")})
-    public ResponseEntity<Void> deleteEquipment(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                      @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                      @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
-                                                      @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/equipments-deletion/type/{equipmentType}/id/{equipmentId}")
-    @Operation(summary = "Update an equipment deletion in a study network")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The equipment deletion was updated"),
-            @ApiResponse(responseCode = "404", description = "The study was not found")})
-    public ResponseEntity<Void> updateDeleteEquipment(
-            @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Modification UUID") @PathVariable("modificationUuid") UUID modificationUuid,
-            @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
-            @Parameter(description = "Equipment ID") @PathVariable("equipmentId") String equipmentId) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentDeletion(studyUuid, equipmentType, equipmentId, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators")
-    @Operation(summary = "create a generator in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator has been created")})
-    public ResponseEntity<Void> createGenerator(@PathVariable("studyUuid") UUID studyUuid,
-                                                      @PathVariable("nodeUuid") UUID nodeUuid,
-                                                      @RequestBody String createGeneratorAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/generators-creation")
-    @Operation(summary = "update a generator creation in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The generator creation has been updated.")})
-    public ResponseEntity<Void> updateGeneratorCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                              @PathVariable("modificationUuid") UUID modificationUuid,
-                                                              @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String createGeneratorAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createGeneratorAttributes, ModificationType.GENERATOR_CREATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators")
-    @Operation(summary = "create a shunt-compensator in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The shunt-compensator has been created")})
-    public ResponseEntity<Void> createShuntCompensator(@PathVariable("studyUuid") UUID studyUuid,
-                                                             @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestBody String createShuntCompensatorAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/shunt-compensators-creation")
-    @Operation(summary = "update a shunt-compensator creation in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The shunt-compensator creation has been updated.")})
-    public ResponseEntity<Void> updateShuntCompensatorCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                                     @PathVariable("modificationUuid") UUID modificationUuid,
-                                                                     @PathVariable("nodeUuid") UUID nodeUuid,
-                                                              @RequestBody String createShuntCompensatorAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createShuntCompensatorAttributes, ModificationType.SHUNT_COMPENSATOR_CREATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines")
-    @Operation(summary = "create a line in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line has been created")})
-    public ResponseEntity<Void> createLine(@PathVariable("studyUuid") UUID studyUuid,
-                                                 @PathVariable("nodeUuid") UUID nodeUuid,
-                                                 @RequestBody String createLineAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-creation")
-    @Operation(summary = "update a line creation in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line creation has been updated.")})
-    public ResponseEntity<Void> updateLineCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                         @PathVariable("modificationUuid") UUID modificationUuid,
-                                                         @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                     @RequestBody String createLineAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createLineAttributes, ModificationType.LINE_CREATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers")
-    @Operation(summary = "create a two windings transformer in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The two windings transformer has been created")})
-    public ResponseEntity<Void> createTwoWindingsTransformer(@PathVariable("studyUuid") UUID studyUuid,
-                                                                   @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                   @RequestBody String createTwoWindingsTransformerAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/two-windings-transformers-creation")
-    @Operation(summary = "update a two windings transformer creation in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The two windings transformer creation has been updated.")})
-    public ResponseEntity<Void> updateTwoWindingsTransformerCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                                           @PathVariable("modificationUuid") UUID modificationUuid,
-                                                                           @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String createTwoWindingsTransformerAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createTwoWindingsTransformerAttributes, ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations")
-    @Operation(summary = "create a substation in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation has been created")})
-    public ResponseEntity<Void> createSubstation(@PathVariable("studyUuid") UUID studyUuid,
-                                                                   @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                   @RequestBody String createSubstationAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/substations-creation")
-    @Operation(summary = "update a substation creation in the study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The substation creation has been updated")})
-    public ResponseEntity<Void> updateSubstationCreation(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @PathVariable("modificationUuid") UUID modificationUuid,
-                                                               @PathVariable("nodeUuid") UUID nodeUuid,
-                                                       @RequestBody String createSubstationAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createSubstationAttributes, ModificationType.SUBSTATION_CREATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels")
-    @Operation(summary = "create a voltage level in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level has been created")})
-    public ResponseEntity<Void> createVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
-        @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String createVoltageLevelAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createEquipment(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/voltage-levels-creation")
-    @Operation(summary = "update a voltage level creation in the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage level creation has been updated.")})
-    public ResponseEntity<Void> updateVoltageLevelCreation(@PathVariable("studyUuid") UUID studyUuid,
-        @PathVariable("modificationUuid") UUID modificationUuid,
-        @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String createVoltageLevelAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, createVoltageLevelAttributes, ModificationType.VOLTAGE_LEVEL_CREATION, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits")
-    @Operation(summary = "split a line at a voltage level")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was split at a voltage level ok")})
-    public ResponseEntity<Void> lineSplitWithVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
-        @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String lineSplitWithVoltageLevelAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, null);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits")
-    @Operation(summary = "update a line split at a voltage level")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line split at a voltage level has been updated.")})
-    public ResponseEntity<Void> updateLineSplitWithVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
-        @PathVariable("modificationUuid") UUID modificationUuid,
-        @PathVariable("nodeUuid") UUID nodeUuid,
-        @RequestBody String lineSplitWithVoltageLevelAttributes) {
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.lineSplitWithVoltageLevel(studyUuid, lineSplitWithVoltageLevelAttributes, ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach")
-    @Operation(summary = "attach a line to a voltage level")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line was attached to the voltage level")})
-    public ResponseEntity<Void> lineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @PathVariable("nodeUuid") UUID nodeUuid,
-                                                               @RequestBody String lineAttachToVoltageLevelAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.assertComputationNotRunning(nodeUuid);
-        studyService.createEquipment(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach")
-    @Operation(summary = "update a line attach to a voltage level")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line attach to a voltage level has been updated.")})
-    public ResponseEntity<Void> updateLineAttachToVoltageLevel(@PathVariable("studyUuid") UUID studyUuid,
-                                                                      @PathVariable("modificationUuid") UUID modificationUuid,
-                                                                      @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                      @RequestBody String lineAttachToVoltageLevelAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.assertComputationNotRunning(nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, lineAttachToVoltageLevelAttributes, ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines-attach-to-split-lines")
-    @Operation(summary = "attach a line to a split line")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Attaching lines to spliting lines successfully")})
-    public ResponseEntity<Void> linesAttachToSplitLines(@PathVariable("studyUuid") UUID studyUuid,
-                                                         @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody String linesAttachToSplitLinesAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.assertComputationNotRunning(nodeUuid);
-        studyService.createEquipment(studyUuid, linesAttachToSplitLinesAttributes, ModificationType.LINES_ATTACH_TO_SPLIT_LINES, nodeUuid);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-attach-to-split-lines")
-    @Operation(summary = "update lines attach to a split lines")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "lines attach to split lines has been updated.")})
-    public ResponseEntity<Void> updateLinesAttachToSplitLines(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @PathVariable("modificationUuid") UUID modificationUuid,
-                                                               @PathVariable("nodeUuid") UUID nodeUuid,
-                                                               @RequestBody String linesAttachToSplitLinesAttributes) {
-        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.assertComputationNotRunning(nodeUuid);
-        studyService.updateEquipmentCreation(studyUuid, linesAttachToSplitLinesAttributes, ModificationType.LINES_ATTACH_TO_SPLIT_LINES, nodeUuid, modificationUuid);
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
