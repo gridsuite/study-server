@@ -606,14 +606,14 @@ public class StudyController {
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.moveModification(studyUuid, nodeUuid, List.of(modificationUuid), beforeUuid);
+        studyService.moveModifications(studyUuid, nodeUuid, List.of(modificationUuid), beforeUuid);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of network modifications passed in body, duplicate or cut, then append them to target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
-    public ResponseEntity<String> updateModifications(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<String> cutOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") UpdateModificationAction action,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList) {
@@ -622,7 +622,7 @@ public class StudyController {
             case COPY:
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList));
             case CUT:
-                studyService.moveModification(studyUuid, nodeUuid, modificationsToCopyUuidList, null);
+                studyService.moveModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, null);
                 return ResponseEntity.ok().build();
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);

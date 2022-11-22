@@ -1398,7 +1398,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveModification(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+    public void moveModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
