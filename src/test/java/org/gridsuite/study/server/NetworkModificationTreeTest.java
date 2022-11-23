@@ -298,7 +298,6 @@ public class NetworkModificationTreeTest {
             .date(LocalDateTime.now())
             .networkId("netId")
             .networkUuid(networkUuid)
-            .userId("userId")
             .loadFlowParameters(new LoadFlowParametersEntity())
             .shortCircuitParameters(new ShortCircuitParametersEntity())
             .build();
