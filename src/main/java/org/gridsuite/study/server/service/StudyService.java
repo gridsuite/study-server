@@ -600,6 +600,12 @@ public class StudyService {
         return geoDataService.getSubstationsGraphics(networkUuid, variantId);
     }
 
+    public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid, List<String> substationsIds) {
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+
+        return geoDataService.getSubstationsGraphics(networkUuid, variantId, substationsIds);
+    }
+
     public String getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
