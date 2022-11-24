@@ -571,12 +571,6 @@ public class StudyService {
         return geoDataService.getLinesGraphics(networkUuid, variantId);
     }
 
-    public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
-        return geoDataService.getSubstationsGraphics(networkUuid, variantId);
-    }
-
     public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid, List<String> substationsIds) {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
