@@ -1403,7 +1403,7 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.reorderModification(groupUuid, modificationUuidList, beforeUuid);
+            networkModificationService.moveModifications(groupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);

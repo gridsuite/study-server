@@ -440,7 +440,7 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public void reorderModification(UUID groupUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+    public void moveModifications(UUID groupUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "MOVE");
@@ -449,21 +449,13 @@ public class NetworkModificationService {
         }
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
-        try {
-            restTemplate.put(getNetworkModificationServerURI(false)
-                            + path.buildAndExpand(groupUuid).toUriString(), httpEntity);
-        } catch (HttpStatusCodeException e) {
-            //Ignore because modification group does not exist if no modifications
-            if (!HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw e;
-            }
-        }
+        restTemplate.put(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), httpEntity);
     }
 
     public String duplicateModification(UUID groupUuid, List<UUID> modificationUuidList) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "DUPLICATE");
+            .queryParam("action", "COPY");
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();

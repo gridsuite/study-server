@@ -55,7 +55,7 @@ public class StudyController {
     private final CaseService caseService;
 
     enum UpdateModificationAction {
-        CUT, COPY
+        MOVE, COPY
     }
 
     public StudyController(StudyService studyService,
@@ -611,9 +611,9 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "For a list of network modifications passed in body, duplicate or cut, then append them to target node")
+    @Operation(summary = "For a list of network modifications passed in body, copy or cut, then append them to target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
-    public ResponseEntity<String> cutOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<String> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") UpdateModificationAction action,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList) {
@@ -621,7 +621,7 @@ public class StudyController {
         switch (action) {
             case COPY:
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList));
-            case CUT:
+            case MOVE:
                 studyService.moveModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, null);
                 return ResponseEntity.ok().build();
             default:
