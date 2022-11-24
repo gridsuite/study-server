@@ -22,19 +22,16 @@ import javax.persistence.*;
 @Getter
 @Setter
 @Entity
-@Table(name = "StudyCreationRequest", indexes = {@Index(name = "studyCreationRequest_userId_index", columnList = "userId")})
+@Table(name = "StudyCreationRequest")
 public class StudyCreationRequestEntity implements BasicStudyEntity {
 
-    public StudyCreationRequestEntity(String userId, LocalDateTime date) {
-        this(null, userId, date);
+    public StudyCreationRequestEntity(LocalDateTime date) {
+        this(null, date);
     }
 
     @Id
     @Column(name = "id")
     private UUID id;
-
-    @Column(name = "userId", nullable = false)
-    private String userId;
 
     @Column(name = "creationDate", nullable = false)
     private LocalDateTime date;

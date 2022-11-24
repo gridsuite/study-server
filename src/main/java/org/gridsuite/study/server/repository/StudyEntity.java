@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
+import org.gridsuite.study.server.service.ShortCircuitService;
 
 import javax.persistence.*;
 
@@ -24,15 +25,12 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Builder
-@Table(name = "study", indexes = {@Index(name = "studyEntity_userId_index", columnList = "userId")})
+@Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
     @Id
     @Column(name = "id")
     private UUID id;
-
-    @Column(name = "userId", nullable = false)
-    private String userId;
 
     @Column(name = "creationDate", nullable = false)
     private LocalDateTime date;
@@ -65,6 +63,21 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
                     name = "loadFlowParameters_id_fk"
             ), nullable = false)
     private LoadFlowParametersEntity loadFlowParameters;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name  =  "shortCircuitParametersEntity_id",
+            referencedColumnName  =  "id",
+            foreignKey = @ForeignKey(
+                    name = "shortCircuitParameters_id_fk"
+            ))
+    private ShortCircuitParametersEntity shortCircuitParameters;
+
+    public ShortCircuitParametersEntity getShortCircuitParameters() {
+        if (this.shortCircuitParameters == null) {
+            this.setShortCircuitParameters(ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters()));
+        }
+        return this.shortCircuitParameters;
+    }
 
     @Value
     public static class StudyNetworkUuid {

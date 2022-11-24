@@ -26,18 +26,17 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.powsybl.security.SecurityAnalysisParameters;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.ActionsService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NotificationService;
-import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -74,6 +73,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -107,6 +107,8 @@ public class SecurityAnalysisTest {
     private static final String VARIANT_ID_3 = "variant_3";
 
     private static final long TIMEOUT = 1000;
+
+    private static final SecurityAnalysisParameters SECURITY_ANALYSIS_PARAMETERS = new SecurityAnalysisParameters();
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -244,8 +246,8 @@ public class SecurityAnalysisTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
                 studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)).andExpect(status().isForbidden());
 
-        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
-        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
+        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID), SECURITY_ANALYSIS_PARAMETERS);
+        testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID), null);
     }
 
   //test security analysis on network 2 will fail
@@ -307,7 +309,7 @@ public class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
     }
 
-    private void testSecurityAnalysisWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
+    private void testSecurityAnalysisWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID resultUuid, SecurityAnalysisParameters securityAnalysisParameters) throws Exception {
         MvcResult mvcResult;
         String resultAsString;
 
@@ -315,8 +317,13 @@ public class SecurityAnalysisTest {
         mockMvc.perform(get("/v1/security-analysis/results/{resultUuid}", NOT_FOUND_SECURITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
         // run security analysis
-        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME)).andExpect(status().isOk())
+        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
+                studyUuid, nodeUuid, CONTINGENCY_LIST_NAME);
+        if (securityAnalysisParameters != null) {
+            requestBuilder.contentType(MediaType.APPLICATION_JSON)
+                        .content(objectWriter.writeValueAsString(securityAnalysisParameters));
+        }
+        mvcResult = mockMvc.perform(requestBuilder).andExpect(status().isOk())
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         UUID uuidResponse = mapper.readValue(resultAsString, UUID.class);
@@ -380,8 +387,8 @@ public class SecurityAnalysisTest {
             .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
-
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity);
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;

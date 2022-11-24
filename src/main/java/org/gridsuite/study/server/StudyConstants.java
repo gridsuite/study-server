@@ -27,6 +27,7 @@ public final class StudyConstants {
     public static final String ACTIONS_API_VERSION = "v1";
     public static final String NETWORK_MAP_API_VERSION = "v1";
     public static final String REPORT_API_VERSION = "v1";
+    public static final String SHORT_CIRCUIT_API_VERSION = "v1";
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
@@ -34,6 +35,7 @@ public final class StudyConstants {
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
     public static final String REPORT_UUID = "reportUuid";
+    public static final String REPORTER_ID = "reporterId";
     public static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
     public static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";

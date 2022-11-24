@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -58,8 +59,7 @@ public class ConsumerService {
     public ConsumerService(ObjectMapper objectMapper,
             NotificationService notificationService,
             StudyService studyService,
-            NetworkModificationTreeService networkModificationTreeService,
-            LoadflowService loadflowService) {
+            NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -241,7 +241,8 @@ public class ConsumerService {
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), importReportUuid);
+                    ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {
@@ -362,5 +363,85 @@ public class ConsumerService {
 
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
         networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
+    }
+
+    void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
+        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeShortCircuitAnalysisResult() {
+        return message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Short circuit analysis result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
+
+                    // update DB
+                    updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), resultUuid);
+
+                    // send notifications
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeShortCircuitAnalysisStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Short circuit analysis stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete Short circuit analysis result in database
+                    updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for stopped computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeShortCircuitAnalysisFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Short circuit analysis failed for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete Short circuit analysis result in database
+                    updateShortCircuitAnalysisResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for failed computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
     }
 }

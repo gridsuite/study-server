@@ -57,6 +57,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getModificationsToExclude(),
             modificationNode.getLoadFlowStatus(),
             LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
+            modificationNode.getShortCircuitAnalysisResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getBuildStatus());
@@ -72,6 +73,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getModificationsToExclude(),
             node.getLoadFlowStatus(),
             LoadflowService.fromEntity(node.getLoadFlowResult()),
+            node.getShortCircuitAnalysisResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getBuildStatus()));
@@ -143,6 +145,18 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
+        updateNode(modificationNode);
+    }
+
+    @Override
+    public UUID getShortCircuitAnalysisResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getShortCircuitAnalysisResultUuid();
+    }
+
+    @Override
     public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         return LoadFlowInfos.builder().loadFlowStatus(modificationNode.getLoadFlowStatus()).loadFlowResult(modificationNode.getLoadFlowResult()).build();
@@ -205,6 +219,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public NodeModificationInfos getNodeModificationInfos(AbstractNode node) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) node;
         return NodeModificationInfos.builder()
+            .id(networkModificationNode.getId())
             .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
             .variantId(networkModificationNode.getVariantId())
             .reportUuid(networkModificationNode.getReportUuid())

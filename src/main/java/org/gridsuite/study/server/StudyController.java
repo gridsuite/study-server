@@ -8,6 +8,7 @@ package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,18 +22,10 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.SensitivityAnalysisService;
-import org.gridsuite.study.server.service.SingleLineDiagramService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.*;
 import org.springframework.http.*;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -56,6 +49,7 @@ public class StudyController {
     private final NetworkConversionService networkConversionService;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final ShortCircuitService shortCircuitService;
     private final CaseService caseService;
 
     public StudyController(StudyService studyService,
@@ -65,6 +59,7 @@ public class StudyController {
             NetworkConversionService networkConversionService,
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
+            ShortCircuitService shortCircuitService,
             CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -73,6 +68,7 @@ public class StudyController {
         this.networkConversionService = networkConversionService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
+        this.shortCircuitService = shortCircuitService;
         this.caseService = caseService;
     }
 
@@ -158,19 +154,6 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
-    @PostMapping(value = "/studies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "create a study and import the case")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The id of the network imported"),
-        @ApiResponse(responseCode = "409", description = "The study already exists"),
-        @ApiResponse(responseCode = "500", description = "The storage is down or a file with the same name already exists")})
-    public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("caseFile") MultipartFile caseFile,
-                                                             @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
-                                                             @RequestHeader("userId") String userId) {
-        BasicStudyInfos createStudy = studyService.createStudy(caseFile, userId, studyUuid);
-        return ResponseEntity.ok().body(createStudy);
-    }
-
     @PostMapping(value = "/studies")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {
@@ -202,17 +185,31 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/tree/nodes")
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes", params = {"nodeToCopyUuid", "referenceNodeUuid", "insertMode"})
     @Operation(summary = "duplicate a node")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The node was successfully created"),
-            @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
-            @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
+        @ApiResponse(responseCode = "200", description = "The node was successfully created"),
+        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
+        @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
     public ResponseEntity<Void> duplicateNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
-                                              @Parameter(description = "The reference node to where we want to copy") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "the position where the node will be copied relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
+                                              @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
         studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes", params = {"nodeToCutUuid", "referenceNodeUuid", "insertMode"})
+    @Operation(summary = "cut and paste a node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The node was successfully created"),
+        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node nor around itself"),
+        @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
+    public ResponseEntity<Void> cutAndPasteNode(@PathVariable("studyUuid") UUID studyUuid,
+                                              @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,
+                                              @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
+        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode);
         return ResponseEntity.ok().build();
     }
 
@@ -642,6 +639,49 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run")
+    @Operation(summary = "run short circuit analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has started")})
+    public ResponseEntity<UUID> runShortCircuit(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
+    @Operation(summary = "stop security analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
+    public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result")
+    @Operation(summary = "Get a short circuit analysis result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result"),
+            @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+    public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status")
+    @Operation(summary = "Get the short circuit analysis status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis status"),
+            @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
+    public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
@@ -737,6 +777,24 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is returned")})
     public ResponseEntity<String> getLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
+    public ResponseEntity<Void> setShortCircuitParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters) {
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
+    @Operation(summary = "Get short-circuit analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters")})
+    public ResponseEntity<ShortCircuitParameters> getShortCircuitParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getShortCircuitParameters(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
@@ -1004,8 +1062,8 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "simplified nodes (without children"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<AbstractNode> getNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                      @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
-        AbstractNode node = networkModificationTreeService.getSimpleNode(nodeId);
+                                                @Parameter(description = "node uuid") @PathVariable("id") UUID nodeId) {
+        AbstractNode node = networkModificationTreeService.getNode(nodeId);
         return node != null ?
                 ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(node)
                 : ResponseEntity.notFound().build();
@@ -1041,6 +1099,22 @@ public class StudyController {
                                                       @Parameter(description = "Equipment id") @PathVariable("equipmentId") String equipmentId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.deleteEquipment(studyUuid, equipmentType, equipmentId, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/equipments-deletion/type/{equipmentType}/id/{equipmentId}")
+    @Operation(summary = "Update an equipment deletion in a study network")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The equipment deletion was updated"),
+            @ApiResponse(responseCode = "404", description = "The study was not found")})
+    public ResponseEntity<Void> updateDeleteEquipment(
+            @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Modification UUID") @PathVariable("modificationUuid") UUID modificationUuid,
+            @Parameter(description = "Equipment type") @PathVariable("equipmentType") String equipmentType,
+            @Parameter(description = "Equipment ID") @PathVariable("equipmentId") String equipmentId) {
+        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
+        studyService.updateEquipmentDeletion(studyUuid, equipmentType, equipmentId, nodeUuid, modificationUuid);
         return ResponseEntity.ok().build();
     }
 

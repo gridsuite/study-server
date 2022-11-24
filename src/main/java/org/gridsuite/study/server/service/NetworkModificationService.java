@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -66,7 +65,7 @@ public class NetworkModificationService {
     @Autowired
     NetworkModificationService(@Value("${backing-services.network-modification.base-uri:http://network-modification-server/}") String networkModificationServerBaseUri,
                                NetworkService networkStoreService,
-                               ObjectMapper objectMapper, StreamBridge modificationUpdatePublisher) {
+                               ObjectMapper objectMapper) {
         this.networkModificationServerBaseUri = networkModificationServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.objectMapper = objectMapper;
@@ -128,7 +127,7 @@ public class NetworkModificationService {
         }
     }
 
-    List<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId, UUID reportUuid) {
+    List<EquipmentModificationInfos> changeSwitchState(UUID studyUuid, String switchId, boolean open, UUID groupUuid, String variantId, UUID reportUuid, String reporterId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(switchId);
         List<EquipmentModificationInfos> result;
@@ -138,6 +137,7 @@ public class NetworkModificationService {
             .fromPath(buildPathFrom(networkUuid) + "switches" + DELIMITER + "{switchId}")
             .queryParam(GROUP, groupUuid)
             .queryParam(REPORT_UUID, reportUuid)
+            .queryParam(REPORTER_ID, reporterId)
             .queryParam("open", open);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -156,14 +156,15 @@ public class NetworkModificationService {
         return result;
     }
 
-    public List<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId, UUID reportUuid) {
+    public List<ModificationInfos> applyGroovyScript(UUID studyUuid, String groovyScript, UUID groupUuid, String variantId, UUID reportUuid, String reporterId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(groovyScript);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "groovy")
             .queryParam(GROUP, groupUuid)
-            .queryParam(REPORT_UUID, reportUuid);
+            .queryParam(REPORT_UUID, reportUuid)
+            .queryParam(REPORTER_ID, reporterId);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -178,13 +179,14 @@ public class NetworkModificationService {
                 }).getBody();
     }
 
-    List<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId, UUID reportUuid) {
+    List<ModificationInfos> changeLineStatus(UUID studyUuid, String lineId, String status, UUID groupUuid, String variantId, UUID reportUuid, String reporterId) {
         List<ModificationInfos> result;
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(buildPathFrom(networkUuid) + "lines" + DELIMITER + "{lineId}" + DELIMITER + "status")
                 .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid);
+                .queryParam(REPORT_UUID, reportUuid)
+                .queryParam(REPORTER_ID, reporterId);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -224,7 +226,7 @@ public class NetworkModificationService {
     }
 
     public List<EquipmentModificationInfos> createEquipment(UUID studyUuid, String createEquipmentAttributes,
-            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid, String reporterId) {
         List<EquipmentModificationInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createEquipmentAttributes);
@@ -234,7 +236,8 @@ public class NetworkModificationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
                 .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid);
+                .queryParam(REPORT_UUID, reportUuid)
+                .queryParam(REPORTER_ID, reporterId);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -259,7 +262,7 @@ public class NetworkModificationService {
     }
 
     public List<EquipmentModificationInfos> modifyEquipment(UUID studyUuid, String modifyEquipmentAttributes,
-            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+            UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid, String reporterId) {
         List<EquipmentModificationInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(modifyEquipmentAttributes);
@@ -269,7 +272,8 @@ public class NetworkModificationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
                 .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid);
+                .queryParam(REPORT_UUID, reportUuid)
+                .queryParam(REPORTER_ID, reporterId);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -334,7 +338,7 @@ public class NetworkModificationService {
         }
     }
 
-    public List<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId, UUID reportUuid) {
+    public List<EquipmentDeletionInfos> deleteEquipment(UUID studyUuid, String equipmentType, String equipmentId, UUID groupUuid, String variantId, UUID reportUuid, String reporterId) {
         List<EquipmentDeletionInfos> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(equipmentType);
@@ -344,7 +348,8 @@ public class NetworkModificationService {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "equipments" + DELIMITER
                 + "type" + DELIMITER + "{equipmentType}" + DELIMITER + "id" + DELIMITER + "{equipmentId}")
                 .queryParam(GROUP, groupUuid)
-                .queryParam(REPORT_UUID, reportUuid);
+                .queryParam(REPORT_UUID, reportUuid)
+                .queryParam(REPORTER_ID, reporterId);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -358,6 +363,29 @@ public class NetworkModificationService {
         }
 
         return result;
+    }
+
+    public void updateEquipmentDeletion(String equipmentType, String equipmentId, UUID modificationUuid) {
+
+        Objects.requireNonNull(modificationUuid);
+        Objects.requireNonNull(equipmentType);
+        Objects.requireNonNull(equipmentId);
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
+                MODIFICATIONS_PATH + DELIMITER + modificationUuid + DELIMITER
+                        + "equipments-deletion" + DELIMITER
+                        + "type" + DELIMITER + equipmentType + DELIMITER
+                        + "id" + DELIMITER + equipmentId);
+
+        String path = uriComponentsBuilder
+                .buildAndExpand()
+                .toUriString();
+
+        try {
+            restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, null, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleChangeError(e, DELETE_EQUIPMENT_FAILED);
+        }
     }
 
     void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
@@ -463,14 +491,15 @@ public class NetworkModificationService {
     }
 
     public List<EquipmentModificationInfos> splitLineWithVoltageLevel(UUID studyUuid, String lineSplitWithVoltageLevelAttributes,
-        UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid) {
+        UUID groupUuid, ModificationType modificationType, String variantId, UUID reportUuid, String reporterId) {
         List<EquipmentModificationInfos> result;
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(
                 buildPathFrom(networkUuid) + ModificationType.getUriFromType(modificationType))
             .queryParam(GROUP, groupUuid)
-            .queryParam(REPORT_UUID, reportUuid);
+            .queryParam(REPORT_UUID, reportUuid)
+            .queryParam(REPORTER_ID, reporterId);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -492,13 +521,12 @@ public class NetworkModificationService {
         return result;
     }
 
-    public void createModifications(UUID sourceGroupUuid, UUID groupUuid, UUID reportUuid) {
+    public void createModifications(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups")
                 .queryParam("duplicateFrom", sourceGroupUuid)
                 .queryParam("groupUuid", groupUuid)
-                .queryParam("reportUuid", reportUuid)
                 .buildAndExpand(groupUuid)
                 .toUriString();
 

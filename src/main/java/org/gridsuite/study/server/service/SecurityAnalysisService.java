@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.powsybl.security.SecurityAnalysisParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -92,11 +93,12 @@ public class SecurityAnalysisService {
         return result;
     }
 
-    public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, String variantId, String provider, List<String> contingencyListNames, String parameters,
+    public UUID runSecurityAnalysis(UUID networkUuid, UUID reportUuid, UUID nodeUuid, String variantId, String provider, List<String> contingencyListNames, SecurityAnalysisParameters securityAnalysisParameters,
             String receiver) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportUuid.toString());
+                .queryParam("reportUuid", reportUuid.toString())
+                .queryParam("reporterId", nodeUuid.toString());
         if (!provider.isEmpty()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
@@ -109,7 +111,7 @@ public class SecurityAnalysisService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<SecurityAnalysisParameters> httpEntity = new HttpEntity<>(securityAnalysisParameters, headers);
 
         return restTemplate
                 .exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();

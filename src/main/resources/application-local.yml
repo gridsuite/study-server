@@ -38,5 +38,7 @@ backing-services:
     base-uri: http://localhost:5028
   sensitivity-analysis-server:
     base-uri: http://localhost:5030
+  shortcircuit-server:
+    base-uri: http://localhost:5031
   network-store-server:
     base-uri: http://localhost:8080/
