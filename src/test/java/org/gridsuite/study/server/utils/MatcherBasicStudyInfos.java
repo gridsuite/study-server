@@ -20,10 +20,9 @@ import org.hamcrest.TypeSafeMatcher;
  */
 public class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeMatcher<T> {
 
-    public static MatcherBasicStudyInfos<BasicStudyInfos> createMatcherStudyBasicInfos(UUID studyUuid, String userId) {
+    public static MatcherBasicStudyInfos<BasicStudyInfos> createMatcherStudyBasicInfos(UUID studyUuid) {
         return new MatcherBasicStudyInfos<>(BasicStudyInfos.builder()
                 .id(studyUuid)
-                .userId(userId)
                 .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .build());
     }
@@ -37,7 +36,6 @@ public class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeM
     @Override
     public boolean matchesSafely(T s) {
         return reference.getId().equals(s.getId())
-                && reference.getUserId().equals(s.getUserId())
                 && s.getCreationDate().toEpochSecond() - reference.getCreationDate().toEpochSecond() < 2;
     }
 
