@@ -30,7 +30,8 @@ public enum ModificationType {
     GROOVY_SCRIPT,
     BRANCH_STATUS,
     SHUNT_COMPENSATOR_CREATION,
-    LINES_ATTACH_TO_SPLIT_LINES;
+    LINES_ATTACH_TO_SPLIT_LINES,
+    GET_POSITIONS_FAILED;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
@@ -98,6 +99,8 @@ public enum ModificationType {
                 return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
+            case GET_POSITIONS_FAILED:
+                return StudyException.Type.GET_POSITIONS_FAILED;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }

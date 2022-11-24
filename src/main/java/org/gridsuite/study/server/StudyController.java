@@ -59,8 +59,7 @@ public class StudyController {
             NetworkConversionService networkConversionService,
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
-            ShortCircuitService shortCircuitService,
-            CaseService caseService) {
+            ShortCircuitService shortCircuitService, CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -225,9 +224,10 @@ public class StudyController {
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
+            @Parameter(description = "useFeederPositions") @RequestParam(name = "useFeederPositions", defaultValue = "false") boolean useFeederPositions) {
         byte[] result = studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, useFeederPositions), nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -244,9 +244,10 @@ public class StudyController {
             @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
+            @Parameter(description = "useFeederPositions") @RequestParam(name = "useFeederPositions", defaultValue = "false") boolean useFeederPositions) {
         String result = studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, useFeederPositions), nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -812,7 +813,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
         byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, false), substationLayout, nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -832,7 +833,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
         String result = studyService.getSubstationSvgAndMetadata(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary), substationLayout, nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, false), substationLayout, nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1451,5 +1452,4 @@ public class StudyController {
         sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
     }
-
 }

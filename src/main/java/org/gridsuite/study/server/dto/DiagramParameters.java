@@ -20,4 +20,5 @@ public class DiagramParameters {
     private boolean diagonalLabel;
     private boolean topologicalColoring;
     private String  componentLibrary;
+    private boolean useFeederPositions;
 }
