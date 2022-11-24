@@ -1689,7 +1689,7 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        Optional<RequestWithBody> duplicateModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + node1.getModificationGroupUuid() + "[?]action=DUPLICATE")).findFirst();
+        Optional<RequestWithBody> duplicateModificationRequest = requests.stream().filter(r -> r.getPath().matches("/v1/groups/" + node1.getModificationGroupUuid() + "[?]action=COPY")).findFirst();
         assertTrue(duplicateModificationRequest.isPresent());
         List<UUID> expectedList = List.of(modification1, modification2);
         String expectedBody = mapper.writeValueAsString(expectedList);
@@ -1709,21 +1709,21 @@ public class NetworkModificationTest {
         String modificationUuidListBody = objectWriter.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=CUT",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
                         UUID.randomUUID(), rootNodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
                 .andExpect(status().isForbidden());
 
         // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=CUT",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
                         studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
                 .andExpect(status().isNotFound());
 
         // move 2 modifications to node1
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=CUT",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
                         studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
