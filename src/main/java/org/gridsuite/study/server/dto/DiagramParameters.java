@@ -8,6 +8,7 @@ package org.gridsuite.study.server.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.gridsuite.study.server.StudyConstants;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -20,5 +21,5 @@ public class DiagramParameters {
     private boolean diagonalLabel;
     private boolean topologicalColoring;
     private String  componentLibrary;
-    private boolean useFeederPositions;
+    private StudyConstants.DisplayMode displayMode;
 }

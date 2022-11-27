@@ -225,9 +225,9 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "useFeederPositions") @RequestParam(name = "useFeederPositions", defaultValue = "false") boolean useFeederPositions) {
+            @Parameter(description = "displayMode") @RequestParam(name = "displayMode", defaultValue = "DEFAULT") StudyConstants.DisplayMode displayMode) {
         byte[] result = studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, useFeederPositions), nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, displayMode), nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -245,9 +245,9 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "useFeederPositions") @RequestParam(name = "useFeederPositions", defaultValue = "false") boolean useFeederPositions) {
+            @Parameter(description = "displayMode") @RequestParam(name = "displayMode", defaultValue = "DEFAULT") StudyConstants.DisplayMode displayMode) {
         String result = studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, useFeederPositions), nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, displayMode), nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -813,7 +813,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
         byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, false), substationLayout, nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, null), substationLayout, nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -833,7 +833,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
         String result = studyService.getSubstationSvgAndMetadata(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, false), substationLayout, nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, null), substationLayout, nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
