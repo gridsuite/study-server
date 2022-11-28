@@ -1398,16 +1398,34 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+        String modificationsInError;
+
+        if (originNodeUuid == null) {
+            throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
+        }
+
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        if (!nodeUuid.equals(originNodeUuid)) {
+            notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        }
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.moveModifications(groupUuid, modificationUuidList, beforeUuid);
+            UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
+            modificationsInError = networkModificationService.moveModifications(groupUuid, originGroupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
+            if (!nodeUuid.equals(originNodeUuid)) {
+                updateStatuses(studyUuid, originNodeUuid, false);
+            }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            if (!nodeUuid.equals(originNodeUuid)) {
+                notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
+            }
         }
+
+        return modificationsInError;
     }
 
     @Transactional

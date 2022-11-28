@@ -440,16 +440,17 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public void moveModifications(UUID groupUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+    public String moveModifications(UUID groupUuid, UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "MOVE");
+            .queryParam("action", "MOVE")
+            .queryParam("originGroupUuid", originGroupUuid);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
-        restTemplate.put(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), httpEntity);
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
     }
 
     public String duplicateModification(UUID groupUuid, List<UUID> modificationUuidList) {

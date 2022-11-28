@@ -606,7 +606,7 @@ public class StudyController {
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.moveModifications(studyUuid, nodeUuid, List.of(modificationUuid), beforeUuid);
+        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -616,14 +616,17 @@ public class StudyController {
     public ResponseEntity<String> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") UpdateModificationAction action,
+                                                         @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        if (originNodeUuid != null) {
+            studyService.assertCanModifyNode(studyUuid, originNodeUuid);
+        }
         switch (action) {
             case COPY:
                 return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList));
             case MOVE:
-                studyService.moveModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, null);
-                return ResponseEntity.ok().build();
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null));
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }

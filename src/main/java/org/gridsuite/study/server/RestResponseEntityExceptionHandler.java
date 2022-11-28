@@ -73,6 +73,7 @@ public class RestResponseEntityExceptionHandler {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(studyException.getMessage());
                 case UNKNOWN_NOTIFICATION_TYPE:
                 case UNKNOWN_ACTION_TYPE:
+                case MISSING_PARAMETER:
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(studyException.getType());
                 default:
             }

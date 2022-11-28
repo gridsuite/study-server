@@ -60,6 +60,7 @@ public class StudyException extends RuntimeException {
         GET_MODIFICATIONS_FAILED,
         LINES_ATTACH_TO_SPLIT_LINES,
         UNKNOWN_ACTION_TYPE,
+        MISSING_PARAMETER,
     }
 
     private final Type type;
