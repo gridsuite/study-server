@@ -66,7 +66,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -295,7 +294,6 @@ public class NetworkModificationTreeTest {
 
     StudyEntity createDummyStudy(UUID networkUuid) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("").caseUuid(UUID.randomUUID())
-            .date(LocalDateTime.now())
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowParameters(new LoadFlowParametersEntity())
