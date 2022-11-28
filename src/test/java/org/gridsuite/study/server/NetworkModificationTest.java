@@ -127,6 +127,8 @@ public class NetworkModificationTest {
 
     private static final String TEST_FILE = "testCase.xiidm";
 
+    private static final String USER_ID_HEADER = "userId";
+
     private static final long TIMEOUT = 1000;
 
     @Value("${loadflow.default-provider}")
@@ -177,6 +179,7 @@ public class NetworkModificationTest {
 
     //output destinations
     private String studyUpdateDestination = "study.update";
+    private String elementUpdateDestination = "element.update";
 
     @Before
     public void setup() throws IOException {
@@ -596,11 +599,11 @@ public class NetworkModificationTest {
 
         // update switch on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                studyNameUserIdUuid, rootNodeUuid, "switchId")).andExpect(status().isForbidden());
+                studyNameUserIdUuid, rootNodeUuid, "switchId").header(USER_ID_HEADER, "userId")).andExpect(status().isForbidden());
 
         // update switch on first modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
+                studyNameUserIdUuid, modificationNode1Uuid, "switchId").header(USER_ID_HEADER, "userId")).andExpect(status().isOk());
 
         Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -611,7 +614,7 @@ public class NetworkModificationTest {
 
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true&variantId=" + VARIANT_ID)));
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId")).andExpectAll(
+        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -622,7 +625,7 @@ public class NetworkModificationTest {
 
         // update switch on second modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, modificationNode2Uuid, "switchId")).andExpect(status().isOk());
+                        studyNameUserIdUuid, modificationNode2Uuid, "switchId").header(USER_ID_HEADER, "userId")).andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, substationsSet);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -639,7 +642,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/switches/{switchId}?open=true",
-                        studyNameUserIdUuid, modificationNode1Uuid, "switchId")).andExpect(status().isOk());
+                        studyNameUserIdUuid, modificationNode1Uuid, "switchId").header(USER_ID_HEADER, "userId")).andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         output.receive(TIMEOUT, studyUpdateDestination);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -684,12 +687,12 @@ public class NetworkModificationTest {
 
         //update equipment on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                rootNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+                rootNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')").header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         //update equipment
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                        modificationNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+                        modificationNodeUuid).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')").header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         Set<String> substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
@@ -700,7 +703,7 @@ public class NetworkModificationTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream()
                 .anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/groovy\\?group=.*")));
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header("userId", "userId").header("userId", "userId")).andExpectAll(
+        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
@@ -711,7 +714,7 @@ public class NetworkModificationTest {
 
         // update equipment on second modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/groovy", studyNameUserIdUuid,
-                        modificationNodeUuid2).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"))
+                        modificationNodeUuid2).content("equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')").header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
@@ -736,12 +739,12 @@ public class NetworkModificationTest {
 
         // create generator on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
-                        studyNameUserIdUuid, rootNodeUuid).content(createGeneratorAttributes))
+                        studyNameUserIdUuid, rootNodeUuid).content(createGeneratorAttributes).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         // create generator on first modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
@@ -749,7 +752,7 @@ public class NetworkModificationTest {
 
         // create generator on second modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
-                        studyNameUserIdUuid, modificationNode2Uuid).content(createGeneratorAttributes))
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createGeneratorAttributes).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
@@ -758,7 +761,7 @@ public class NetworkModificationTest {
         // update generator creation
         String generatorAttributesUpdated = "{\"generatorId\":\"generatorId2\",\"generatorName\":\"generatorName2\",\"energySource\":\"UNDEFINED\",\"minActivePower\":\"150.0\",\"maxActivePower\":\"50.0\",\"ratedNominalPower\":\"50.0\",\"activePowerSetpoint\":\"10.0\",\"reactivePowerSetpoint\":\"20.0\",\"voltageRegulatorOn\":\"true\",\"voltageSetpoint\":\"225.0\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/generators-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(generatorAttributesUpdated))
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(generatorAttributesUpdated).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -770,7 +773,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create generator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/generators",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes2))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createGeneratorAttributes2).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
@@ -793,12 +796,12 @@ public class NetworkModificationTest {
 
         // create shuntCompensator on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
-                        studyNameUserIdUuid, rootNodeUuid).content(createShuntCompensatorAttributes))
+                        studyNameUserIdUuid, rootNodeUuid).content(createShuntCompensatorAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // create shuntCompensator on modification node child of root node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
@@ -807,7 +810,7 @@ public class NetworkModificationTest {
         // update shunt compensator creation
         String shuntCompensatorAttributesUpdated = "{\"shuntCompensatorId\":\"shuntCompensatorId2\",\"shuntCompensatorName\":\"shuntCompensatorName2\",\"voltageLevelId\":\"idVL2\",\"busOrBusbarSectionId\":\"idBus1\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/shunt-compensators-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(shuntCompensatorAttributesUpdated))
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(shuntCompensatorAttributesUpdated).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -819,7 +822,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create shunt compensator on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/shunt-compensators",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes2))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createShuntCompensatorAttributes2).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         var requests = TestUtils.getRequestsWithBodyDone(2, server);
@@ -854,12 +857,12 @@ public class NetworkModificationTest {
 
         // create line on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
-                studyNameUserIdUuid, rootNodeUuid).content(createLineAttributes))
+                studyNameUserIdUuid, rootNodeUuid).content(createLineAttributes).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         // create line on first modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
-                studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes))
+                studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
@@ -867,7 +870,7 @@ public class NetworkModificationTest {
 
         // create line on second modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
-                studyNameUserIdUuid, modificationNode2Uuid).content(createLineAttributes))
+                studyNameUserIdUuid, modificationNode2Uuid).content(createLineAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
@@ -881,7 +884,7 @@ public class NetworkModificationTest {
                 + "\"voltageLevelId1\":\"idVL2\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(lineAttributesUpdated))
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(lineAttributesUpdated).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -898,7 +901,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create line on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes2))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createLineAttributes2).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
@@ -924,12 +927,12 @@ public class NetworkModificationTest {
 
         // create 2WT on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
-                        studyNameUserIdUuid, rootNodeUuid).content(createTwoWindingsTransformerAttributes))
+                        studyNameUserIdUuid, rootNodeUuid).content(createTwoWindingsTransformerAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // create 2WT on first modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
@@ -937,7 +940,7 @@ public class NetworkModificationTest {
 
         // create 2WT on second modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
-                        studyNameUserIdUuid, modificationNode2Uuid).content(createTwoWindingsTransformerAttributes))
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createTwoWindingsTransformerAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
@@ -946,7 +949,7 @@ public class NetworkModificationTest {
         // update Two Windings Transformer creation
         String twoWindingsTransformerAttributesUpdated = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/two-windings-transformers-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(twoWindingsTransformerAttributesUpdated))
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(twoWindingsTransformerAttributesUpdated).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -958,7 +961,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create Two Windings Transformer on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes2))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createTwoWindingsTransformerAttributes2).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
@@ -983,11 +986,11 @@ public class NetworkModificationTest {
 
         // deactivate modification on modificationNode
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
-                studyUuid, nodeNotFoundUuid, modificationUuid))
+                studyUuid, nodeNotFoundUuid, modificationUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=false",
-                        studyUuid, modificationNode1.getId(), modificationUuid))
+                        studyUuid, modificationNode1.getId(), modificationUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         AtomicReference<AbstractNode> node = new AtomicReference<>();
@@ -1000,7 +1003,7 @@ public class NetworkModificationTest {
 
         // reactivate modification
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network_modifications/{modificationUuid}?active=true",
-                        studyUuid, modificationNode1.getId(), modificationUuid))
+                        studyUuid, modificationNode1.getId(), modificationUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         node.set(networkModificationTreeService.getNode(modificationNode1.getId()));
@@ -1028,7 +1031,7 @@ public class NetworkModificationTest {
          */
         UUID studyUuid1 = UUID.randomUUID();
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
-                        studyUuid1, modificationNode.getId(), node3.getId()))
+                        studyUuid1, modificationNode.getId(), node3.getId()).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         checkEquipmentDeletingMessagesReceived(studyUuid1, modificationNode.getId());
@@ -1036,7 +1039,7 @@ public class NetworkModificationTest {
 
         UUID modificationUuid = UUID.randomUUID();
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification?modificationsUuids={modificationUuid}",
-                studyUuid, modificationNode.getId(), modificationUuid))
+                studyUuid, modificationNode.getId(), modificationUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream()
@@ -1062,65 +1065,65 @@ public class NetworkModificationTest {
 
         // change line status on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, rootNodeUuid, "line12").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, rootNodeUuid, "line12").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // lockout line
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "line12").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode1Uuid, "line12").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("lockout").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         // trip line
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                studyNameUserIdUuid, modificationNode1Uuid, "line23").content("trip").contentType(MediaType.TEXT_PLAIN_VALUE))
+                studyNameUserIdUuid, modificationNode1Uuid, "line23").content("trip").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2", "s3"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("trip").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("trip").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         // energise line end
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "line13").content("energiseEndOne").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode1Uuid, "line13").content("energiseEndOne").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s3"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("energiseEndTwo").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("energiseEndTwo").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         // switch on line
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "line13").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode1Uuid, "line13").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s3"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode1Uuid, "lineFailedId").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         // switch on line on second modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status",
-                        studyNameUserIdUuid, modificationNode2Uuid, "line13").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE))
+                        studyNameUserIdUuid, modificationNode2Uuid, "line13").content("switchOn").contentType(MediaType.TEXT_PLAIN_VALUE).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s1", "s3"));
@@ -1157,12 +1160,12 @@ public class NetworkModificationTest {
 
         // create load on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, rootNodeUuid).content(createLoadAttributes))
+                studyNameUserIdUuid, rootNodeUuid).content(createLoadAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // create load on first modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNode1Uuid).content(createLoadAttributes))
+                studyNameUserIdUuid, modificationNode1Uuid).content(createLoadAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
@@ -1170,7 +1173,7 @@ public class NetworkModificationTest {
 
         // create load on second modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNode2Uuid).content(createLoadAttributes))
+                studyNameUserIdUuid, modificationNode2Uuid).content(createLoadAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
@@ -1179,7 +1182,7 @@ public class NetworkModificationTest {
         // update load creation
         String loadAttributesUpdated = "{\"loadId\":\"loadId2\",\"loadName\":\"loadName2\",\"loadType\":\"UNDEFINED\",\"activePower\":\"50.0\",\"reactivePower\":\"25.0\",\"voltageLevelId\":\"idVL2\",\"busId\":\"idBus2\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(loadAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(loadAttributesUpdated).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1191,7 +1194,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create load on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                        studyNameUserIdUuid, modificationNode3Uuid).content(createLoadAttributes2))
+                        studyNameUserIdUuid, modificationNode3Uuid).content(createLoadAttributes2).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
@@ -1217,12 +1220,12 @@ public class NetworkModificationTest {
 
         // modify load on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, rootNodeUuid).content(loadModificationAttributes))
+                studyNameUserIdUuid, rootNodeUuid).content(loadModificationAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // modify load on first modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNodeUuid).content(loadModificationAttributes))
+                studyNameUserIdUuid, modificationNodeUuid).content(loadModificationAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
@@ -1230,7 +1233,7 @@ public class NetworkModificationTest {
 
         // modify load on second modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads",
-                studyNameUserIdUuid, modificationNodeUuid2).content(loadModificationAttributes))
+                studyNameUserIdUuid, modificationNodeUuid2).content(loadModificationAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
@@ -1238,7 +1241,7 @@ public class NetworkModificationTest {
 
         // update load modification
         String loadAttributesUpdated = "{\"loadId\":\"loadId1\",\"loadType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-modification", studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID).content(loadAttributesUpdated))
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/loads-modification", studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID).content(loadAttributesUpdated).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1267,12 +1270,12 @@ public class NetworkModificationTest {
 
         // modify generator on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, rootNodeUuid, modificationTypeUrl)
-                .content(equipmentModificationAttribute))
+                .content(equipmentModificationAttribute).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // modify generator on first modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, modificationNodeUuid, modificationTypeUrl)
-                .content(equipmentModificationAttribute))
+                .content(equipmentModificationAttribute).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
@@ -1280,7 +1283,7 @@ public class NetworkModificationTest {
 
         // modify generator on second modification node
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}", studyNameUserIdUuid, modificationNodeUuid2, modificationTypeUrl)
-                .content(equipmentModificationAttribute))
+                .content(equipmentModificationAttribute).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
@@ -1289,7 +1292,7 @@ public class NetworkModificationTest {
         // update generator modification
         String generatorAttributesUpdated = "{\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}/{modificationUuid}/", studyNameUserIdUuid, modificationNodeUuid, modificationTypeUrl, MODIFICATION_UUID)
-                .content(generatorAttributesUpdated))
+                .content(generatorAttributesUpdated).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1319,12 +1322,12 @@ public class NetworkModificationTest {
 
         // create substation on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
-                        studyNameUserIdUuid, rootNodeUuid).content(createSubstationAttributes))
+                        studyNameUserIdUuid, rootNodeUuid).content(createSubstationAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // create substation on first modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, new HashSet<>());
@@ -1332,7 +1335,7 @@ public class NetworkModificationTest {
 
         // create substation on second modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
-                        studyNameUserIdUuid, modificationNode2Uuid).content(createSubstationAttributes))
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createSubstationAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, new HashSet<>());
@@ -1341,7 +1344,7 @@ public class NetworkModificationTest {
         // update substation creation
         String substationAttributesUpdated = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"FR\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/substations-creation",
-                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(substationAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
+                studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID).content(substationAttributesUpdated).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1353,7 +1356,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create substation on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/substations",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes2))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createSubstationAttributes2).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
@@ -1381,14 +1384,16 @@ public class NetworkModificationTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
                         studyNameUserIdUuid, rootNodeUuid)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(createVoltageLevelAttributes))
+                .content(createVoltageLevelAttributes)
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // create voltage level
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
                         studyNameUserIdUuid, modificationNode1Uuid)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(createVoltageLevelAttributes))
+                .content(createVoltageLevelAttributes)
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, new HashSet<>());
@@ -1396,7 +1401,7 @@ public class NetworkModificationTest {
 
         // create voltage level on second modification node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
-                        studyNameUserIdUuid, modificationNode2Uuid).content(createVoltageLevelAttributes))
+                        studyNameUserIdUuid, modificationNode2Uuid).content(createVoltageLevelAttributes).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, new HashSet<>());
@@ -1408,7 +1413,8 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/voltage-levels-creation",
                 studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(voltageLevelAttributesUpdated))
+                .content(voltageLevelAttributesUpdated)
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1421,7 +1427,7 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create voltage level on building node
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/voltage-levels",
-                        studyNameUserIdUuid, modificationNode1Uuid).content(createVoltageLevelAttributes2))
+                        studyNameUserIdUuid, modificationNode1Uuid).content(createVoltageLevelAttributes2).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         var requests = TestUtils.getRequestsWithBodyDone(3, server);
@@ -1455,7 +1461,8 @@ public class NetworkModificationTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid)
             .contentType(MediaType.APPLICATION_JSON)
-            .content(lineSplitWoVLasJSON))
+            .content(lineSplitWoVLasJSON)
+            .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
@@ -1464,7 +1471,8 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
             .contentType(MediaType.APPLICATION_JSON)
-            .content(lineSplitWoVLasJSON))
+            .content(lineSplitWoVLasJSON)
+            .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1481,7 +1489,8 @@ public class NetworkModificationTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid)
-            .content("bogus"))
+            .content("bogus")
+            .header(USER_ID_HEADER, "userId"))
             .andExpectAll(
                 status().is5xxServerError(),
                 content().string("400 BAD_REQUEST")
@@ -1490,7 +1499,8 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-splits",
                 studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-            .content("bogus"))
+            .content("bogus")
+            .header(USER_ID_HEADER, "userId"))
             .andExpectAll(
                 status().is5xxServerError(),
                 content().string("400 BAD_REQUEST")
@@ -1520,7 +1530,8 @@ public class NetworkModificationTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/line-attach",
                         studyNameUserIdUuid, modificationNodeUuid)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(createLineAttachToVoltageLevelAttributes))
+                .content(createLineAttachToVoltageLevelAttributes)
+                .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
@@ -1529,7 +1540,8 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/line-attach",
                         studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(createLineAttachToVoltageLevelAttributes))
+                .content(createLineAttachToVoltageLevelAttributes)
+                .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1559,7 +1571,8 @@ public class NetworkModificationTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines-attach-to-split-lines",
                         studyNameUserIdUuid, modificationNodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createLinesAttachToSplitLinesAttributes))
+                        .content(createLinesAttachToSplitLinesAttributes)
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Collections.EMPTY_SET);
@@ -1568,7 +1581,8 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-attach-to-split-lines",
                         studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createLinesAttachToSplitLinesAttributes))
+                        .content(createLinesAttachToSplitLinesAttributes)
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1585,13 +1599,15 @@ public class NetworkModificationTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines-attach-to-split-lines",
                         studyNameUserIdUuid, modificationNodeUuid)
-                        .content("bogus"))
+                        .content("bogus")
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().is5xxServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-attach-to-split-lines",
                         studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .content("bogus"))
+                        .content("bogus")
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().is5xxServerError());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1611,18 +1627,18 @@ public class NetworkModificationTest {
         UUID modification2 = UUID.randomUUID();
         UUID studyNameUserIdUuid1 = UUID.randomUUID();
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2))
+                studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                        studyNameUserIdUuid1, modificationNodeUuid, modification1, modification2))
+                        studyNameUserIdUuid1, modificationNodeUuid, modification1, modification2).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid1, modificationNodeUuid);
 
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
-                        studyNameUserIdUuid, modificationNodeUuid, modification1))
+                        studyNameUserIdUuid, modificationNodeUuid, modification1).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
@@ -1638,7 +1654,7 @@ public class NetworkModificationTest {
 
         // switch back the 2 modifications order (modification1 is set before modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                studyNameUserIdUuid, modificationNodeUuid, modification1, modification2))
+                studyNameUserIdUuid, modificationNodeUuid, modification1, modification2).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
@@ -1667,21 +1683,24 @@ public class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
                         UUID.randomUUID(), rootNodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody))
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
 
         // Random/bad nodeId error case
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
                         studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody))
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
         // duplicate 2 modifications in node1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
                         studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody))
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
         checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
@@ -1710,12 +1729,14 @@ public class NetworkModificationTest {
 
         // delete equipment on root node (not allowed)
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
-                studyNameUserIdUuid, rootNodeUuid, "LOAD", "idLoadToDelete"))
+                studyNameUserIdUuid, rootNodeUuid, "LOAD", "idLoadToDelete")
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isForbidden());
 
         // delete equipment on first modification node
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
-                studyNameUserIdUuid, modificationNode1Uuid, "LOAD", "idLoadToDelete"))
+                studyNameUserIdUuid, modificationNode1Uuid, "LOAD", "idLoadToDelete")
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid,
@@ -1725,7 +1746,8 @@ public class NetworkModificationTest {
 
         // delete equipment on second modification node
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/equipments/type/{equipmentType}/id/{equipmentId}",
-                studyNameUserIdUuid, modificationNode2Uuid, "LOAD", "idLoadToDelete"))
+                studyNameUserIdUuid, modificationNode2Uuid, "LOAD", "idLoadToDelete")
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid,
@@ -1735,7 +1757,8 @@ public class NetworkModificationTest {
 
         // update equipment deletion
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/equipments-deletion/type/{equipmentType}/id/{equipmentId}",
-                        studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID, "LOAD", "idLoadToDelete"))
+                        studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID, "LOAD", "idLoadToDelete")
+                .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1777,7 +1800,8 @@ public class NetworkModificationTest {
         String modificationTypeUrl = ModificationType.getUriFromType(modificationType);
         String generatorAttributesUpdated = "{\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationType}/{modificationUuid}/", studyNameUserIdUuid, modificationNode1Uuid, modificationTypeUrl, MODIFICATION_UUID)
-                        .content(generatorAttributesUpdated))
+                        .content(generatorAttributesUpdated)
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkNodesInvalidationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid, modificationNode3Uuid));
@@ -2100,7 +2124,7 @@ public class NetworkModificationTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).header(USER_ID_HEADER, "userId").content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);

@@ -178,6 +178,8 @@ public class NetworkModificationTreeTest {
     private static final UUID MODIFICATION_GROUP_UUID_2 = UUID.randomUUID();
     private static final UUID MODIFICATION_GROUP_UUID_3 = UUID.randomUUID();
 
+    private static final String USER_ID_HEADER = "userId";
+
     @MockBean
     private Network network;
 
@@ -327,7 +329,7 @@ public class NetworkModificationTreeTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/tree", study.getId()))
             .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", study.getId(), root.getId(), false))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", study.getId(), root.getId(), false).header(USER_ID_HEADER, "userId"))
             .andExpect(status().is4xxClientError());
     }
 
@@ -453,7 +455,8 @@ public class NetworkModificationTreeTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(node1)))
+                .content(objectWriter.writeValueAsString(node1))
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
 
     }
@@ -464,7 +467,7 @@ public class NetworkModificationTreeTest {
 
     private void deleteNode(UUID studyUuid, AbstractNode child, boolean deleteChildren, Set<AbstractNode> expectedDeletion, boolean nodeWithModification) throws Exception {
         List<UUID> children = child.getChildren().stream().map(AbstractNode::getId).collect(Collectors.toList());
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/tree/nodes/{id}?deleteChildren={delete}", studyUuid, child.getId(), deleteChildren).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
@@ -507,7 +510,8 @@ public class NetworkModificationTreeTest {
         /* trying to insert before root */
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode=BEFORE", root.getStudyId(), root.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(networkModification1)))
+                .content(objectWriter.writeValueAsString(networkModification1))
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().is4xxClientError());
 
         createNode(root.getStudyId(), root, networkModification1);
@@ -533,7 +537,8 @@ public class NetworkModificationTreeTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(networkModification1)))
+                .content(objectWriter.writeValueAsString(networkModification1))
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
 
     }
@@ -575,7 +580,8 @@ public class NetworkModificationTreeTest {
         node1.setId(root.getChildren().get(0).getId());
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(node1)))
+                .content(objectWriter.writeValueAsString(node1))
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().size());
@@ -596,7 +602,8 @@ public class NetworkModificationTreeTest {
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(justeANameUpdate)))
+                .content(objectWriter.writeValueAsString(justeANameUpdate))
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         output.receive(TIMEOUT, studyUpdateDestination).getHeaders();
 
@@ -607,7 +614,8 @@ public class NetworkModificationTreeTest {
         node1.setId(UUID.randomUUID());
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(node1)))
+                .content(objectWriter.writeValueAsString(node1))
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
     }
 
@@ -691,7 +699,8 @@ public class NetworkModificationTreeTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(newNodeBodyJson))
+                .content(newNodeBodyJson)
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
@@ -713,7 +722,8 @@ public class NetworkModificationTreeTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={mode}", studyUuid, parentNode.getId(), mode)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(newNodeBodyJson))
+                .content(newNodeBodyJson)
+                .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
@@ -823,7 +833,8 @@ public class NetworkModificationTreeTest {
     private void createNodeFail(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode) throws Exception {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectWriter.writeValueAsString(newNode)))
+                        .content(objectWriter.writeValueAsString(newNode))
+                        .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
     }
 
