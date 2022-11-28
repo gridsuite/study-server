@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.repository;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
@@ -31,9 +30,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Id
     @Column(name = "id")
     private UUID id;
-
-    @Column(name = "creationDate", nullable = false)
-    private LocalDateTime date;
 
     @Column(name = "networkUuid", nullable = false)
     private UUID networkUuid;
