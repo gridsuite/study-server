@@ -8,7 +8,6 @@ package org.gridsuite.study.server.elasticsearch;
 
 import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -64,7 +63,6 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
     public EquipmentInfosService equipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         return new EquipmentInfosServiceImpl(equipmentInfosRepository, tombstonedEquipmentInfosRepository, elasticsearchOperations);
     }
-
 
     @Bean
     @Override
