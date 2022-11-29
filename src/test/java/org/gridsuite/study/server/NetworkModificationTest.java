@@ -195,7 +195,7 @@ public class NetworkModificationTest {
 
         // Start the mock server.
         server.start();
-        wireMock = new WireMockServer(WireMockSpring.options().port(9999).extensions(new SendInput(input)));
+        wireMock = new WireMockServer(WireMockSpring.options().dynamicPort().extensions(new SendInput(input)));
         wireMock.start();
 
      // Ask the server for its URL. You'll need this to make HTTP requests.
@@ -1837,6 +1837,8 @@ public class NetworkModificationTest {
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/build/stop"))
                 .withQueryParam("receiver", WireMock.matching(".*"))
         );
+        //TODO remove after refactoring (it's here because there is several tests inside the same test method
+        wireMock.resetRequests();
     }
 
     // builds on network 2 will fail
@@ -2123,9 +2125,9 @@ public class NetworkModificationTest {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws IOException {
 
-        wireMock.stop();
+        wireMock.shutdown();
 
         List<String> destinations = List.of(studyUpdateDestination);
 
