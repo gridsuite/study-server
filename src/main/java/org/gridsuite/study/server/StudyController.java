@@ -24,7 +24,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
 import org.springframework.http.*;
-import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nullable;
@@ -89,25 +88,6 @@ public class StudyController {
                 throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
             }
         }
-    }
-
-    static class MyModificationTypeConverter extends PropertyEditorSupport {
-
-        public MyModificationTypeConverter() {
-            super();
-        }
-
-        @Override
-        public void setAsText(final String text) throws IllegalArgumentException {
-            setValue(ModificationType.getTypeFromUri(text));
-        }
-    }
-
-    @InitBinder
-    public void initBinder(WebDataBinder webdataBinder) {
-        webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
-            new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
-        webdataBinder.registerCustomEditor(ModificationType.class, new MyModificationTypeConverter());
     }
 
     @GetMapping(value = "/studies")

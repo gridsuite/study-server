@@ -37,5 +37,5 @@ public class ModificationInfos {
 
     @Schema(description = "Substations ID")
     @Builder.Default
-    private Set<String> substationIds = Set.of();
+    protected Set<String> substationIds = Set.of();
 }

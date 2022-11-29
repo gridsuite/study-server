@@ -115,7 +115,7 @@ public class NetworkModificationService {
     public void deleteModifications(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
-                .fromPath(getNetworkModificationServerURI(true) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationsUuids)
+                .fromUriString(getNetworkModificationServerURI(true) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationsUuids)
                 .buildAndExpand()
                 .toUriString();
         try {
@@ -159,7 +159,7 @@ public class NetworkModificationService {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(getNetworkModificationServerURI(true) + NETWORK_MODIFICATIONS_PATH)
+                .fromUriString(getNetworkModificationServerURI(true) + NETWORK_MODIFICATIONS_PATH)
                 .queryParam(NETWORK_UUID, networkUuid)
                 .queryParam(GROUP_UUID, groupUuid)
                 .queryParam(REPORT_UUID, reportUuid)
@@ -193,7 +193,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(createEquipmentAttributes);
 
         var path = UriComponentsBuilder
-                .fromPath(getNetworkModificationServerURI(true) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationUuid)
+                .fromUriString(getNetworkModificationServerURI(true) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationUuid)
                 .buildAndExpand()
                 .toUriString();
 

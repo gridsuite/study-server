@@ -54,6 +54,7 @@ public class RestResponseEntityExceptionHandler {
             case SUBSTATION_CREATION_FAILED:
             case VOLTAGE_LEVEL_CREATION_FAILED:
             case LINE_SPLIT_FAILED:
+            case BRANCH_STATUS_FAILED:
             case NETWORK_NOT_FOUND:
             case NETWORK_INDEXATION_FAILED:
             case NODE_NOT_BUILT:

@@ -1026,8 +1026,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
             List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
                     .createModification(studyUuid, createModificationAttributes, groupUuid, modificationType, variantId, reportUuid, nodeInfos.getId().toString());
-            sendNotifications(studyUuid, nodeUuid, equipmentModificationInfosList, modificationType);
-            updateStatuses(studyUuid, nodeUuid);
+            updateStatuses(studyUuid, nodeUuid, equipmentModificationInfosList, modificationType);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
@@ -1355,17 +1354,19 @@ public class StudyService {
                 .collect(Collectors.toSet());
     }
 
-    private void sendNotifications(UUID studyUuid, UUID nodeUuid, List<EquipmentModificationInfos> modifications, ModificationType modificationType) {
+    private void updateStatuses(UUID studyUuid, UUID nodeUuid, List<EquipmentModificationInfos> modifications, ModificationType modificationType) {
         switch (modificationType) {
             case SWITCH_STATUS: {
                 Set<String> substationIds = getSubstationIds(modifications);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
+                updateStatuses(studyUuid, nodeUuid);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
                 break;
             }
             case BRANCH_STATUS: {
                 Set<String> substationIds = getSubstationIds(modifications);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
+                updateStatuses(studyUuid, nodeUuid);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
                 break;
             }
@@ -1374,6 +1375,7 @@ public class StudyService {
                         notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
                                 deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
                 );
+                updateStatuses(studyUuid, nodeUuid);
                 break;
             }
             case LINE_SPLIT_WITH_VOLTAGE_LEVEL: {
@@ -1384,11 +1386,13 @@ public class StudyService {
                         .collect(Collectors.toList());
                 deletions.forEach(modif -> notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
                         allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
+                updateStatuses(studyUuid, nodeUuid);
                 break;
             }
             default: {
                 Set<String> substationIds = getSubstationIds(modifications);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
+                updateStatuses(studyUuid, nodeUuid);
                 break;
             }
         }

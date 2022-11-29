@@ -59,6 +59,8 @@ public enum ModificationType {
                 return "generators-modification";
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return "lines-attach-to-split-lines";
+            case SWITCH_STATUS:
+                return "switch-status";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
@@ -99,6 +101,8 @@ public enum ModificationType {
                 return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
+            case BRANCH_STATUS:
+                return StudyException.Type.BRANCH_STATUS_FAILED;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
