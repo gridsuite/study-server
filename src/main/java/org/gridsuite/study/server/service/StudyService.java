@@ -1247,17 +1247,34 @@ public class StudyService {
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
-        updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
+
+        //Invalidating previous children if necessary
+        if (invalidateBuild) {
+            updateStatuses(studyUuid, nodeToMoveUuid, true, invalidateBuild);
+        }
+
+        networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
+
+        //Invalidation moved node or new children if necessary
+        if (invalidateBuild) {
+            updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
+        } else {
+            invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
+        }
     }
 
-    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         invalidateNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        // we might want to invalidate target node without impacting other nodes (when moving an empty node for exemple
+        if (invalidateOnlyTargetNode) {
+            networkModificationTreeService.invalidateBuildOfNodeOnly(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        } else {
+            networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        }
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
@@ -1293,7 +1310,7 @@ public class StudyService {
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateBuild) {
         if (invalidateBuild) {
-            invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
+            invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus, false);
         }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1383,7 +1400,7 @@ public class StudyService {
                 LOGGER.error(e.toString(), e);
                 throw e;
             }
-            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, false);
             LOGGER.info("Study with id = '{}' has been reindexed", studyUuid);
         } else {
             throw new StudyException(STUDY_NOT_FOUND);

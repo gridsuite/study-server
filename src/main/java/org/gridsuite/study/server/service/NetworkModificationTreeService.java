@@ -181,8 +181,7 @@ public class NetworkModificationTreeService {
 
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
 
-        notificationService.emitNodesDeleted(studyUuid, List.of(nodeToMoveUuid), false);
-        notificationService.emitNodeInserted(studyUuid, parent.getIdNode(), nodeToMoveEntity.getIdNode(), insertMode);
+        notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveEntity.getIdNode(), insertMode);
     }
 
     @Transactional
@@ -626,6 +625,20 @@ public class NetworkModificationTreeService {
         nodesRepository.findById(nodeUuid).ifPresent(n -> {
             invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes);
             invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
+        });
+
+        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+    }
+
+    @Transactional
+    // method used when moving a node to invalidate it without impacting other nodes
+    public void invalidateBuildOfNodeOnly(UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, InvalidateNodeInfos invalidateNodeInfos) {
+        final List<UUID> changedNodes = new ArrayList<>();
+        changedNodes.add(nodeUuid);
+        UUID studyId = getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(n -> {
+            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes);
         });
 
         notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
