@@ -49,9 +49,6 @@ import org.springframework.web.client.HttpStatusCodeException;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -164,21 +161,18 @@ public class StudyService {
     private static StudyInfos toStudyInfos(StudyEntity entity) {
         return StudyInfos.builder()
                 .id(entity.getId())
-                .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC))
                 .caseFormat(entity.getCaseFormat())
                 .build();
     }
 
     private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder()
-                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .id(entity.getId())
                 .build();
     }
 
     private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder()
-                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .id(entity.getId())
                 .caseFormat(entity.getCaseFormat())
                 .build();
@@ -187,7 +181,6 @@ public class StudyService {
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
                 .map(StudyService::toCreatedStudyBasicInfos)
-                .sorted(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed())
                 .collect(Collectors.toList());
     }
 
@@ -206,7 +199,7 @@ public class StudyService {
     public List<BasicStudyInfos> getStudiesCreationRequests() {
         return studyCreationRequestRepository.findAll().stream()
                 .map(StudyService::toBasicStudyInfos)
-                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
+                .collect(Collectors.toList());
     }
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
@@ -501,7 +494,7 @@ public class StudyService {
         Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters, newShortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters, newShortCircuitParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -967,7 +960,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         Objects.requireNonNull(shortCircuitParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters, shortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters, shortCircuitParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
@@ -1003,7 +996,7 @@ public class StudyService {
 
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(String userId, UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
-                studyUuid == null ? UUID.randomUUID() : studyUuid, LocalDateTime.now(ZoneOffset.UTC));
+                studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 

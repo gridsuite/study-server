@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server.utils;
 
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.BasicStudyInfos;
@@ -23,7 +21,6 @@ public class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeM
     public static MatcherBasicStudyInfos<BasicStudyInfos> createMatcherStudyBasicInfos(UUID studyUuid) {
         return new MatcherBasicStudyInfos<>(BasicStudyInfos.builder()
                 .id(studyUuid)
-                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .build());
     }
 
@@ -35,8 +32,7 @@ public class MatcherBasicStudyInfos<T extends BasicStudyInfos> extends TypeSafeM
 
     @Override
     public boolean matchesSafely(T s) {
-        return reference.getId().equals(s.getId())
-                && s.getCreationDate().toEpochSecond() - reference.getCreationDate().toEpochSecond() < 2;
+        return reference.getId().equals(s.getId());
     }
 
     @Override
