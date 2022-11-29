@@ -56,28 +56,15 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
     private Optional<String> password;
 
     @Bean
-    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
     public StudyInfosService studyInfosServiceImpl(StudyInfosRepository studyInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         return new StudyInfosServiceImpl(studyInfosRepository, elasticsearchOperations);
     }
 
     @Bean
-    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'false'")
-    public StudyInfosService studyInfosServiceMock() {
-        return new StudyInfosServiceMock();
-    }
-
-    @Bean
-    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
     public EquipmentInfosService equipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         return new EquipmentInfosServiceImpl(equipmentInfosRepository, tombstonedEquipmentInfosRepository, elasticsearchOperations);
     }
 
-    @Bean
-    @ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'false'")
-    public EquipmentInfosService equipmentInfosServiceMock() {
-        return new EquipmentInfosServiceMock();
-    }
 
     @Bean
     @Override

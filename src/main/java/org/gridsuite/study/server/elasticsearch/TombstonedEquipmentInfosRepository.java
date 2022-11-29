@@ -18,7 +18,6 @@ import java.util.UUID;
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
-@ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
 @Lazy
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);

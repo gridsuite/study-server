@@ -18,7 +18,6 @@ import java.util.UUID;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
 @Lazy
 public interface StudyInfosRepository extends ElasticsearchRepository<CreatedStudyBasicInfos, String> {
 
