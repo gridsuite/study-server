@@ -83,8 +83,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -245,8 +243,8 @@ public class StudyTest {
         linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
 
         studiesInfos = List.of(
-                CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").caseFormat("XIIDM").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build(),
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").creationDate(ZonedDateTime.now(ZoneOffset.UTC)).build()
+                CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").caseFormat("XIIDM").build(),
+                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build()
         );
 
         when(studyInfosService.add(any(CreatedStudyBasicInfos.class))).thenReturn(studiesInfos.get(0));
@@ -716,7 +714,7 @@ public class StudyTest {
             new TypeReference<List<CreatedStudyBasicInfos>>() {
             });
 
-        assertThat(createdStudyBasicInfosList.get(0),
+        assertThat(createdStudyBasicInfosList.get(1),
             createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE"));
 
         UUID randomUuid = UUID.randomUUID();
@@ -1456,6 +1454,36 @@ public class StudyTest {
                 study1Uuid, node1.getId(), rootNode.getId(), InsertMode.BEFORE)
                 .header("userId", "userId"))
                 .andExpect(status().isForbidden());
+
+    }
+
+    @Test
+    public void testCutAndPasteNodeAroundItself() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1");
+
+        //try to cut and paste a node before itself and expect forbidden
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+            study1Uuid, node1.getId(), node1.getId(), InsertMode.BEFORE)
+            .header("userId", "userId"))
+            .andExpect(status().isForbidden());
+
+        //try to cut and paste a node after itself and expect forbidden
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+            study1Uuid, node1.getId(), node1.getId(), InsertMode.AFTER)
+            .header("userId", "userId"))
+            .andExpect(status().isForbidden());
+
+        //try to cut and paste a node in a new branch after itself and expect forbidden
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+            study1Uuid, node1.getId(), node1.getId(), InsertMode.CHILD)
+            .header("userId", "userId"))
+            .andExpect(status().isForbidden());
     }
 
     @Test

@@ -209,7 +209,7 @@ public class StudyController {
     @Operation(summary = "cut and paste a node")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The node was successfully created"),
-        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node"),
+        @ApiResponse(responseCode = "403", description = "The node can't be copied above the root node nor around itself"),
         @ApiResponse(responseCode = "404", description = "The source study or node doesn't exist")})
     public ResponseEntity<Void> cutAndPasteNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,

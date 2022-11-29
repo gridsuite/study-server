@@ -19,8 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -73,11 +71,10 @@ public class StudyInfosServiceTests {
     public void searchStudyInfos() {
         EqualsVerifier.simple().forClass(CreatedStudyBasicInfos.class).verify();
 
-        ZonedDateTime dateNow = ZonedDateTime.now(ZoneOffset.UTC);
-        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").creationDate(dateNow).build();
-        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").creationDate(dateNow).build();
-        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").caseFormat("XIIDM").creationDate(dateNow).build();
-        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222222")).userId("userId2").caseFormat("UCTE").creationDate(dateNow).build();
+        CreatedStudyBasicInfos studyInfos11 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111111")).userId("userId1").caseFormat("XIIDM").build();
+        CreatedStudyBasicInfos studyInfos12 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").caseFormat("UCTE").build();
+        CreatedStudyBasicInfos studyInfos21 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222221")).userId("userId2").caseFormat("XIIDM").build();
+        CreatedStudyBasicInfos studyInfos22 = CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-22222222222")).userId("userId2").caseFormat("UCTE").build();
 
         studyInfosService.add(studyInfos11);
         studyInfosService.add(studyInfos12);
@@ -102,14 +99,6 @@ public class StudyInfosServiceTests {
 
         hits = new HashSet<>(studyInfosService.search("userId:(userId1) AND caseFormat:(UCTE)"));
         assertEquals(1, hits.size());
-        assertTrue(hits.contains(studyInfos12));
-
-        hits = new HashSet<>(studyInfosService.search(StudyInfosService.getDateSearchTerm(dateNow)));
-        assertEquals(4, hits.size());
-
-        hits = new HashSet<>(studyInfosService.search(StudyInfosService.getDateSearchTerm(dateNow) + " AND userId:(userId1)"));
-        assertEquals(2, hits.size());
-        assertTrue(hits.contains(studyInfos11));
         assertTrue(hits.contains(studyInfos12));
 
         studyInfosService.deleteByUuid(studyInfos11.getId());

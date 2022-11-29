@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.repository;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 import lombok.*;
@@ -25,14 +24,7 @@ import javax.persistence.*;
 @Table(name = "StudyCreationRequest")
 public class StudyCreationRequestEntity implements BasicStudyEntity {
 
-    public StudyCreationRequestEntity(LocalDateTime date) {
-        this(null, date);
-    }
-
     @Id
     @Column(name = "id")
     private UUID id;
-
-    @Column(name = "creationDate", nullable = false)
-    private LocalDateTime date;
 }

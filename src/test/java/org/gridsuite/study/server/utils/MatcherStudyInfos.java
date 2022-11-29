@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server.utils;
 
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.StudyInfos;
@@ -22,7 +20,6 @@ public class MatcherStudyInfos extends MatcherCreatedStudyBasicInfos<StudyInfos>
         return new MatcherStudyInfos(StudyInfos.builder()
                 .id(studyUuid)
                 .caseFormat(caseFormat)
-                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .build());
     }
 
