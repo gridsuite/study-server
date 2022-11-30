@@ -1245,13 +1245,14 @@ public class StudyService {
 
     @Transactional
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+        List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
 
         //Invalidating previous children if necessary
         if (invalidateBuild) {
-            updateStatuses(studyUuid, nodeToMoveUuid, true, invalidateBuild);
+            oldChildren = networkModificationTreeService.getChildrenByParentUuid(nodeToMoveUuid);
         }
 
         networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
@@ -1259,6 +1260,7 @@ public class StudyService {
         //Invalidation moved node or new children if necessary
         if (invalidateBuild) {
             updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
+            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), true, invalidateBuild));
         } else {
             invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
         }

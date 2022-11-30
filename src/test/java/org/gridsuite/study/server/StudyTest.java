@@ -89,6 +89,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
@@ -1341,7 +1342,7 @@ public class StudyTest {
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(node2.getId())).count());
 
         // cute the node1 and paste it after node2
-        cutAndPasteNode(study1Uuid, node1.getId(), node2.getId(), InsertMode.AFTER);
+        cutAndPasteNode(study1Uuid, node1.getId(), node2.getId(), InsertMode.AFTER, 1);
 
         /*
          *              rootNode
@@ -1371,7 +1372,7 @@ public class StudyTest {
                 .collect(Collectors.toList()));
 
         // cut and paste the node2 before emptyNode
-        cutAndPasteNode(study1Uuid, node2.getId(), emptyNode.getId(), InsertMode.BEFORE);
+        cutAndPasteNode(study1Uuid, node2.getId(), emptyNode.getId(), InsertMode.BEFORE, 1);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
 
         /*
@@ -1407,7 +1408,7 @@ public class StudyTest {
                 .collect(Collectors.toList()));
 
         //cut and paste node2 in a new branch starting from modificationNode
-        cutAndPasteNode(study1Uuid, node2.getId(), modificationNodeUuid, InsertMode.CHILD);
+        cutAndPasteNode(study1Uuid, node2.getId(), modificationNodeUuid, InsertMode.CHILD, 1);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
 
         /*
@@ -1433,6 +1434,47 @@ public class StudyTest {
                         && nodeEntity.getParentNode().getIdNode().equals(rootNode.getId()))
                 .map(NodeEntity::getIdNode)
                 .collect(Collectors.toList()));
+    }
+
+    @Test
+    public void testCutAndPasteNodeAroundItself() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1");
+
+        //try to cut and paste a node before itself and expect forbidden
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+            study1Uuid, node1.getId(), node1.getId(), InsertMode.BEFORE)
+            .header("userId", "userId"))
+            .andExpect(status().isForbidden());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
+
+        //try to cut and paste a node after itself and expect forbidden
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+            study1Uuid, node1.getId(), node1.getId(), InsertMode.AFTER)
+            .header("userId", "userId"))
+            .andExpect(status().isForbidden());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
+
+        //try to cut and paste a node in a new branch after itself and expect forbidden
+        mockMvc.perform(post(STUDIES_URL +
+                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+            study1Uuid, node1.getId(), node1.getId(), InsertMode.CHILD)
+            .header("userId", "userId"))
+            .andExpect(status().isForbidden());
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
+    }
+
+    @Test
+    public void testCutAndPastErrors() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1");
 
         //try cut non existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +
@@ -1455,35 +1497,8 @@ public class StudyTest {
                 .header("userId", "userId"))
                 .andExpect(status().isForbidden());
 
-    }
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
-    @Test
-    public void testCutAndPasteNodeAroundItself() throws Exception {
-        UUID study1Uuid = createStudy("userId", CASE_UUID);
-        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
-        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
-        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1");
-
-        //try to cut and paste a node before itself and expect forbidden
-        mockMvc.perform(post(STUDIES_URL +
-                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
-            study1Uuid, node1.getId(), node1.getId(), InsertMode.BEFORE)
-            .header("userId", "userId"))
-            .andExpect(status().isForbidden());
-
-        //try to cut and paste a node after itself and expect forbidden
-        mockMvc.perform(post(STUDIES_URL +
-                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
-            study1Uuid, node1.getId(), node1.getId(), InsertMode.AFTER)
-            .header("userId", "userId"))
-            .andExpect(status().isForbidden());
-
-        //try to cut and paste a node in a new branch after itself and expect forbidden
-        mockMvc.perform(post(STUDIES_URL +
-                    "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
-            study1Uuid, node1.getId(), node1.getId(), InsertMode.CHILD)
-            .header("userId", "userId"))
-            .andExpect(status().isForbidden());
     }
 
     @Test
@@ -1598,20 +1613,52 @@ public class StudyTest {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
     }
 
-    public void cutAndPasteNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) throws Exception {
+    public void cutAndPasteNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, int childCount) throws Exception {
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode)
                 .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
-        output.receive(TIMEOUT);
+        /*
+         * moving node
+         */
+        //nodeMoved
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.NODE_MOVED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(nodeToCopyUuid, message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
+        assertEquals(insertMode.name(), message.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+
+        /*
+         * invalidating old children
+         */
+        IntStream.rangeClosed(1, childCount).forEach(i -> {
+          //nodeUpdated
+            output.receive(TIMEOUT, studyUpdateDestination);
+            //loadflow_status
+            output.receive(TIMEOUT, studyUpdateDestination);
+            //securityAnalysis_status
+            output.receive(TIMEOUT, studyUpdateDestination);
+            //sensitivityAnalysis_status
+            output.receive(TIMEOUT, studyUpdateDestination);
+            //shortCircuitAnalysis_status
+            output.receive(TIMEOUT, studyUpdateDestination);
+        });
+
+        /*
+         * invalidating new children
+         */
+        //nodeUpdated
+        output.receive(TIMEOUT, studyUpdateDestination);
+        //loadflow_status
+        output.receive(TIMEOUT, studyUpdateDestination);
+        //securityAnalysis_status
+        output.receive(TIMEOUT, studyUpdateDestination);
+        //sensitivityAnalysis_status
+        output.receive(TIMEOUT, studyUpdateDestination);
+        //shortCircuitAnalysis_status
+        output.receive(TIMEOUT, studyUpdateDestination);
 
         var requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
