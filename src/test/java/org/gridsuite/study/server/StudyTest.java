@@ -1480,7 +1480,7 @@ public class StudyTest {
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", BuildStatus.BUILT);
         NetworkModificationNode emptyNodeChild = createNetworkModificationNode(study1Uuid, emptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "emptyNodeChild", BuildStatus.BUILT);
 
-        cutAndPasteNode(study1Uuid, emptyNode.getId(), node1.getId(), InsertMode.BEFORE, 0);
+        cutAndPasteNode(study1Uuid, emptyNode.getId(), node1.getId(), InsertMode.BEFORE, 1);
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(emptyNode.getId()));
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node1.getId()));
@@ -1497,7 +1497,7 @@ public class StudyTest {
         NetworkModificationNode notEmptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID_2, "notEmptyNode", BuildStatus.BUILT);
         NetworkModificationNode notEmptyNodeChild = createNetworkModificationNode(study1Uuid, notEmptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "notEmptyNodeChild", BuildStatus.BUILT);
 
-        cutAndPasteNode(study1Uuid, notEmptyNode.getId(), node1.getId(), InsertMode.BEFORE, 0);
+        cutAndPasteNode(study1Uuid, notEmptyNode.getId(), node1.getId(), InsertMode.BEFORE, 1);
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(notEmptyNode.getId()));
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(node1.getId()));
@@ -1661,17 +1661,11 @@ public class StudyTest {
 
         boolean nodeHasModifications = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
 
-        if (isNodeBuilt) {
-            // if node is built, it will be invalidated
+        //depending on number of children, number of modifications and build state, there will be several "/v1/reports/.*" requests to get reports to delete on invalidation
+        do {
             request = TestUtils.getRequestsDone(1, server);
-            assertTrue(request.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-            if (nodeHasModifications) {
-             // if node has modifications, it's children will be invalidated
-                request = TestUtils.getRequestsDone(1, server);
-                assertTrue(request.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
-            }
-        }
-        request = TestUtils.getRequestsDone(1, server);
+        } while (request.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+
         assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
         /*

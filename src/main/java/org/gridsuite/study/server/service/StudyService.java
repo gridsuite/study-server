@@ -1260,7 +1260,7 @@ public class StudyService {
         //Invalidation moved node or new children if necessary
         if (invalidateBuild) {
             updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
-            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), true, invalidateBuild));
+            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, invalidateBuild));
         } else {
             invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
         }
