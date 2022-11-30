@@ -1257,7 +1257,7 @@ public class StudyService {
 
         networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
 
-        //Invalidation moved node or new children if necessary
+        //Invalidating moved node or new children if necessary
         if (invalidateBuild) {
             updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
             oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, invalidateBuild));
