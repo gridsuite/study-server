@@ -637,9 +637,9 @@ public class NetworkModificationTreeService {
         changedNodes.add(nodeUuid);
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
 
-        nodesRepository.findById(nodeUuid).ifPresent(n -> {
-            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes);
-        });
+        nodesRepository.findById(nodeUuid).ifPresent(n ->
+            invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes)
+        );
 
         notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }

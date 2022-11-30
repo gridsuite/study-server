@@ -162,6 +162,7 @@ public class StudyTest {
     private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
     private static final String CASE_NAME = "DefaultCaseName";
     private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
+    private static final String EMPTY_ARRAY = "[]";
 
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
 
@@ -1341,8 +1342,8 @@ public class StudyTest {
         List<NodeEntity> allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(node2.getId())).count());
 
-        // cute the node1 and paste it after node2
-        cutAndPasteNode(study1Uuid, node1.getId(), node2.getId(), InsertMode.AFTER, 1);
+        // cut the node1 and paste it after node2
+        cutAndPasteNode(study1Uuid, node1.getId(), node2.getId(), InsertMode.AFTER, 0);
 
         /*
          *              rootNode
@@ -1467,6 +1468,40 @@ public class StudyTest {
             .andExpect(status().isForbidden());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
+    }
+
+    @Test
+    public void testCutAndPasteNodeWithoutModification() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT);
+
+        NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", BuildStatus.BUILT);
+        NetworkModificationNode emptyNodeChild = createNetworkModificationNode(study1Uuid, emptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "emptyNodeChild", BuildStatus.BUILT);
+
+        cutAndPasteNode(study1Uuid, emptyNode.getId(), node1.getId(), InsertMode.BEFORE, 0);
+
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(emptyNode.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node1.getId()));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(emptyNodeChild.getId()));
+    }
+
+    @Test
+    public void testCutAndPasteNodeWithModification() throws Exception {
+        UUID study1Uuid = createStudy("userId", CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT);
+
+        NetworkModificationNode notEmptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID_2, "notEmptyNode", BuildStatus.BUILT);
+        NetworkModificationNode notEmptyNodeChild = createNetworkModificationNode(study1Uuid, notEmptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "notEmptyNodeChild", BuildStatus.BUILT);
+
+        cutAndPasteNode(study1Uuid, notEmptyNode.getId(), node1.getId(), InsertMode.BEFORE, 0);
+
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(notEmptyNode.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(node1.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(notEmptyNodeChild.getId()));
     }
 
     @Test
@@ -1614,11 +1649,30 @@ public class StudyTest {
     }
 
     public void cutAndPasteNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, int childCount) throws Exception {
+        boolean isNodeBuilt = networkModificationTreeService.getBuildStatus(nodeToCopyUuid).equals(BuildStatus.BUILT);
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode)
                 .header("userId", "userId"))
                 .andExpect(status().isOk());
+
+        var request = TestUtils.getRequestsDone(1, server);
+        assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
+
+        boolean nodeHasModifications = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
+
+        if (isNodeBuilt) {
+            // if node is built, it will be invalidated
+            request = TestUtils.getRequestsDone(1, server);
+            assertTrue(request.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+            if (nodeHasModifications) {
+             // if node has modifications, it's children will be invalidated
+                request = TestUtils.getRequestsDone(1, server);
+                assertTrue(request.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
+            }
+        }
+        request = TestUtils.getRequestsDone(1, server);
+        assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
         /*
          * moving node
@@ -1630,38 +1684,43 @@ public class StudyTest {
         assertEquals(nodeToCopyUuid, message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
         assertEquals(insertMode.name(), message.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        /*
-         * invalidating old children
-         */
-        IntStream.rangeClosed(1, childCount).forEach(i -> {
-          //nodeUpdated
-            output.receive(TIMEOUT, studyUpdateDestination);
+        if (nodeHasModifications) {
+            /*
+             * invalidating old children
+             */
+            IntStream.rangeClosed(1, childCount).forEach(i -> {
+                //nodeUpdated
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //loadflow_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //securityAnalysis_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //sensitivityAnalysis_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //shortCircuitAnalysis_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            });
+
+            /*
+             * invalidating new children
+             */
+            //nodeUpdated
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //loadflow_status
-            output.receive(TIMEOUT, studyUpdateDestination);
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //securityAnalysis_status
-            output.receive(TIMEOUT, studyUpdateDestination);
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //sensitivityAnalysis_status
-            output.receive(TIMEOUT, studyUpdateDestination);
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //shortCircuitAnalysis_status
-            output.receive(TIMEOUT, studyUpdateDestination);
-        });
-
-        /*
-         * invalidating new children
-         */
-        //nodeUpdated
-        output.receive(TIMEOUT, studyUpdateDestination);
-        //loadflow_status
-        output.receive(TIMEOUT, studyUpdateDestination);
-        //securityAnalysis_status
-        output.receive(TIMEOUT, studyUpdateDestination);
-        //sensitivityAnalysis_status
-        output.receive(TIMEOUT, studyUpdateDestination);
-        //shortCircuitAnalysis_status
-        output.receive(TIMEOUT, studyUpdateDestination);
-
-        var requests = TestUtils.getRequestsDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        } else {
+            /*
+             * Invalidating moved node
+             */
+            //nodeUpdated
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        }
     }
 
     public UUID duplicateNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) throws Exception {
