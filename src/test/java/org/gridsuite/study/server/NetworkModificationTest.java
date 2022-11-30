@@ -46,11 +46,13 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.RequestWithBody;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.hamcrest.core.StringContains;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -418,13 +420,11 @@ public class NetworkModificationTest {
 
         // update switch on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.SWITCH_STATUS.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // update switch on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.SWITCH_STATUS.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
@@ -446,7 +446,6 @@ public class NetworkModificationTest {
 
         // update switch on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.SWITCH_STATUS.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -464,7 +463,6 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.SWITCH_STATUS.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -521,13 +519,11 @@ public class NetworkModificationTest {
 
         //update equipment on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.GROOVY_SCRIPT.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         //update equipment
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.GROOVY_SCRIPT.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
@@ -550,7 +546,6 @@ public class NetworkModificationTest {
 
         // update equipment on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid2)
-                        .queryParam("typeModification", ModificationType.GROOVY_SCRIPT.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
@@ -595,13 +590,11 @@ public class NetworkModificationTest {
 
         // create generator on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.GENERATOR_CREATION.toString())
                         .content(bodyJsonCreate).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // create generator on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.GENERATOR_CREATION.toString())
                         .content(bodyJsonCreate).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -610,7 +603,6 @@ public class NetworkModificationTest {
 
         // create generator on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.GENERATOR_CREATION.toString())
                         .content(bodyJsonCreate).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -625,7 +617,6 @@ public class NetworkModificationTest {
         body.replace("maxActivePower", "50.0");
         String bodyJsonUpdate = mapper.writeValueAsString(body);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.GENERATOR_CREATION.toString())
                         .content(bodyJsonUpdate).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -643,7 +634,6 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create generator on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.GENERATOR_CREATION.toString())
                         .content(bodyJsonCreateBis).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -666,17 +656,15 @@ public class NetworkModificationTest {
                 UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        String createShuntCompensatorAttributes = "{\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+        String createShuntCompensatorAttributes = "{\"type\":\"" + ModificationType.SHUNT_COMPENSATOR_CREATION + "\",\"shuntCompensatorId\":\"shuntCompensatorId1\",\"shuntCompensatorName\":\"shuntCompensatorName1\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
 
         // create shuntCompensator on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
                         .content(createShuntCompensatorAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // create shuntCompensator on modification node child of root node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
                         .content(createShuntCompensatorAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -684,22 +672,20 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         // update shunt compensator creation
-        String shuntCompensatorAttributesUpdated = "{\"shuntCompensatorId\":\"shuntCompensatorId2\",\"shuntCompensatorName\":\"shuntCompensatorName2\",\"voltageLevelId\":\"idVL2\",\"busOrBusbarSectionId\":\"idBus1\"}";
+        String shuntCompensatorAttributesUpdated = "{\"type\":\"" + ModificationType.SHUNT_COMPENSATOR_CREATION + "\",\"shuntCompensatorId\":\"shuntCompensatorId2\",\"shuntCompensatorName\":\"shuntCompensatorName2\",\"voltageLevelId\":\"idVL2\",\"busOrBusbarSectionId\":\"idBus1\"}";
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
                         .content(shuntCompensatorAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        String createShuntCompensatorAttributes2 = "{\"shuntCompensatorId\":\"shuntCompensatorId3\",\"shuntCompensatorName\":\"shuntCompensatorName3\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
+        String createShuntCompensatorAttributes2 = "{\"type\":\"" + ModificationType.SHUNT_COMPENSATOR_CREATION + "\",\"shuntCompensatorId\":\"shuntCompensatorId3\",\"shuntCompensatorName\":\"shuntCompensatorName3\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create shunt compensator on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
                         .content(createShuntCompensatorAttributes2).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -724,7 +710,8 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        String createLineAttributes = "{" + "\"lineId\":\"lineId1\"," + "\"lineName\":\"lineName1\","
+        String createLineAttributes = "{\"type\":\"" + ModificationType.LINE_CREATION
+                + "\",\"lineId\":\"lineId1\"," + "\"lineName\":\"lineName1\","
                 + "\"seriesResistance\":\"50.0\"," + "\"seriesReactance\":\"50.0\","
                 + "\"shuntConductance1\":\"100.0\"," + "\"shuntSusceptance1\":\"100.0\","
                 + "\"shuntConductance2\":\"200.0\"," + "\"shuntSusceptance2\":\"200.0\","
@@ -733,13 +720,11 @@ public class NetworkModificationTest {
 
         // create line on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.LINE_CREATION.toString())
                         .content(createLineAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // create line on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.LINE_CREATION.toString())
                         .content(createLineAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -748,7 +733,6 @@ public class NetworkModificationTest {
 
         // create line on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.LINE_CREATION.toString())
                         .content(createLineAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -756,21 +740,22 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
 
         // update line creation
-        String lineAttributesUpdated = "{" + "\"lineId\":\"lineId2\"," + "\"lineName\":\"lineName2\","
+        String lineAttributesUpdated = "{\"type\":\"" + ModificationType.LINE_CREATION
+                + "\",\"lineId\":\"lineId2\"," + "\"lineName\":\"lineName2\","
                 + "\"seriesResistance\":\"54.0\"," + "\"seriesReactance\":\"55.0\","
                 + "\"shuntConductance1\":\"100.0\"," + "\"shuntSusceptance1\":\"100.0\","
                 + "\"shuntConductance2\":\"200.0\"," + "\"shuntSusceptance2\":\"200.0\","
                 + "\"voltageLevelId1\":\"idVL2\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
                         .content(lineAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        String createLineAttributes2 = "{" + "\"lineId\":\"lineId3\"," + "\"lineName\":\"lineName3\","
+        String createLineAttributes2 = "{\"type\":\"" + ModificationType.LINE_CREATION
+                + "\",\"lineId\":\"lineId3\"," + "\"lineName\":\"lineName3\","
                 + "\"seriesResistance\":\"50.0\"," + "\"seriesReactance\":\"50.0\","
                 + "\"shuntConductance1\":\"100.0\"," + "\"shuntSusceptance1\":\"100.0\","
                 + "\"shuntConductance2\":\"200.0\"," + "\"shuntSusceptance2\":\"200.0\","
@@ -781,7 +766,6 @@ public class NetworkModificationTest {
         output.receive(TIMEOUT, studyUpdateDestination);
         // create line on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.LINE_CREATION.toString())
                         .content(createLineAttributes2).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -807,17 +791,15 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
         // create 2WT on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION.toString())
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // create 2WT on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION.toString())
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -826,7 +808,6 @@ public class NetworkModificationTest {
 
         // create 2WT on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION.toString())
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -834,22 +815,20 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
 
         // update Two Windings Transformer creation
-        String twoWindingsTransformerAttributesUpdated = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String twoWindingsTransformerAttributesUpdated = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION.toString())
                         .content(twoWindingsTransformerAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        String createTwoWindingsTransformerAttributes2 = "{\"equipmentId\":\"2wtId3\",\"equipmentName\":\"2wtName3\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes2 = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId3\",\"equipmentName\":\"2wtName3\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create Two Windings Transformer on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION.toString())
                         .content(createTwoWindingsTransformerAttributes2).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -960,13 +939,11 @@ public class NetworkModificationTest {
 
         // change line status on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate1).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // lockout line
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate1).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -977,7 +954,6 @@ public class NetworkModificationTest {
         String bodyJsonCreate2 = mapper.writeValueAsString(bodyLineInfos);
         stubNetworkModificationPostWithError(bodyJsonCreate2);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate2).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -989,7 +965,6 @@ public class NetworkModificationTest {
         String responseBody3 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s2", "s3");
         stubNetworkModificationPostWithBody(bodyJsonCreate3, responseBody3);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate3).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1000,7 +975,6 @@ public class NetworkModificationTest {
         String bodyJsonCreate4 = mapper.writeValueAsString(bodyLineInfos);
         stubNetworkModificationPostWithError(bodyJsonCreate4);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate4).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1012,7 +986,6 @@ public class NetworkModificationTest {
         String responseBody5 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s1", "s3");
         stubNetworkModificationPostWithBody(bodyJsonCreate5, responseBody5);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate5).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1023,7 +996,6 @@ public class NetworkModificationTest {
         String bodyJsonCreate6 = mapper.writeValueAsString(bodyLineInfos);
         stubNetworkModificationPostWithError(bodyJsonCreate6);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate6).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1036,7 +1008,6 @@ public class NetworkModificationTest {
         String responseBody7 = responseBody5;
         stubNetworkModificationPostWithBody(bodyJsonCreate7, responseBody7);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate7).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1047,7 +1018,6 @@ public class NetworkModificationTest {
         String bodyJsonCreate8 = mapper.writeValueAsString(bodyLineInfos);
         stubNetworkModificationPostWithError(bodyJsonCreate8);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate8).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1057,7 +1027,6 @@ public class NetworkModificationTest {
         String responseBody9 = responseBody5;
         stubNetworkModificationPostWithBody(bodyJsonCreate9, responseBody9);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.BRANCH_STATUS.toString())
                         .content(bodyJsonCreate9).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -1091,17 +1060,15 @@ public class NetworkModificationTest {
                 UUID.randomUUID(), VARIANT_ID, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
 
-        String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         stubNetworkModificationPostWithBody(createLoadAttributes, responseBody);
         // create load on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.LOAD_CREATION.toString())
                         .content(createLoadAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // create load on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.LOAD_CREATION.toString())
                         .content(createLoadAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1110,7 +1077,6 @@ public class NetworkModificationTest {
 
         // create load on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.LOAD_CREATION.toString())
                         .content(createLoadAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -1118,24 +1084,22 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
 
         // update load creation
-        String loadAttributesUpdated = "{\"loadId\":\"loadId2\",\"loadName\":\"loadName2\",\"loadType\":\"UNDEFINED\",\"activePower\":\"50.0\",\"reactivePower\":\"25.0\",\"voltageLevelId\":\"idVL2\",\"busId\":\"idBus2\"}";
+        String loadAttributesUpdated = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId2\",\"loadName\":\"loadName2\",\"loadType\":\"UNDEFINED\",\"activePower\":\"50.0\",\"reactivePower\":\"25.0\",\"voltageLevelId\":\"idVL2\",\"busId\":\"idBus2\"}";
         stubNetworkModificationPutWithBody(loadAttributesUpdated);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
                         .content(loadAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        String createLoadAttributes2 = "{\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes2 = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         modificationNode3.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
         output.receive(TIMEOUT, studyUpdateDestination);
         stubNetworkModificationPostWithBody(createLoadAttributes2, responseBody);
         // create load on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode3Uuid)
-                        .queryParam("typeModification", ModificationType.LOAD_CREATION.toString())
                         .content(createLoadAttributes2).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -1160,17 +1124,15 @@ public class NetworkModificationTest {
                 modificationNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        String loadModificationAttributes = "{\"equipmentId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"AUXILIARY\",\"activePower\":\"100.0\"}";
+        String loadModificationAttributes = "{\"type\":\"" + ModificationType.LOAD_MODIFICATION + "\",\"equipmentId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"AUXILIARY\",\"activePower\":\"100.0\"}";
 
         // modify load on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.LOAD_MODIFICATION.toString())
                         .content(loadModificationAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // modify load on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.LOAD_MODIFICATION.toString())
                         .content(loadModificationAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1179,7 +1141,6 @@ public class NetworkModificationTest {
 
         // modify load on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid2)
-                        .queryParam("typeModification", ModificationType.LOAD_MODIFICATION.toString())
                         .content(loadModificationAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
@@ -1187,9 +1148,8 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
 
         // update load modification
-        String loadAttributesUpdated = "{\"loadId\":\"loadId1\",\"loadType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
+        String loadAttributesUpdated = "{\"type\":\"" + ModificationType.LOAD_MODIFICATION + "\",\"loadId\":\"loadId1\",\"loadType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.LOAD_MODIFICATION.toString())
                         .content(loadAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1211,18 +1171,16 @@ public class NetworkModificationTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        String equipmentModificationAttribute = "{\"equipmentId\":\"equipmentId\"}";
+        String equipmentModificationAttribute = "{\"type\":\"" + ModificationType.GENERATOR_MODIFICATION + "\",\"equipmentId\":\"equipmentId\"}";
         String responseBody = createEquipmentModificationInfosBody(ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION, "s2");
         stubNetworkModificationPostWithBody(equipmentModificationAttribute, responseBody);
         // modify generator on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.GENERATOR_MODIFICATION.toString())
                         .content(equipmentModificationAttribute).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // modify generator on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.GENERATOR_MODIFICATION.toString())
                         .content(equipmentModificationAttribute).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1231,7 +1189,6 @@ public class NetworkModificationTest {
 
         // modify generator on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid2)
-                        .queryParam("typeModification", ModificationType.GENERATOR_MODIFICATION.toString())
                         .content(equipmentModificationAttribute).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
@@ -1239,10 +1196,9 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
 
         // update generator modification
-        String generatorAttributesUpdated = "{\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
+        String generatorAttributesUpdated = "{\"type\":\"" + ModificationType.SHUNT_COMPENSATOR_CREATION + "\",\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
         stubNetworkModificationPutWithBody(generatorAttributesUpdated);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
                         .content(generatorAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1272,17 +1228,15 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        String createSubstationAttributes = "{\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
+        String createSubstationAttributes = "{\"type\":\"" + ModificationType.SUBSTATION_CREATION + "\",\"substationId\":\"substationId1\",\"substationName\":\"substationName1\",\"country\":\"AD\"}";
 
         // create substation on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.SUBSTATION_CREATION.toString())
                         .content(createSubstationAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // create substation on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.SUBSTATION_CREATION.toString())
                         .content(createSubstationAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1291,7 +1245,6 @@ public class NetworkModificationTest {
 
         // create substation on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.SUBSTATION_CREATION.toString())
                         .content(createSubstationAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -1299,22 +1252,20 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
 
         // update substation creation
-        String substationAttributesUpdated = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"FR\"}";
+        String substationAttributesUpdated = "{\"type\":\"" + ModificationType.SUBSTATION_CREATION + "\",\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"FR\"}";
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.SUBSTATION_CREATION.toString())
                         .content(substationAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        String createSubstationAttributes2 = "{\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
+        String createSubstationAttributes2 = "{\"type\":\"" + ModificationType.SUBSTATION_CREATION + "\",\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create substation on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.SUBSTATION_CREATION.toString())
                         .content(createSubstationAttributes2).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -1339,18 +1290,16 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        String createVoltageLevelAttributes = "{\"voltageLevelId\":\"voltageLevelId1\",\"voltageLevelName\":\"voltageLevelName1\""
+        String createVoltageLevelAttributes = "{\"type\":\"" + ModificationType.VOLTAGE_LEVEL_CREATION + "\",\"voltageLevelId\":\"voltageLevelId1\",\"voltageLevelName\":\"voltageLevelName1\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s1\"}";
 
         // create voltage level on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.VOLTAGE_LEVEL_CREATION.toString())
                         .content(createVoltageLevelAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // create voltage level
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.VOLTAGE_LEVEL_CREATION.toString())
                         .content(createVoltageLevelAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1359,7 +1308,6 @@ public class NetworkModificationTest {
 
         // create voltage level on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.VOLTAGE_LEVEL_CREATION.toString())
                         .content(createVoltageLevelAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -1367,24 +1315,22 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
 
         // update voltage level creation
-        String voltageLevelAttributesUpdated = "{\"voltageLevelId\":\"voltageLevelId2\",\"voltageLevelName\":\"voltageLevelName2\""
+        String voltageLevelAttributesUpdated = "{\"type\":\"" + ModificationType.VOLTAGE_LEVEL_CREATION + "\",\"voltageLevelId\":\"voltageLevelId2\",\"voltageLevelName\":\"voltageLevelName2\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.VOLTAGE_LEVEL_CREATION.toString())
                         .content(voltageLevelAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        String createVoltageLevelAttributes2 = "{\"voltageLevelId\":\"voltageLevelId3\",\"voltageLevelName\":\"voltageLevelName3\""
+        String createVoltageLevelAttributes2 = "{\"type\":\"" + ModificationType.VOLTAGE_LEVEL_CREATION + "\",\"voltageLevelId\":\"voltageLevelId3\",\"voltageLevelName\":\"voltageLevelName3\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
         modificationNode1.setBuildStatus(BuildStatus.BUILDING);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1);
         output.receive(TIMEOUT, studyUpdateDestination);
         // create voltage level on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.VOLTAGE_LEVEL_CREATION.toString())
                         .content(createVoltageLevelAttributes2).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -1420,12 +1366,12 @@ public class NetworkModificationTest {
                 .build();
         LineSplitWithVoltageLevelInfos lineSplitWoVL = new LineSplitWithVoltageLevelInfos("line3", 10.0, vl1, null, "1.A",
                 "nl1", "NewLine1", "nl2", "NewLine2");
+        lineSplitWoVL.setType(ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL);
         String lineSplitWoVLasJSON = mapper.writeValueAsString(lineSplitWoVL);
         stubNetworkModificationPostWithBody(lineSplitWoVLasJSON, responseBody);
         stubNetworkModificationPutWithBody(lineSplitWoVLasJSON);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL.toString())
                         .content(lineSplitWoVLasJSON).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1433,7 +1379,6 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL.toString())
                         .content(lineSplitWoVLasJSON).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1443,26 +1388,25 @@ public class NetworkModificationTest {
         verifyPostWithBody(lineSplitWoVLasJSON);
         verifyPutWithBody(lineSplitWoVLasJSON);
 
-        stubNetworkModificationPostWithBodyAndError("{\"bogus\":\"bogus\"}");
-        stubNetworkModificationPutWithBodyAndError("{\"bogus\":\"bogus\"}");
+        String badBody = "{\"type\":\"" + ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL + "\",\"bogus\":\"bogus\"}";
+        stubNetworkModificationPostWithBodyAndError(badBody);
+        stubNetworkModificationPutWithBodyAndError(badBody);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.LINE_SPLIT_WITH_VOLTAGE_LEVEL.toString())
-                        .content("{\"bogus\":\"bogus\"}").contentType(MediaType.APPLICATION_JSON))
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                         status().is5xxServerError(),
                         content().string("400 BAD_REQUEST"));
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.SHUNT_COMPENSATOR_CREATION.toString())
-                        .content("{\"bogus\":\"bogus\"}").contentType(MediaType.APPLICATION_JSON))
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                         status().is5xxServerError(),
                         content().string("400 BAD_REQUEST"));
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        verifyPostWithBody("{\"bogus\":\"bogus\"}");
-        verifyPutWithBody("{\"bogus\":\"bogus\"}");
+        verifyPostWithBody(badBody);
+        verifyPutWithBody(badBody);
     }
 
     @SneakyThrows
@@ -1488,14 +1432,13 @@ public class NetworkModificationTest {
 
         String createLineAttributes = "{\"seriesResistance\":\"25\",\"seriesReactance\":\"12\"}";
 
-        String createLineAttachToVoltageLevelAttributes = "{\"lineToAttachToId\":\"line3\",\"percent\":\"10\",\"mayNewVoltageLevelInfos\":" +
+        String createLineAttachToVoltageLevelAttributes = "{\"type\":\"" + ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL + "\",\"lineToAttachToId\":\"line3\",\"percent\":\"10\",\"mayNewVoltageLevelInfos\":" +
                 createVoltageLevelAttributes + ",\"attachmentLine\":" + createLineAttributes + "}";
 
         stubNetworkModificationPostWithBody(createLineAttachToVoltageLevelAttributes, responseBody);
         stubNetworkModificationPutWithBody(createLineAttachToVoltageLevelAttributes);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL.toString())
                         .content(createLineAttachToVoltageLevelAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1503,7 +1446,6 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL.toString())
                         .content(createLineAttachToVoltageLevelAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1538,13 +1480,12 @@ public class NetworkModificationTest {
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node");
         UUID modificationNodeUuid = modificationNode.getId();
 
-        String createLinesAttachToSplitLinesAttributes = "{\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"attachedLineId\":\"line3\",\"voltageLevelId\":\"vl1\",\"bbsBusId\":\"v1bbs\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name\",\"replacingLine2Id\":\"replacingLine2Id\",\"replacingLine2Name\":\"replacingLine2Name\"}";
+        String createLinesAttachToSplitLinesAttributes = "{\"type\":\"" + ModificationType.LINES_ATTACH_TO_SPLIT_LINES + "\",\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"attachedLineId\":\"line3\",\"voltageLevelId\":\"vl1\",\"bbsBusId\":\"v1bbs\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name\",\"replacingLine2Id\":\"replacingLine2Id\",\"replacingLine2Name\":\"replacingLine2Name\"}";
 
         stubNetworkModificationPostWithBody(createLinesAttachToSplitLinesAttributes, responseBody);
         stubNetworkModificationPutWithBody(createLinesAttachToSplitLinesAttributes);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.LINES_ATTACH_TO_SPLIT_LINES.toString())
                         .content(createLinesAttachToSplitLinesAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1552,7 +1493,6 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL.toString())
                         .content(createLinesAttachToSplitLinesAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1562,24 +1502,77 @@ public class NetworkModificationTest {
         verifyPostWithBody(createLinesAttachToSplitLinesAttributes);
         verifyPutWithBody(createLinesAttachToSplitLinesAttributes);
 
-        stubNetworkModificationPostWithBodyAndError("{\"bogus\":\"bogus\"}");
-        stubNetworkModificationPutWithBodyAndError("{\"bogus\":\"bogus\"}");
+        String badBody = "{\"type\":\"" + ModificationType.LINES_ATTACH_TO_SPLIT_LINES + "\",\"bogus\":\"bogus\"}";
+        stubNetworkModificationPostWithBodyAndError(badBody);
+        stubNetworkModificationPutWithBodyAndError(badBody);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .queryParam("typeModification", ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL.toString())
-                        .content("{\"bogus\":\"bogus\"}").contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(
-                        status().is5xxServerError());
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().is5xxServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.LINE_ATTACH_TO_VOLTAGE_LEVEL.toString())
-                        .content("{\"bogus\":\"bogus\"}").contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(
-                        status().is5xxServerError());
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().is5xxServerError());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        verifyPostWithBody("{\"bogus\":\"bogus\"}");
-        verifyPutWithBody("{\"bogus\":\"bogus\"}");
+        verifyPostWithBody(badBody);
+        verifyPutWithBody(badBody);
+    }
+
+    @SneakyThrows
+    @Test
+    @DisplayName("Should throw an exception when the body of a network modification is wrongly formatted")
+    public void testNetworkModificationBodyBadFormat() {
+
+        // setup
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNodeUuid = modificationNode1.getId();
+
+        // missing a ','
+        String bodyWithBadFormat = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"equipmentId\":\"equipId\"\"equipmentName\":\"equipName\"}";
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(bodyWithBadFormat).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isBadRequest(),
+                        content().string(StringContains.containsString("Unexpected character")));
+
+        // missing a '"'
+        bodyWithBadFormat = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"equipmentId\":\"equipId,\"equipmentName\":\"equipName\"}";
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(bodyWithBadFormat).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isBadRequest(),
+                        content().string(StringContains.containsString("Unexpected character")));
+    }
+
+    @SneakyThrows
+    @Test
+    @DisplayName("Should throw an exception when the body of a network modification doesn't have a known type")
+    public void testNetworkModificationBodyBadType() {
+
+        // setup
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNodeUuid = modificationNode1.getId();
+
+        // missing type
+        String bodyWithMissingType = "{\"equipmentId\":\"equipId\",\"equipmentName\":\"equipName\"}";
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(bodyWithMissingType).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isBadRequest(),
+                        content().string(StringContains.containsString("'type' field not found in body")));
+
+        // bad type
+        String bodyWithBadType = "{\"type\":\"" + "VERY_BAD_TYPE" + "\",\"equipmentId\":\"equipId\",\"equipmentName\":\"equipName\"}";
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(bodyWithBadType).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isBadRequest(),
+                        content().string(StringContains.containsString("'VERY_BAD_TYPE' is not a known type")));
     }
 
     @Test
@@ -1703,13 +1696,11 @@ public class NetworkModificationTest {
 
         // delete equipment on root node (not allowed)
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, rootNodeUuid)
-                        .queryParam("typeModification", ModificationType.EQUIPMENT_DELETION.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
         // delete equipment on first modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
-                        .queryParam("typeModification", ModificationType.EQUIPMENT_DELETION.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1720,7 +1711,6 @@ public class NetworkModificationTest {
 
         // delete equipment on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
-                        .queryParam("typeModification", ModificationType.EQUIPMENT_DELETION.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
@@ -1731,7 +1721,6 @@ public class NetworkModificationTest {
 
         // update equipment deletion
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.EQUIPMENT_DELETION.toString())
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1768,10 +1757,9 @@ public class NetworkModificationTest {
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3);
         output.receive(TIMEOUT, studyUpdateDestination);
 
-        String generatorAttributesUpdated = "{\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
+        String generatorAttributesUpdated = "{\"type\":\"" + ModificationType.GENERATOR_MODIFICATION + "\",\"generatorId\":\"generatorId1\",\"generatorType\":\"FICTITIOUS\",\"activePower\":\"70.0\"}";
         stubNetworkModificationPutWithBody(generatorAttributesUpdated);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNode1Uuid, MODIFICATION_UUID)
-                        .queryParam("typeModification", ModificationType.GENERATOR_MODIFICATION.toString())
                         .content(generatorAttributesUpdated).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);

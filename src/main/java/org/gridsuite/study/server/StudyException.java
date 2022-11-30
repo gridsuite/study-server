@@ -57,17 +57,15 @@ public class StudyException extends RuntimeException {
         NODE_BUILD_ERROR,
         INVALIDATE_BUILD_FAILED,
         UNKNOWN_NOTIFICATION_TYPE,
+        MISSING_MODIFICATION_TYPE,
+        UNKNOWN_MODIFICATION_TYPE,
         GET_MODIFICATIONS_FAILED,
         LINES_ATTACH_TO_SPLIT_LINES,
-        BRANCH_STATUS_FAILED
+        BRANCH_STATUS_FAILED,
+        BAD_INPUT_BODY_FORMAT
     }
 
     private final Type type;
-
-    public static StudyException createEquipmentTypeUnknown(String type) {
-        Objects.requireNonNull(type);
-        return new StudyException(Type.UNKNOWN_EQUIPMENT_TYPE, "The equipment type : " + type + " is unknown");
-    }
 
     public StudyException(Type type) {
         super(Objects.requireNonNull(type.name()));

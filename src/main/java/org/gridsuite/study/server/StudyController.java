@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -850,10 +849,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification has been created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> createNetworkModification(@PathVariable("studyUuid") UUID studyUuid,
                                                           @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @RequestParam("typeModification") ModificationType typeModification,
                                                           @RequestBody String modificationAttributes) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createModification(studyUuid, modificationAttributes, typeModification, nodeUuid);
+        studyService.createModification(studyUuid, modificationAttributes, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -863,13 +861,12 @@ public class StudyController {
     public ResponseEntity<Void> updateNetworkModification(@PathVariable("studyUuid") UUID studyUuid,
                                                           @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @PathVariable("modificationUuid") UUID modificationUuid,
-                                                          @RequestParam("typeModification") ModificationType typeModification,
                                                           @RequestBody String modificationAttributes) {
         //TODO quelles asserts utiliser?
 //        studyService.assertCanModifyNode(studyUuid, nodeUuid);
 //        studyService.assertComputationNotRunning(nodeUuid);
         studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
-        studyService.updateModification(studyUuid, modificationAttributes, typeModification, nodeUuid, modificationUuid);
+        studyService.updateModification(studyUuid, modificationAttributes, nodeUuid, modificationUuid);
         return ResponseEntity.ok().build();
     }
 

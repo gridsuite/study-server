@@ -11,10 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -23,6 +20,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @Getter
+@Setter
 @ToString
 @Schema(description = "Modification attributes")
 public class ModificationInfos {

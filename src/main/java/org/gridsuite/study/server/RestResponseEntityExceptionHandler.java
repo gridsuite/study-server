@@ -21,7 +21,8 @@ public class RestResponseEntityExceptionHandler {
 
     @ExceptionHandler(StudyException.class)
     protected ResponseEntity<Object> handleStudyException(StudyException exception) {
-        switch (exception.getType()) {
+        StudyException.Type type = exception.getType();
+        switch (type) {
             case ELEMENT_NOT_FOUND:
             case STUDY_NOT_FOUND:
             case NODE_NOT_FOUND:
@@ -32,16 +33,15 @@ public class RestResponseEntityExceptionHandler {
             case CASE_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS:
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(STUDY_ALREADY_EXISTS);
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(type);
             case LOADFLOW_NOT_RUNNABLE:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(LOADFLOW_NOT_RUNNABLE);
             case LOADFLOW_RUNNING:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(LOADFLOW_RUNNING);
             case SECURITY_ANALYSIS_RUNNING:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(SECURITY_ANALYSIS_RUNNING);
             case SENSITIVITY_ANALYSIS_RUNNING:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(SENSITIVITY_ANALYSIS_RUNNING);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED:
+            case BAD_NODE_TYPE:
+            case NODE_NAME_ALREADY_EXIST:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
@@ -65,13 +65,14 @@ public class RestResponseEntityExceptionHandler {
             case GET_MODIFICATIONS_FAILED:
             case NODE_BUILD_ERROR:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
-            case BAD_NODE_TYPE:
-            case NODE_NAME_ALREADY_EXIST:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case SVG_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
             case UNKNOWN_NOTIFICATION_TYPE:
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION_TYPE);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(type);
+            case UNKNOWN_MODIFICATION_TYPE:
+            case MISSING_MODIFICATION_TYPE:
+            case BAD_INPUT_BODY_FORMAT:
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

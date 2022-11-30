@@ -1010,7 +1010,8 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
     }
 
-    public void createModification(UUID studyUuid, String createModificationAttributes, ModificationType modificationType, UUID nodeUuid) {
+    public void createModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid) {
+        ModificationType modificationType = extractType(createModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -1025,7 +1026,8 @@ public class StudyService {
         }
     }
 
-    public void updateModification(UUID studyUuid, String updateModificationAttributes, ModificationType modificationType, UUID nodeUuid, UUID modificationUuid) {
+    public void updateModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid) {
+        ModificationType modificationType = extractType(updateModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateModification(updateModificationAttributes, modificationType, modificationUuid);
@@ -1437,5 +1439,26 @@ public class StudyService {
         updateShortCircuitAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         return result;
+    }
+
+    /* Extract the field 'type' from a JSON String */
+    private ModificationType extractType(String stringBody) {
+        JsonNode jsonBody;
+        try {
+            jsonBody = objectMapper.readTree(stringBody);
+        } catch (JsonProcessingException e) {
+            throw new StudyException(BAD_INPUT_BODY_FORMAT, e.getMessage());
+        }
+        if (!jsonBody.has("type")) {
+            throw new StudyException(MISSING_MODIFICATION_TYPE, "'type' field not found in body");
+        }
+        String parsedType = jsonBody.get("type").asText();
+        ModificationType type;
+        try {
+            type = ModificationType.valueOf(parsedType);
+        } catch (Exception e) {
+            throw new StudyException(UNKNOWN_MODIFICATION_TYPE, "'" + parsedType + "' is not a known type");
+        }
+        return type;
     }
 }
