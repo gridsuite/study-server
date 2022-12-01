@@ -56,12 +56,12 @@ public class ESConfig extends AbstractElasticsearchConfiguration {
 
     @Bean
     public StudyInfosService studyInfosServiceImpl(StudyInfosRepository studyInfosRepository, ElasticsearchOperations elasticsearchOperations) {
-        return new StudyInfosServiceImpl(studyInfosRepository, elasticsearchOperations);
+        return new StudyInfosService(studyInfosRepository, elasticsearchOperations);
     }
 
     @Bean
     public EquipmentInfosService equipmentInfosServiceImpl(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
-        return new EquipmentInfosServiceImpl(equipmentInfosRepository, tombstonedEquipmentInfosRepository, elasticsearchOperations);
+        return new EquipmentInfosService(equipmentInfosRepository, tombstonedEquipmentInfosRepository, elasticsearchOperations);
     }
 
     @Bean
