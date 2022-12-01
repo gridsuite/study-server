@@ -775,7 +775,7 @@ public class StudyService {
         }
     }
 
-    public void assertComputationNotRunning(UUID nodeUuid) {
+    private void assertComputationNotRunning(UUID nodeUuid) {
         assertLoadFlowNotRunning(nodeUuid);
         securityAnalysisService.assertSecurityAnalysisNotRunning(nodeUuid);
         sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(nodeUuid);
@@ -799,7 +799,7 @@ public class StudyService {
         assertNoNodeIsBuilding(studyUuid);
     }
 
-    public void assertNoNodeIsBuilding(UUID studyUuid) {
+    private void assertNoNodeIsBuilding(UUID studyUuid) {
         networkModificationTreeService.getAllNodes(studyUuid).stream().forEach(node -> {
             if (networkModificationTreeService.getBuildStatus(node.getIdNode()) == BuildStatus.BUILDING) {
                 throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");

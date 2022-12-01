@@ -862,10 +862,7 @@ public class StudyController {
                                                           @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @PathVariable("modificationUuid") UUID modificationUuid,
                                                           @RequestBody String modificationAttributes) {
-        //TODO quelles asserts utiliser?
-//        studyService.assertCanModifyNode(studyUuid, nodeUuid);
-//        studyService.assertComputationNotRunning(nodeUuid);
-        studyService.assertNoBuildNoComputation(studyUuid, nodeUuid);
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.updateModification(studyUuid, modificationAttributes, nodeUuid, modificationUuid);
         return ResponseEntity.ok().build();
     }
