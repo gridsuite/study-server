@@ -1329,6 +1329,31 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/delete-voltage-level-on-line")
+    @Operation(summary = "create delete voltage level on line")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Deleting voltage level on a line successfully")})
+    public ResponseEntity<Void> createDeleteVoltageLevelOnLine(@PathVariable("studyUuid") UUID studyUuid,
+                                                        @PathVariable("nodeUuid") UUID nodeUuid,
+                                                        @RequestBody String deleteVoltageLevelOnLineAttributes) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.createEquipment(studyUuid, deleteVoltageLevelOnLineAttributes, ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/delete-voltage-level-on-line")
+    @Operation(summary = "update delete voltage level on line")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Delete a voltage level on a line has been updated.")})
+    public ResponseEntity<Void> updateDeleteVoltageLevelOnLine(@PathVariable("studyUuid") UUID studyUuid,
+                                                              @PathVariable("modificationUuid") UUID modificationUuid,
+                                                              @PathVariable("nodeUuid") UUID nodeUuid,
+                                                              @RequestBody String deleteVoltageLevelOnLineAttributes) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.updateEquipmentCreation(studyUuid, deleteVoltageLevelOnLineAttributes, ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE, nodeUuid, modificationUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/infos")
     @Operation(summary = "get the load flow information (status and result) on study")
     @ApiResponses(value = {

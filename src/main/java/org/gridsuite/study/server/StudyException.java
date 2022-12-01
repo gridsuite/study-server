@@ -59,6 +59,7 @@ public class StudyException extends RuntimeException {
         UNKNOWN_NOTIFICATION_TYPE,
         GET_MODIFICATIONS_FAILED,
         LINES_ATTACH_TO_SPLIT_LINES,
+        DELETE_VOLTAGE_LEVEL_ON_LINE,
     }
 
     private final Type type;

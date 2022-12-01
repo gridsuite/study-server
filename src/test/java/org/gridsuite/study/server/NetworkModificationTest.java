@@ -236,6 +236,13 @@ public class NetworkModificationTest {
         List<EquipmentModificationInfos> linesToAttachToSplitLinesResponseInfos = new ArrayList<>();
         lineAttachResponseInfos.add(linesToAttachToSplitLines);
 
+        EquipmentModificationInfos deleteVoltageLevelOnLineInfos = EquipmentModificationInfos.builder()
+                .type(ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> deleteVoltageLevelOnLineResponseInfos = new ArrayList<>();
+        deleteVoltageLevelOnLineResponseInfos.add(deleteVoltageLevelOnLineInfos);
+
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
             @Override
@@ -358,6 +365,14 @@ public class NetworkModificationTest {
                     } else {
                         return new MockResponse().setResponseCode(200)
                                 .setBody(mapper.writeValueAsString(linesToAttachToSplitLinesResponseInfos))
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    }
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/delete-voltage-level-on-line[?]group=.*") && POST.equals(request.getMethod())) {
+                    if (body.peek().readUtf8().equals("bogus")) {
+                        return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                    } else {
+                        return new MockResponse().setResponseCode(200)
+                                .setBody(mapper.writeValueAsString(deleteVoltageLevelOnLineResponseInfos))
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     }
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/substations[?]group=.*") && POST.equals(request.getMethod())) {
@@ -1590,6 +1605,52 @@ public class NetworkModificationTest {
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/lines-attach-to-split-lines",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content("bogus"))
+                .andExpectAll(status().is5xxServerError());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        TestUtils.getRequestsWithBodyDone(2, server);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testDeleteVoltageLevelOnLine() {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node");
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String createDeleteVoltageLevelOnLineAttributes = "{\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"attachedLineId\":\"line3\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name\"}";
+        String updateDeleteVoltageLevelOnLineAttributes = "{\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"attachedLineId\":\"line3\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name2\"}";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/delete-voltage-level-on-line",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createDeleteVoltageLevelOnLineAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of("s1", "s2"));
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/delete-voltage-level-on-line",
+                        studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateDeleteVoltageLevelOnLineAttributes))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        var requests = TestUtils.getRequestsWithBodyDone(2, server);
+        assertEquals(2, requests.size());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/delete-voltage-level-on-line",
+                        studyNameUserIdUuid, modificationNodeUuid)
+                        .content("bogus"))
+                .andExpect(status().is5xxServerError());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/delete-voltage-level-on-line",
                         studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content("bogus"))
                 .andExpectAll(status().is5xxServerError());
