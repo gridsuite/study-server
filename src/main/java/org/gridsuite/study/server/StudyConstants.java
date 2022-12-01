@@ -42,6 +42,6 @@ public final class StudyConstants {
 
     public enum SldDisplayMode {
         FEEDER_POSITION,
-        DEFAULT;
+        STATE_VARIABLE;
     }
 }
