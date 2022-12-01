@@ -10,7 +10,6 @@ package org.gridsuite.study.server.utils;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -67,7 +66,6 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
-            .date(LocalDateTime.now())
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowProvider(loadflowProvider)
@@ -89,7 +87,6 @@ public final class TestUtils {
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .caseName(caseName)
-            .date(LocalDateTime.now())
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowProvider(loadFlowProvider)
