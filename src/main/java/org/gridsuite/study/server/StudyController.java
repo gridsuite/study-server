@@ -295,7 +295,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations")
     @Operation(summary = "Get Network substations graphics")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substations graphics with the given ids")})
-    public ResponseEntity<String> getSubstationsGraphicByIds(
+    public ResponseEntity<String> getSubstationsGraphic(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {

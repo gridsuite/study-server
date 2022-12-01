@@ -55,21 +55,6 @@ public class GeoDataService {
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
 
-    public String getSubstationsGraphics(UUID networkUuid, String variantId) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
-                .queryParam(NETWORK_UUID, networkUuid);
-
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
-    }
-
     public String getSubstationsGraphics(UUID networkUuid, String variantId, List<String> substationsIds) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
                 .queryParam(NETWORK_UUID, networkUuid);
