@@ -44,7 +44,7 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String NOT_FOUND = " not found";
-    static final String QUERY_PARAM_DISPLAY_MODE = "displayMode";
+    static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
 
     @Autowired
     private RestTemplate restTemplate;
