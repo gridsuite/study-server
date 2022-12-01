@@ -103,7 +103,7 @@ public class SingleLineDiagramService {
                 .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
                 .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_DISPLAY_MODE, diagramParameters.getDisplayMode());
+                .queryParam(QUERY_PARAM_DISPLAY_MODE, diagramParameters.getSldDisplayMode());
         if (diagramParameters.getComponentLibrary() != null) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
         }

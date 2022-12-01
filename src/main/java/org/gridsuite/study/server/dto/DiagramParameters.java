@@ -21,5 +21,5 @@ public class DiagramParameters {
     private boolean diagonalLabel;
     private boolean topologicalColoring;
     private String  componentLibrary;
-    private StudyConstants.DisplayMode displayMode;
+    private StudyConstants.SldDisplayMode sldDisplayMode;
 }

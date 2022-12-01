@@ -59,7 +59,8 @@ public class StudyController {
             NetworkConversionService networkConversionService,
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
-            ShortCircuitService shortCircuitService, CaseService caseService) {
+            ShortCircuitService shortCircuitService,
+            CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -225,9 +226,9 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "displayMode") @RequestParam(name = "displayMode", defaultValue = "DEFAULT") StudyConstants.DisplayMode displayMode) {
+            @Parameter(description = "sldDisplayMode") @RequestParam(name = "sldDisplayMode", defaultValue = "DEFAULT") StudyConstants.SldDisplayMode sldDisplayMode) {
         byte[] result = studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, displayMode), nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, sldDisplayMode), nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -245,9 +246,9 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "displayMode") @RequestParam(name = "displayMode", defaultValue = "DEFAULT") StudyConstants.DisplayMode displayMode) {
+            @Parameter(description = "sldDisplayMode") @RequestParam(name = "sldDisplayMode", defaultValue = "DEFAULT") StudyConstants.SldDisplayMode sldDisplayMode) {
         String result = studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, displayMode), nodeUuid);
+            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, sldDisplayMode), nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
