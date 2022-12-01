@@ -218,6 +218,7 @@ public class SingleLineDiagramTest {
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING:
                     case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
+                    case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&substationId=BBE1AA":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/substations":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers":
@@ -377,11 +378,11 @@ public class SingleLineDiagramTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s", NETWORK_UUID_STRING)));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations/", studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations?substationId=BBE1AA", studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s&variantId=%s", NETWORK_UUID_STRING, VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s&variantId=%s&substationId=BBE1AA", NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the lines map data of a network
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
