@@ -858,15 +858,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReport(nodeUuid, nodeOnlyReport));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
-    @Operation(summary = "Get modifications from the study network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications has been returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<String> getNetworkModifications(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        // Return json string because modification dtos are not available here
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid));
-    }
-
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/report")
     @Operation(summary = "Delete node report")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report has been deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
@@ -881,6 +872,15 @@ public class StudyController {
     public ResponseEntity<List<String>> getAvailableSvgComponentLibraries() {
         List<String> libraries = singleLineDiagramService.getAvailableSvgComponentLibraries();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(libraries);
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Get modifications from the study network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications has been returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<String> getNetworkModifications(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                          @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        // Return json string because modification dtos are not available here
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
