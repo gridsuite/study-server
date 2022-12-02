@@ -1609,7 +1609,7 @@ public class NetworkModificationTest {
         List<UUID> modificationUuidList = Collections.singletonList(modification1);
         String expectedBody = mapper.writeValueAsString(modificationUuidList);
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlEqualTo(
-                        "/v1/groups/" + modificationNode.getModificationGroupUuid() + "?action=MOVE"))
+                        "/v1/groups/" + modificationNode.getModificationGroupUuid() + "?action=MOVE&originGroupUuid=" + modificationNode.getModificationGroupUuid()))
                 .withRequestBody(WireMock.equalToJson(expectedBody))); // modification1 is in the request body
 
         // switch back the 2 modifications order (modification1 is set before modification2)
@@ -1622,7 +1622,7 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlEqualTo(
-                        "/v1/groups/" + modificationNode.getModificationGroupUuid() + "?action=MOVE&before=" + modification2))
+                        "/v1/groups/" + modificationNode.getModificationGroupUuid() + "?action=MOVE&originGroupUuid=" + modificationNode.getModificationGroupUuid() + "&before=" + modification2))
                 .withRequestBody(WireMock.equalToJson(expectedBody))); // modification1 is still in the request body
     }
 
@@ -1639,21 +1639,21 @@ public class NetworkModificationTest {
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         UUID.randomUUID(), rootNodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
                 .andExpect(status().isForbidden());
 
         // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
                 .andExpect(status().isNotFound());
 
         // duplicate 2 modifications in node1
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                         studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody))
@@ -1666,8 +1666,83 @@ public class NetworkModificationTest {
         List<UUID> expectedList = List.of(modification1, modification2);
         String expectedBody = mapper.writeValueAsString(expectedList);
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlEqualTo(
-                        "/v1/groups/" + node1.getModificationGroupUuid() + "?action=DUPLICATE"))
+                        "/v1/groups/" + node1.getModificationGroupUuid() + "?action=COPY"))
                 .withRequestBody(WireMock.equalToJson(expectedBody)));
+    }
+
+    @Test
+    public void testCutAndPasteModification() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1");
+        UUID nodeUuid1 = node1.getId();
+        NetworkModificationNode node2 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 2");
+        UUID nodeUuid2 = node2.getId();
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+
+        // Random/bad studyId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
+                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isForbidden());
+
+        // Random/bad nodeId error case
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, UUID.randomUUID(), UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isNotFound());
+
+     // move 2 modifications within node 1
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, nodeUuid1, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        List<UUID> expectedList = List.of(modification1, modification2);
+        String expectedBody = mapper.writeValueAsString(expectedList);
+        wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlEqualTo(
+                        "/v1/groups/" + node1.getModificationGroupUuid() + "?action=MOVE&originGroupUuid=" + node1.getModificationGroupUuid()))
+                .withRequestBody(WireMock.equalToJson(expectedBody)));
+
+        // move 2 modifications from node1 to node2
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, nodeUuid2, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid2);
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid2));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid2);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid2);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        expectedList = List.of(modification1, modification2);
+        expectedBody = mapper.writeValueAsString(expectedList);
+        wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlEqualTo(
+                        "/v1/groups/" + node1.getModificationGroupUuid() + "?action=MOVE&originGroupUuid=" + node1.getModificationGroupUuid()))
+                .withRequestBody(WireMock.equalToJson(expectedBody)));
+
+        // move modification without defining originNodeUuid
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

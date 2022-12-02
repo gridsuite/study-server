@@ -62,7 +62,9 @@ public class StudyException extends RuntimeException {
         GET_MODIFICATIONS_FAILED,
         LINES_ATTACH_TO_SPLIT_LINES,
         BRANCH_STATUS_FAILED,
-        BAD_INPUT_BODY_FORMAT
+        BAD_INPUT_BODY_FORMAT,
+        UNKNOWN_ACTION_TYPE,
+        MISSING_PARAMETER
     }
 
     private final Type type;
