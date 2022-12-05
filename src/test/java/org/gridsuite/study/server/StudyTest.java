@@ -1644,7 +1644,7 @@ public class StudyTest {
         var request = TestUtils.getRequestsDone(1, server);
         assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
-        boolean nodeHasModifications = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
+        boolean nodeHasModifications = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
 
         //depending on number of children, number of modifications and build state, there will be several "/v1/reports/.*" requests to get reports to delete on invalidation
         do {

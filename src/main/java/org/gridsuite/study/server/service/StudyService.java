@@ -1121,7 +1121,7 @@ public class StudyService {
         List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        boolean shouldInvalidateChildren = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
+        boolean shouldInvalidateChildren = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToMoveUuid));
 
         //Invalidating previous children if necessary
         if (shouldInvalidateChildren) {
@@ -1132,8 +1132,8 @@ public class StudyService {
 
         //Invalidating moved node or new children if necessary
         if (shouldInvalidateChildren) {
-            updateStatuses(nodeToMoveUuid, false, shouldInvalidateChildren);
-            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, shouldInvalidateChildren));
+            updateStatuses(studyUuid, nodeToMoveUuid, false, true);
+            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, true));
         } else {
             invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
         }
