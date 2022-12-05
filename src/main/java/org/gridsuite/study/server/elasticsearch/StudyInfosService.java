@@ -13,6 +13,8 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+@Service
 public class StudyInfosService {
 
     private final StudyInfosRepository studyInfosRepository;

@@ -6,7 +6,8 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +16,8 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +31,7 @@ import static java.util.Map.entry;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
+@Service
 public class EquipmentInfosService {
 
     public enum FieldSelector {

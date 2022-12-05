@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=true"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public class NetworkVariantsListenerTests {
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
