@@ -50,9 +50,6 @@ import org.springframework.web.client.HttpStatusCodeException;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -165,21 +162,18 @@ public class StudyService {
     private static StudyInfos toStudyInfos(StudyEntity entity) {
         return StudyInfos.builder()
                 .id(entity.getId())
-                .creationDate(ZonedDateTime.ofInstant(entity.getDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC))
                 .caseFormat(entity.getCaseFormat())
                 .build();
     }
 
     private static BasicStudyInfos toBasicStudyInfos(StudyCreationRequestEntity entity) {
         return BasicStudyInfos.builder()
-                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .id(entity.getId())
                 .build();
     }
 
     private static CreatedStudyBasicInfos toCreatedStudyBasicInfos(StudyEntity entity) {
         return CreatedStudyBasicInfos.builder()
-                .creationDate(ZonedDateTime.now(ZoneOffset.UTC))
                 .id(entity.getId())
                 .caseFormat(entity.getCaseFormat())
                 .build();
@@ -188,7 +182,6 @@ public class StudyService {
     public List<CreatedStudyBasicInfos> getStudies() {
         return studyRepository.findAll().stream()
                 .map(StudyService::toCreatedStudyBasicInfos)
-                .sorted(Comparator.comparing(CreatedStudyBasicInfos::getCreationDate).reversed())
                 .collect(Collectors.toList());
     }
 
@@ -207,7 +200,7 @@ public class StudyService {
     public List<BasicStudyInfos> getStudiesCreationRequests() {
         return studyCreationRequestRepository.findAll().stream()
                 .map(StudyService::toBasicStudyInfos)
-                .sorted(Comparator.comparing(BasicStudyInfos::getCreationDate).reversed()).collect(Collectors.toList());
+                .collect(Collectors.toList());
     }
 
     public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
@@ -502,7 +495,7 @@ public class StudyService {
         Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), LocalDateTime.now(ZoneOffset.UTC), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters, newShortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters, newShortCircuitParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -1030,7 +1023,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         Objects.requireNonNull(shortCircuitParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, LocalDateTime.now(ZoneOffset.UTC), networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters, shortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters, shortCircuitParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
@@ -1066,7 +1059,7 @@ public class StudyService {
 
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(String userId, UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
-                studyUuid == null ? UUID.randomUUID() : studyUuid, LocalDateTime.now(ZoneOffset.UTC));
+                studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
@@ -1252,19 +1245,38 @@ public class StudyService {
 
     @Transactional
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+        List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        boolean shouldInvalidateChildren = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
+
+        //Invalidating previous children if necessary
+        if (shouldInvalidateChildren) {
+            oldChildren = networkModificationTreeService.getChildrenByParentUuid(nodeToMoveUuid);
+        }
+
         networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
-        boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
-        updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
+
+        //Invalidating moved node or new children if necessary
+        if (shouldInvalidateChildren) {
+            updateStatuses(studyUuid, nodeToMoveUuid, false, shouldInvalidateChildren);
+            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, shouldInvalidateChildren));
+        } else {
+            invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
+        }
     }
 
-    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         invalidateNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        // we might want to invalidate target node without impacting other nodes (when moving an empty node for exemple
+        if (invalidateOnlyTargetNode) {
+            networkModificationTreeService.invalidateBuildOfNodeOnly(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        } else {
+            networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        }
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
@@ -1300,7 +1312,7 @@ public class StudyService {
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateBuild) {
         if (invalidateBuild) {
-            invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
+            invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus, false);
         }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1390,7 +1402,7 @@ public class StudyService {
                 LOGGER.error(e.toString(), e);
                 throw e;
             }
-            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, false);
             LOGGER.info("Study with id = '{}' has been reindexed", studyUuid);
         } else {
             throw new StudyException(STUDY_NOT_FOUND);
@@ -1398,17 +1410,34 @@ public class StudyService {
     }
 
     @Transactional
-    public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid) {
+    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+        String modificationsInError;
+
+        if (originNodeUuid == null) {
+            throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
+        }
+
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        if (!nodeUuid.equals(originNodeUuid)) {
+            notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        }
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            List<UUID> modificationUuidList = Collections.singletonList(modificationUuid);
-            networkModificationService.reorderModification(groupUuid, modificationUuidList, beforeUuid);
+            UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
+            modificationsInError = networkModificationService.moveModifications(groupUuid, originGroupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
+            if (!nodeUuid.equals(originNodeUuid)) {
+                updateStatuses(studyUuid, originNodeUuid, false);
+            }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            if (!nodeUuid.equals(originNodeUuid)) {
+                notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
+            }
         }
+
+        return modificationsInError;
     }
 
     @Transactional
