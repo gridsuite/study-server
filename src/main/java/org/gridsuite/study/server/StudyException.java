@@ -59,6 +59,8 @@ public class StudyException extends RuntimeException {
         UNKNOWN_NOTIFICATION_TYPE,
         GET_MODIFICATIONS_FAILED,
         LINES_ATTACH_TO_SPLIT_LINES,
+        UNKNOWN_ACTION_TYPE,
+        MISSING_PARAMETER,
     }
 
     private final Type type;
