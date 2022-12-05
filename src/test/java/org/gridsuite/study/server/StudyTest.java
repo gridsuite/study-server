@@ -348,7 +348,7 @@ public class StudyTest {
                 } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/network-modifications.*") && POST.equals(request.getMethod())) {
+                } else if (path.matches("/v1/network-modifications.*") && POST.equals(request.getMethod())) {
                     JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
                     return new MockResponse().setResponseCode(200)
                             .setBody(new JSONArray(List.of(jsonObject)).toString())
@@ -1199,7 +1199,7 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/network-modifications.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
@@ -1213,7 +1213,7 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/network-modifications.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
@@ -1299,7 +1299,7 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/network-modifications.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
@@ -1313,7 +1313,7 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/network-modifications.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
@@ -1493,7 +1493,7 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/network-modifications.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
@@ -1507,7 +1507,7 @@ public class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/network-modifications.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));

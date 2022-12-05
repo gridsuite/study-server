@@ -882,7 +882,7 @@ public class NetworkModificationTest {
     @Test
     public void deleteModificationRequest() throws Exception {
 
-        wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/networks/network-modifications/.*"))
+        wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications/.*"))
                 .willReturn(WireMock.ok()));
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -910,7 +910,7 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
 
         wireMock.verify(1, WireMock.deleteRequestedFor(
-                WireMock.urlPathMatching("/v1/networks/network-modifications/.*")));
+                WireMock.urlPathMatching("/v1/network-modifications/.*")));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
@@ -2208,14 +2208,14 @@ public class NetworkModificationTest {
     }
 
     private void stubNetworkModificationPost(String responseBody) {
-        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/network-modifications"))
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
                 .willReturn(WireMock.ok()
                         .withBody(responseBody)
                         .withHeader("Content-Type", "application/json")));
     }
 
     private void stubNetworkModificationPostWithBody(String requestBody, String responseBody) {
-        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/network-modifications"))
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
                 .withRequestBody(WireMock.equalToJson(requestBody))
                 .willReturn(WireMock.ok()
                         .withBody(responseBody)
@@ -2223,30 +2223,30 @@ public class NetworkModificationTest {
     }
 
     private void stubNetworkModificationPostWithError(String requestBody) {
-        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/network-modifications"))
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
                 .withRequestBody(WireMock.equalToJson(requestBody))
                 .willReturn(WireMock.serverError()));
     }
 
     private void stubNetworkModificationPostWithBodyAndError(String requestBody) {
-        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/network-modifications"))
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
                 .withRequestBody(WireMock.equalToJson(requestBody))
                 .willReturn(WireMock.badRequest()));
     }
 
     private void stubNetworkModificationPut() {
-        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/networks/network-modifications/" + MODIFICATION_UUID))
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/network-modifications/" + MODIFICATION_UUID))
                 .willReturn(WireMock.ok()));
     }
 
     private void stubNetworkModificationPutWithBody(String requestBody) {
-        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/networks/network-modifications/" + MODIFICATION_UUID))
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/network-modifications/" + MODIFICATION_UUID))
                 .withRequestBody(WireMock.equalToJson(requestBody))
                 .willReturn(WireMock.ok()));
     }
 
     private void stubNetworkModificationPutWithBodyAndError(String requestBody) {
-        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/networks/network-modifications/" + MODIFICATION_UUID))
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/network-modifications/" + MODIFICATION_UUID))
                 .withRequestBody(WireMock.equalToJson(requestBody))
                 .willReturn(WireMock.badRequest()));
     }
@@ -2257,7 +2257,7 @@ public class NetworkModificationTest {
 
     private void verifyPostWithBody(Integer count, String requestBody) {
         wireMock.verify(count, WireMock.postRequestedFor(WireMock.urlPathEqualTo(
-                        "/v1/networks/network-modifications"))
+                        "/v1/network-modifications"))
                 .withQueryParam("networkUuid", WireMock.equalTo(NETWORK_UUID_STRING))
                 .withQueryParam("groupUuid", WireMock.matching(".*"))
                 .withRequestBody(WireMock.equalToJson(requestBody)));
@@ -2269,7 +2269,7 @@ public class NetworkModificationTest {
 
     private void verifyPostWithBodyAndVariant(Integer count, String requestBody, String variantId) {
         wireMock.verify(count, WireMock.postRequestedFor(WireMock.urlPathEqualTo(
-                        "/v1/networks/network-modifications"))
+                        "/v1/network-modifications"))
                 .withQueryParam("networkUuid", WireMock.equalTo(NETWORK_UUID_STRING))
                 .withQueryParam("groupUuid", WireMock.matching(".*"))
                 .withQueryParam("variantId", WireMock.equalTo(variantId))
@@ -2278,7 +2278,7 @@ public class NetworkModificationTest {
 
     private void verifyPutWithBody(String requestBody) {
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo(
-                        "/v1/networks/network-modifications/" + MODIFICATION_UUID))
+                        "/v1/network-modifications/" + MODIFICATION_UUID))
                 .withRequestBody(WireMock.equalToJson(requestBody)));
     }
 
