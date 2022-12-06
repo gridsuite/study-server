@@ -1099,18 +1099,10 @@ public class StudyController {
     @Operation(summary = "run sensitivity analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started")})
     public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                    @Parameter(description = "Variables filters list uuids") @RequestParam(name = "variablesFiltersListUuid", required = false) List<UUID> variablesFiltersListUuids,
-                                                    @Parameter(description = "Contingency list uuids") @RequestParam(name = "contingencyListUuid", required = false) List<UUID> contingencyListUuids,
-                                                    @Parameter(description = "Branch filters list uuids") @RequestParam(name = "branchFiltersListUuid", required = false) List<UUID> branchFiltersListUuids,
-                                                    @RequestBody(required = false) String parameters) {
-        List<UUID> nonNullVariablesFiltersListUuids = variablesFiltersListUuids != null ? variablesFiltersListUuids : Collections.emptyList();
-        List<UUID> nonNullContingencyListUuids = contingencyListUuids != null ? contingencyListUuids : Collections.emptyList();
-        List<UUID> nonNullBranchFiltersListUuids = branchFiltersListUuids != null ? branchFiltersListUuids : Collections.emptyList();
-
-        String nonNullParameters = Objects.toString(parameters, "");
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @RequestBody String sensitivityAnalysisInput) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nonNullVariablesFiltersListUuids, nonNullContingencyListUuids, nonNullBranchFiltersListUuids, nonNullParameters, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid, sensitivityAnalysisInput));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")

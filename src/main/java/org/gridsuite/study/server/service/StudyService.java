@@ -15,6 +15,7 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
+import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
@@ -1439,18 +1440,10 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(UUID studyUuid,
-                                       List<UUID> variablesFiltersListUuids,
-                                       List<UUID> contingencyListUuids,
-                                       List<UUID> branchFiltersListUuids,
-                                       String parameters,
-                                       UUID nodeUuid) {
+    public UUID runSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, String sensitivityAnalysisInput) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(variablesFiltersListUuids);
-        Objects.requireNonNull(contingencyListUuids);
-        Objects.requireNonNull(branchFiltersListUuids);
-        Objects.requireNonNull(parameters);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(sensitivityAnalysisInput);
 
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisResult);
@@ -1460,9 +1453,20 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider,
-                variablesFiltersListUuids, contingencyListUuids, branchFiltersListUuids,
-                parameters);
+        SensitivityAnalysisInputData sensitivityAnalysisInputData;
+        try {
+            sensitivityAnalysisInputData = objectMapper.readValue(sensitivityAnalysisInput, SensitivityAnalysisInputData.class);
+            if (sensitivityAnalysisInputData.getParameters() == null) {
+                SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
+                LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
+                sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
+                sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
+            }
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData);
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
