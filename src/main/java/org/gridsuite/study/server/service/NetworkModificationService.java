@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
@@ -112,10 +113,15 @@ public class NetworkModificationService {
         }
     }
 
-    public void deleteModifications(List<UUID> modificationsUuids) {
+    public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
+        String modificationsUuidsUri = modificationsUuids.toString()
+                .replace("[", "")
+                .replace("]", "");
         var path = UriComponentsBuilder
-                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationsUuids)
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + '{' + NETWORK_MODIFICATIONS_PATH + '}')
+                .uriVariables(ImmutableMap.of(NETWORK_MODIFICATIONS_PATH, modificationsUuidsUri))
+                .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();
         try {

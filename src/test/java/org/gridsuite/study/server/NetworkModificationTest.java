@@ -61,7 +61,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.cloud.contract.wiremock.WireMockSpring;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -81,6 +80,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
@@ -197,7 +197,7 @@ public class NetworkModificationTest {
 
         // Start the mock server.
         server.start();
-        wireMock = new WireMockServer(WireMockSpring.options().dynamicPort().extensions(new SendInput(input)));
+        wireMock = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMock.start();
 
      // Ask the server for its URL. You'll need this to make HTTP requests.
@@ -2282,6 +2282,7 @@ public class NetworkModificationTest {
                 .withRequestBody(WireMock.equalToJson(requestBody)));
     }
 
+    /* Class that implements an action we want to execute after mocking an API call */
     public class SendInput extends PostServeAction {
 
         final InputDestination input;
