@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ServerWebInputException;
 
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -81,7 +81,7 @@ public class RestResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ServerWebInputException.class)
-    protected ResponseEntity<Object> handleStudyException(ServerWebInputException exception) {
+    protected ResponseEntity<Object> handleServerWebInputException(ServerWebInputException exception) {
         Throwable cause = exception.getCause();
         if (cause instanceof TypeMismatchException && cause.getCause() != null && cause.getCause() != cause) {
             cause = cause.getCause();
@@ -90,7 +90,7 @@ public class RestResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(TypeMismatchException.class)
-    protected ResponseEntity<Object> handleStudyException(TypeMismatchException exception) {
+    protected ResponseEntity<Object> handleTypeMismatchException(TypeMismatchException exception) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getCause().getMessage());
     }
 }
