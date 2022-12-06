@@ -1553,18 +1553,10 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(UUID studyUuid,
-                                       List<UUID> variablesFiltersListUuids,
-                                       List<UUID> contingencyListUuids,
-                                       List<UUID> branchFiltersListUuids,
-                                       String parameters,
-                                       UUID nodeUuid) {
+    public UUID runSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, String sensitivityAnalysisInput) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(variablesFiltersListUuids);
-        Objects.requireNonNull(contingencyListUuids);
-        Objects.requireNonNull(branchFiltersListUuids);
-        Objects.requireNonNull(parameters);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(sensitivityAnalysisInput);
 
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisResult);
@@ -1574,9 +1566,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider,
-                variablesFiltersListUuids, contingencyListUuids, branchFiltersListUuids,
-                parameters);
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInput);
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
