@@ -15,7 +15,6 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Field;
 
-import java.time.ZonedDateTime;
 import java.util.UUID;
 
 /**
@@ -35,6 +34,4 @@ public class BasicStudyInfos {
     UUID id;
 
     String userId;
-
-    ZonedDateTime creationDate;
 }
