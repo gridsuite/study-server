@@ -15,6 +15,7 @@ import com.github.tomakehurst.wiremock.core.Admin;
 import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.extension.PostServeAction;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
@@ -74,7 +75,6 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import wiremock.com.google.common.collect.ImmutableMap;
 
 import java.io.IOException;
 import java.util.*;
@@ -134,6 +134,7 @@ public class NetworkModificationTest {
 
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}";
+    private static final String POST_ACTION_SEND_INPUT = "send-input";
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -211,15 +212,15 @@ public class NetworkModificationTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
 
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
-                .withPostServeAction("input-send", ImmutableMap.of("payload", "s1,s2", "destination", "build.result"))
+                .withPostServeAction(POST_ACTION_SEND_INPUT, ImmutableMap.of("payload", "s1,s2", "destination", "build.result"))
                 .willReturn(WireMock.ok()));
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
-                .withPostServeAction("input-send", ImmutableMap.of("payload", "", "destination", "build.failed"))
+                .withPostServeAction(POST_ACTION_SEND_INPUT, ImmutableMap.of("payload", "", "destination", "build.failed"))
                 .willReturn(WireMock.ok()));
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
                 .willReturn(WireMock.serverError()));
         wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
-                .withPostServeAction("input-send", ImmutableMap.of("payload", "", "destination", "build.stopped"))
+                .withPostServeAction(POST_ACTION_SEND_INPUT, ImmutableMap.of("payload", "", "destination", "build.stopped"))
                 .willReturn(WireMock.ok()));
 
         wireMock.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
@@ -2293,7 +2294,7 @@ public class NetworkModificationTest {
 
         @Override
         public String getName() {
-            return "input-send";
+            return POST_ACTION_SEND_INPUT;
         }
 
         @Override
