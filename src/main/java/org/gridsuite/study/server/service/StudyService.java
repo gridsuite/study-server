@@ -57,7 +57,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.elasticsearch.index.query.QueryBuilders.*;
+import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
@@ -1011,7 +1012,7 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
     }
 
-    public void createModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid) {
+    public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid) {
         ModificationType modificationType = extractType(createModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
@@ -1027,7 +1028,7 @@ public class StudyService {
         }
     }
 
-    public void updateModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid) {
+    public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid) {
         ModificationType modificationType = extractType(updateModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -1205,7 +1206,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
+    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
@@ -1389,7 +1390,8 @@ public class StudyService {
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, List<EquipmentModificationInfos> modifications, ModificationType modificationType) {
         switch (modificationType) {
-            case SWITCH_STATUS: {
+            case EQUIPMENT_ATTRIBUTE_MODIFICATION: {
+                // for now only one sub type (switch), but after need to extract the equipment type to select the right update type
                 Set<String> substationIds = getSubstationIds(modifications);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
                 updateStatuses(studyUuid, nodeUuid);
