@@ -2192,6 +2192,7 @@ public class NetworkModificationTest {
     @After
     public void tearDown() throws IOException {
 
+        wireMock.checkForUnmatchedRequests();
         wireMock.shutdown();
 
         List<String> destinations = List.of(studyUpdateDestination);
