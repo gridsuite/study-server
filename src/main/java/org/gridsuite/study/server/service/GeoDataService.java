@@ -15,6 +15,7 @@ import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.GEO_DATA_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
+import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_LINE_ID;
 import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_SUBSTATION_ID;
 
 import java.util.List;
@@ -40,12 +41,16 @@ public class GeoDataService {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
     }
 
-    public String getLinesGraphics(UUID networkUuid, String variantId) {
+    public String getLinesGraphics(UUID networkUuid, String variantId, List<String> linesIds) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
             .queryParam(NETWORK_UUID, networkUuid);
 
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        if (linesIds != null) {
+            uriComponentsBuilder = uriComponentsBuilder.queryParam(QUERY_PARAM_LINE_ID, linesIds);
         }
 
         var path = uriComponentsBuilder

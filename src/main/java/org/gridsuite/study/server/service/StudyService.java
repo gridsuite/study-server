@@ -559,10 +559,10 @@ public class StudyService {
         }
     }
 
-    public String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
+    public String getLinesGraphics(UUID networkUuid, UUID nodeUuid, List<String> linesIds) {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        return geoDataService.getLinesGraphics(networkUuid, variantId);
+        return geoDataService.getLinesGraphics(networkUuid, variantId, linesIds);
     }
 
     public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid, List<String> substationsIds) {

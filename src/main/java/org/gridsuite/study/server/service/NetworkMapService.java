@@ -38,6 +38,8 @@ public class NetworkMapService {
 
     static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
 
+    static final String QUERY_PARAM_LINE_ID = "lineId";
+
     @Autowired
     private RestTemplate restTemplate;
 
