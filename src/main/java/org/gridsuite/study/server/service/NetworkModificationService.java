@@ -117,13 +117,13 @@ public class NetworkModificationService {
     }
 
     public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
+        Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationsUuids);
         String modificationsUuidsUri = modificationsUuids.toString()
                 .replace("[", "")
                 .replace("]", "");
         var path = UriComponentsBuilder
-                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + '{' + NETWORK_MODIFICATIONS_PATH + '}')
-                .uriVariables(Map.of(NETWORK_MODIFICATIONS_PATH, modificationsUuidsUri))
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationsUuidsUri)
                 .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();

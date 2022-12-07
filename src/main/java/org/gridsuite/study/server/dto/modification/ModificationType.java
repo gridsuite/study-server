@@ -29,7 +29,6 @@ public enum ModificationType {
     LINE_ATTACH_TO_VOLTAGE_LEVEL,
     GROOVY_SCRIPT,
     BRANCH_STATUS,
-    SWITCH_STATUS,
     SHUNT_COMPENSATOR_CREATION,
     LINES_ATTACH_TO_SPLIT_LINES;
 
@@ -59,8 +58,6 @@ public enum ModificationType {
                 return "generators-modification";
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return "lines-attach-to-split-lines";
-            case SWITCH_STATUS:
-                return "switch-status";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }

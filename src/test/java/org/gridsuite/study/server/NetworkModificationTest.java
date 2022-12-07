@@ -391,7 +391,7 @@ public class NetworkModificationTest {
     @Test
     public void testNetworkModificationSwitch() throws Exception {
 
-        String responseBody = createEquipmentModificationInfosBody(ModificationType.SWITCH_STATUS, "s1", "s2", "s3");
+        String responseBody = createEquipmentModificationInfosBody(ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION, "s1", "s2", "s3");
         stubNetworkModificationPost(responseBody);
 
         MvcResult mvcResult;
@@ -408,9 +408,10 @@ public class NetworkModificationTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         Map<String, Object> body = Map.of(
-                "type", ModificationType.SWITCH_STATUS,
+                "type", ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION,
                 "equipmentAttributeName", "open",
                 "equipmentAttributeValue", true,
+                "equipmentType", "SWITCH",
                 "equipmentId", "switchId"
         );
         String bodyJson = mapper.writeValueAsString(body);
