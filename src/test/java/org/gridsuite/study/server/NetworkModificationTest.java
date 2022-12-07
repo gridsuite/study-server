@@ -11,11 +11,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.core.Admin;
-import com.github.tomakehurst.wiremock.extension.Parameters;
-import com.github.tomakehurst.wiremock.extension.PostServeAction;
-import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
@@ -46,6 +41,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.RequestWithBody;
+import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.hamcrest.core.StringContains;
 import org.jetbrains.annotations.NotNull;
@@ -69,7 +65,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -81,7 +76,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.service.NetworkModificationService.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
+import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.when;
@@ -134,7 +131,6 @@ public class NetworkModificationTest {
 
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}";
-    private static final String POST_ACTION_SEND_INPUT = "send-input";
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -182,7 +178,7 @@ public class NetworkModificationTest {
     private StudyRepository studyRepository;
 
     //output destinations
-    private String studyUpdateDestination = "study.update";
+    private final String studyUpdateDestination = "study.update";
 
     @Before
     public void setup() throws IOException {
@@ -195,13 +191,13 @@ public class NetworkModificationTest {
         initMockBeans(network);
 
         server = new MockWebServer();
-
-        // Start the mock server.
-        server.start();
         wireMock = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
+
+        // Start the mock servers
+        server.start();
         wireMock.start();
 
-     // Ask the server for its URL. You'll need this to make HTTP requests.
+        // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         reportService.setReportServerBaseUri(baseUrl);
@@ -212,15 +208,15 @@ public class NetworkModificationTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
 
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
-                .withPostServeAction(POST_ACTION_SEND_INPUT, ImmutableMap.of("payload", "s1,s2", "destination", "build.result"))
+                .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "s1,s2", "destination", "build.result"))
                 .willReturn(WireMock.ok()));
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
-                .withPostServeAction(POST_ACTION_SEND_INPUT, ImmutableMap.of("payload", "", "destination", "build.failed"))
+                .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.failed"))
                 .willReturn(WireMock.ok()));
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
                 .willReturn(WireMock.serverError()));
         wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
-                .withPostServeAction(POST_ACTION_SEND_INPUT, ImmutableMap.of("payload", "", "destination", "build.stopped"))
+                .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.stopped"))
                 .willReturn(WireMock.ok()));
 
         wireMock.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
@@ -411,7 +407,7 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        Map body = Map.of(
+        Map<String, Object> body = Map.of(
                 "type", ModificationType.SWITCH_STATUS,
                 "equipmentAttributeName", "open",
                 "equipmentAttributeValue", true,
@@ -512,7 +508,7 @@ public class NetworkModificationTest {
                 modificationNodeUuid, VARIANT_ID_2, "node 2");
         UUID modificationNodeUuid2 = modificationNode2.getId();
 
-        Map body = Map.of(
+        Map<String, Object> body = Map.of(
                 "type", ModificationType.GROOVY_SCRIPT,
                 "script", "equipment = network.getGenerator('idGen')\nequipment.setTargetP('42')"
         );
@@ -573,7 +569,7 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        Map body = new HashMap();
+        Map<String, Object> body = new HashMap<>();
         body.put("type", ModificationType.GENERATOR_CREATION);
         body.put("generatorId", "generatorId1");
         body.put("generatorName", "generatorName1");
@@ -930,7 +926,7 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        Map bodyLineInfos = new HashMap();
+        HashMap<String, Object> bodyLineInfos = new HashMap<>();
         bodyLineInfos.put("type", ModificationType.BRANCH_STATUS);
         bodyLineInfos.put("equipmentId", "line12");
         bodyLineInfos.put("action", "lockout");
@@ -1490,7 +1486,7 @@ public class NetworkModificationTest {
                         .content(createLinesAttachToSplitLinesAttributes).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Collections.EMPTY_SET);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
 
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
@@ -1759,7 +1755,7 @@ public class NetworkModificationTest {
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        Map body = Map.of(
+        Map<String, Object> body = Map.of(
                 "type", ModificationType.EQUIPMENT_DELETION,
                 "equipmentId", "idLoadToDelete",
                 "equipmentType", "LOAD",
@@ -1874,7 +1870,7 @@ public class NetworkModificationTest {
 
         assertTrue(TestUtils.getRequestsDone(nbReportExpected, server).stream().allMatch(r -> r.contains("reports")));
         wireMock.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
-                .withQueryParam("receiver", WireMock.matching(".*"))
+                .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
         );
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is built
@@ -1899,7 +1895,7 @@ public class NetworkModificationTest {
                                                                                                       // built
 
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/build/stop"))
-                .withQueryParam("receiver", WireMock.matching(".*"))
+                .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
         );
         //TODO remove after refactoring (it's here because there is several tests inside the same test method
         wireMock.resetRequests();
@@ -1929,7 +1925,7 @@ public class NetworkModificationTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).iterator().next().contains("reports"));
         wireMock.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
-                .withQueryParam("receiver", WireMock.matching(".*"))
+                .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
         );
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
@@ -1953,7 +1949,7 @@ public class NetworkModificationTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).iterator().next().contains("reports"));
         wireMock.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
-                .withQueryParam("receiver", WireMock.matching(".*"))
+                .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
         );
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodeUuid));  // node is not built
@@ -2283,26 +2279,4 @@ public class NetworkModificationTest {
                 .withRequestBody(WireMock.equalToJson(requestBody)));
     }
 
-    /* Class that implements an action we want to execute after mocking an API call */
-    public class SendInput extends PostServeAction {
-
-        final InputDestination input;
-
-        public SendInput(InputDestination input) {
-            this.input = input;
-        }
-
-        @Override
-        public String getName() {
-            return POST_ACTION_SEND_INPUT;
-        }
-
-        @Override
-        public void doAction(ServeEvent serveEvent, Admin admin, Parameters parameters) {
-            String payload = parameters.get("payload").toString();
-            String destination = parameters.get("destination").toString();
-            input.send(MessageBuilder.withPayload(payload).setHeader("receiver", "%7B%22nodeUuid%22%3A%22"
-                    + serveEvent.getRequest().getUrl().split("%")[5].substring(4) + "%22%2C%22userId%22%3A%22userId%22%7D").build(), destination);
-        }
-    }
 }

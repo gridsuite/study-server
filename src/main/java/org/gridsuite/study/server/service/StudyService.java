@@ -83,14 +83,13 @@ public class StudyService {
     static final String EQUIPMENT_TYPE = "equipmentType.keyword";
     public static final String EMPTY_ARRAY = "[]";
 
-    @Autowired
     NotificationService notificationService;
 
     NetworkModificationTreeService networkModificationTreeService;
 
     StudyServerExecutionService studyServerExecutionService;
 
-    private String defaultLoadflowProvider;
+    private final String defaultLoadflowProvider;
 
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
@@ -128,6 +127,7 @@ public class StudyService {
             NetworkModificationTreeService networkModificationTreeService,
             ObjectMapper objectMapper,
             StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
             LoadflowService loadflowService,
             ShortCircuitService shortCircuitService,
             SingleLineDiagramService singleLineDiagramService,
@@ -148,6 +148,7 @@ public class StudyService {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.objectMapper = objectMapper;
         this.studyServerExecutionService = studyServerExecutionService;
+        this.notificationService = notificationService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.loadflowService = loadflowService;
         this.shortCircuitService = shortCircuitService;
@@ -937,10 +938,6 @@ public class StudyService {
         return singleLineDiagramService.getNeworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth);
     }
 
-    public void invalidateSecurityAnalysisStatus(UUID nodeUuid) {
-        securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getSecurityAnalysisResultUuidsFromNode(nodeUuid));
-    }
-
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
         securityAnalysisService.invalidateSaStatus(networkModificationTreeService.getStudySecurityAnalysisResultUuids(studyUuid));
     }
@@ -1011,7 +1008,7 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
     }
 
-    public void createModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid) {
+    public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid) {
         ModificationType modificationType = extractType(createModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {

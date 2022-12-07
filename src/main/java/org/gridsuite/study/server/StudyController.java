@@ -642,8 +642,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/result")
     @Operation(summary = "Get a short circuit analysis result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result"),
-            @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
+        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
     public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = shortCircuitService.getShortCircuitAnalysisResult(nodeUuid);
@@ -654,8 +654,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/status")
     @Operation(summary = "Get the short circuit analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis status"),
-            @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
+        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid);
@@ -824,7 +824,7 @@ public class StudyController {
     public ResponseEntity<String> getNeworkAreaDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds", required = true) List<String> voltageLevelsIds,
+            @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds") List<String> voltageLevelsIds,
             @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNeworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth));
     }
@@ -890,7 +890,7 @@ public class StudyController {
                                                           @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestBody String modificationAttributes) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createModification(studyUuid, modificationAttributes, nodeUuid);
+        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -1060,9 +1060,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification has been activated/deactivated"),
                            @ApiResponse(responseCode = "404", description = "The study/node/modification doesn't exist")})
     public ResponseEntity<Void> changeModificationActiveState(@PathVariable("studyUuid") UUID studyUuid,
-                                                                    @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                    @PathVariable("modificationUuid") UUID modificationUuid,
-                                                                    @Parameter(description = "active") @RequestParam("active") boolean active) {
+                                                              @PathVariable("nodeUuid") UUID nodeUuid,
+                                                              @PathVariable("modificationUuid") UUID modificationUuid,
+                                                              @Parameter(description = "active") @RequestParam("active") boolean active) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active);
         return ResponseEntity.ok().build();

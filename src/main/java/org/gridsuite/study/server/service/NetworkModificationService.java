@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
@@ -22,7 +21,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -32,6 +34,7 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -51,7 +54,7 @@ public class NetworkModificationService {
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String MODIFICATIONS_PATH = "modifications";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
-    private static final String QUERY_PARAM_RECEIVER = "receiver";
+    public static final String QUERY_PARAM_RECEIVER = "receiver";
 
     private String networkModificationServerBaseUri;
 
@@ -120,7 +123,7 @@ public class NetworkModificationService {
                 .replace("]", "");
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + '{' + NETWORK_MODIFICATIONS_PATH + '}')
-                .uriVariables(ImmutableMap.of(NETWORK_MODIFICATIONS_PATH, modificationsUuidsUri))
+                .uriVariables(Map.of(NETWORK_MODIFICATIONS_PATH, modificationsUuidsUri))
                 .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();
