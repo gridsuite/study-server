@@ -67,12 +67,14 @@ public class NotificationService {
 
     public static final String HEADER_INSERT_MODE = "insertMode";
     public static final String HEADER_NEW_NODE = "newNode";
+    public static final String HEADER_MOVED_NODE = "movedNode";
     public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
 
     public static final String NODE_UPDATED = "nodeUpdated";
     public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
+    public static final String NODE_MOVED = "nodeMoved";
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
@@ -154,6 +156,18 @@ public class NotificationService {
                 .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
                 .setHeader(HEADER_PARENT_NODE, parentNode)
                 .setHeader(HEADER_NEW_NODE, nodeCreated)
+                .setHeader(HEADER_INSERT_MODE, insertMode.name())
+                .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitNodeMoved(UUID studyUuid, UUID parentNode, UUID nodeMoved, InsertMode insertMode) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, NODE_MOVED)
+                .setHeader(HEADER_PARENT_NODE, parentNode)
+                .setHeader(HEADER_MOVED_NODE, nodeMoved)
                 .setHeader(HEADER_INSERT_MODE, insertMode.name())
                 .build()
         );

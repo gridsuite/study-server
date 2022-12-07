@@ -15,6 +15,7 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
+import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
@@ -1258,20 +1259,39 @@ public class StudyService {
 
     @Transactional
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        boolean shouldInvalidateChildren = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
+
+        //Invalidating previous children if necessary
+        if (shouldInvalidateChildren) {
+            oldChildren = networkModificationTreeService.getChildrenByParentUuid(nodeToMoveUuid);
+        }
+
         networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
-        boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToMoveUuid));
-        updateStatuses(studyUuid, nodeToMoveUuid, false, invalidateBuild);
+
+        //Invalidating moved node or new children if necessary
+        if (shouldInvalidateChildren) {
+            updateStatuses(studyUuid, nodeToMoveUuid, false, shouldInvalidateChildren);
+            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, shouldInvalidateChildren));
+        } else {
+            invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
+        }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+    private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         invalidateNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        // we might want to invalidate target node without impacting other nodes (when moving an empty node for exemple
+        if (invalidateOnlyTargetNode) {
+            networkModificationTreeService.invalidateBuildOfNodeOnly(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        } else {
+            networkModificationTreeService.invalidateBuild(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
+        }
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
@@ -1307,7 +1327,7 @@ public class StudyService {
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateBuild) {
         if (invalidateBuild) {
-            invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus);
+            invalidateBuild(studyUuid, nodeUuid, invalidateOnlyChildrenBuildStatus, false);
         }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1400,7 +1420,7 @@ public class StudyService {
                 LOGGER.error(e.toString(), e);
                 throw e;
             }
-            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, false);
             LOGGER.info("Study with id = '{}' has been reindexed", studyUuid);
         } else {
             throw new StudyException(STUDY_NOT_FOUND);
@@ -1408,18 +1428,35 @@ public class StudyService {
     }
 
     @Transactional
-    public void reorderModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
+    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
+        String modificationsInError;
+
+        if (originNodeUuid == null) {
+            throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
+        }
+
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        if (!nodeUuid.equals(originNodeUuid)) {
+            notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        }
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            List<UUID> modificationUuidList = Collections.singletonList(modificationUuid);
-            networkModificationService.reorderModification(groupUuid, modificationUuidList, beforeUuid);
+            UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
+            modificationsInError = networkModificationService.moveModifications(groupUuid, originGroupUuid, modificationUuidList, beforeUuid);
             updateStatuses(studyUuid, nodeUuid, false);
+            if (!nodeUuid.equals(originNodeUuid)) {
+                updateStatuses(studyUuid, originNodeUuid, false);
+            }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            if (!nodeUuid.equals(originNodeUuid)) {
+                notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
+            }
         }
         notificationService.emitElementUpdated(studyUuid, userId);
+
+        return modificationsInError;
     }
 
     @Transactional
@@ -1537,18 +1574,10 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(UUID studyUuid,
-                                       List<UUID> variablesFiltersListUuids,
-                                       List<UUID> contingencyListUuids,
-                                       List<UUID> branchFiltersListUuids,
-                                       String parameters,
-                                       UUID nodeUuid) {
+    public UUID runSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, String sensitivityAnalysisInput) {
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(variablesFiltersListUuids);
-        Objects.requireNonNull(contingencyListUuids);
-        Objects.requireNonNull(branchFiltersListUuids);
-        Objects.requireNonNull(parameters);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(sensitivityAnalysisInput);
 
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisResult);
@@ -1558,9 +1587,20 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider,
-                variablesFiltersListUuids, contingencyListUuids, branchFiltersListUuids,
-                parameters);
+        SensitivityAnalysisInputData sensitivityAnalysisInputData;
+        try {
+            sensitivityAnalysisInputData = objectMapper.readValue(sensitivityAnalysisInput, SensitivityAnalysisInputData.class);
+            if (sensitivityAnalysisInputData.getParameters() == null) {
+                SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
+                LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
+                sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
+                sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
+            }
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, networkUuid, variantId, reportUuid, provider, sensitivityAnalysisInputData);
 
         updateSensitivityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);

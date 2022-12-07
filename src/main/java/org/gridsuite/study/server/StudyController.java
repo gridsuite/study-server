@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nullable;
+
 import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -51,6 +53,10 @@ public class StudyController {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
     private final CaseService caseService;
+
+    enum UpdateModificationAction {
+        MOVE, COPY
+    }
 
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
@@ -605,19 +611,31 @@ public class StudyController {
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.reorderModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId);
+        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "For a list of network modifications passed in body, duplicate and append them to current node")
+    @Operation(summary = "For a list of network modifications passed in body, copy or cut, then append them to target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
-    public ResponseEntity<String> duplicateModifications(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<String> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestBody List<UUID> modificationsUuidList,
+                                                         @RequestParam("action") UpdateModificationAction action,
+                                                         @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
+                                                         @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsUuidList, userId));
+        if (originNodeUuid != null) {
+            studyService.assertCanModifyNode(studyUuid, originNodeUuid);
+        }
+        switch (action) {
+            case COPY:
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId));
+            case MOVE:
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId));
+            default:
+                throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/lines/{lineId}/status", consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -1446,18 +1464,10 @@ public class StudyController {
     @Operation(summary = "run sensitivity analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started")})
     public ResponseEntity<UUID> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                    @Parameter(description = "Variables filters list uuids") @RequestParam(name = "variablesFiltersListUuid", required = false) List<UUID> variablesFiltersListUuids,
-                                                    @Parameter(description = "Contingency list uuids") @RequestParam(name = "contingencyListUuid", required = false) List<UUID> contingencyListUuids,
-                                                    @Parameter(description = "Branch filters list uuids") @RequestParam(name = "branchFiltersListUuid", required = false) List<UUID> branchFiltersListUuids,
-                                                    @RequestBody(required = false) String parameters) {
-        List<UUID> nonNullVariablesFiltersListUuids = variablesFiltersListUuids != null ? variablesFiltersListUuids : Collections.emptyList();
-        List<UUID> nonNullContingencyListUuids = contingencyListUuids != null ? contingencyListUuids : Collections.emptyList();
-        List<UUID> nonNullBranchFiltersListUuids = branchFiltersListUuids != null ? branchFiltersListUuids : Collections.emptyList();
-
-        String nonNullParameters = Objects.toString(parameters, "");
+                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @RequestBody String sensitivityAnalysisInput) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nonNullVariablesFiltersListUuids, nonNullContingencyListUuids, nonNullBranchFiltersListUuids, nonNullParameters, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runSensitivityAnalysis(studyUuid, nodeUuid, sensitivityAnalysisInput));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
