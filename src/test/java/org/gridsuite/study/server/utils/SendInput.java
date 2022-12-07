@@ -19,6 +19,7 @@ import static org.gridsuite.study.server.service.NetworkModificationService.QUER
 
 /**
  * Class that implements an action we want to execute after mocking an API call
+ * See 'Post-serve actions' in https://wiremock.org/docs/extending-wiremock/
  */
 public class SendInput extends PostServeAction {
 

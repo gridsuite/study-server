@@ -2188,6 +2188,7 @@ public class NetworkModificationTest {
     @After
     public void tearDown() throws IOException {
 
+        // it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify'
         wireMock.checkForUnmatchedRequests();
         wireMock.shutdown();
 

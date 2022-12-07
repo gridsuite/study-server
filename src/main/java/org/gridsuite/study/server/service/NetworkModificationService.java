@@ -119,6 +119,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationsUuids);
         String modificationsUuidsUri = modificationsUuids.toString()
+                .replace(" ", "")
                 .replace("[", "")
                 .replace("]", "");
         var path = UriComponentsBuilder
