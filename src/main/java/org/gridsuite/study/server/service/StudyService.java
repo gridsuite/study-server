@@ -27,6 +27,7 @@ import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -1017,9 +1018,9 @@ public class StudyService {
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
-            List<EquipmentModificationInfos> equipmentModificationInfosList = networkModificationService
+            List<ModificationInfos> modificationInfosList = networkModificationService
                     .createModification(studyUuid, createModificationAttributes, groupUuid, modificationType, variantId, reportUuid, nodeInfos.getId().toString());
-            updateStatuses(studyUuid, nodeUuid, equipmentModificationInfosList, modificationType);
+            updateStatuses(studyUuid, nodeUuid, modificationInfosList, modificationType);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
@@ -1380,12 +1381,12 @@ public class StudyService {
         return defaultLoadflowProvider;
     }
 
-    private Set<String> getSubstationIds(List<? extends ModificationInfos> modificationInfosList) {
+    private Set<String> getSubstationIds(List<ModificationInfos> modificationInfosList) {
         return modificationInfosList.stream().flatMap(modification -> modification.getSubstationIds().stream())
                 .collect(Collectors.toSet());
     }
 
-    private void updateStatuses(UUID studyUuid, UUID nodeUuid, List<EquipmentModificationInfos> modifications, ModificationType modificationType) {
+    private void updateStatuses(UUID studyUuid, UUID nodeUuid, List<ModificationInfos> modifications, ModificationType modificationType) {
         switch (modificationType) {
             case EQUIPMENT_ATTRIBUTE_MODIFICATION: {
                 // for now only one sub type (switch), but after need to extract the equipment type to select the right update type
@@ -1403,10 +1404,12 @@ public class StudyService {
                 break;
             }
             case EQUIPMENT_DELETION: {
-                modifications.forEach(deletionInfo ->
+                modifications.stream()
+                    .map(EquipmentDeletionInfos.class::cast)
+                    .forEach(deletionInfo ->
                         notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
-                                deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
-                );
+                            deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
+                    );
                 updateStatuses(studyUuid, nodeUuid);
                 break;
             }
@@ -1415,6 +1418,7 @@ public class StudyService {
                         .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
                 List<EquipmentModificationInfos> deletions = modifications.stream()
                         .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
+                        .map(EquipmentDeletionInfos.class::cast)
                         .collect(Collectors.toList());
                 deletions.forEach(modif -> notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
                         allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));

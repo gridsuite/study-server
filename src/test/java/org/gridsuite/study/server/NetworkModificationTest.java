@@ -17,6 +17,7 @@ import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
@@ -31,7 +32,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -130,7 +130,7 @@ public class NetworkModificationTest {
     private static final long TIMEOUT = 1000;
 
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
-    private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}";
+    private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuids}";
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -1210,9 +1210,10 @@ public class NetworkModificationTest {
 
     @Test
     public void testCreateSubstation() throws Exception {
-
         String substationDataAsString = mapper.writeValueAsString(List.of(
-                IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
+            EquipmentModificationInfos.builder().type(ModificationType.SUBSTATION_CREATION).equipmentId(SUBSTATION_ID_1)
+                .equipmentType(IdentifiableType.SUBSTATION.name())
+                .build()));
         stubNetworkModificationPost(substationDataAsString);
         stubNetworkModificationPut();
 
@@ -1275,7 +1276,9 @@ public class NetworkModificationTest {
     @Test
     public void testCreateVoltageLevel() throws Exception {
         String voltageLevelDataAsString = mapper.writeValueAsString(List.of(
-                IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build()));
+            EquipmentModificationInfos.builder().type(ModificationType.VOLTAGE_LEVEL_CREATION).equipmentId(VL_ID_1)
+                .equipmentType(IdentifiableType.VOLTAGE_LEVEL.name())
+                .build()));
         stubNetworkModificationPost(voltageLevelDataAsString);
         stubNetworkModificationPut();
 
@@ -2187,16 +2190,16 @@ public class NetworkModificationTest {
 
     @After
     public void tearDown() throws IOException {
-
-        // it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify'
-        wireMock.checkForUnmatchedRequests();
-        wireMock.shutdown();
-
-        List<String> destinations = List.of(studyUpdateDestination);
-
         cleanDB();
 
-        TestUtils.assertQueuesEmptyThenClear(destinations, output);
+        TestUtils.assertQueuesEmptyThenClear(List.of(studyUpdateDestination), output);
+
+        try {
+            // it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify'
+            wireMock.checkForUnmatchedRequests();
+        } finally {
+            wireMock.shutdown();
+        }
 
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);

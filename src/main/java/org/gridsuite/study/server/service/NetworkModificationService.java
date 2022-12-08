@@ -14,7 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -155,15 +155,15 @@ public class NetworkModificationService {
         return new StudyException(type, message);
     }
 
-    public List<EquipmentModificationInfos> createModification(UUID studyUuid,
-                                                               String createEquipmentAttributes,
-                                                               UUID groupUuid,
-                                                               ModificationType modificationType,
-                                                               String variantId, UUID reportUuid,
-                                                               String reporterId) {
-        List<EquipmentModificationInfos> result;
+    public List<ModificationInfos> createModification(UUID studyUuid,
+                                                      String createModificationAttributes,
+                                                      UUID groupUuid,
+                                                      ModificationType modificationType,
+                                                      String variantId, UUID reportUuid,
+                                                      String reporterId) {
+        List<ModificationInfos> result;
         Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(createEquipmentAttributes);
+        Objects.requireNonNull(createModificationAttributes);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
@@ -183,11 +183,11 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
+        HttpEntity<String> httpEntity = new HttpEntity<>(createModificationAttributes, headers);
 
         try {
             result = restTemplate.exchange(path, HttpMethod.POST, httpEntity,
-                    new ParameterizedTypeReference<List<EquipmentModificationInfos>>() {
+                    new ParameterizedTypeReference<List<ModificationInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));

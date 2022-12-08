@@ -30,6 +30,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -351,10 +352,12 @@ public class StudyTest {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/network-modifications.*") && POST.equals(request.getMethod())) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                    ModificationInfos modificationInfos = mapper.readValue(body.readUtf8(), new TypeReference<ModificationInfos>() {
+                    });
+                    modificationInfos.setSubstationIds(Set.of("s2"));
                     return new MockResponse().setResponseCode(200)
-                            .setBody(new JSONArray(List.of(jsonObject)).toString())
-                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                        .setBody("[" + mapper.writeValueAsString(modificationInfos) + "]")
+                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
                         return new MockResponse().setResponseCode(200);

@@ -875,7 +875,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", produces = MediaType.TEXT_PLAIN_VALUE)
-    @Operation(summary = "Get modifications from the study network")
+    @Operation(summary = "Get network modifications from a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<String> getNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -884,7 +884,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
-    @Operation(summary = "Create a modification in the study network")
+    @Operation(summary = "Create a network modification for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> createNetworkModification(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -907,7 +907,7 @@ public class StudyController {
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuids}")
-    @Operation(summary = "Delete modifications in the study network")
+    @Operation(summary = "Delete network modifications for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -967,7 +967,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/tree")
-    @Operation(summary = "get network modification tree for the given study")
+    @Operation(summary = "Get network modification tree for the given study")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "network modification tree"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
