@@ -50,7 +50,7 @@ public class GeoDataService {
         }
 
         if (linesIds != null) {
-            uriComponentsBuilder = uriComponentsBuilder.queryParam(QUERY_PARAM_LINE_ID, linesIds);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_LINE_ID, linesIds);
         }
 
         var path = uriComponentsBuilder
@@ -69,7 +69,7 @@ public class GeoDataService {
         }
 
         if (substationsIds != null) {
-            uriComponentsBuilder = uriComponentsBuilder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
         }
 
         var path = uriComponentsBuilder
