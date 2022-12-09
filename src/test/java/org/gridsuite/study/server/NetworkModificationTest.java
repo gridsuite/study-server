@@ -130,7 +130,7 @@ public class NetworkModificationTest {
     private static final long TIMEOUT = 1000;
 
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
-    private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuids}";
+    private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{uuid}";
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -880,7 +880,7 @@ public class NetworkModificationTest {
     @Test
     public void deleteModificationRequest() throws Exception {
 
-        wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications/.*"))
+        wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications"))
                 .willReturn(WireMock.ok()));
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -897,18 +897,21 @@ public class NetworkModificationTest {
             node is only there to test that when we update modification node, it is not in notifications list
          */
         UUID studyUuid1 = UUID.randomUUID();
-        mockMvc.perform(delete(URI_NETWORK_MODIF_WITH_ID, studyUuid1, modificationNode.getId(), node3.getId()))
+        mockMvc.perform(delete(URI_NETWORK_MODIF, studyUuid1, modificationNode.getId())
+                        .queryParam("uuids", node3.getId().toString()))
                 .andExpect(status().isForbidden());
 
         checkEquipmentDeletingMessagesReceived(studyUuid1, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid1, modificationNode.getId());
 
         UUID modificationUuid = UUID.randomUUID();
-        mockMvc.perform(delete(URI_NETWORK_MODIF_WITH_ID, studyUuid, modificationNode.getId(), modificationUuid))
+        mockMvc.perform(delete(URI_NETWORK_MODIF, studyUuid, modificationNode.getId())
+                        .queryParam("uuids", modificationUuid.toString()))
                 .andExpect(status().isOk());
 
         wireMock.verify(1, WireMock.deleteRequestedFor(
-                WireMock.urlPathMatching("/v1/network-modifications/.*")));
+                WireMock.urlPathMatching("/v1/network-modifications"))
+                .withQueryParam("uuids", WireMock.equalTo(modificationUuid.toString())));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());

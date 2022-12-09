@@ -894,26 +894,26 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuid}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{uuid}")
     @Operation(summary = "Update a modification in the study network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was updated"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> updateNetworkModification(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Network modification UUID") @PathVariable("modificationUuid") UUID modificationUuid,
+                                                          @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
                                                           @RequestBody String modificationAttributes) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, modificationUuid);
+        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid);
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{modificationUuids}")
+    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
     @Operation(summary = "Delete network modifications for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                           @Parameter(description = "Network modification UUIDs") @PathVariable("modificationUuids") List<UUID> modificationUuids) {
+                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, modificationUuids);
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids);
         return ResponseEntity.ok().build();
     }
 

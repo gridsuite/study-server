@@ -118,12 +118,9 @@ public class NetworkModificationService {
     public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(modificationsUuids);
-        String modificationsUuidsUri = modificationsUuids.toString()
-                .replace(" ", "")
-                .replace("[", "")
-                .replace("]", "");
         var path = UriComponentsBuilder
-                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationsUuidsUri)
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
+                .queryParam(UUIDS, modificationsUuids)
                 .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();
