@@ -585,7 +585,7 @@ public class StudyController {
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
+        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, true, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -602,14 +602,18 @@ public class StudyController {
         if (originNodeUuid != null) {
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
+        String failureIds;
         switch (action) {
             case COPY:
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId));
+                failureIds = studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId;
+                break;
             case MOVE:
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId));
+                failureIds = studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, false, userId);
+                break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(failureIds);
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
@@ -1064,7 +1068,8 @@ public class StudyController {
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopBuild(studyUuid, nodeUuid);
+        // TODO studyUuid parameter is not used
+        studyService.stopBuild(nodeUuid);
         return ResponseEntity.ok().build();
     }
 
