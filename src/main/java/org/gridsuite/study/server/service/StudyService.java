@@ -509,7 +509,7 @@ public class StudyService {
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
-        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(userId, studyUuid);
+        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid);
         notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
     }
@@ -995,7 +995,7 @@ public class StudyService {
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
-    private StudyCreationRequestEntity insertStudyCreationRequestEntity(String userId, UUID studyUuid) {
+    private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
                 studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
@@ -1104,7 +1104,7 @@ public class StudyService {
 
     }
 
-    public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public void stopBuild(@NonNull UUID nodeUuid) {
         networkModificationService.stopBuild(nodeUuid);
     }
 
@@ -1284,24 +1284,29 @@ public class StudyService {
     }
 
     @Transactional
-    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean modificationsReorder) {
         String modificationsInError;
-
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
         }
+        boolean moveBetweenNodes = !nodeUuid.equals(originNodeUuid);
+        // Node must be invalidated (with no possible incremental build) when:
+        // - the move is a position change inside the same node (then modificationsReorder is true)
+        // - the move is a cut & paste between 2 nodes, and the target node belongs to the source node subtree
+        boolean invalidateTargetNode = modificationsReorder || (moveBetweenNodes && networkModificationTreeService.hasAncestor(nodeUuid, originNodeUuid));
 
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-        if (!nodeUuid.equals(originNodeUuid)) {
+        if (moveBetweenNodes) {
             notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         }
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
-            modificationsInError = networkModificationService.moveModifications(groupUuid, originGroupUuid, modificationUuidList, beforeUuid);
-            updateStatuses(studyUuid, nodeUuid, false);
-            if (!nodeUuid.equals(originNodeUuid)) {
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+            UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+            modificationsInError = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, invalidateTargetNode);
+            updateStatuses(studyUuid, nodeUuid, false, invalidateTargetNode);
+            if (moveBetweenNodes) {
                 updateStatuses(studyUuid, originNodeUuid, false);
             }
         } finally {
@@ -1320,9 +1325,11 @@ public class StudyService {
         String response;
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            response = networkModificationService.duplicateModification(targetGroupUuid, modificationUuidList);
-            updateStatuses(studyUuid, nodeUuid, false);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+            UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+            response = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
+            // no invalidation cause we will apply the duplicated modifications on a built node
+            updateStatuses(studyUuid, nodeUuid, false, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
