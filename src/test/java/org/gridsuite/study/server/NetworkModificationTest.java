@@ -1536,6 +1536,13 @@ public class NetworkModificationTest {
                 UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNodeUuid = modificationNode1.getId();
 
+        // bad json format
+        String bodyWithBadJsonFormat = "{,}";
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(bodyWithBadJsonFormat).contentType(MediaType.APPLICATION_JSON))
+            .andExpectAll(status().isBadRequest(),
+                content().string(StringContains.containsString("Unexpected")));
+
         // missing a ','
         String bodyWithBadFormat = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"equipmentId\":\"equipId\"\"equipmentName\":\"equipName\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
@@ -1565,18 +1572,25 @@ public class NetworkModificationTest {
         UUID modificationNodeUuid = modificationNode1.getId();
 
         // missing type
-        String bodyWithMissingType = "{\"equipmentId\":\"equipId\",\"equipmentName\":\"equipName\"}";
+        String bodyWithMissingType = "{}";
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(bodyWithMissingType).contentType(MediaType.APPLICATION_JSON))
+            .andExpectAll(status().isBadRequest(),
+                content().string(StringContains.containsString("missing type id property 'type'")));
+
+        // missing type
+        bodyWithMissingType = "{\"equipmentId\":\"equipId\",\"equipmentName\":\"equipName\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(bodyWithMissingType).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(status().isBadRequest(),
-                        content().string(StringContains.containsString("'type' field not found in body")));
+                        content().string(StringContains.containsString("missing type id property 'type'")));
 
         // bad type
         String bodyWithBadType = "{\"type\":\"" + "VERY_BAD_TYPE" + "\",\"equipmentId\":\"equipId\",\"equipmentName\":\"equipName\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(bodyWithBadType).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(status().isBadRequest(),
-                        content().string(StringContains.containsString("'VERY_BAD_TYPE' is not a known type")));
+                    content().string(StringContains.containsString("Could not resolve type id 'VERY_BAD_TYPE'")));
     }
 
     @Test

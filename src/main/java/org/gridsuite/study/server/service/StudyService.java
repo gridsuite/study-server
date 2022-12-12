@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -1011,7 +1012,7 @@ public class StudyService {
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid) {
-        ModificationType modificationType = extractType(createModificationAttributes);
+        ModificationType modificationType = getModificationType(createModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
@@ -1027,7 +1028,7 @@ public class StudyService {
     }
 
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid) {
-        ModificationType modificationType = extractType(updateModificationAttributes);
+        ModificationType modificationType = getModificationType(updateModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateModification(updateModificationAttributes, modificationType, modificationUuid);
@@ -1485,24 +1486,13 @@ public class StudyService {
         return result;
     }
 
-    /* Extract the field 'type' from a JSON String */
-    private ModificationType extractType(String stringBody) {
-        JsonNode jsonBody;
+    private ModificationType getModificationType(String modificationAttributes) {
         try {
-            jsonBody = objectMapper.readTree(stringBody);
+            return objectMapper.readValue(modificationAttributes, ModificationInfos.class).getType();
+        } catch (InvalidTypeIdException e) {
+            throw new StudyException(BAD_MODIFICATION_TYPE, e.getMessage());
         } catch (JsonProcessingException e) {
-            throw new StudyException(BAD_INPUT_BODY_FORMAT, e.getMessage());
+            throw new StudyException(BAD_JSON_FORMAT, e.getMessage());
         }
-        if (!jsonBody.has("type")) {
-            throw new StudyException(MISSING_MODIFICATION_TYPE, "'type' field not found in body");
-        }
-        String parsedType = jsonBody.get("type").asText();
-        ModificationType type;
-        try {
-            type = ModificationType.valueOf(parsedType);
-        } catch (Exception e) {
-            throw new StudyException(UNKNOWN_MODIFICATION_TYPE, "'" + parsedType + "' is not a known type");
-        }
-        return type;
     }
 }

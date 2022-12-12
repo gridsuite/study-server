@@ -67,9 +67,8 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
-            case UNKNOWN_MODIFICATION_TYPE:
-            case MISSING_MODIFICATION_TYPE:
-            case BAD_INPUT_BODY_FORMAT:
+            case BAD_MODIFICATION_TYPE:
+            case BAD_JSON_FORMAT:
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
             case UNKNOWN_NOTIFICATION_TYPE:
             case UNKNOWN_ACTION_TYPE:
