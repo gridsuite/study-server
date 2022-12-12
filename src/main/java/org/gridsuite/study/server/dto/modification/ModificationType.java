@@ -30,7 +30,8 @@ public enum ModificationType {
     GROOVY_SCRIPT,
     BRANCH_STATUS,
     SHUNT_COMPENSATOR_CREATION,
-    LINES_ATTACH_TO_SPLIT_LINES;
+    LINES_ATTACH_TO_SPLIT_LINES,
+    REVERT_CONNECT_VOLTAGE_LEVEL_ON_LINE;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
@@ -58,6 +59,8 @@ public enum ModificationType {
                 return "generators-modification";
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return "lines-attach-to-split-lines";
+            case REVERT_CONNECT_VOLTAGE_LEVEL_ON_LINE:
+                return "revert_connect_voltage_level_on_line";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
@@ -98,6 +101,8 @@ public enum ModificationType {
                 return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
+            case REVERT_CONNECT_VOLTAGE_LEVEL_ON_LINE:
+                return StudyException.Type.REVERT_CONNECT_VOLTAGE_LEVEL_ON_LINE;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }

@@ -1470,4 +1470,29 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/revert-connect-voltage-level-on-line")
+    @Operation(summary = "create revert connect voltage level on line")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Reverting voltage level connection on a line successfully")})
+    public ResponseEntity<Void> createRevertConnectVoltageLevelOnLine(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @RequestBody String revertConnectVoltageLevelOnLineAttributes) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.createEquipment(studyUuid, revertConnectVoltageLevelOnLineAttributes, ModificationType.REVERT_CONNECT_VOLTAGE_LEVEL_ON_LINE, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/modifications/{modificationUuid}/revert-connect-voltage-level-on-line")
+    @Operation(summary = "update revert connect voltage level on line")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Revert connect voltage level on a line has been updated.")})
+    public ResponseEntity<Void> updateRevertConnectVoltageLevelOnLineCreation(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @PathVariable("modificationUuid") UUID modificationUuid,
+                                                               @PathVariable("nodeUuid") UUID nodeUuid,
+                                                               @RequestBody String revertConnectVoltageLevelOnLineAttributes) {
+        studyService.assertCanModifyNode(studyUuid, nodeUuid);
+        studyService.assertComputationNotRunning(nodeUuid);
+        studyService.updateEquipmentCreation(studyUuid, revertConnectVoltageLevelOnLineAttributes, ModificationType.REVERT_CONNECT_VOLTAGE_LEVEL_ON_LINE, nodeUuid, modificationUuid);
+        return ResponseEntity.ok().build();
+    }
+
 }
