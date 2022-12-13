@@ -43,9 +43,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "caseUuid", nullable = false)
     private UUID caseUuid;
 
-    @Column(name = "casePrivate", nullable = false)
-    private boolean casePrivate;
-
     @Column(name = "caseName", nullable = false)
     private String caseName;
 
