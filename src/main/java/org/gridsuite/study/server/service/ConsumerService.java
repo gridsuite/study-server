@@ -41,7 +41,7 @@ public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    static final String HEADER_RECEIVER = "receiver";
+    public static final String HEADER_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
     static final String NETWORK_UUID = "networkUuid";
     static final String NETWORK_ID = "networkId";

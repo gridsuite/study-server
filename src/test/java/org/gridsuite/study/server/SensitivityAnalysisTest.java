@@ -22,6 +22,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -99,7 +100,7 @@ public class SensitivityAnalysisTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
-    private static final String SENSITIVITY_INPUT = "{}";
+    private static String SENSITIVITY_INPUT = null;
 
     private static final long TIMEOUT = 1000;
 
@@ -159,6 +160,34 @@ public class SensitivityAnalysisTest {
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
+
+        SensitivityAnalysisInputData sensitivityAnalysisInputData = SensitivityAnalysisInputData.builder()
+            .resultsThreshold(0.20)
+            .sensitivityInjectionsSets(List.of(SensitivityAnalysisInputData.SensitivityInjectionsSet.builder()
+                .monitoredBranches(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name1")))
+                .injections(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name2"), new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name3")))
+                .distributionType(SensitivityAnalysisInputData.DistributionType.REGULAR)
+                .contingencies(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name4"))).build()))
+            .sensitivityInjections(List.of(SensitivityAnalysisInputData.SensitivityInjection.builder()
+                .monitoredBranches(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name5")))
+                .injections(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name6")))
+                .contingencies(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name7"), new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name8"))).build()))
+            .sensitivityHVDCs(List.of(SensitivityAnalysisInputData.SensitivityHVDC.builder()
+                .monitoredBranches(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name9")))
+                .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_MW)
+                .hvdcs(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name10")))
+                .contingencies(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name11"))).build()))
+            .sensitivityPSTs(List.of(SensitivityAnalysisInputData.SensitivityPST.builder()
+                .monitoredBranches(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name12")))
+                .sensitivityType(SensitivityAnalysisInputData.SensitivityType.DELTA_A)
+                .psts(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name13"), new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name14")))
+                .contingencies(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name15"))).build()))
+            .sensitivityNodes(List.of(SensitivityAnalysisInputData.SensitivityNodes.builder()
+                .monitoredVoltageLevels(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name16")))
+                .equipmentsInVoltageRegulation(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name17")))
+                .contingencies(List.of(new SensitivityAnalysisInputData.Ident(UUID.randomUUID(), "name18"))).build()))
+            .build();
+        SENSITIVITY_INPUT = objectWriter.writeValueAsString(sensitivityAnalysisInputData);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
