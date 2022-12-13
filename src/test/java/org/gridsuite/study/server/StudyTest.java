@@ -30,6 +30,8 @@ import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -166,6 +168,7 @@ public class StudyTest {
     private static final String EMPTY_ARRAY = "[]";
 
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
+    private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -350,10 +353,12 @@ public class StudyTest {
                 } else if (path.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")) {
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*") && POST.equals(request.getMethod())) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
+                } else if (path.matches("/v1/network-modifications.*") && POST.equals(request.getMethod())) {
+                    ModificationInfos modificationInfos = mapper.readValue(body.readUtf8(), new TypeReference<ModificationInfos>() {
+                    });
+                    modificationInfos.setSubstationIds(Set.of("s2"));
                     return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
+                        .setBody("[" + mapper.writeValueAsString(modificationInfos) + "]")
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.startsWith("/v1/modifications/" + MODIFICATION_UUID + "/")) {
                     if (!"PUT".equals(request.getMethod()) || !body.peek().readUtf8().equals("bogus")) {
@@ -361,22 +366,6 @@ public class StudyTest {
                     } else {
                         return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
                     }
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/equipments/type/LOAD/id/idLoadToDelete\\?group=.*")) {
-                    JSONObject jsonObject = new JSONObject(Map.of("equipmentId", "idLoadToDelete",
-                            "equipmentType", "LOAD", "substationIds", List.of("s2")));
-                    return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/generators\\?group=.*")) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
-                    return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads(-modification)?\\?group=.*")) {
-                    JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s2")));
-                    return new MockResponse().setResponseCode(200)
-                        .setBody(new JSONArray(List.of(jsonObject)).toString())
-                        .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/networks/.*/reindex-all")) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/networks\\?caseUuid=" + CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")) {
@@ -628,7 +617,7 @@ public class StudyTest {
         assertThat(createdStudyBasicInfosList, new MatcherJson<>(mapper, studiesInfos));
 
         mvcResult = mockMvc
-                .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=name",
+                .perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
                         studyUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
@@ -1210,9 +1199,9 @@ public class StudyTest {
         NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2", userId);
 
         // add modification on node "node1"
-        String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers", study1Uuid, node1.getId())
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
@@ -1223,12 +1212,12 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         // add modification on node "node2"
-        String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", study1Uuid, node2.getId())
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(createLoadAttributes)
             .header(USER_ID_HEADER, "userId"))
@@ -1239,7 +1228,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
@@ -1317,12 +1306,11 @@ public class StudyTest {
          */
 
         // add modification on node "node1"
-        String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers", study1Uuid, node1.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(createTwoWindingsTransformerAttributes)
-                .header(USER_ID_HEADER, userId))
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
+                        .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), ImmutableSet.of("s2"));
@@ -1330,12 +1318,12 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         // add modification on node "node2"
-        String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", study1Uuid, node2.getId())
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, userId))
@@ -1346,7 +1334,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
@@ -1569,9 +1557,9 @@ public class StudyTest {
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
 
         // add modification on node "node1"
-        String createTwoWindingsTransformerAttributes = "{\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/two-windings-transformers", study1Uuid, node1.getId())
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
@@ -1582,12 +1570,12 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         var requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/two-windings-transformers\\?group=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         // add modification on node "node2"
-        String createLoadAttributes = "{\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/loads", study1Uuid, node2.getId())
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, "userId"))
@@ -1598,7 +1586,7 @@ public class StudyTest {
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + NETWORK_UUID_STRING + "/loads\\?group=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-modifications.*")));
 
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
@@ -1687,7 +1675,7 @@ public class StudyTest {
         var request = TestUtils.getRequestsDone(1, server);
         assertTrue(request.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
-        boolean nodeHasModifications = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(studyUuid, nodeToCopyUuid));
+        boolean nodeHasModifications = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
 
         //depending on number of children, number of modifications and build state, there will be several "/v1/reports/.*" requests to get reports to delete on invalidation
         do {
