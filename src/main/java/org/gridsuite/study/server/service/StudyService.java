@@ -1337,12 +1337,13 @@ public class StudyService {
 
     @Transactional
     public void changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid,
-                                              @NonNull UUID modificationUuid, boolean active) {
+                                              @NonNull UUID modificationUuid, boolean active, String userId) {
         if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active);
         updateStatuses(studyUuid, nodeUuid, false);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
