@@ -98,6 +98,8 @@ public enum ModificationType {
                 return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
+            case BRANCH_STATUS:
+                return StudyException.Type.BRANCH_STATUS_FAILED;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
