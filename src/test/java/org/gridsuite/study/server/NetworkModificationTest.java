@@ -86,7 +86,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
-@SpringBootTest
+@SpringBootTest(properties = {"test.elasticsearch.enabled=true"})
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public class NetworkModificationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTest.class);
