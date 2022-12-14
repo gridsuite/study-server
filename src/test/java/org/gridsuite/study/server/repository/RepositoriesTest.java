@@ -106,7 +106,6 @@ public class RepositoriesTest {
                 .networkId("networkId")
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .build();
@@ -117,7 +116,6 @@ public class RepositoriesTest {
                 .networkId("networkId2")
                 .caseFormat("caseFormat2")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity2)
                 .shortCircuitParameters(shortCircuitParametersEntity2)
                 .build();
@@ -128,7 +126,6 @@ public class RepositoriesTest {
                 .networkId("networkId3")
                 .caseFormat("caseFormat3")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity3)
                 .shortCircuitParameters(shortCircuitParametersEntity3)
                 .build();
@@ -179,7 +176,6 @@ public class RepositoriesTest {
                 .networkId("networkId")
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(LoadFlowParametersEntity.builder().build())
                 .shortCircuitParameters(null) // intentionally set to null
                 .build();

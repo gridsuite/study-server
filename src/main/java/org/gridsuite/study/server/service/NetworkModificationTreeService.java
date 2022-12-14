@@ -68,7 +68,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode) {
+    public AbstractNode createNode(UUID studyUuid, UUID nodeId, AbstractNode nodeInfo, InsertMode insertMode, String userId) {
         Optional<NodeEntity> referenceNode = nodesRepository.findById(nodeId);
         return referenceNode.map(reference -> {
             assertNodeNameNotExist(studyUuid, nodeInfo.getName());
@@ -89,6 +89,10 @@ public class NetworkModificationTreeService {
                     .forEach(child -> child.setParentNode(node));
             }
             notificationService.emitNodeInserted(getStudyUuidForNodeId(nodeId), parent.getIdNode(), node.getIdNode(), insertMode);
+            // userId is null when creating initial nodes, we don't need to send element update notifications in this case
+            if (userId != null) {
+                notificationService.emitElementUpdated(studyUuid, userId);
+            }
             return nodeInfo;
         }).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
@@ -325,7 +329,7 @@ public class NetworkModificationTreeService {
                 model.setSensitivityAnalysisResultUuid(null);
                 model.setShortCircuitAnalysisResultUuid(null);
 
-                nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD).getId();
+                nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD, null).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
             }
             if (nextParentId != null) {
@@ -345,17 +349,18 @@ public class NetworkModificationTreeService {
                 .loadFlowStatus(LoadFlowStatus.NOT_DONE)
                 .buildStatus(BuildStatus.BUILT)
                 .build();
-        createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER);
+        createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
     }
 
     @Transactional
-    public void updateNode(UUID studyUuid, AbstractNode node) {
+    public void updateNode(UUID studyUuid, AbstractNode node, String userId) {
         NetworkModificationNodeInfoEntity networkModificationNode = networkModificationNodeInfoRepository.findById(node.getId()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         if (!networkModificationNode.getName().equals(node.getName())) {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
         repositories.get(node.getType()).updateNode(node);
         notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional

@@ -477,10 +477,10 @@ public class StudyService {
     }
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
-                                              UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
+                                              UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                               ShortCircuitParametersEntity shortCircuitParametersEntity, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, casePrivate, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity));
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -499,7 +499,7 @@ public class StudyService {
         Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.isCasePrivate(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters, newShortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters, newShortCircuitParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -826,7 +826,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters) {
+    public void setLoadFlowParameters(UUID studyUuid, LoadFlowParameters parameters, String userId) {
         updateLoadFlowParameters(studyUuid, LoadflowService.toEntity(parameters != null ? parameters : LoadFlowParameters.load()));
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
@@ -834,6 +834,7 @@ public class StudyService {
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
@@ -847,11 +848,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateLoadFlowProvider(UUID studyUuid, String provider) {
+    public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
@@ -861,8 +863,9 @@ public class StudyService {
     }
 
     @Transactional
-    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters) {
+    public void setShortCircuitParameters(UUID studyUuid, ShortCircuitParameters parameters, String userId) {
         updateShortCircuitParameters(studyUuid, ShortCircuitService.toEntity(parameters != null ? parameters : ShortCircuitService.getDefaultShortCircuitParameters()));
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -950,7 +953,7 @@ public class StudyService {
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
-                                          String caseFormat, UUID caseUuid, boolean casePrivate, String caseName, LoadFlowParametersEntity loadFlowParameters,
+                                          String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                           UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
@@ -961,7 +964,7 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         Objects.requireNonNull(shortCircuitParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, casePrivate, caseName, defaultLoadflowProvider, loadFlowParameters, shortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider, loadFlowParameters, shortCircuitParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
@@ -1011,7 +1014,7 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
     }
 
-    public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid) {
+    public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
         ModificationType modificationType = getModificationType(createModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
@@ -1025,9 +1028,10 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid) {
+    public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
         ModificationType modificationType = getModificationType(updateModificationAttributes);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -1036,6 +1040,7 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public List<VoltageLevelInfos> getVoltageLevels(UUID studyUuid, UUID nodeUuid) {
@@ -1109,16 +1114,17 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+    public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         checkStudyContainsNode(studyUuid, nodeToCopyUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
         updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+    public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
@@ -1138,6 +1144,7 @@ public class StudyService {
         } else {
             invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     private void invalidateBuild(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus, boolean invalidateOnlyTargetNode) {
@@ -1196,16 +1203,17 @@ public class StudyService {
 
     @Transactional
     public void changeModificationActiveState(@NonNull UUID studyUuid, @NonNull UUID nodeUuid,
-                                              @NonNull UUID modificationUuid, boolean active) {
+                                              @NonNull UUID modificationUuid, boolean active, String userId) {
         if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         networkModificationTreeService.handleExcludeModification(nodeUuid, modificationUuid, active);
         updateStatuses(studyUuid, nodeUuid, false);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids) {
+    public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
@@ -1218,10 +1226,11 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren) {
+    public void deleteNode(UUID studyUuid, UUID nodeId, boolean deleteChildren, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
@@ -1257,6 +1266,8 @@ public class StudyService {
         if (invalidateChildrenBuild) {
             childrenNodes.forEach(nodeEntity -> updateStatuses(studyUuid, nodeEntity.getIdNode(), false, true));
         }
+
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void reindexStudy(UUID studyUuid) {
@@ -1284,7 +1295,7 @@ public class StudyService {
     }
 
     @Transactional
-    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
+    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
         String modificationsInError;
 
         if (originNodeUuid == null) {
@@ -1310,12 +1321,13 @@ public class StudyService {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
             }
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
 
         return modificationsInError;
     }
 
     @Transactional
-    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList) {
+    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId) {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         String response;
         try {
@@ -1326,6 +1338,7 @@ public class StudyService {
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
         return response;
     }
 

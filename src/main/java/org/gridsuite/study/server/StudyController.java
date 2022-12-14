@@ -200,8 +200,9 @@ public class StudyController {
     public ResponseEntity<Void> duplicateNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
-        studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
+                                              @RequestHeader("userId") String userId) {
+        studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -214,8 +215,9 @@ public class StudyController {
     public ResponseEntity<Void> cutAndPasteNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode) {
-        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode);
+                                              @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
+                                              @RequestHeader("userId") String userId) {
+        studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -582,9 +584,10 @@ public class StudyController {
     public ResponseEntity<Void> moveModification(@PathVariable("studyUuid") UUID studyUuid,
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
-                                                        @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid) {
+                                                        @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
+                                                        @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid);
+        studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -595,16 +598,17 @@ public class StudyController {
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") UpdateModificationAction action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<UUID> modificationsToCopyUuidList) {
+                                                         @RequestBody List<UUID> modificationsToCopyUuidList,
+                                                         @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
         switch (action) {
             case COPY:
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList));
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId));
             case MOVE:
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null));
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId));
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
@@ -733,8 +737,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) LoadFlowParameters lfParameter) {
-        studyService.setLoadFlowParameters(studyUuid, lfParameter);
+            @RequestBody(required = false) LoadFlowParameters lfParameter,
+            @RequestHeader("userId") String userId) {
+        studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -750,8 +755,9 @@ public class StudyController {
     @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
     public ResponseEntity<Void> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                          @RequestBody(required = false) String provider) {
-        studyService.updateLoadFlowProvider(studyUuid, provider);
+                                                          @RequestBody(required = false) String provider,
+                                                          @RequestHeader("userId") String userId) {
+        studyService.updateLoadFlowProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -767,8 +773,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters) {
-        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters);
+            @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters,
+            @RequestHeader("userId") String userId) {
+        studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -890,9 +897,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> createNetworkModification(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @RequestBody String modificationAttributes) {
+                                                          @RequestBody String modificationAttributes,
+                                                          @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid);
+        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -902,9 +910,10 @@ public class StudyController {
     public ResponseEntity<Void> updateNetworkModification(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
-                                                          @RequestBody String modificationAttributes) {
+                                                          @RequestBody String modificationAttributes,
+                                                          @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid);
+        studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -913,9 +922,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was deleted"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids) {
+                                                           @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                           @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids);
+        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -952,8 +962,9 @@ public class StudyController {
     public ResponseEntity<AbstractNode> createNode(@RequestBody AbstractNode node,
                                                          @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
-                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode));
+                                                         @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode,
+                                                         @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode, userId));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
@@ -963,8 +974,9 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
-                                                 @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren) {
-        studyService.deleteNode(studyUuid, nodeId, deleteChildren);
+                                                 @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
+                                                 @RequestHeader("userId") String userId) {
+        studyService.deleteNode(studyUuid, nodeId, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -986,8 +998,9 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "the node has been updated"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> updateNode(@RequestBody AbstractNode node,
-                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        networkModificationTreeService.updateNode(studyUuid, node);
+                                                 @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                 @RequestHeader("userId") String userId) {
+        networkModificationTreeService.updateNode(studyUuid, node, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1064,9 +1077,10 @@ public class StudyController {
     public ResponseEntity<Void> changeModificationActiveState(@PathVariable("studyUuid") UUID studyUuid,
                                                               @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @PathVariable("modificationUuid") UUID modificationUuid,
-                                                              @Parameter(description = "active") @RequestParam("active") boolean active) {
+                                                              @Parameter(description = "active") @RequestParam("active") boolean active,
+                                                              @RequestHeader("userId") String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
-        studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active);
+        studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active, userId);
         return ResponseEntity.ok().build();
     }
 
