@@ -402,7 +402,7 @@ public class ShortCircuitTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);

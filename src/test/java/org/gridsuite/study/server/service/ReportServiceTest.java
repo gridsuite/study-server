@@ -186,7 +186,7 @@ public class ReportServiceTest {
         assertEquals(mapper.writeValueAsString(expectedRootReporter.getSubReporters()), mapper.writeValueAsString(reports));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
-        NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Node1", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER);
+        NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Node1", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);  // message for modification node creation
         ReporterModel expectedNodeReporter = getNodeReport(MODIFICATION_NODE_REPORT_UUID.toString(), node.getId().toString());
 
@@ -214,9 +214,9 @@ public class ReportServiceTest {
     @Test
     public void testNodeMultipleReport() {
         RootNode rootNode = createRoot();
-        NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Modification Node", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER);
-        NetworkModificationNode child1 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 1", MODIFICATION_CHILD_NODE1_REPORT_UUID), InsertMode.AFTER);
-        NetworkModificationNode child2 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 2", MODIFICATION_CHILD_NODE2_REPORT_UUID), InsertMode.AFTER);
+        NetworkModificationNode node = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), rootNode.getId(), createModificationNodeInfo("Modification Node", MODIFICATION_NODE_REPORT_UUID), InsertMode.AFTER, null);
+        NetworkModificationNode child1 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 1", MODIFICATION_CHILD_NODE1_REPORT_UUID), InsertMode.AFTER, null);
+        NetworkModificationNode child2 = (NetworkModificationNode) networkModificationTreeService.createNode(rootNode.getStudyId(), node.getId(), createModificationNodeInfo("Child 2", MODIFICATION_CHILD_NODE2_REPORT_UUID), InsertMode.AFTER, null);
 
         // message for 3 modification nodes creation
         output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);

@@ -10,19 +10,43 @@ import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    property = "type",
+    include = JsonTypeInfo.As.EXISTING_PROPERTY,
+    visible = true
+)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = ModificationInfos.class, name = "GROOVY_SCRIPT"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "LOAD_CREATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "LOAD_MODIFICATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "GENERATOR_CREATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "GENERATOR_MODIFICATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "LINE_CREATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "SUBSTATION_CREATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "VOLTAGE_LEVEL_CREATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "SHUNT_COMPENSATOR_CREATION"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "TWO_WINDINGS_TRANSFORMER_CREATION"),
+    @JsonSubTypes.Type(value = EquipmentDeletionInfos.class, name = "EQUIPMENT_DELETION"),
+    @JsonSubTypes.Type(value = ModificationInfos.class, name = "LINE_SPLIT_WITH_VOLTAGE_LEVEL"),
+    @JsonSubTypes.Type(value = ModificationInfos.class, name = "LINE_ATTACH_TO_VOLTAGE_LEVEL"),
+    @JsonSubTypes.Type(value = ModificationInfos.class, name = "LINES_ATTACH_TO_SPLIT_LINES"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "BRANCH_STATUS"),
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "EQUIPMENT_ATTRIBUTE_MODIFICATION")
+})
 @SuperBuilder
 @NoArgsConstructor
 @Getter
+@Setter
 @ToString
 @Schema(description = "Modification attributes")
 public class ModificationInfos {
