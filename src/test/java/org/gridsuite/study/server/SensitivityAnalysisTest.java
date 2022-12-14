@@ -307,12 +307,6 @@ public class SensitivityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
 
         // get sensitivity analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result", studyUuid, nodeUuid)).andExpectAll(
-            status().isOk(),
-            content().string(SENSITIVITY_ANALYSIS_RESULT_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s", resultUuid)));
-
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
             .andExpectAll(status().isOk(), content().string(TABBED_RESULT_JSON));
 
@@ -358,10 +352,6 @@ public class SensitivityAnalysisTest {
         testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result",
-                studyNameUserIdUuid, NOT_FOUND_SENSITIVITY_ANALYSIS_UUID))
-            .andExpectAll(status().isNoContent());
-
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
                 studyNameUserIdUuid, NOT_FOUND_SENSITIVITY_ANALYSIS_UUID, "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
@@ -371,8 +361,6 @@ public class SensitivityAnalysisTest {
                 studyNameUserIdUuid, modificationNode1Uuid))
             .andExpectAll(status().isNotFound());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s", SENSITIVITY_ANALYSIS_RESULT_UUID)));
-
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
                 studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNotFound());
@@ -380,15 +368,6 @@ public class SensitivityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("tabbed")));
 
         difficultyOfFind = 2;
-        try {
-            mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?a",
-                    studyNameUserIdUuid, modificationNode1Uuid));
-
-            fail("should have thrown");
-        } catch (Exception e) {
-            assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s", SENSITIVITY_ANALYSIS_RESULT_UUID)));
-            // good
-        }
 
         try {
             mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",

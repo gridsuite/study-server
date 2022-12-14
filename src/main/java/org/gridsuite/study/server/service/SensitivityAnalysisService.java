@@ -104,27 +104,6 @@ public class SensitivityAnalysisService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResultNaive(UUID nodeUuid) {
-        String result;
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
-        if (resultUuidOpt.isEmpty()) {
-            return null;
-        }
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
-        try {
-            result = restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
-    }
-
     public String getSensitivityAnalysisResult(UUID nodeUuid, String selector) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
