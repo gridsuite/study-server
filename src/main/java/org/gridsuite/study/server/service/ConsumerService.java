@@ -41,7 +41,7 @@ public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    static final String HEADER_RECEIVER = "receiver";
+    public static final String HEADER_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
     static final String NETWORK_UUID = "networkUuid";
     static final String NETWORK_ID = "networkId";
@@ -242,7 +242,7 @@ public class ConsumerService {
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, false, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {

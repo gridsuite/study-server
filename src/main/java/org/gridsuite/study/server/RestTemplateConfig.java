@@ -13,6 +13,7 @@ import com.powsybl.contingency.json.ContingencyJsonModule;
 import com.powsybl.loadflow.json.LoadFlowParametersJsonModule;
 import com.powsybl.loadflow.json.LoadFlowResultJsonModule;
 import com.powsybl.security.json.SecurityAnalysisJsonModule;
+import com.powsybl.sensitivity.json.SensitivityJsonModule;
 import com.powsybl.shortcircuit.json.ShortCircuitAnalysisJsonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -53,6 +54,8 @@ public class RestTemplateConfig {
         objectMapper.registerModule(new LoadFlowParametersJsonModule());
         objectMapper.registerModule(new SecurityAnalysisJsonModule());
         objectMapper.registerModule(new ShortCircuitAnalysisJsonModule());
+        objectMapper.registerModule(new SensitivityJsonModule());
+
         return objectMapper;
     }
 

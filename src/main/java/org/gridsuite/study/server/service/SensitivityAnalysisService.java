@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,7 +50,8 @@ public class SensitivityAnalysisService {
 
     private String sensitivityAnalysisServerBaseUri;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    private RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
 
@@ -72,10 +74,7 @@ public class SensitivityAnalysisService {
                                        String variantId,
                                        UUID reportUuid,
                                        String provider,
-                                       List<UUID> variablesFiltersListUuids,
-                                       List<UUID> contingencyListUuids,
-                                       List<UUID> branchFiltersListUuids,
-                                       String parameters) {
+                                       SensitivityAnalysisInputData sensitivityAnalysisInputData) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
@@ -93,16 +92,13 @@ public class SensitivityAnalysisService {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var path = uriComponentsBuilder
-            .queryParam("variablesFiltersListUuid", variablesFiltersListUuids)
-            .queryParam("contingencyListUuid", contingencyListUuids)
-            .queryParam("branchFiltersListUuid", branchFiltersListUuids)
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<SensitivityAnalysisInputData> httpEntity = new HttpEntity<>(sensitivityAnalysisInputData, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }

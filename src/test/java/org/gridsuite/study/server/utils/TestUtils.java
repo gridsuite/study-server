@@ -7,15 +7,9 @@
 
 package org.gridsuite.study.server.utils;
 
-import static org.junit.Assert.assertNull;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
+import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
+import okhttp3.mockwebserver.MockWebServer;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -25,9 +19,13 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.ShortCircuitService;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
-import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import okhttp3.mockwebserver.MockWebServer;
+import static org.junit.Assert.assertNull;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
