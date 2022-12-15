@@ -357,10 +357,6 @@ public class SensitivityAnalysisTest {
             .andExpectAll(status().isNoContent());
 
         difficultyOfFind = 1;
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?a",
-                studyNameUserIdUuid, modificationNode1Uuid))
-            .andExpectAll(status().isNotFound());
-
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
                 studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNotFound());
@@ -368,7 +364,6 @@ public class SensitivityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("tabbed")));
 
         difficultyOfFind = 2;
-
         try {
             mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
                     studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"));
