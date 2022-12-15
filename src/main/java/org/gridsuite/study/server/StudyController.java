@@ -605,7 +605,7 @@ public class StudyController {
         String failureIds;
         switch (action) {
             case COPY:
-                failureIds = studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId;
+                failureIds = studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
                 failureIds = studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, false, userId);
