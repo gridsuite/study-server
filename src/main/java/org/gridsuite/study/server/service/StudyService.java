@@ -1322,7 +1322,7 @@ public class StudyService {
             }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
-            if (!nodeUuid.equals(originNodeUuid)) {
+            if (moveBetweenNodes) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
             }
         }

@@ -1854,7 +1854,6 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
-        //checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1)); TODO
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -1869,7 +1868,6 @@ public class NetworkModificationTest {
                 .withRequestBody(WireMock.equalToJson(expectedBody)));
     }
 
-    /* TODO
     @Test
     public void testCutAndPasteModification() throws Exception {
         String userId = "userId";
@@ -1902,7 +1900,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
-     // move 2 modifications within node 1
+        // move 2 modifications within node 1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
                         studyUuid, nodeUuid1, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1910,7 +1908,6 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
-        //checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
@@ -1918,10 +1915,10 @@ public class NetworkModificationTest {
         String expectedBody = mapper.writeValueAsString(expectedList);
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlMatching(
                         "/v1/groups/" + node1.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
-                                "&reportUuid=(.*)\\"+
+                                "&reportUuid=(.*)\\" +
                                 "&reporterId=" + node1.getId() +
                                 "&variantId=" + VARIANT_ID +
-                                "&originGroupUuid=" + node1.getModificationGroupUuid()+"&build=true$"))
+                                "&originGroupUuid=" + node1.getModificationGroupUuid() + "&build=true$"))
                 .withRequestBody(WireMock.equalToJson(expectedBody)));
 
         // move 2 modifications from node1 to node2
@@ -1933,7 +1930,6 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid2);
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
-        //checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid2));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid2);
         checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
@@ -1946,10 +1942,10 @@ public class NetworkModificationTest {
         expectedBody = mapper.writeValueAsString(expectedList);
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlMatching(
                         "/v1/groups/" + node1.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
-                                "&reportUuid=(.*)\\"+
+                                "&reportUuid=(.*)\\" +
                                 "&reporterId=" + node1.getId() +
                                 "&variantId=" + VARIANT_ID +
-                                "&originGroupUuid=" + node1.getModificationGroupUuid()+"&build=true$"))
+                                "&originGroupUuid=" + node1.getModificationGroupUuid() + "&build=true$"))
                 .withRequestBody(WireMock.equalToJson(expectedBody)));
 
         // move modification without defining originNodeUuid
@@ -1959,7 +1955,7 @@ public class NetworkModificationTest {
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isBadRequest());
-    }*/
+    }
 
     @Test
     public void testDeleteEquipment() throws Exception {

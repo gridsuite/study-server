@@ -384,6 +384,95 @@ public class NetworkModificationTreeTest {
         deleteNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)), userId);
     }
 
+    private UUID createNodeTree() throws Exception {
+        /*  create following small node tree, and return the root studyId
+                root
+               /    \
+              n1    n2
+                    /  \
+                   n3  n4
+         */
+        String userId = "userId";
+        RootNode root = createRoot();
+        UUID rootId = root.getId();
+        final NetworkModificationNode node1 = buildNetworkModification("n1", "zzz", MODIFICATION_GROUP_UUID, VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode node2 = buildNetworkModification("n2", "", MODIFICATION_GROUP_UUID_2, VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+        createNode(root.getStudyId(), root, node2, userId);
+        // need to re-access to see the whole tree
+        root = getRootNode(root.getStudyId());
+        List<AbstractNode> children = root.getChildren();
+        assertEquals(2, children.size());
+        UUID n1Id = children.get(0).getId();
+        UUID n2Id = children.get(1).getId();
+        // add 2 children to n2
+        node2.setName("n3");
+        node1.setName("n4");
+        createNode(root.getStudyId(), children.get(1), node2, userId);
+        createNode(root.getStudyId(), children.get(1), node1, userId);
+        // need to re-access to see the whole tree
+        root = getRootNode(root.getStudyId());
+        children = root.getChildren();
+        assertEquals(2, children.size());
+        List<AbstractNode> n2Children = children.get(1).getChildren();
+        assertEquals(2, n2Children.size());
+        UUID n3Id = n2Children.get(0).getId();
+        UUID n4Id = n2Children.get(1).getId();
+        return root.getStudyId();
+    }
+
+    @Test
+    public void testNodeModificationInfos() throws Exception {
+        UUID rootStudyId = createNodeTree();
+        RootNode root = getRootNode(rootStudyId);
+        UUID rootId = root.getId();
+
+        NodeModificationInfos rootInfos = networkModificationTreeService.getNodeModificationInfos(rootId);
+        assertEquals(rootId, rootInfos.getId());
+
+        List<AbstractNode> children = root.getChildren();
+        assertEquals(2, children.size());
+        NetworkModificationNode n1 = (NetworkModificationNode) children.get(0);
+        NodeModificationInfos n1Infos = networkModificationTreeService.getNodeModificationInfos(n1.getId());
+
+        assertEquals("n1", n1.getName());
+        assertEquals("zzz", n1.getDescription());
+        assertEquals(BuildStatus.NOT_BUILT, n1.getBuildStatus());
+        assertEquals(n1.getId(), n1Infos.getId());
+        assertEquals(MODIFICATION_GROUP_UUID, n1Infos.getModificationGroupUuid());
+        assertEquals(VARIANT_ID, n1Infos.getVariantId());
+        UUID badUuid = UUID.randomUUID();
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getNodeModificationInfos(badUuid));
+    }
+
+    @Test
+    public void testNodeAncestor() throws Exception {
+        UUID rootStudyId = createNodeTree();
+
+        // get node ID foreach node
+        RootNode root = getRootNode(rootStudyId);
+        UUID rootId = root.getId();
+        List<AbstractNode> children = root.getChildren();
+        assertEquals(2, children.size());
+        UUID n1Id = children.get(0).getId();
+        UUID n2Id = children.get(1).getId();
+        List<AbstractNode> n2Children = children.get(1).getChildren();
+        assertEquals(2, n2Children.size());
+        UUID n3Id = n2Children.get(0).getId();
+        UUID n4Id = n2Children.get(1).getId();
+
+        assertTrue(networkModificationTreeService.hasAncestor(rootId, rootId));
+        assertFalse(networkModificationTreeService.hasAncestor(rootId, n1Id));
+        assertTrue(networkModificationTreeService.hasAncestor(n1Id, rootId));
+        assertTrue(networkModificationTreeService.hasAncestor(n3Id, rootId));
+        assertTrue(networkModificationTreeService.hasAncestor(n4Id, rootId));
+        assertTrue(networkModificationTreeService.hasAncestor(n4Id, n2Id));
+        assertFalse(networkModificationTreeService.hasAncestor(n4Id, n1Id));
+        assertFalse(networkModificationTreeService.hasAncestor(n3Id, UUID.randomUUID()));
+        UUID badUuid = UUID.randomUUID();
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.hasAncestor(badUuid, rootId));
+    }
+
     @Test
     public void testNodeManipulation() throws Exception {
         String userId = "userId";
@@ -667,6 +756,10 @@ public class NetworkModificationTreeTest {
         assertEquals(node5.getId(), networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
         assertEquals(node3.getId(), networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
         assertEquals(root.getId(), networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT));
+        assertEquals(root.getId(), networkModificationTreeService.getParentNode(root.getId(), NodeType.ROOT));
+
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(UUID.randomUUID(), NodeType.ROOT));
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(root.getId(), NodeType.NETWORK_MODIFICATION));
     }
 
     @Test
