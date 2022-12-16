@@ -292,8 +292,8 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines graphics")})
-    public ResponseEntity<String> getLinesGraphics(
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of line graphics with the given ids, all otherwise")})
+    public ResponseEntity<String> getLineGraphics(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Lines ids") @RequestParam(name = "lineId", required = false) List<String> linesIds) {
@@ -303,8 +303,8 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations")
     @Operation(summary = "Get Network substations graphics")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substations graphics with the given ids")})
-    public ResponseEntity<String> getSubstationsGraphics(
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substation graphics with the given ids, all otherwise")})
+    public ResponseEntity<String> getSubstationGraphics(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
