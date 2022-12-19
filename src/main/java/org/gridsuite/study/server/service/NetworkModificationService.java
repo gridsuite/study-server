@@ -269,7 +269,7 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public String moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean invalidateTargetNode) {
+    public String moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
         Objects.requireNonNull(networkUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "MOVE")
@@ -278,7 +278,7 @@ public class NetworkModificationService {
             .queryParam("reporterId", nodeInfos.getId())
             .queryParam("variantId", nodeInfos.getVariantId())
             .queryParam("originGroupUuid", originGroupUuid)
-            .queryParam("build", !invalidateTargetNode);
+            .queryParam("build", buildTargetNode);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }

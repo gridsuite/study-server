@@ -1152,7 +1152,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         invalidateNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        // we might want to invalidate target node without impacting other nodes (when moving an empty node for exemple
+        // we might want to invalidate target node without impacting other nodes (when moving an empty node for example)
         if (invalidateOnlyTargetNode) {
             networkModificationTreeService.invalidateBuildOfNodeOnly(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
         } else {
@@ -1295,33 +1295,39 @@ public class StudyService {
     }
 
     @Transactional
-    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
+    public String moveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
         String modificationsInError;
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
         }
-        boolean moveBetweenNodes = !nodeUuid.equals(originNodeUuid);
-        // Target node must be invalidated (with no possible incremental build) when:
+
+        boolean moveBetweenNodes = !targetNodeUuid.equals(originNodeUuid);
+        // Target node must not be built (incremental mode) when:
         // - the move is a cut & paste or a position change inside the same node
         // - the move is a cut & paste between 2 nodes and the target node belongs to the source node subtree
-        boolean invalidateTargetNode = !moveBetweenNodes || networkModificationTreeService.hasAncestor(nodeUuid, originNodeUuid);
+        boolean targetNodeBelongsToSourceNodeSubTree = moveBetweenNodes && networkModificationTreeService.hasAncestor(targetNodeUuid, originNodeUuid);
+        boolean buildTargetNode = moveBetweenNodes && !targetNodeBelongsToSourceNodeSubTree;
 
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         if (moveBetweenNodes) {
             notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         }
         try {
-            checkStudyContainsNode(studyUuid, nodeUuid);
+            checkStudyContainsNode(studyUuid, targetNodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
-            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(targetNodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            modificationsInError = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, invalidateTargetNode);
-            updateStatuses(studyUuid, nodeUuid, false, invalidateTargetNode);
+            modificationsInError = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
+            if (!targetNodeBelongsToSourceNodeSubTree) {
+                // invalidate the whole subtree except maybe the target node itself (depends if we have to build it)
+                updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true);
+            }
             if (moveBetweenNodes) {
-                updateStatuses(studyUuid, originNodeUuid, false);
+                // invalidate the whole subtree including the source node
+                updateStatuses(studyUuid, originNodeUuid, false, true);
             }
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid);
             if (moveBetweenNodes) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
             }
@@ -1340,8 +1346,8 @@ public class StudyService {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             response = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
-            // no invalidation cause we will apply the duplicated modifications on a built node
-            updateStatuses(studyUuid, nodeUuid, false, false);
+            // invalidate the whole subtree except the target node (could be incrementally built)
+            updateStatuses(studyUuid, nodeUuid, true, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
