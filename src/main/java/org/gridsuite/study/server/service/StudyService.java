@@ -1295,16 +1295,16 @@ public class StudyService {
     }
 
     @Transactional
-    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean modificationsReorder, String userId) {
+    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
         String modificationsInError;
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
         }
         boolean moveBetweenNodes = !nodeUuid.equals(originNodeUuid);
-        // Node must be invalidated (with no possible incremental build) when:
-        // - the move is a position change inside the same node (then modificationsReorder is true)
-        // - the move is a cut & paste between 2 nodes, and the target node belongs to the source node subtree
-        boolean invalidateTargetNode = modificationsReorder || (moveBetweenNodes && networkModificationTreeService.hasAncestor(nodeUuid, originNodeUuid));
+        // Target node must be invalidated (with no possible incremental build) when:
+        // - the move is a cut & paste or a position change inside the same node
+        // - the move is a cut & paste between 2 nodes and the target node belongs to the source node subtree
+        boolean invalidateTargetNode = !moveBetweenNodes || networkModificationTreeService.hasAncestor(nodeUuid, originNodeUuid);
 
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         if (moveBetweenNodes) {

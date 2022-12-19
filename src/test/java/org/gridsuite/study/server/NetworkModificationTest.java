@@ -1908,6 +1908,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
@@ -1918,8 +1919,8 @@ public class NetworkModificationTest {
                                 "&reportUuid=(.*)\\" +
                                 "&reporterId=" + node1.getId() +
                                 "&variantId=" + VARIANT_ID +
-                                "&originGroupUuid=" + node1.getModificationGroupUuid() + "&build=true$"))
-                .withRequestBody(WireMock.equalToJson(expectedBody)));
+                                "&originGroupUuid=" + node1.getModificationGroupUuid() + "&build=false$"))
+                .withRequestBody(WireMock.equalToJson(expectedBody))); // modification1 is in the request body
 
         // move 2 modifications from node1 to node2
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
@@ -1941,9 +1942,9 @@ public class NetworkModificationTest {
         expectedList = List.of(modification1, modification2);
         expectedBody = mapper.writeValueAsString(expectedList);
         wireMock.verify(1, WireMock.putRequestedFor(WireMock.urlMatching(
-                        "/v1/groups/" + node1.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
+                        "/v1/groups/" + node2.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
                                 "&reportUuid=(.*)\\" +
-                                "&reporterId=" + node1.getId() +
+                                "&reporterId=" + node2.getId() +
                                 "&variantId=" + VARIANT_ID +
                                 "&originGroupUuid=" + node1.getModificationGroupUuid() + "&build=true$"))
                 .withRequestBody(WireMock.equalToJson(expectedBody)));

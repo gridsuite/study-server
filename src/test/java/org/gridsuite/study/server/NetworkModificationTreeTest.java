@@ -460,6 +460,7 @@ public class NetworkModificationTreeTest {
         assertEquals(2, n2Children.size());
         UUID n3Id = n2Children.get(0).getId();
         UUID n4Id = n2Children.get(1).getId();
+        UUID badUuid = UUID.randomUUID();
 
         assertTrue(networkModificationTreeService.hasAncestor(rootId, rootId));
         assertFalse(networkModificationTreeService.hasAncestor(rootId, n1Id));
@@ -468,8 +469,7 @@ public class NetworkModificationTreeTest {
         assertTrue(networkModificationTreeService.hasAncestor(n4Id, rootId));
         assertTrue(networkModificationTreeService.hasAncestor(n4Id, n2Id));
         assertFalse(networkModificationTreeService.hasAncestor(n4Id, n1Id));
-        assertFalse(networkModificationTreeService.hasAncestor(n3Id, UUID.randomUUID()));
-        UUID badUuid = UUID.randomUUID();
+        assertFalse(networkModificationTreeService.hasAncestor(n3Id, badUuid));
         assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.hasAncestor(badUuid, rootId));
     }
 
@@ -739,6 +739,7 @@ public class NetworkModificationTreeTest {
     public void testGetParentNode() throws Exception {
         String userId = "userId";
         RootNode root = createRoot();
+        UUID rootId = root.getId();
         final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", null, VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         final NetworkModificationNode node2 = buildNetworkModification("hypo 1", "potamus", null, VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         final NetworkModificationNode node3 = buildNetworkModification("loadflow", "dance", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
@@ -755,11 +756,12 @@ public class NetworkModificationTreeTest {
 
         assertEquals(node5.getId(), networkModificationTreeService.getParentNode(node6.getId(), NodeType.NETWORK_MODIFICATION));
         assertEquals(node3.getId(), networkModificationTreeService.getParentNode(node2.getId(), NodeType.NETWORK_MODIFICATION));
-        assertEquals(root.getId(), networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT));
-        assertEquals(root.getId(), networkModificationTreeService.getParentNode(root.getId(), NodeType.ROOT));
+        assertEquals(rootId, networkModificationTreeService.getParentNode(node5.getId(), NodeType.ROOT));
+        assertEquals(rootId, networkModificationTreeService.getParentNode(rootId, NodeType.ROOT));
 
-        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(UUID.randomUUID(), NodeType.ROOT));
-        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(root.getId(), NodeType.NETWORK_MODIFICATION));
+        UUID badUuid = UUID.randomUUID();
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(badUuid, NodeType.ROOT));
+        assertThrows("ELEMENT_NOT_FOUND", StudyException.class, () -> networkModificationTreeService.getParentNode(rootId, NodeType.NETWORK_MODIFICATION));
     }
 
     @Test
