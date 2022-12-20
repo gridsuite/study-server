@@ -45,6 +45,7 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String NOT_FOUND = " not found";
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
+    static final String LANGUAGE = "language";
 
     @Autowired
     private RestTemplate restTemplate;
@@ -71,16 +72,11 @@ public class SingleLineDiagramService {
                 .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
                 .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring());
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
+        addParameters(diagramParameters, uriComponentsBuilder, variantId);
 
         var path = uriComponentsBuilder
-            .buildAndExpand(networkUuid, voltageLevelId)
-            .toUriString();
+                .buildAndExpand(networkUuid, voltageLevelId)
+                .toUriString();
 
         byte[] result;
         try {
@@ -104,12 +100,7 @@ public class SingleLineDiagramService {
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
                 .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
                 .queryParam(QUERY_PARAM_DISPLAY_MODE, diagramParameters.getSldDisplayMode());
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
+        addParameters(diagramParameters, uriComponentsBuilder, variantId);
 
         String result;
         try {
@@ -161,12 +152,7 @@ public class SingleLineDiagramService {
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
                 .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
                 .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
+        addParameters(diagramParameters, uriComponentsBuilder, variantId);
 
         String result;
         try {
@@ -183,7 +169,7 @@ public class SingleLineDiagramService {
 
     public String getNeworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}")
+                        "/network-area-diagram/{networkUuid}")
                 .queryParam(QUERY_PARAM_DEPTH, depth)
                 .queryParam(QUERY_PARAM_VOLTAGE_LEVELS_IDS, voltageLevelsIds);
         if (!StringUtils.isBlank(variantId)) {
@@ -198,5 +184,17 @@ public class SingleLineDiagramService {
 
     public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
+    }
+
+    public void addParameters(DiagramParameters diagramParameters, UriComponentsBuilder uriComponentsBuilder, String variantId) {
+        if (diagramParameters.getComponentLibrary() != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (diagramParameters.getLanguage() != null) {
+            uriComponentsBuilder.queryParam(LANGUAGE, diagramParameters.getLanguage());
+        }
     }
 }
