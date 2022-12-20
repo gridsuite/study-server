@@ -44,7 +44,7 @@ public class NetworkMapService {
     private String networkMapServerBaseUri;
 
     @Autowired
-    public NetworkMapService(@Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri) {
+    public NetworkMapService(@Value("${backing-services.network-map-server.base-uri:http://network-map-server/}") String networkMapServerBaseUri) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
 

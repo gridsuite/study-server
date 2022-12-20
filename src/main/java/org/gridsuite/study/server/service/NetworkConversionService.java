@@ -53,7 +53,7 @@ public class NetworkConversionService {
 
     private final ObjectMapper objectMapper;
 
-    public NetworkConversionService(@Value("${backing-services.network-conversion.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
+    public NetworkConversionService(@Value("${backing-services.network-conversion-server.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
             ObjectMapper objectMapper) {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
         this.objectMapper = objectMapper;

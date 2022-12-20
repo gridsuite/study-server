@@ -34,7 +34,7 @@ public class CaseService {
     private RestTemplate restTemplate;
 
     @Autowired
-    public CaseService(@Value("${backing-services.case.base-uri:http://case-server/}") String caseServerBaseUri) {
+    public CaseService(@Value("${backing-services.case-server.base-uri:http://case-server/}") String caseServerBaseUri) {
         this.caseServerBaseUri = caseServerBaseUri;
     }
 

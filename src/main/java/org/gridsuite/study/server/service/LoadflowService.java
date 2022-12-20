@@ -54,7 +54,7 @@ public class LoadflowService {
 
     @Autowired
     public LoadflowService(
-        @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
+        @Value("${backing-services.loadflow-server.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
         NetworkModificationTreeService networkModificationTreeService,
         NetworkService networkStoreService) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;

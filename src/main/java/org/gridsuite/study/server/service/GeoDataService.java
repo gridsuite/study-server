@@ -34,7 +34,7 @@ public class GeoDataService {
     private String geoDataServerBaseUri;
 
     @Autowired
-    public GeoDataService(@Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri) {
+    public GeoDataService(@Value("${backing-services.geo-data-server.base-uri:http://geo-data-server/}") String geoDataServerBaseUri) {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
     }
 
