@@ -44,6 +44,7 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
     static final String NOT_FOUND = " not found";
+    static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
 
     @Autowired
     private RestTemplate restTemplate;
@@ -101,7 +102,8 @@ public class SingleLineDiagramService {
                 .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
                 .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring());
+                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
+                .queryParam(QUERY_PARAM_DISPLAY_MODE, diagramParameters.getSldDisplayMode());
         if (diagramParameters.getComponentLibrary() != null) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
         }

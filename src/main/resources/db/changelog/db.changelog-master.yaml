@@ -95,3 +95,11 @@ databaseChangeLog:
   - include:
       file: changesets/changelog_2022-10-27T15:11:50Z.xml
       relativeToChangelogFile: true
+
+  - include:
+      file: changesets/changelog_2022-11-22T15:26:54Z.xml
+      relativeToChangelogFile: true
+
+  - include:
+      file: changesets/changelog_2022-11-18T14:53:27Z.xml
+      relativeToChangelogFile: true

@@ -18,8 +18,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -104,36 +102,30 @@ public class RepositoriesTest {
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId")
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity)
                 .shortCircuitParameters(shortCircuitParametersEntity)
                 .build();
 
         StudyEntity studyEntity2 = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId2")
                 .caseFormat("caseFormat2")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity2)
                 .shortCircuitParameters(shortCircuitParametersEntity2)
                 .build();
 
         StudyEntity studyEntity3 = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId3")
                 .caseFormat("caseFormat3")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(loadFlowParametersEntity3)
                 .shortCircuitParameters(shortCircuitParametersEntity3)
                 .build();
@@ -168,11 +160,9 @@ public class RepositoriesTest {
     @Test
     public void testStudyCreationRequest() {
         UUID studyUuid = UUID.randomUUID();
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid, LocalDateTime.now(ZoneOffset.UTC));
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
-        StudyCreationRequestEntity savedStudyCreationRequestEntity = studyCreationRequestRepository.findAll().get(0);
         assertEquals(1, studyCreationRequestRepository.findAll().size());
-        assertEquals(savedStudyCreationRequestEntity.getDate(), savedStudyCreationRequestEntity.getDate());
         assertTrue(studyCreationRequestRepository.findById(studyUuid).isPresent());
     }
 
@@ -182,12 +172,10 @@ public class RepositoriesTest {
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())
-                .date(LocalDateTime.now(ZoneOffset.UTC))
                 .networkUuid(UUID.randomUUID())
                 .networkId("networkId")
                 .caseFormat("caseFormat")
                 .caseUuid(UUID.randomUUID())
-                .casePrivate(true)
                 .loadFlowParameters(LoadFlowParametersEntity.builder().build())
                 .shortCircuitParameters(null) // intentionally set to null
                 .build();

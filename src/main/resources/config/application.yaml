@@ -11,6 +11,8 @@ spring:
       bindings:
         publishStudyUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
+        publishElementUpdate-out-0:
+          destination:  ${powsybl-ws.rabbitmq.destination.prefix:}element.update
         consumeSaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
           group: studySaResultGroup
@@ -53,7 +55,7 @@ spring:
         consumeCaseImportFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.failed
           group: studyCaseImportFailedGroup
-      output-bindings: publishStudyUpdate
+      output-bindings: publishStudyUpdate;publishElementUpdate
 
 network-store-server:
   preloading-strategy: COLLECTION
