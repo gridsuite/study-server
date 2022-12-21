@@ -14,7 +14,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -24,15 +23,19 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
-import org.springframework.http.*;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nullable;
-
 import java.beans.PropertyEditorSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -154,7 +157,7 @@ public class StudyController {
     public ResponseEntity<BasicStudyInfos> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
                                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                                              @RequestBody(required = false) Map<String, Object> importParameters,
-                                                                             @RequestHeader("userId") String userId) {
+                                                                             @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters);
         return ResponseEntity.ok().body(createStudy);
@@ -167,7 +170,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
     public ResponseEntity<BasicStudyInfos> createStudy(@RequestParam("duplicateFrom") UUID sourceStudyUuid,
                                                              @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
-                                                             @RequestHeader("userId") String userId) {
+                                                             @RequestHeader(HEADER_USER_ID) String userId) {
         BasicStudyInfos createStudy = studyService.createStudy(sourceStudyUuid, studyUuid, userId);
         return createStudy != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(createStudy) :
                 ResponseEntity.notFound().build();
@@ -186,7 +189,7 @@ public class StudyController {
     @Operation(summary = "delete the study")
     @ApiResponse(responseCode = "200", description = "Study deleted")
     public ResponseEntity<Void> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
-                                                  @RequestHeader("userId") String userId) {
+                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -201,7 +204,7 @@ public class StudyController {
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                               @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
-                                              @RequestHeader("userId") String userId) {
+                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.duplicateStudyNode(studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
@@ -216,7 +219,7 @@ public class StudyController {
                                               @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                               @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
-                                              @RequestHeader("userId") String userId) {
+                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
         return ResponseEntity.ok().build();
     }
@@ -585,7 +588,7 @@ public class StudyController {
                                                         @PathVariable("nodeUuid") UUID nodeUuid,
                                                         @PathVariable("modificationUuid") UUID modificationUuid,
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
-                                                        @RequestHeader("userId") String userId) {
+                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.moveModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
@@ -599,7 +602,7 @@ public class StudyController {
                                                          @RequestParam("action") UpdateModificationAction action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
-                                                         @RequestHeader("userId") String userId) {
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
@@ -631,9 +634,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has started")})
     public ResponseEntity<UUID> runShortCircuit(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid) {
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runShortCircuit(studyUuid, nodeUuid, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
@@ -738,7 +742,7 @@ public class StudyController {
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) LoadFlowParameters lfParameter,
-            @RequestHeader("userId") String userId) {
+            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
         return ResponseEntity.ok().build();
     }
@@ -756,7 +760,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
     public ResponseEntity<Void> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
                                                           @RequestBody(required = false) String provider,
-                                                          @RequestHeader("userId") String userId) {
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateLoadFlowProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
     }
@@ -774,7 +778,7 @@ public class StudyController {
     public ResponseEntity<Void> setShortCircuitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) ShortCircuitParameters shortCircuitParameters,
-            @RequestHeader("userId") String userId) {
+            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setShortCircuitParameters(studyUuid, shortCircuitParameters, userId);
         return ResponseEntity.ok().build();
     }
@@ -898,7 +902,7 @@ public class StudyController {
     public ResponseEntity<Void> createNetworkModification(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestBody String modificationAttributes,
-                                                          @RequestHeader("userId") String userId) {
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
         return ResponseEntity.ok().build();
@@ -911,7 +915,7 @@ public class StudyController {
                                                           @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @Parameter(description = "Network modification UUID") @PathVariable("uuid") UUID networkModificationUuid,
                                                           @RequestBody String modificationAttributes,
-                                                          @RequestHeader("userId") String userId) {
+                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
         return ResponseEntity.ok().build();
@@ -923,7 +927,7 @@ public class StudyController {
     public ResponseEntity<Void> deleteNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
-                                                           @RequestHeader("userId") String userId) {
+                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
         return ResponseEntity.ok().build();
@@ -963,7 +967,7 @@ public class StudyController {
                                                          @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                          @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode,
-                                                         @RequestHeader("userId") String userId) {
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.createNode(studyUuid, referenceId, node, insertMode, userId));
     }
 
@@ -975,7 +979,7 @@ public class StudyController {
     public ResponseEntity<Void> deleteNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to remove") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
-                                                 @RequestHeader("userId") String userId) {
+                                                 @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.deleteNode(studyUuid, nodeId, deleteChildren, userId);
         return ResponseEntity.ok().build();
     }
@@ -999,7 +1003,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> updateNode(@RequestBody AbstractNode node,
                                                  @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                 @RequestHeader("userId") String userId) {
+                                                 @RequestHeader(HEADER_USER_ID) String userId) {
         networkModificationTreeService.updateNode(studyUuid, node, userId);
         return ResponseEntity.ok().build();
     }
@@ -1078,7 +1082,7 @@ public class StudyController {
                                                               @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @PathVariable("modificationUuid") UUID modificationUuid,
                                                               @Parameter(description = "active") @RequestParam("active") boolean active,
-                                                              @RequestHeader("userId") String userId) {
+                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanModifyNode(studyUuid, nodeUuid);
         studyService.changeModificationActiveState(studyUuid, nodeUuid, modificationUuid, active, userId);
         return ResponseEntity.ok().build();

@@ -21,6 +21,8 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
  */
@@ -35,7 +37,6 @@ public class NotificationService {
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
     public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
-    public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
@@ -108,6 +109,17 @@ public class NotificationService {
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .build());
+    }
+
+    @PostCompletion
+    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, String errorMessage, String userId) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_ERROR, errorMessage)
+                .setHeader(HEADER_USER_ID, userId)
                 .build());
     }
 
