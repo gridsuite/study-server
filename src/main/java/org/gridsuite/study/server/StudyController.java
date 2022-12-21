@@ -54,10 +54,6 @@ public class StudyController {
     private final ShortCircuitService shortCircuitService;
     private final CaseService caseService;
 
-    enum UpdateModificationAction {
-        MOVE, COPY
-    }
-
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
             NetworkModificationTreeService networkModificationTreeService,
@@ -76,37 +72,6 @@ public class StudyController {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
         this.caseService = caseService;
-    }
-
-    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
-        private final Class<E> enumClass;
-
-        public MyEnumConverter(Class<E> enumClass) {
-            this.enumClass = enumClass;
-        }
-
-        @Override
-        public void setAsText(final String text) throws IllegalArgumentException {
-            try {
-                E value = Enum.valueOf(enumClass, text.toUpperCase());
-                setValue(value);
-            } catch (IllegalArgumentException ex) {
-                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
-                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
-            }
-        }
-    }
-
-    static class MyModificationTypeConverter extends PropertyEditorSupport {
-
-        public MyModificationTypeConverter() {
-            super();
-        }
-
-        @Override
-        public void setAsText(final String text) throws IllegalArgumentException {
-            setValue(ModificationType.getTypeFromUri(text));
-        }
     }
 
     @InitBinder
@@ -234,9 +199,22 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode) {
-        byte[] result = studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, sldDisplayMode), nodeUuid);
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .sldDisplayMode(sldDisplayMode)
+                .language(language)
+                .build();
+        byte[] result = studyService.getVoltageLevelSvg(
+                studyUuid,
+                voltageLevelId,
+                diagramParameters,
+                nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -254,9 +232,22 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode) {
-        String result = studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, sldDisplayMode), nodeUuid);
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .sldDisplayMode(sldDisplayMode)
+                .language(language)
+                .build();
+        String result = studyService.getVoltageLevelSvgAndMetadata(
+                studyUuid,
+                voltageLevelId,
+                diagramParameters,
+                nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -800,11 +791,20 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .language(language)
+                .build();
         byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, null), substationLayout, nodeUuid);
+                diagramParameters, substationLayout, nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
-            ResponseEntity.noContent().build();
+                ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
@@ -820,9 +820,22 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-        String result = studyService.getSubstationSvgAndMetadata(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, null), substationLayout, nodeUuid);
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .language(language)
+                .build();
+        String result = studyService.getSubstationSvgAndMetadata(
+                studyUuid,
+                substationId,
+                diagramParameters,
+                substationLayout,
+                nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1152,5 +1165,40 @@ public class StudyController {
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
+    }
+
+    enum UpdateModificationAction {
+        MOVE, COPY
+    }
+
+    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
+        private final Class<E> enumClass;
+
+        public MyEnumConverter(Class<E> enumClass) {
+            this.enumClass = enumClass;
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            try {
+                E value = Enum.valueOf(enumClass, text.toUpperCase());
+                setValue(value);
+            } catch (IllegalArgumentException ex) {
+                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
+                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
+            }
+        }
+    }
+
+    static class MyModificationTypeConverter extends PropertyEditorSupport {
+
+        public MyModificationTypeConverter() {
+            super();
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            setValue(ModificationType.getTypeFromUri(text));
+        }
     }
 }
