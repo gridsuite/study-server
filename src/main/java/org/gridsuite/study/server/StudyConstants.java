@@ -23,11 +23,14 @@ public final class StudyConstants {
     public static final String NETWORK_MODIFICATION_API_VERSION = "v1";
     public static final String LOADFLOW_API_VERSION = "v1";
     public static final String SECURITY_ANALYSIS_API_VERSION = "v1";
+    public static final String DYNAMIC_SIMULATION_API_VERSION = "v1";
     public static final String SENSITIVITY_ANALYSIS_API_VERSION = "v1";
     public static final String ACTIONS_API_VERSION = "v1";
     public static final String NETWORK_MAP_API_VERSION = "v1";
     public static final String REPORT_API_VERSION = "v1";
     public static final String SHORT_CIRCUIT_API_VERSION = "v1";
+    public static final String TIME_SERIES_API_VERSION = "v1";
+    public static final String DYNAMIC_MAPPING_API_VERSION = "v1";
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";

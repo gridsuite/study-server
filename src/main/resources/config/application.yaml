@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -22,6 +22,15 @@ spring:
         consumeSaFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.failed
           group: studySaFailedGroup
+        consumeDsResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.result
+          group: studyDsResultGroup
+        consumeDsStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.stopped
+          group: studyDsStoppedGroup
+        consumeDsFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.failed
+          group: studyDsFailedGroup
         consumeBuildResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.result
           group: studyBuildResultGroup

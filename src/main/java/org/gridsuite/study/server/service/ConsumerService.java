@@ -67,6 +67,33 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeDsResult() {
+        return message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            NodeReceiver.class);
+
+                    LOGGER.info("Dynamic Simulation result '{}' available for node '{}'", resultUuid,
+                            receiverObj.getNodeUuid());
+
+                    // update DB
+                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                    // send notifications
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeSaResult() {
         return message -> {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
@@ -355,6 +382,10 @@ public class ConsumerService {
 
     void updateSecurityAnalysisResultUuid(UUID nodeUuid, UUID securityAnalysisResultUuid) {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
+    }
+
+    void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
+        networkModificationTreeService.updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid);
     }
 
     private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {

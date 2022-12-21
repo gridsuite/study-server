@@ -40,6 +40,12 @@ backing-services:
     base-uri: http://localhost:5030
   shortcircuit-server:
     base-uri: http://localhost:5031
+  timeseries-server:
+    base-uri: http://localhost:5037
+  dynamic-simulation-server:
+      base-uri: http://localhost:5032
+  dynamic-mapping-server:
+    base-uri: http://localhost:5036
 
 network-store-server:
   base-uri: http://localhost:8080/

@@ -18,6 +18,7 @@ import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
+import com.powsybl.timeseries.TimeSeries;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -39,6 +40,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.*;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,6 +111,7 @@ public class StudyService {
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final DynamicSimulationService dynamicSimulationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ActionsService actionsService;
 
@@ -139,7 +142,8 @@ public class StudyService {
             NetworkMapService networkMapService,
             SecurityAnalysisService securityAnalysisService,
             ActionsService actionsService,
-            SensitivityAnalysisService sensitivityAnalysisService) {
+            SensitivityAnalysisService sensitivityAnalysisService,
+            DynamicSimulationService dynamicSimulationService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -161,6 +165,7 @@ public class StudyService {
         this.networkMapService = networkMapService;
         this.securityAnalysisService = securityAnalysisService;
         this.actionsService = actionsService;
+        this.dynamicSimulationService = dynamicSimulationService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -445,6 +450,8 @@ public class StudyService {
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                         .map(NodeModificationInfos::getSecurityAnalysisUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
+                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                        .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                         .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
                     studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
@@ -783,6 +790,7 @@ public class StudyService {
     private void assertComputationNotRunning(UUID nodeUuid) {
         assertLoadFlowNotRunning(nodeUuid);
         securityAnalysisService.assertSecurityAnalysisNotRunning(nodeUuid);
+        dynamicSimulationService.assertDynamicSimulationNotRunning(nodeUuid);
         sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(nodeUuid);
         shortCircuitService.assertShortCircuitAnalysisNotRunning(nodeUuid);
     }
@@ -990,6 +998,10 @@ public class StudyService {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
+    void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
+        networkModificationTreeService.updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid);
+    }
+
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
         networkModificationTreeService.updateSensitivityAnalysisResultUuid(nodeUuid, sensitivityAnalysisResultUuid);
     }
@@ -1162,6 +1174,7 @@ public class StudyService {
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
                 studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
@@ -1197,6 +1210,7 @@ public class StudyService {
         }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        //notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
     }
@@ -1243,6 +1257,7 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
                 studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
                 studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
                 studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
                 studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
                 studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
@@ -1507,5 +1522,51 @@ public class StudyService {
         } catch (JsonProcessingException e) {
             throw new StudyException(BAD_JSON_FORMAT, e.getMessage());
         }
+    }
+
+    @Transactional
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, String parameters, String mappingName) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(mappingName);
+
+        // TODO destructured parameters
+        String variantId = "";
+        int startTime = 0;
+        int stopTime = 500;
+
+        // get associated network
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+
+        // clean previous result if exist
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
+        prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
+
+        // launch dynamic simulation
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(networkUuid, variantId, startTime, stopTime, mappingName);
+
+        // update result uuid and notification
+        updateDynamicSimulationResultUuid(nodeUuid, resultUuid);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+
+        return resultUuid;
+    }
+
+    public String getDynamicSimulationTimeSeries(UUID nodeUuid) {
+        // get timeseries from node uuid
+        List<TimeSeries> timeseries = dynamicSimulationService.getTimeSeriesResult(nodeUuid);
+
+        return TimeSeries.toJson(timeseries);
+    }
+
+    public String getDynamicSimulationTimeLine(UUID nodeUuid) {
+        // get timeline from node uuid
+        List<TimeSeries> timeline = dynamicSimulationService.getTimeLineResult(nodeUuid);
+
+        return TimeSeries.toJson(timeline); // timeline has only one element
+    }
+
+    public String getDynamicSimulationStatus(UUID nodeUuid) {
+        return dynamicSimulationService.getStatus(nodeUuid);
     }
 }
