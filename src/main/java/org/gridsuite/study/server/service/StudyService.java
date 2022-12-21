@@ -386,7 +386,7 @@ public class StudyService {
                 termsQuery(VARIANT_ID, initialVariantId)
                 : termsQuery(VARIANT_ID, initialVariantId, variantId);
 
-        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = new FunctionScoreQueryBuilder.FilterFunctionBuilder[ EQUIPMENT_TYPE_SCORES.size() + 1 ];
+        FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionsForScoreQueries = new FunctionScoreQueryBuilder.FilterFunctionBuilder[EQUIPMENT_TYPE_SCORES.size() + 1];
 
         int i = 0;
         filterFunctionsForScoreQueries[i++] = new FunctionScoreQueryBuilder.FilterFunctionBuilder(
@@ -547,7 +547,6 @@ public class StudyService {
                                      UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
         return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
     }
 
@@ -1437,8 +1436,7 @@ public class StudyService {
                     .map(EquipmentDeletionInfos.class::cast)
                     .forEach(deletionInfo ->
                         notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
-                            deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId())
-                    );
+                            deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId()));
                 updateStatuses(studyUuid, nodeUuid);
                 break;
             }
