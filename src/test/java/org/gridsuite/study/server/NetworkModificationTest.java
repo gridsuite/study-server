@@ -113,7 +113,7 @@ public class NetworkModificationTest {
     private static final String VL_ID_1 = "VL_ID_1";
 
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
-    private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
 
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
