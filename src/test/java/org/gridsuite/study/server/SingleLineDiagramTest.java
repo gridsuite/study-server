@@ -201,7 +201,7 @@ public class SingleLineDiagramTest {
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                         return new MockResponse().setResponseCode(404);
 
-                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=falselanguage=en":
+                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
@@ -270,6 +270,17 @@ public class SingleLineDiagramTest {
                         status().isOk(),
                         content().contentType(MediaType.APPLICATION_XML),
                         content().string("byte"));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format(
+                "/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en",
+                NETWORK_UUID_STRING)));
+
+        //get the voltage level diagram svg without language
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
+                studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_XML),
+                content().string("byte"));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format(
                 "/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en",

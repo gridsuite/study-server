@@ -125,12 +125,7 @@ public class SingleLineDiagramService {
                 .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isLabelCentered())
                 .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
                 .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
-        if (diagramParameters.getComponentLibrary() != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_COMPONENT_LIBRARY, diagramParameters.getComponentLibrary());
-        }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
+        addParameters(diagramParameters, uriComponentsBuilder, variantId);
         var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
         byte[] result;
