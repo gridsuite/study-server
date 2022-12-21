@@ -1319,7 +1319,7 @@ public class StudyService {
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             modificationsInError = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
             if (!targetNodeBelongsToSourceNodeSubTree) {
-                // invalidate the whole subtree except maybe the target node itself (depends if we have to build it)
+                // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
                 updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true);
             }
             if (moveBetweenNodes) {
@@ -1346,7 +1346,7 @@ public class StudyService {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
             response = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
-            // invalidate the whole subtree except the target node (could be incrementally built)
+            // invalidate the whole subtree except the target node (we have built this node during the duplication)
             updateStatuses(studyUuid, nodeUuid, true, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);

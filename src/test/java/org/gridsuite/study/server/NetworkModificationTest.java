@@ -1817,7 +1817,6 @@ public class NetworkModificationTest {
                 .withRequestBody(WireMock.equalToJson(expectedBody))); // modification1 is still in the request body
     }
 
-    /* TODO
     @Test
     public void testDuplicateModification() throws Exception {
         String userId = "userId";
@@ -1855,6 +1854,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -1932,6 +1932,7 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid2);
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid2));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid2);
         checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
@@ -1958,7 +1959,6 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isBadRequest());
     }
-    */
 
     @Test
     public void testDeleteEquipment() throws Exception {
