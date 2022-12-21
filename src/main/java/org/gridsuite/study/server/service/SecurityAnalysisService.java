@@ -134,8 +134,8 @@ public class SecurityAnalysisService {
         restTemplate.put(securityAnalysisServerBaseUri + path, Void.class);
     }
 
-    public String getSecurityAnalysisStatus(UUID nodeUuid) {
-        String result = null;
+    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid) {
+        SecurityAnalysisStatus status;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
@@ -147,7 +147,7 @@ public class SecurityAnalysisService {
                     .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
                     .buildAndExpand(resultUuidOpt.get()).toUriString();
 
-            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+            status = restTemplate.getForObject(securityAnalysisServerBaseUri + path, SecurityAnalysisStatus.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
@@ -155,7 +155,7 @@ public class SecurityAnalysisService {
             throw e;
         }
 
-        return result;
+        return status;
     }
 
     public void deleteSaResult(UUID uuid) {
@@ -181,8 +181,8 @@ public class SecurityAnalysisService {
     }
 
     public void assertSecurityAnalysisNotRunning(UUID nodeUuid) {
-        String sas = getSecurityAnalysisStatus(nodeUuid);
-        if (SecurityAnalysisStatus.RUNNING.name().equals(sas)) {
+        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(nodeUuid);
+        if (sas == SecurityAnalysisStatus.RUNNING) {
             throw new StudyException(SECURITY_ANALYSIS_RUNNING);
         }
     }
