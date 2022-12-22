@@ -143,6 +143,7 @@ public class NetworkMapTest {
                 IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build()));
         String substationDataAsString = mapper.writeValueAsString(List.of(
                 IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
+        String mapEquipmentsDataAsString = mapper.writeValueAsString(List.of(lineDataAsString, substationDataAsString));
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -190,6 +191,10 @@ public class NetworkMapTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels-equipments":
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVELS_EQUIPMENTS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-equipments":
+                        return new MockResponse().setResponseCode(200).setBody(mapEquipmentsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -337,6 +342,23 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/voltage-levels-equipments", NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testGetMapEquipments() throws Exception {
+        //create study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        //get the voltage levels and its equipments
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server)
+                .contains(String.format("/v1/networks/%s/map-equipments", NETWORK_UUID_STRING)));
     }
 
     @Test
