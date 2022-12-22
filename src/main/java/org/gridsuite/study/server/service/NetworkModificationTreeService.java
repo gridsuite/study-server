@@ -731,6 +731,19 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
+    public boolean hasAncestor(UUID nodeUuid, UUID ancestorNodeUuid) {
+        if (nodeUuid.equals(ancestorNodeUuid)) {
+            return true;
+        }
+        NodeEntity nodeEntity = nodesRepository.findById(nodeUuid).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+        if (nodeEntity.getType() == NodeType.ROOT) {
+            return false;
+        } else {
+            return hasAncestor(nodeEntity.getParentNode().getIdNode(), ancestorNodeUuid);
+        }
+    }
+
+    @Transactional(readOnly = true)
     public Optional<Boolean> isReadOnly(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).isReadOnly(nodeUuid));
     }
