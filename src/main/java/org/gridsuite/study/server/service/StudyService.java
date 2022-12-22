@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,7 +61,7 @@ import java.util.stream.Stream;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
+import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 
 /**
@@ -125,8 +124,8 @@ public class StudyService {
             NetworkService networkStoreService,
             NetworkModificationService networkModificationService,
             ReportService reportService,
-            @Lazy StudyInfosService studyInfosService,
-            @Lazy EquipmentInfosService equipmentInfosService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
             NetworkModificationTreeService networkModificationTreeService,
             ObjectMapper objectMapper,
             StudyServerExecutionService studyServerExecutionService,
@@ -306,7 +305,7 @@ public class StudyService {
     }
 
     public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-                                                 @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
+                                                 @NonNull EquipmentInfosService.FieldSelector  fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
