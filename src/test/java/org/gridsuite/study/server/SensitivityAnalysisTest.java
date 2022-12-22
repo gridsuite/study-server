@@ -104,7 +104,7 @@ public class SensitivityAnalysisTest {
 
     private static final long TIMEOUT = 1000;
 
-    @Value("${loadflow.default-provider}")
+    @Value("${powsybl-ws.loadflow.default-provider}")
     String defaultLoadflowProvider;
 
     @Autowired

@@ -86,7 +86,7 @@ public class NetworkMapTest {
     private static final String VOLTAGE_LEVEL_ID = "VOLTAGE_LEVEL_ID";
     private static final String VOLTAGE_LEVELS_EQUIPMENTS_JSON = "[{\"voltageLevel\":{\"id\":\"V1\",\"name\":\"VLGEN\",\"substationId\":\"P1\",\"nominalVoltage\":24,\"topologyKind\":\"BUS_BREAKER\"},\"equipments\":[{\"id\":\"GEN\",\"name\":\"GEN\",\"type\":\"GENERATOR\"},{\"id\":\"GEN2\",\"name\":\"GEN2\",\"type\":\"GENERATOR\"},{\"id\":\"LCC1\",\"name\":\"LCC1\",\"type\":\"HVDC_CONVERTER_STATION\"},{\"id\":\"SVC1\",\"name\":\"SVC1\",\"type\":\"STATIC_VAR_COMPENSATOR\"},{\"id\":\"NGEN_NHV1\",\"name\":\"NGEN_NHV1\",\"type\":\"TWO_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT\",\"name\":\"TWT\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT21\",\"name\":\"TWT21\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT32\",\"name\":\"TWT32\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"DL1\",\"name\":\"DL1\",\"type\":\"DANGLING_LINE\"},{\"id\":\"LINE3\",\"name\":\"LINE3\",\"type\":\"LINE\"}]}]";
 
-    @Value("${loadflow.default-provider}")
+    @Value("${powsybl-ws.loadflow.default-provider}")
     String defaultLoadflowProvider;
 
     @Autowired

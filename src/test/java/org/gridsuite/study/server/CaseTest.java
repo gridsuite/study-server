@@ -64,7 +64,7 @@ public class CaseTest {
     public static final String POST = "POST";
     private static final String CASE_NAME = "DefaultCaseName";
 
-    @Value("${loadflow.default-provider}")
+    @Value("${powsybl-ws.loadflow.default-provider}")
     String defaultLoadflowProvider;
 
     @Autowired

@@ -93,7 +93,7 @@ public class SingleLineDiagramTest {
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
 
-    @Value("${loadflow.default-provider}")
+    @Value("${powsybl-ws.loadflow.default-provider}")
     String defaultLoadflowProvider;
 
     @Autowired

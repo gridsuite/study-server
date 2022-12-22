@@ -119,7 +119,7 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-            @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
+            @Value("${powsybl-ws.loadflow.default-provider}") String defaultLoadflowProvider,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             NetworkService networkStoreService,

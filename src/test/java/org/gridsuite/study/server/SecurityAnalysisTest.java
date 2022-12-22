@@ -110,7 +110,7 @@ public class SecurityAnalysisTest {
 
     private static final SecurityAnalysisParameters SECURITY_ANALYSIS_PARAMETERS = new SecurityAnalysisParameters();
 
-    @Value("${loadflow.default-provider}")
+    @Value("${powsybl-ws.loadflow.default-provider}")
     String defaultLoadflowProvider;
 
     @Autowired
