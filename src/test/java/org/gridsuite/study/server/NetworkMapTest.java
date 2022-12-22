@@ -193,7 +193,7 @@ public class NetworkMapTest {
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVELS_EQUIPMENTS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-equipments-data":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-equipments":
                         return new MockResponse().setResponseCode(200).setBody(mapEquipmentsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
@@ -352,13 +352,13 @@ public class NetworkMapTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the voltage levels and its equipments
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments-data",
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments",
                 studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/map-equipments-data", NETWORK_UUID_STRING)));
+                .contains(String.format("/v1/networks/%s/map-equipments", NETWORK_UUID_STRING)));
     }
 
     @Test
