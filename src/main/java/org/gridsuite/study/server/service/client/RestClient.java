@@ -13,6 +13,8 @@ import org.springframework.web.client.RestTemplate;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 public interface RestClient {
+    String DELIMITER = "/";
+
     RestTemplate getRestTemplate();
 
     String getBaseUri();

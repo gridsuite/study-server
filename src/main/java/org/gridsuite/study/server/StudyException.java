@@ -65,7 +65,8 @@ public class StudyException extends RuntimeException {
         BRANCH_STATUS_FAILED,
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
-        MISSING_PARAMETER
+        MISSING_PARAMETER,
+        URI_SYNTAX,
     }
 
     private final Type type;

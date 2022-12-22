@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
@@ -25,15 +26,15 @@ import java.util.UUID;
 public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeriesClient {
 
     public TimeSeriesClientImpl(@Value("${backing-services.timeseries-server.base-uri:http://timeseries-server/}") String baseUri) {
-        this.baseUri = baseUri;
+        super(baseUri);
     }
 
     @Override
     public List<TimeSeries> getTimeSeriesGroup(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        String url = getBaseUri() + DELIMITER + API_VERSION + DELIMITER + TIME_SERIES_END_POINT + DELIMITER;
+        String endPointUrl = buildEndPointUrl(API_VERSION, TIME_SERIES_END_POINT);
 
-        var uriBuilder = UriComponentsBuilder.fromPath(url + "{uuid}")
+        var uriBuilder = UriComponentsBuilder.fromPath(endPointUrl + "{uuid}")
                 .buildAndExpand(groupUuid);
 
         // call time-series Rest API

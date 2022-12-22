@@ -19,6 +19,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class Mapping {
+public class MappingInfos {
     private String name;
 }

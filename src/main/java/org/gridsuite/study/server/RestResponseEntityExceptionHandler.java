@@ -64,6 +64,7 @@ public class RestResponseEntityExceptionHandler {
             case DELETE_MODIFICATIONS_FAILED:
             case GET_MODIFICATIONS_FAILED:
             case NODE_BUILD_ERROR:
+            case URI_SYNTAX:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());

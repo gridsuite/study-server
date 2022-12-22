@@ -7,7 +7,7 @@
 
 package org.gridsuite.study.server.service.client.dynamicmapping;
 
-import org.gridsuite.study.server.dto.dynamicmapping.Mapping;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.service.client.RestClient;
 
 import java.util.List;
@@ -22,5 +22,5 @@ public interface DynamicMappingClient extends RestClient {
     String DELIMITER = "/";
     String DYNAMIC_MAPPING_END_POINT_MAPPING = "mappings";
 
-    List<Mapping> getAllMappings();
+    List<MappingInfos> getAllMappings();
 }

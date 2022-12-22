@@ -7,7 +7,7 @@
 
 package org.gridsuite.study.server.service.client.dynamicmapping.impl;
 
-import org.gridsuite.study.server.dto.dynamicmapping.Mapping;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +20,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Collections;
 import java.util.List;
 
+
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
@@ -27,23 +28,17 @@ import java.util.List;
 public class DynamicMappingClientImpl extends AbstractRestClient implements DynamicMappingClient {
 
     public DynamicMappingClientImpl(@Value("${backing-services.dynamic-mapping-server.base-uri:http://dynamic-mapping-server/}") String baseUri) {
-        this.baseUri = baseUri;
+        super(baseUri);
     }
 
     @Override
-    public List<Mapping> getAllMappings() {
-        String url = new StringBuilder(baseUri)
-                .append(DELIMITER)
-                .append(API_VERSION)
-                .append(DELIMITER)
-                .append(DYNAMIC_MAPPING_END_POINT_MAPPING)
-                .append(DELIMITER)
-                .toString();
+    public List<MappingInfos> getAllMappings() {
+        String endPointUrl = buildEndPointUrl(API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
-        var uriBuilder = UriComponentsBuilder.fromPath(url);
+        var uriBuilder = UriComponentsBuilder.fromPath(endPointUrl);
 
         // call dynamic-mapping REST API
-        var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<Mapping>>() { });
+        var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<MappingInfos>>() { });
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
             return responseEntity.getBody();
         } else {
