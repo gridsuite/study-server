@@ -10,7 +10,6 @@ package org.gridsuite.study.server.service.client;
 import org.gridsuite.study.server.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
@@ -26,13 +25,13 @@ public abstract class AbstractRestClient implements RestClient {
         return LoggerFactory.getLogger(this.getClass());
     }
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     private final String baseUri;
 
-    protected AbstractRestClient(String baseUri) {
+    protected AbstractRestClient(String baseUri, RestTemplate restTemplate) {
         this.baseUri = baseUri;
+        this.restTemplate = restTemplate;
     }
 
     @Override
