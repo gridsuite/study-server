@@ -88,7 +88,7 @@ public class SecurityAnalysisTest {
     private static final String NOT_FOUND_SECURITY_ANALYSIS_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String CONTINGENCY_LIST_NAME = "ls";
     private static final String SECURITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"preContingencyResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"postContingencyResults\":[{\"contingency\":{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}},{\"contingency\":{\"id\":\"l2\",\"elements\":[{\"id\":\"l2\",\"type\":\"BRANCH\"}]},\"limitViolationsResult\":{\"computationOk\":true,\"limitViolations\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"acceptableDuration\":0,\"limit\":400.0,\"limitReduction\":1.0,\"value\":410.0}],\"actionsTaken\":[]}}]}";
-    private static final String SECURITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -244,7 +244,7 @@ public class SecurityAnalysisTest {
 
         // run security analysis on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)).andExpect(status().isForbidden());
+                studyNameUserIdUuid, rootNodeUuid, CONTINGENCY_LIST_NAME).header("userId", "userId")).andExpect(status().isForbidden());
 
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID), SECURITY_ANALYSIS_PARAMETERS);
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID), null);
@@ -264,7 +264,7 @@ public class SecurityAnalysisTest {
 
         //run failing security analysis (because in network 2)
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME))
+                studyUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME).header("userId", "userId"))
             .andExpect(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         String uuidResponse = mapper.readValue(resultAsString, String.class);
@@ -295,7 +295,7 @@ public class SecurityAnalysisTest {
         UUID modificationNode1Uuid2 = modificationNode2.getId();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME))
+                studyUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME).header("userId", "userId"))
             .andExpect(status().isOk());
 
         // failed security analysis without receiver -> no failure message sent to frontend
@@ -321,7 +321,8 @@ public class SecurityAnalysisTest {
                 studyUuid, nodeUuid, CONTINGENCY_LIST_NAME);
         if (securityAnalysisParameters != null) {
             requestBuilder.contentType(MediaType.APPLICATION_JSON)
-                        .content(objectWriter.writeValueAsString(securityAnalysisParameters));
+                        .content(objectWriter.writeValueAsString(securityAnalysisParameters))
+                        .header("userId", "userId");
         }
         mvcResult = mockMvc.perform(requestBuilder).andExpect(status().isOk())
             .andReturn();
@@ -354,14 +355,14 @@ public class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s?limitType", resultUuid)));
 
         // get security analysis status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, nodeUuid)).andExpectAll(
-                status().isOk(),
-                content().string(SECURITY_ANALYSIS_STATUS_JSON));
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, nodeUuid)).andExpectAll(
+                status().isOk()).andReturn();
+        assertEquals("CONVERGED", result.getResponse().getContentAsString());
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/status", resultUuid)));
 
         // stop security analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid)).andExpect(status().isOk());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, nodeUuid).header("userId", "userId")).andExpect(status().isOk());
 
         securityAnalysisStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyUuid, securityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
@@ -423,7 +424,7 @@ public class SecurityAnalysisTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);

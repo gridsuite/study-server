@@ -16,6 +16,7 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
@@ -35,6 +36,9 @@ public class NotificationService {
     public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
     public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
     public static final String HEADER_USER_ID = "userId";
+    public static final String HEADER_MODIFIED_BY = "modifiedBy";
+    public static final String HEADER_MODIFICATION_DATE = "modificationDate";
+    public static final String HEADER_ELEMENT_UUID = "elementUuid";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
@@ -63,12 +67,14 @@ public class NotificationService {
 
     public static final String HEADER_INSERT_MODE = "insertMode";
     public static final String HEADER_NEW_NODE = "newNode";
+    public static final String HEADER_MOVED_NODE = "movedNode";
     public static final String HEADER_PARENT_NODE = "parentNode";
     public static final String HEADER_REMOVE_CHILDREN = "removeChildren";
 
     public static final String NODE_UPDATED = "nodeUpdated";
     public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
+    public static final String NODE_MOVED = "nodeMoved";
 
     private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
 
@@ -80,6 +86,11 @@ public class NotificationService {
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         updatePublisher.send("publishStudyUpdate-out-0", message);
+    }
+
+    private void sendElementUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        updatePublisher.send("publishElementUpdate-out-0", message);
     }
 
     @PostCompletion
@@ -151,6 +162,18 @@ public class NotificationService {
     }
 
     @PostCompletion
+    public void emitNodeMoved(UUID studyUuid, UUID parentNode, UUID nodeMoved, InsertMode insertMode) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, NODE_MOVED)
+                .setHeader(HEADER_PARENT_NODE, parentNode)
+                .setHeader(HEADER_MOVED_NODE, nodeMoved)
+                .setHeader(HEADER_INSERT_MODE, insertMode.name())
+                .build()
+        );
+    }
+
+    @PostCompletion
     public void emitNodesChanged(UUID studyUuid, Collection<UUID> nodes) {
         if (nodes.isEmpty()) {
             return;
@@ -195,4 +218,13 @@ public class NotificationService {
         );
     }
 
+    @PostCompletion
+    public void emitElementUpdated(UUID elementUuid, String modifiedBy) {
+        sendElementUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_ELEMENT_UUID, elementUuid)
+                .setHeader(HEADER_MODIFIED_BY, modifiedBy)
+                .setHeader(HEADER_MODIFICATION_DATE, LocalDateTime.now())
+                .build()
+        );
+    }
 }
