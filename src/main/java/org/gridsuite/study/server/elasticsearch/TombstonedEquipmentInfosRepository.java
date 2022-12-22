@@ -7,8 +7,6 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.lang.NonNull;
 
@@ -18,8 +16,6 @@ import java.util.UUID;
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
-@ConditionalOnExpression("'${spring.data.elasticsearch.enabled:false}' == 'true'")
-@Lazy
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 

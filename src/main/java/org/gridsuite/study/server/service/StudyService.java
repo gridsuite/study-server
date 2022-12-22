@@ -45,7 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,7 +63,7 @@ import java.util.stream.Stream;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.elasticsearch.EquipmentInfosServiceImpl.EQUIPMENT_TYPE_SCORES;
+import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 
 /**
@@ -128,8 +127,8 @@ public class StudyService {
             NetworkService networkStoreService,
             NetworkModificationService networkModificationService,
             ReportService reportService,
-            @Lazy StudyInfosService studyInfosService,
-            @Lazy EquipmentInfosService equipmentInfosService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
             NetworkModificationTreeService networkModificationTreeService,
             ObjectMapper objectMapper,
             StudyServerExecutionService studyServerExecutionService,
@@ -311,7 +310,7 @@ public class StudyService {
     }
 
     public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-                                                 @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
+                                                 @NonNull EquipmentInfosService.FieldSelector  fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
@@ -516,7 +515,7 @@ public class StudyService {
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
-        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(userId, studyUuid);
+        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid);
         notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
     }
@@ -1009,7 +1008,7 @@ public class StudyService {
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
     }
 
-    private StudyCreationRequestEntity insertStudyCreationRequestEntity(String userId, UUID studyUuid) {
+    private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
                 studyUuid == null ? UUID.randomUUID() : studyUuid);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
@@ -1120,7 +1119,7 @@ public class StudyService {
 
     }
 
-    public void stopBuild(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+    public void stopBuild(@NonNull UUID nodeUuid) {
         networkModificationService.stopBuild(nodeUuid);
     }
 
@@ -1163,7 +1162,7 @@ public class StudyService {
         startTime.set(System.nanoTime());
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         invalidateNodeInfos.setNetworkUuid(networkStoreService.doGetNetworkUuid(studyUuid));
-        // we might want to invalidate target node without impacting other nodes (when moving an empty node for exemple
+        // we might want to invalidate target node without impacting other nodes (when moving an empty node for example)
         if (invalidateOnlyTargetNode) {
             networkModificationTreeService.invalidateBuildOfNodeOnly(nodeUuid, invalidateOnlyChildrenBuildStatus, invalidateNodeInfos);
         } else {
@@ -1309,29 +1308,40 @@ public class StudyService {
     }
 
     @Transactional
-    public String moveModifications(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
+    public String moveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
         String modificationsInError;
-
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
         }
 
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-        if (!nodeUuid.equals(originNodeUuid)) {
+        boolean moveBetweenNodes = !targetNodeUuid.equals(originNodeUuid);
+        // Target node must not be built (incremental mode) when:
+        // - the move is a cut & paste or a position change inside the same node
+        // - the move is a cut & paste between 2 nodes and the target node belongs to the source node subtree
+        boolean targetNodeBelongsToSourceNodeSubTree = moveBetweenNodes && networkModificationTreeService.hasAncestor(targetNodeUuid, originNodeUuid);
+        boolean buildTargetNode = moveBetweenNodes && !targetNodeBelongsToSourceNodeSubTree;
+
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        if (moveBetweenNodes) {
             notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         }
         try {
-            checkStudyContainsNode(studyUuid, nodeUuid);
-            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            checkStudyContainsNode(studyUuid, targetNodeUuid);
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
-            modificationsInError = networkModificationService.moveModifications(groupUuid, originGroupUuid, modificationUuidList, beforeUuid);
-            updateStatuses(studyUuid, nodeUuid, false);
-            if (!nodeUuid.equals(originNodeUuid)) {
-                updateStatuses(studyUuid, originNodeUuid, false);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(targetNodeUuid);
+            UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+            modificationsInError = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
+            if (!targetNodeBelongsToSourceNodeSubTree) {
+                // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
+                updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true);
+            }
+            if (moveBetweenNodes) {
+                // invalidate the whole subtree including the source node
+                updateStatuses(studyUuid, originNodeUuid, false, true);
             }
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
-            if (!nodeUuid.equals(originNodeUuid)) {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid);
+            if (moveBetweenNodes) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
             }
         }
@@ -1346,9 +1356,11 @@ public class StudyService {
         String response;
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
-            UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            response = networkModificationService.duplicateModification(targetGroupUuid, modificationUuidList);
-            updateStatuses(studyUuid, nodeUuid, false);
+            NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
+            UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+            response = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
+            // invalidate the whole subtree except the target node (we have built this node during the duplication)
+            updateStatuses(studyUuid, nodeUuid, true, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
         }
@@ -1510,6 +1522,14 @@ public class StudyService {
         updateShortCircuitAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         return result;
+    }
+
+    public String getMapEquipments(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = nodeUuid;
+        if (inUpstreamBuiltParentNode) {
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+        }
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), substationsIds, "map-equipments");
     }
 
     private ModificationType getModificationType(String modificationAttributes) {
