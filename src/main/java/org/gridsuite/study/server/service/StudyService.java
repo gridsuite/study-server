@@ -1496,12 +1496,12 @@ public class StudyService {
         return result;
     }
 
-    public String getMapEquipmentsMapData(UUID studyUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode, List<String> substationsIds) {
+    public String getMapEquipments(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
         }
-        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), substationsIds, "map-equipments-data");
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), substationsIds, "map-equipments");
     }
 
     private ModificationType getModificationType(String modificationAttributes) {
