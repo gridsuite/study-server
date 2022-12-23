@@ -7,17 +7,22 @@
 package org.gridsuite.study.server.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import org.gridsuite.study.server.StudyConstants;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Getter
 @AllArgsConstructor
+@Builder
 public class DiagramParameters {
     private boolean useName;
     private boolean labelCentered;
     private boolean diagonalLabel;
     private boolean topologicalColoring;
     private String  componentLibrary;
+    private StudyConstants.SldDisplayMode sldDisplayMode;
+    private String language;
 }

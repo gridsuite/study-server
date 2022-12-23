@@ -41,4 +41,9 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
     public static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
+
+    public enum SldDisplayMode {
+        FEEDER_POSITION,
+        STATE_VARIABLE;
+    }
 }

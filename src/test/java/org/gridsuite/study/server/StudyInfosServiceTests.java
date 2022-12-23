@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=true"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"test.elasticsearch.enabled=true"})
 public class StudyInfosServiceTests {
 
     private static final UUID STUDY_UUID_1 = UUID.fromString("11888888-0000-0000-0000-111111111111");

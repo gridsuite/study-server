@@ -6,35 +6,56 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
+import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
-import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * An interface to define an api for metadatas transfer in the DB elasticsearch
+ * A class to implement indexing in the DB elasticsearch
  *
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Service
-public interface StudyInfosService {
+public class StudyInfosService {
 
-    CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos ci);
+    private final StudyInfosRepository studyInfosRepository;
 
-    void deleteByUuid(@NonNull final UUID uuid);
+    private final ElasticsearchOperations elasticsearchOperations;
 
-    Iterable<CreatedStudyBasicInfos> findAll();
+    public StudyInfosService(StudyInfosRepository studyInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+        this.studyInfosRepository = studyInfosRepository;
+        this.elasticsearchOperations = elasticsearchOperations;
+    }
 
-    List<CreatedStudyBasicInfos> search(@NonNull final String query);
+    public CreatedStudyBasicInfos add(@NonNull final CreatedStudyBasicInfos ci) {
+        studyInfosRepository.save(ci);
+        return ci;
+    }
 
-    void recreateStudyInfos(@NonNull final CreatedStudyBasicInfos studyInfos);
+    public Iterable<CreatedStudyBasicInfos> findAll() {
+        return studyInfosRepository.findAll();
+    }
 
-    static String getDateSearchTerm(@NonNull final ZonedDateTime... dates) {
-        return Arrays.stream(dates).map(date -> "\"" + date.toString() + "\"").collect(Collectors.joining(" OR ", "creationDate:", ""));
+    public List<CreatedStudyBasicInfos> search(@NonNull final String query) {
+        SearchHits<CreatedStudyBasicInfos> searchHits = elasticsearchOperations.search(new NativeSearchQuery(QueryBuilders.queryStringQuery(query)), CreatedStudyBasicInfos.class);
+        return searchHits.stream().map(SearchHit::getContent).collect(Collectors.toList());
+    }
+
+    public void deleteByUuid(@NonNull UUID uuid) {
+        studyInfosRepository.deleteById(uuid);
+    }
+
+    public void recreateStudyInfos(@NonNull final CreatedStudyBasicInfos studyInfos) {
+        studyInfosRepository.deleteById(studyInfos.getId());
+        studyInfosRepository.save(studyInfos);
     }
 }
