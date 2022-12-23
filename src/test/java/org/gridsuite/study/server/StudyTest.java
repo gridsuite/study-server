@@ -1119,9 +1119,9 @@ public class StudyTest {
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        //checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        //checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
@@ -1707,12 +1707,12 @@ public class StudyTest {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //securityAnalysis_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //dynamicSimulation_status
-                //assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //sensitivityAnalysis_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //shortCircuitAnalysis_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //dynamicSimulation_status
+                //assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             });
 
             /*
@@ -1724,12 +1724,12 @@ public class StudyTest {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //securityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicSimulation_status
-            //assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //sensitivityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //shortCircuitAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            //dynamicSimulation_status
+            //assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         } else {
             /*
              * Invalidating moved node

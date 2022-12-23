@@ -18,7 +18,6 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
 import org.gridsuite.study.server.service.client.UrlUtil;
-import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClientImpl;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +28,8 @@ import javax.validation.constraints.NotNull;
 import java.util.*;
 
 import static org.apache.commons.collections4.CollectionUtils.emptyIfNull;
+import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.API_VERSION;
+import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.TIME_SERIES_END_POINT;
 import static org.junit.Assert.assertEquals;
 
 public class TimeSeriesClientTest extends AbstractRestClientTest {
@@ -75,7 +76,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) throws InterruptedException {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
-                String endPointUrl = UrlUtil.buildEndPointUrl(DynamicMappingClient.API_VERSION, TimeSeriesClient.TIME_SERIES_END_POINT);
+                String endPointUrl = UrlUtil.buildEndPointUrl(API_VERSION, TIME_SERIES_END_POINT);
                 String method = recordedRequest.getMethod();
 
                 MockResponse response = new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
