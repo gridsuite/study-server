@@ -51,7 +51,7 @@ import static org.mockito.Mockito.when;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=true"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"test.elasticsearch.enabled=true"})
 public class EquipmentInfosServiceTests {
 
     private static final String TEST_FILE = "testCase.xiidm";
