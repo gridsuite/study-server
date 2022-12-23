@@ -767,14 +767,14 @@ public class NetworkModificationTreeService {
         return nodeModificationInfos;
     }
 
+    @Transactional(readOnly = true)
     public List<UUID> getChildren(UUID id) {
         List<UUID> children = new ArrayList<>();
         doGetChildren(id, children);
         return children;
     }
 
-    @Transactional(readOnly = true)
-    public void doGetChildren(UUID id, List<UUID> children) {
+    private void doGetChildren(UUID id, List<UUID> children) {
         Optional<NodeEntity> optNode = nodesRepository.findById(id);
         optNode.ifPresent(node -> nodesRepository.findAllByParentNodeIdNode(id)
                 .forEach(child -> {

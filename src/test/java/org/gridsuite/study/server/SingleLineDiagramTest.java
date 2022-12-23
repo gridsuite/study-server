@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -193,6 +194,11 @@ public class SingleLineDiagramTest {
                             .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
+                        + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en&variantId=" + VARIANT_ID:
+                        return new MockResponse().setResponseCode(200).setBody("svgandmetadata")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
                             + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=FEEDER_POSITION&language=en":
                         return new MockResponse().setResponseCode(200).setBody("FEEDER_POSITION")
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -298,6 +304,17 @@ public class SingleLineDiagramTest {
                 "/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en",
                 NETWORK_UUID_STRING)));
 
+        //get the voltage level diagram svg on a variant node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
+            studyNameUserIdUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON),
+            content().string("svgandmetadata"));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format(
+            "/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en&variantId=%s",
+            NETWORK_UUID_STRING, VARIANT_ID)));
+
         //get the voltage level diagram svg from a study that doesn't exist
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
                 randomUuid, rootNodeUuid, "voltageLevelId")).andExpect(status().isNotFound());
@@ -311,6 +328,7 @@ public class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format(
                 "/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=%s&language=en",
                 NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.STATE_VARIABLE)));
+
         //get the voltage level diagram svg and metadata sldDisplayMode = FEEDER_POSITION
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false&sldDisplayMode=" + StudyConstants.SldDisplayMode.FEEDER_POSITION + "&language=en",
                 studyNameUserIdUuid, rootNodeUuid, "voltageLevelId")).andExpectAll(
