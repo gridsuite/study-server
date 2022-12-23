@@ -9,8 +9,10 @@ package org.gridsuite.study.server.service;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.NetworkVariantsListener;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -95,5 +97,11 @@ public class NetworkService {
 
     List<VariantInfos> getNetworkVariants(UUID networkUuid) {
         return networkStoreService.getVariantsInfos(networkUuid).stream().sorted(Comparator.comparing(VariantInfos::getNum)).collect(Collectors.toList());
+    }
+
+    boolean existeVariant(UUID networkUuid, String variantId) {
+        return StringUtils.isEmpty(variantId) ||
+            variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ||
+            networkStoreService.getVariantsInfos(networkUuid).stream().anyMatch(info -> info.getId().equals(variantId));
     }
 }

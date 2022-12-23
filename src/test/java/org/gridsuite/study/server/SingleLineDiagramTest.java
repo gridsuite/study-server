@@ -16,6 +16,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -27,6 +28,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.powsybl.iidm.network.VariantManagerConstants;
+import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.model.VariantInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.VoltageLevelMapData;
@@ -53,6 +57,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
@@ -130,6 +135,9 @@ public class SingleLineDiagramTest {
     //output destinations
     private String studyUpdateDestination = "study.update";
 
+    @MockBean
+    private NetworkStoreService networkStoreService;
+
     @Before
     public void setup() throws IOException {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
@@ -147,6 +155,10 @@ public class SingleLineDiagramTest {
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
         geoDataService.setGeoDataServerBaseUri(baseUrl);
+
+        when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_STRING)))
+            .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
+                new VariantInfos(VARIANT_ID, 1)));
 
         // Values used in dispatcher
         String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
