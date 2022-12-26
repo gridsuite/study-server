@@ -1501,8 +1501,7 @@ public class StudyService {
 
     private ModificationType getModificationType(String modificationAttributes) {
         try {
-            var x = objectMapper.readValue(modificationAttributes, ModificationInfos.class).getType();
-            return x;
+            return objectMapper.readValue(modificationAttributes, ModificationInfos.class).getType();
         } catch (InvalidTypeIdException e) {
             throw new StudyException(BAD_MODIFICATION_TYPE, e.getMessage());
         } catch (JsonProcessingException e) {
