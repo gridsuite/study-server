@@ -38,27 +38,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     public static final String TIME_SERIES_GROUP_UUID = "33333333-0000-0000-0000-000000000000";
     public static final String TIME_LINE_GROUP_UUID = "44444444-0000-0000-0000-000000000000";
 
-    private static Map<String, List<TimeSeries>> database = new HashMap<>();
-
-    static {
-        // timeseries
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
-        List<TimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
-                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
-                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
-        ));
-
-        // timeline
-        index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
-                "CLA_2_5 - CLA : order to change topology",
-                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
-                "CLA_2_5 - CLA : order to change topology",
-                "CLA_2_4 - CLA : arming by over-current constraint");
-
-        database.put(TIME_SERIES_GROUP_UUID, timeSeries);
-        database.put(TIME_LINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeLine)));
-    }
+    private final Map<String, List<TimeSeries>> database = new HashMap<>();
 
     private TimeSeriesClient timeSeriesClient;
 
@@ -72,9 +52,8 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     @NotNull
     protected Dispatcher getDispatcher() {
         return new Dispatcher() {
-            @NotNull
             @Override
-            public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) throws InterruptedException {
+            public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
                 String endPointUrl = UrlUtil.buildEndPointUrl(API_VERSION, TIME_SERIES_END_POINT);
                 String method = recordedRequest.getMethod();
@@ -103,8 +82,27 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     }
 
     @Override
-    public void setUp() {
-        super.setUp();
+    public void setup() {
+        super.setup();
+
+        // setup fake database
+        // timeseries
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
+        List<TimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
+                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
+                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
+        ));
+
+        // timeline
+        index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
+        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
+                "CLA_2_5 - CLA : order to change topology",
+                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
+                "CLA_2_5 - CLA : order to change topology",
+                "CLA_2_4 - CLA : arming by over-current constraint");
+
+        database.put(TIME_SERIES_GROUP_UUID, timeSeries);
+        database.put(TIME_LINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeLine)));
 
         // config client
         timeSeriesClient = new TimeSeriesClientImpl(initMockWebServer(TIME_SERIES_PORT), restTemplate);

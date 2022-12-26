@@ -59,7 +59,7 @@ public abstract class AbstractRestClientTest {
     }
 
     @Before
-    public void setUp() {
+    public void setup() {
 
     }
 

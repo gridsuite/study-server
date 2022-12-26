@@ -32,9 +32,9 @@ import static org.junit.Assert.assertEquals;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 public class DynamicMappingClientTest extends AbstractRestClientTest {
-    private static String[] mappingNames = {"mapping01", "mapping02"};
-    private List<MappingInfos> mappings = Arrays.asList(new MappingInfos(mappingNames[0]),
-                                                        new MappingInfos(mappingNames[1]));
+    private static final String[] MAPPING_NAMES = {"mapping01", "mapping02"};
+    private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
+                                                        new MappingInfos(MAPPING_NAMES[1]));
 
     private static final int DYNAMIC_MAPPING_PORT = 5036;
 
@@ -50,7 +50,6 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
     @NotNull
     protected Dispatcher getDispatcher() {
         return new Dispatcher() {
-            @NotNull
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
@@ -67,7 +66,7 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
                         response = new MockResponse()
                                 .setResponseCode(HttpStatus.OK.value())
                                 .addHeader("Content-Type", "application/json; charset=utf-8")
-                                .setBody(objectMapper.writeValueAsString(mappings));
+                                .setBody(objectMapper.writeValueAsString(MAPPINGS));
                     } catch (JsonProcessingException e) {
                         getLogger().info("Cannot convert to json : ", e);
                         return new MockResponse().setResponseCode(HttpStatus.NO_CONTENT.value());
@@ -79,8 +78,8 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
     }
 
     @Override
-    public void setUp() {
-        super.setUp();
+    public void setup() {
+        super.setup();
 
         // config client
         dynamicMappingClient = new DynamicMappingClientImpl(initMockWebServer(DYNAMIC_MAPPING_PORT), restTemplate);
@@ -96,8 +95,8 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
         assertEquals(2, allMappings.size());
         getLogger().info("Result mappings = " + objectMapper.writeValueAsString(allMappings));
         // first element's name must be mappingNames[0]
-        assertEquals(mappingNames[0], allMappings.get(0).getName());
+        assertEquals(MAPPING_NAMES[0], allMappings.get(0).getName());
         // first element's name must be mappingNames[1]
-        assertEquals(mappingNames[1], allMappings.get(1).getName());
+        assertEquals(MAPPING_NAMES[1], allMappings.get(1).getName());
     }
 }

@@ -29,6 +29,7 @@ import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
@@ -65,6 +66,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.service.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -1546,26 +1548,33 @@ public class StudyService {
     public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, String parameters, String mappingName) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
+        Objects.requireNonNull(parameters);
         Objects.requireNonNull(mappingName);
-
-        // TODO destructured parameters
-        String variantId = "";
-        int startTime = 0;
-        int stopTime = 500;
 
         // get associated network
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+
+        // get variant defined in the node
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+
+        // destructured parameters
+        DynamicSimulationParametersInfos dynamicSimulationParameters;
+        try {
+            dynamicSimulationParameters = objectMapper.readValue(parameters, DynamicSimulationParametersInfos.class);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
 
         // clean previous result if exist
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(networkUuid, variantId, startTime, stopTime, mappingName);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(networkUuid, variantId, dynamicSimulationParameters.getStartTime(), dynamicSimulationParameters.getStopTime(), mappingName);
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         return resultUuid;
     }

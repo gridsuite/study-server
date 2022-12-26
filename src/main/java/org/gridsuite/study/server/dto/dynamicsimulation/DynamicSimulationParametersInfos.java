@@ -5,14 +5,21 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.dto;
+package org.gridsuite.study.server.dto.dynamicsimulation;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-public enum DynamicSimulationStatus {
-    NOT_DONE,
-    RUNNING,
-    CONVERGED,
-    DIVERGED
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class DynamicSimulationParametersInfos {
+    private int startTime;
+    private int stopTime;
 }

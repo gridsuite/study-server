@@ -13,7 +13,7 @@ import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -34,10 +34,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
-
 public class DynamicSimulationServiceTest {
 
     private static final String MAPPING_NAME_01 = "_01";
@@ -84,12 +86,27 @@ public class DynamicSimulationServiceTest {
     DynamicSimulationService dynamicSimulationService;
 
     @Before
-    public void setUp() {
+    public void setup() {
+        // setup networkModificationTreeService mock in all normal cases
+        given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID)).willReturn(Optional.of(RESULT_UUID));
+    }
+
+    @Test
+    public void testRunDynamicSimulation() {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.run(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+
+        // call method to be tested
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01);
+
+        // check result
+        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
+    }
+
+    @Test
+    public void testGetTimeSeriesResult() {
+        // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
-        given(dynamicSimulationClient.getTimeLineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
-        given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED.name());
 
         // setup timeSeriesClient mock
         // timeseries
@@ -100,8 +117,22 @@ public class DynamicSimulationServiceTest {
         ));
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID)).willReturn(timeSeries);
 
+        // call method to be tested
+        List<TimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
+
+        // check result
+        // must contain two elements
+        assertEquals(2, timeSeriesResult.size());
+    }
+
+    @Test
+    public void testGetTimeLineResult() {
+        // setup DynamicSimulationClient mock
+        given(dynamicSimulationClient.getTimeLineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
+
+        // setup timeSeriesClient mock
         // timeline
-        index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
         StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
@@ -109,43 +140,20 @@ public class DynamicSimulationServiceTest {
                 "CLA_2_4 - CLA : arming by over-current constraint");
         given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID)).willReturn(Arrays.asList(timeLine));
 
-        // setup networkModificationTreeService mock
-        given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID)).willReturn(Optional.of(RESULT_UUID));
-
-        // setup for running node
-        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING.name());
-        given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID_RUNNING)).willReturn(Optional.of(RESULT_UUID_RUNNING));
-    }
-
-    @Test
-    public void testRunDynamicSimulation() {
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01);
-
-        // check result
-        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
-    }
-
-    @Test
-    public void testGetTimeSeriesResult() {
-        List<TimeSeries> timeSeries = dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
-
-        // check result
-        // must contain two elements
-        assertEquals(2, timeSeries.size());
-    }
-
-    @Test
-    public void testGetTimeLineResult() {
-        List<TimeSeries> timeLine = dynamicSimulationService.getTimeLineResult(NODE_UUID);
+        // call method to be tested
+        List<TimeSeries> timeLineResult = dynamicSimulationService.getTimeLineResult(NODE_UUID);
 
         // check result
         // must contain only one
-        assertEquals(1, timeLine.size());
+        assertEquals(1, timeLineResult.size());
     }
 
     @Test
     public void testGetStatus() {
+        // setup DynamicSimulationClient mock
+        given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED.name());
 
+        // call method to be tested
         String status = dynamicSimulationService.getStatus(NODE_UUID);
 
         // check result
@@ -155,7 +163,7 @@ public class DynamicSimulationServiceTest {
 
     @Test
     public void testDeleteResult() {
-        dynamicSimulationService.deleteResult(NODE_UUID);
+        dynamicSimulationService.deleteResult(RESULT_UUID);
         assertTrue(true);
     }
 
@@ -169,6 +177,9 @@ public class DynamicSimulationServiceTest {
 
     @Test(expected = StudyException.class)
     public void testAssertDynamicSimulationRunning() {
+        // setup for running node
+        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING.name());
+        given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID_RUNNING)).willReturn(Optional.of(RESULT_UUID_RUNNING));
 
         // test running
         dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING);

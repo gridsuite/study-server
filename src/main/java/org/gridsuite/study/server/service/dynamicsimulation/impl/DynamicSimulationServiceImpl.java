@@ -9,17 +9,14 @@ package org.gridsuite.study.server.service.dynamicsimulation.impl;
 
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
 
@@ -81,13 +78,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public void deleteResult(UUID nodeUuid) {
-        Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
-
-        if (resultUuidOpt.isEmpty()) {
-            return;
-        }
-        dynamicSimulationClient.deleteResult(resultUuidOpt.get());
+    public void deleteResult(UUID resultUuid) {
+        Objects.requireNonNull(resultUuid);
+        dynamicSimulationClient.deleteResult(resultUuid);
     }
 
     @Override

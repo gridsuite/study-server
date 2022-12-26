@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.study.server.dto.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
 import org.gridsuite.study.server.service.client.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
@@ -55,9 +55,8 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
     @NotNull
     protected Dispatcher getDispatcher() {
         return new Dispatcher() {
-            @NotNull
             @Override
-            public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) throws InterruptedException {
+            public MockResponse dispatch(RecordedRequest recordedRequest) {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
                 String runEndPointUrl = UrlUtil.buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
                 String resultEndPointUrl = UrlUtil.buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
@@ -140,8 +139,8 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
     }
 
     @Override
-    public void setUp() {
-        super.setUp();
+    public void setup() {
+        super.setup();
 
         // config client
         dynamicSimulationClient = new DynamicSimulationClientImpl(initMockWebServer(DYNAMIC_SIMULATION_PORT), restTemplate);

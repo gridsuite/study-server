@@ -52,9 +52,9 @@ public interface DynamicSimulationService {
 
     /**
      * Delete result uuid
-     * @param nodeUuid a given node UUID
+     * @param resultUuid a given result UUID
      */
-    void deleteResult(UUID nodeUuid);
+    void deleteResult(UUID resultUuid);
 
     void assertDynamicSimulationNotRunning(UUID nodeUuid);
 }

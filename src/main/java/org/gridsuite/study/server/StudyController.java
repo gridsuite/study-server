@@ -1191,6 +1191,7 @@ public class StudyController {
                                                      @Parameter(description = "mappingName") @RequestParam("mappingName") String mappingName,
                                                      @RequestBody(required = false) String parameters) {
         String nonNullParameters = Objects.toString(parameters, "");
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
 
         return ResponseEntity.ok().body(studyService.runDynamicSimulation(studyUuid, nodeUuid, nonNullParameters, mappingName));
     }

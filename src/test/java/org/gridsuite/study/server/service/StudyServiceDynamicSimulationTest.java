@@ -1,0 +1,187 @@
+/*
+ * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.gridsuite.study.server.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.timeseries.IrregularTimeSeriesIndex;
+import com.powsybl.timeseries.StringTimeSeries;
+import com.powsybl.timeseries.TimeSeries;
+import com.powsybl.timeseries.TimeSeriesIndex;
+import org.gridsuite.study.server.StudyApplication;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.ContextHierarchy;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import java.io.UncheckedIOException;
+import java.util.*;
+
+import static org.gridsuite.study.server.service.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
+
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+public class StudyServiceDynamicSimulationTest {
+
+    private static final String MAPPING_NAME_01 = "_01";
+
+    private static final String VARIANT_1_ID = "variant_1";
+
+    private static final int START_TIME = 0;
+
+    private static final int STOP_TIME = 500;
+
+    private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
+    private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
+
+    private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
+    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
+
+    private static final String NODE_UUID_STRING = "22222222-0000-0000-0000-000000000000";
+    private static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
+
+    private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
+
+    private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
+    private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
+
+    @MockBean
+    NetworkService networkService;
+
+    @MockBean
+    NetworkModificationTreeService networkModificationTreeService;
+
+    @MockBean
+    NotificationService notificationService;
+
+    @MockBean
+    DynamicSimulationService dynamicSimulationService;
+
+    @Autowired
+    StudyService studyService;
+
+    public final Logger getLogger() {
+        return LoggerFactory.getLogger(this.getClass());
+    }
+
+    @Before
+    public void setup() {
+        // setup NetworkService mock
+        given(networkService.getNetworkUuid(STUDY_UUID)).willReturn(NETWORK_UUID);
+
+        // setup NetworkModificationTreeService mock
+        // suppose always having an existing result in a previous run
+        given(networkModificationTreeService.getDynamicSimulationResultUuid(any(UUID.class))).willReturn(Optional.of(RESULT_UUID));
+        given(networkModificationTreeService.getVariantId(any(UUID.class))).willReturn(VARIANT_1_ID);
+        willDoNothing().given(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
+
+        // setup NotificationService mock
+        willDoNothing().given(notificationService).emitStudyChanged(STUDY_UUID, NODE_UUID, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+    }
+
+    @Test
+    public void testRunDynamicSimulation() {
+        // setup DynamicSimulationService mock
+        given(dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+        willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
+
+        // call method to be tested
+        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+
+        // check result
+        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
+    }
+
+    @Test(expected = UncheckedIOException.class)
+    public void testRunDynamicSimulationGivenBadFormattedParameters() {
+        // setup DynamicSimulationService mock
+        given(dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+
+        // call method to be tested => must throw exception
+        studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, "", MAPPING_NAME_01);
+    }
+
+    @Test
+    public void testGetDynamicSimulationTimeSeries() throws JsonProcessingException {
+        // setup
+        // timeseries
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
+        List<TimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
+                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
+                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
+        ));
+
+        given(dynamicSimulationService.getTimeSeriesResult(NODE_UUID)).willReturn(timeSeries);
+
+        // call method to be tested
+        String timeSeriesResultJson = studyService.getDynamicSimulationTimeSeries(NODE_UUID);
+
+        // --- check result --- //
+        String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
+        getLogger().info("Time series expected in Json = " + timeSeriesExpectedJson);
+        getLogger().info("Time series result in Json = " + timeSeriesResultJson);
+        ObjectMapper mapper = new ObjectMapper();
+        assertEquals(mapper.readTree(timeSeriesExpectedJson), mapper.readTree(timeSeriesResultJson));
+    }
+
+    @Test
+    public void testGetDynamicSimulationTimeLine() throws JsonProcessingException {
+        // setup
+        // timeline
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
+        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
+                "CLA_2_5 - CLA : order to change topology",
+                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
+                "CLA_2_5 - CLA : order to change topology",
+                "CLA_2_4 - CLA : arming by over-current constraint");
+
+        given(dynamicSimulationService.getTimeLineResult(NODE_UUID)).willReturn(Arrays.asList(timeLine));
+
+        // call method to be tested
+        String timeLineResutlJson = studyService.getDynamicSimulationTimeLine(NODE_UUID);
+
+        // --- check result --- //
+        String timeLineExpectedJson = TimeSeries.toJson(Arrays.asList(timeLine));
+        getLogger().info("Time line expected in Json = " + timeLineExpectedJson);
+        getLogger().info("Time line result in Json = " + timeLineResutlJson);
+        ObjectMapper mapper = new ObjectMapper();
+        assertEquals(mapper.readTree(timeLineExpectedJson), mapper.readTree(timeLineResutlJson));
+    }
+
+    @Test
+    public void testGetDynamicSimulationStatus() {
+        // setup
+        given(dynamicSimulationService.getStatus(NODE_UUID)).willReturn(DynamicSimulationStatus.CONVERGED.name());
+
+        // call method to be tested
+        String status = studyService.getDynamicSimulationStatus(NODE_UUID);
+
+        // --- check result --- //
+        getLogger().info("Status expected = " + DynamicSimulationStatus.CONVERGED.name());
+        getLogger().info("Status result = " + status);
+        assertEquals(DynamicSimulationStatus.CONVERGED.name(), status);
+    }
+}
