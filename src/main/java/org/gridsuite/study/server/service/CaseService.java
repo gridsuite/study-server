@@ -11,12 +11,6 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
-
-import java.util.UUID;
-
 import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +18,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.DELIMITER;
+import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 
 @Service
 public class CaseService {
@@ -44,6 +44,36 @@ public class CaseService {
             .toUriString();
 
         return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, Boolean.class, caseUuid).getBody();
+    }
+
+    /**
+     * Sometimes we set an expiration delay to a newly created case, to be sure it will be removed if it's not used later.
+     * Once the study creation is successful, we want to remove this expiration delay, to make the associated case persist.
+     */
+    public void disableCaseExpiration(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}/disableExpiration")
+                .buildAndExpand(caseUuid)
+                .toUriString();
+
+        restTemplate.exchange(caseServerBaseUri + path, HttpMethod.PUT, null, Void.class, caseUuid);
+    }
+
+    public void deleteCase(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
+                .buildAndExpand(caseUuid)
+                .toUriString();
+
+        restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
+    }
+
+    public UUID duplicateCase(UUID caseUuid, Boolean withExpiration) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases")
+                .queryParam("duplicateFrom", caseUuid)
+                .queryParam("withExpiration", withExpiration)
+                .buildAndExpand(caseUuid)
+                .toUriString();
+
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class, caseUuid).getBody();
     }
 
     public void assertCaseExists(UUID caseUuid) {
