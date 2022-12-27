@@ -16,7 +16,6 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,7 +97,7 @@ public class NetworkModificationService {
         try {
             return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e, GET_MODIFICATIONS_FAILED);
+            throw handleError(e, GET_MODIFICATIONS_FAILED);
         }
     }
 
@@ -112,7 +111,7 @@ public class NetworkModificationService {
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path);
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e, DELETE_MODIFICATIONS_FAILED);
+            throw handleError(e, DELETE_NETWORK_MODIFICATION_FAILED);
         }
     }
 
@@ -128,11 +127,11 @@ public class NetworkModificationService {
         try {
             restTemplate.delete(path);
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e, DELETE_MODIFICATIONS_FAILED);
+            throw handleError(e, DELETE_NETWORK_MODIFICATION_FAILED);
         }
     }
 
-    private StudyException handleChangeError(HttpStatusCodeException httpException, StudyException.Type type) {
+    private StudyException handleError(HttpStatusCodeException httpException, StudyException.Type type) {
         String responseBody = httpException.getResponseBodyAsString();
         if (responseBody.isEmpty()) {
             return new StudyException(type, httpException.getStatusCode().toString());
@@ -156,7 +155,6 @@ public class NetworkModificationService {
     public List<ModificationInfos> createModification(UUID studyUuid,
                                                       String createModificationAttributes,
                                                       UUID groupUuid,
-                                                      ModificationType modificationType,
                                                       String variantId, UUID reportUuid,
                                                       String reporterId) {
         List<ModificationInfos> result;
@@ -188,15 +186,13 @@ public class NetworkModificationService {
                     new ParameterizedTypeReference<List<ModificationInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+            throw handleError(e, CREATE_NETWORK_MODIFICATION_FAILED);
         }
 
         return result;
     }
 
-    public void updateModification(String createEquipmentAttributes,
-                                   ModificationType modificationType,
-                                   UUID modificationUuid) {
+    public void updateModification(String createEquipmentAttributes, UUID modificationUuid) {
         Objects.requireNonNull(createEquipmentAttributes);
 
         var path = UriComponentsBuilder
@@ -213,7 +209,7 @@ public class NetworkModificationService {
             restTemplate.exchange(path, HttpMethod.PUT, httpEntity,
                     Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e, ModificationType.getExceptionFromType(modificationType));
+            throw handleError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
         }
     }
 
@@ -314,7 +310,7 @@ public class NetworkModificationService {
         try {
             restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleChangeError(e, STUDY_CREATION_FAILED);
+            throw handleError(e, STUDY_CREATION_FAILED);
         }
     }
 }

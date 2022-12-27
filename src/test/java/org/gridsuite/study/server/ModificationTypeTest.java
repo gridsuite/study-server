@@ -26,10 +26,5 @@ public class ModificationTypeTest {
         assertEquals("shunt-compensators", ModificationType.getUriFromType(ModificationType.SHUNT_COMPENSATOR_CREATION));
         assertEquals("generators-modification", ModificationType.getUriFromType(ModificationType.GENERATOR_MODIFICATION));
         assertThrows(PowsyblException.class, () -> ModificationType.getUriFromType(ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION));
-
-        assertEquals(StudyException.Type.LOAD_CREATION_FAILED, ModificationType.getExceptionFromType(ModificationType.LOAD_CREATION));
-        assertEquals(StudyException.Type.GENERATOR_CREATION_FAILED, ModificationType.getExceptionFromType(ModificationType.GENERATOR_CREATION));
-        assertEquals(StudyException.Type.LINE_CREATION_FAILED, ModificationType.getExceptionFromType(ModificationType.LINE_CREATION));
-        assertThrows(PowsyblException.class, () -> ModificationType.getExceptionFromType(ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION));
     }
 }
