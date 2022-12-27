@@ -26,7 +26,7 @@ public class EmbeddedElasticsearch {
 
     private static ElasticsearchContainer elasticsearchContainer;
 
-    @Value("${spring.data.elasticsearch.enabled:false}")
+    @Value("${test.elasticsearch.enabled:false}")
     boolean elasticsearchEnabled;
 
     @PostConstruct

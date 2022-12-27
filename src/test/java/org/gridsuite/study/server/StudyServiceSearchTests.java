@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"spring.data.elasticsearch.enabled=true"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"test.elasticsearch.enabled=true"})
 public class StudyServiceSearchTests {
 
     private static final UUID STUDY_UUID = UUID.fromString("14526897-4b5d-11bd-b23e-17e46e4ef00d");
