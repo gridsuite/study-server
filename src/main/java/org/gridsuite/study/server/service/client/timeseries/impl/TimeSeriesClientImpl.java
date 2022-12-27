@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -36,7 +38,7 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
     @Override
     public List<TimeSeries> getTimeSeriesGroup(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
-        String endPointUrl = buildEndPointUrl(API_VERSION, TIME_SERIES_END_POINT);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
 
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}")
                 .buildAndExpand(groupUuid);

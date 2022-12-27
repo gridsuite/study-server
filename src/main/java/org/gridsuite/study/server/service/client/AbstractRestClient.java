@@ -7,15 +7,9 @@
 
 package org.gridsuite.study.server.service.client;
 
-import org.gridsuite.study.server.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestTemplate;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import static org.gridsuite.study.server.StudyException.Type.URI_SYNTAX;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -42,27 +36,5 @@ public abstract class AbstractRestClient implements RestClient {
     @Override
     public String getBaseUri() {
         return baseUri;
-    }
-
-    /**
-     * Build endpoint url
-     * @param apiVersion for example "v1" or empty
-     * @param endPoint root endpoint
-     * @return a normalized completed url to endpoint
-     */
-    protected String buildEndPointUrl(String apiVersion, String endPoint) {
-        try {
-            String url = new StringBuilder(getBaseUri())
-                    .append(DELIMITER)
-                    .append(apiVersion)
-                    .append(DELIMITER)
-                    .append(endPoint)
-                    .append(DELIMITER)
-                    .toString();
-            // normalize before return
-            return new URI(url).normalize().toString();
-        } catch (URISyntaxException e) {
-            throw new StudyException(URI_SYNTAX, e.getMessage());
-        }
     }
 }

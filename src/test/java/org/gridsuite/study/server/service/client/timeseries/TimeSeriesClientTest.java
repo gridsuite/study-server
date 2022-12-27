@@ -17,7 +17,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
-import org.gridsuite.study.server.service.client.UrlUtil;
+import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClientImpl;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +55,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
-                String endPointUrl = UrlUtil.buildEndPointUrl(API_VERSION, TIME_SERIES_END_POINT);
+                String endPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, TIME_SERIES_END_POINT);
                 String method = recordedRequest.getMethod();
 
                 MockResponse response = new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
@@ -135,6 +135,5 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         String resultTimeLinesJson = TimeSeries.toJson(timeLines);
         getLogger().info("resultTimeLinesJson = " + resultTimeLinesJson);
         assertEquals(objectMapper.readTree(expectedTimeLinesJson), objectMapper.readTree(resultTimeLinesJson));
-
     }
 }

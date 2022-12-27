@@ -18,6 +18,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
@@ -33,7 +35,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     @Override
     public UUID run(UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName) {
         Objects.requireNonNull(networkUuid);
-        String endPointUrl = buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{networkUuid}/run")
                 .queryParam("variantId", variantId)
@@ -50,7 +52,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     @Override
     public UUID getTimeSeriesResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
-        String endPointUrl = buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeseries")
                 .buildAndExpand(resultUuid);
@@ -63,7 +65,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     @Override
     public UUID getTimeLineResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
-        String endPointUrl = buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeline")
                 .buildAndExpand(resultUuid);
@@ -76,7 +78,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     @Override
     public String getStatus(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
-        String endPointUrl = buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/status")
                 .buildAndExpand(resultUuid);
@@ -89,7 +91,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     @Override
     public void deleteResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
-        String endPointUrl = buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}")
                 .buildAndExpand(resultUuid);

@@ -14,7 +14,7 @@ import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.client.UrlUtil;
+import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,7 +57,7 @@ public class StudyControllerDynamicSimulationTest {
     private static final String DELIMITER = "/";
     private static final String STUDY_END_POINT = "studies";
 
-    private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl(API_VERSION, STUDY_END_POINT);
+    private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
 
@@ -114,7 +114,7 @@ public class StudyControllerDynamicSimulationTest {
     public void testRunDynamicSimulationGivenRootNode() throws Exception {
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
-        studyClient.perform(post(UrlUtil.buildEndPointUrl(API_VERSION, STUDY_END_POINT) + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
+        studyClient.perform(post(UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT) + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
                 STUDY_UUID, ROOT_NODE_UUID, MAPPING_NAME_01)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());

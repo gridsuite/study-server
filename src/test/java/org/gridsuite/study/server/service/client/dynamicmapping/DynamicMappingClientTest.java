@@ -14,7 +14,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
-import org.gridsuite.study.server.service.client.UrlUtil;
+import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicmapping.impl.DynamicMappingClientImpl;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,7 +53,7 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
             @Override
             public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
-                String endPointUrl = UrlUtil.buildEndPointUrl(DynamicMappingClient.API_VERSION, DynamicMappingClient.DYNAMIC_MAPPING_END_POINT_MAPPING);
+                String endPointUrl = UrlUtil.buildEndPointUrl("", DynamicMappingClient.API_VERSION, DynamicMappingClient.DYNAMIC_MAPPING_END_POINT_MAPPING);
                 String method = recordedRequest.getMethod();
 
                 MockResponse response = new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());

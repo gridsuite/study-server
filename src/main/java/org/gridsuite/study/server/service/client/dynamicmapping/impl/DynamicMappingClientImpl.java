@@ -22,6 +22,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Collections;
 import java.util.List;
 
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -37,7 +39,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
 
     @Override
     public List<MappingInfos> getAllMappings() {
-        String endPointUrl = buildEndPointUrl(API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
 

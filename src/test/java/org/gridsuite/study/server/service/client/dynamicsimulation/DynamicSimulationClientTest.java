@@ -14,7 +14,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
-import org.gridsuite.study.server.service.client.UrlUtil;
+import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,8 +58,8 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
             @Override
             public MockResponse dispatch(RecordedRequest recordedRequest) {
                 String path = Objects.requireNonNull(recordedRequest.getPath());
-                String runEndPointUrl = UrlUtil.buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
-                String resultEndPointUrl = UrlUtil.buildEndPointUrl(API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+                String runEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
+                String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
                 String method = recordedRequest.getMethod();
                 MockResponse response = new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
                 List<String> pathSegments = emptyIfNull(recordedRequest.getRequestUrl().pathSegments());
