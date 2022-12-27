@@ -769,15 +769,19 @@ public class StudyTest {
         createStudyWithDuplicateCase("userId", CASE_UUID);
     }
 
-//    @Test
-//    public void testDeleteStudy() throws Exception {
-//        UUID studyUuid = createStudy("userId", CASE_UUID);
-//
-//        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
-//                .andExpect(status().isOk());
-//
-//        //TODO assert API calls
-//    }
+    @Test
+    public void testDeleteStudy() throws Exception {
+        UUID studyUuid = createStudy("userId", CASE_UUID);
+
+        mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(4, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
+    }
 
     @Test
     public void testMetadata() throws Exception {
