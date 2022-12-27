@@ -213,7 +213,7 @@ public class StudyService {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
         UUID caseUuidToUse;
-        if (duplicateCase) {
+        if (Boolean.TRUE.equals(duplicateCase)) {
             try {
                 caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             } catch (Exception e) {
