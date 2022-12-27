@@ -498,34 +498,6 @@ public class StudyTest {
                     case "/v1/cases/" + CASE_UUID_STRING + "/disableExpiration":
                         return new MockResponse().setResponseCode(200);
 
-                    case "/" + CASE_API_VERSION + "/cases/private": {
-                        String bodyStr = body.readUtf8();
-                        if (bodyStr.contains("filename=\"")) {
-                            String bodyFilename = bodyStr.split(System.lineSeparator())[1].split("\r")[0];
-                            if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_WITH_ERRORS + "\".*")) {  // import file with errors
-                                return new MockResponse().setResponseCode(200).setBody(importedCaseWithErrorsUuidAsString)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                            } else if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_IMPORT_ERRORS + "\"")) {  // import file with errors during import in the case server
-                                return new MockResponse().setResponseCode(500)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8")
-                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                            } else if (bodyFilename.matches(".*filename=\".*" + TEST_FILE_IMPORT_ERRORS_NO_MESSAGE_IN_RESPONSE_BODY + "\"")) {  // import file with errors during import in the case server without message in response body
-                                return new MockResponse().setResponseCode(500)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8")
-                                    .setBody("{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message2\":\"Error during import in the case server\",\"path\":\"/v1/networks\"}");
-                            } else if (bodyFilename.matches(".*filename=\".*blockingCaseFile\".*")) {
-                                return new MockResponse().setResponseCode(200).setBody(importedBlockingCaseUuidAsString)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                            } else {
-                                return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
-                                    .addHeader("Content-Type", "application/json; charset=utf-8");
-                            }
-                        } else {
-                            return new MockResponse().setResponseCode(200).setBody(importedCaseUuidAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-                        }
-                    }
-
                     case "/" + CASE_API_VERSION + "/cases/" + IMPORTED_CASE_UUID_STRING:
                         JSONObject jsonObject = new JSONObject(Map.of("substationIds", List.of("s1", "s2", "s3")));
                         return new MockResponse().setResponseCode(200)
