@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1190,6 +1191,18 @@ public class StudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getMapEquipments(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/mappings")
+    @Operation(summary = "Get all mapping of dynamic simulation on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All mappings of dynamic simulation"),
+        @ApiResponse(responseCode = "204", description = "No dynamic simulation mappings"),
+        @ApiResponse(responseCode = "404", description = "The dynamic simulation mappings has not been found")})
+    public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappingNames(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<MappingInfos> mappings = studyService.getDynamicSimulationMappings(nodeUuid);
+        return mappings != null ? ResponseEntity.ok().body(mappings) :
+                ResponseEntity.noContent().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run")

@@ -9,8 +9,10 @@ package org.gridsuite.study.server.service.dynamicsimulation.impl;
 
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -26,15 +28,19 @@ import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_
 @Service
 public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
+    private final DynamicMappingClient dynamicMappingClient;
+
     private final TimeSeriesClient timeSeriesClient;
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
     private final NetworkModificationTreeService networkModificationTreeService;
 
-    public DynamicSimulationServiceImpl(TimeSeriesClient timeSeriesClient,
+    public DynamicSimulationServiceImpl(DynamicMappingClient dynamicMappingClient,
+                                        TimeSeriesClient timeSeriesClient,
                                         DynamicSimulationClient dynamicSimulationClient,
                                         NetworkModificationTreeService networkModificationTreeService) {
+        this.dynamicMappingClient = dynamicMappingClient;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -89,5 +95,10 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         if (DynamicSimulationStatus.RUNNING.name().equals(status)) {
             throw new StudyException(DYNAMIC_SIMULATION_RUNNING);
         }
+    }
+
+    @Override
+    public List<MappingInfos> getMappings(UUID nodeUuid) {
+        return dynamicMappingClient.getAllMappings();
     }
 }

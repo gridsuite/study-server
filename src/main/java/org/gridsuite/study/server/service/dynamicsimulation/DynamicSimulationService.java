@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.powsybl.timeseries.TimeSeries;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 
 import java.util.List;
 import java.util.UUID;
@@ -57,4 +58,11 @@ public interface DynamicSimulationService {
     void deleteResult(UUID resultUuid);
 
     void assertDynamicSimulationNotRunning(UUID nodeUuid);
+
+    /**
+     * Get mapping names
+     * @param nodeUuid a given node UUID
+     * @return a list of mapping names
+     */
+    List<MappingInfos> getMappings(UUID nodeUuid);
 }

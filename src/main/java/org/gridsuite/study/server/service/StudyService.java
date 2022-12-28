@@ -29,6 +29,7 @@ import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
@@ -1506,6 +1507,13 @@ public class StudyService {
         } catch (JsonProcessingException e) {
             throw new StudyException(BAD_JSON_FORMAT, e.getMessage());
         }
+    }
+
+    public List<MappingInfos> getDynamicSimulationMappings(UUID nodeUuid) {
+        // get mapping from node uuid
+        List<MappingInfos> mappings = dynamicSimulationService.getMappings(nodeUuid);
+
+        return mappings;
     }
 
     @Transactional
