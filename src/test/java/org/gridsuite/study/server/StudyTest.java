@@ -776,6 +776,8 @@ public class StudyTest {
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
+        assertTrue(studyRepository.findById(studyUuid).isEmpty());
+
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups/.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
@@ -942,6 +944,9 @@ public class StudyTest {
     }
 
     private void assertStudyCreation(UUID studyUuid, String userId, String... errorMessage) {
+
+        assertTrue(studyRepository.findById(studyUuid).isPresent());
+
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
 
@@ -953,8 +958,7 @@ public class StudyTest {
 
         output.receive(TIMEOUT, studyUpdateDestination);  // message for first modification node creation
 
-        // assert that the broker message has been sent a study creation message for
-        // creation
+        // assert that the broker message has been sent a study creation message for creation
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
