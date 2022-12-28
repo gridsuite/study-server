@@ -63,7 +63,8 @@ public class StudyServiceDynamicSimulationTest {
     private static final String NODE_UUID_STRING = "22222222-0000-0000-0000-000000000000";
     private static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
 
-    private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
+    private static final String PARAMETERS_WITH_VARIANT = String.format("{\"startTime\": %d, \"stopTime\": %d, \"withVariant\": %b}", START_TIME, STOP_TIME, true);
+    private static final String PARAMETERS_WITHOUT_VARIANT = String.format("{\"startTime\": %d, \"stopTime\": %d, \"withVariant\": %b}", START_TIME, STOP_TIME, false);
 
     private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
     private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
@@ -103,13 +104,26 @@ public class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    public void testRunDynamicSimulation() {
+    public void testRunDynamicSimulationGivenWithVariant() {
         // setup DynamicSimulationService mock
         given(dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
 
         // call method to be tested
-        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS_WITH_VARIANT, MAPPING_NAME_01);
+
+        // check result
+        assertEquals(RESULT_UUID_STRING, resultUuid.toString());
+    }
+
+    @Test
+    public void testRunDynamicSimulationGivenWithoutVariant() {
+        // setup DynamicSimulationService mock
+        given(dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, null, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+        willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
+
+        // call method to be tested
+        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS_WITHOUT_VARIANT, MAPPING_NAME_01);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());

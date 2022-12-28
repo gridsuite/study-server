@@ -37,15 +37,19 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{networkUuid}/run")
-                .queryParam("variantId", variantId)
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{networkUuid}/run");
+        if (variantId != null && !variantId.isBlank()) {
+            uriComponentsBuilder.queryParam("variantId", variantId);
+        }
+        uriComponentsBuilder
                 .queryParam("startTime", startTime)
                 .queryParam("stopTime", stopTime)
-                .queryParam("mappingName", mappingName)
+                .queryParam("mappingName", mappingName);
+        var uriComponent = uriComponentsBuilder
                 .buildAndExpand(networkUuid);
 
         // call dynamic-simulation REST API
-        UUID resultUuid = getRestTemplate().postForObject(uriBuilder.toUriString(), null, UUID.class);
+        UUID resultUuid = getRestTemplate().postForObject(uriComponent.toUriString(), null, UUID.class);
         return resultUuid;
     }
 
@@ -54,11 +58,11 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeseries")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeseries")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        UUID timeseriesUuid = getRestTemplate().getForObject(uriBuilder.toUriString(), UUID.class);
+        UUID timeseriesUuid = getRestTemplate().getForObject(uriComponents.toUriString(), UUID.class);
         return timeseriesUuid;
     }
 
@@ -67,11 +71,11 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeline")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/timeline")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        UUID timelineUuid = getRestTemplate().getForObject(uriBuilder.toUriString(), UUID.class);
+        UUID timelineUuid = getRestTemplate().getForObject(uriComponents.toUriString(), UUID.class);
         return timelineUuid;
     }
 
@@ -80,11 +84,11 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/status")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}/status")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        String status = getRestTemplate().getForObject(uriBuilder.toUriString(), String.class);
+        String status = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
         return status;
     }
 
@@ -93,10 +97,10 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{resultUuid}")
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        getRestTemplate().delete(uriBuilder.toUriString());
+        getRestTemplate().delete(uriComponents.toUriString());
     }
 }

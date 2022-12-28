@@ -40,11 +40,11 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
         Objects.requireNonNull(groupUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}")
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}")
                 .buildAndExpand(groupUuid);
 
         // call time-series Rest API
-        var timeSeriesJson = getRestTemplate().getForObject(uriBuilder.toUriString(), String.class);
+        var timeSeriesJson = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
         // convert timeseries to json
         var timeSeriesObj = TimeSeries.parseJson(timeSeriesJson);
         return timeSeriesObj;

@@ -1518,9 +1518,6 @@ public class StudyService {
         // get associated network
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
-        // get variant defined in the node
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
         // destructured parameters
         DynamicSimulationParametersInfos dynamicSimulationParameters;
         try {
@@ -1528,6 +1525,9 @@ public class StudyService {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
+
+        // get variant defined in the node
+        String variantId = dynamicSimulationParameters.isWithVariant() ? networkModificationTreeService.getVariantId(nodeUuid) : null;
 
         // clean previous result if exist
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);

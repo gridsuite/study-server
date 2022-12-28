@@ -1229,7 +1229,7 @@ public class StudyController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/status")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status")
     @Operation(summary = "Get the status of dynamic simulation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),

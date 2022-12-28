@@ -43,7 +43,7 @@ backing-services:
   timeseries-server:
     base-uri: http://localhost:5037
   dynamic-simulation-server:
-      base-uri: http://localhost:5032
+    base-uri: http://localhost:5032
   dynamic-mapping-server:
     base-uri: http://localhost:5036
 
