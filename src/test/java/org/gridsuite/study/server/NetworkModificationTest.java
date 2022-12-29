@@ -974,7 +974,6 @@ public class NetworkModificationTest {
                         .queryParam("uuids", node3.getId().toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
-
         checkEquipmentDeletingMessagesReceived(studyUuid1, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid1, modificationNode.getId());
 
@@ -984,10 +983,21 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         verifyDeleteRequest(stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
-
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
+
+        String errorMessage = "Internal Server Error";
+        stubId = wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications.*"))
+            .willReturn(WireMock.serverError().withBody(errorMessage))
+        ).getId();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", studyUuid, modificationNode.getId())
+                .queryParam("uuids", modificationUuid.toString())
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isBadRequest());
+        verifyDeleteRequest(stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
+        checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
 
