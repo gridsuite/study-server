@@ -79,7 +79,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.service.NetworkModificationService.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -208,7 +207,6 @@ public class NetworkModificationTest {
         // Start the mock servers
         server.start();
         wireMock.start();
-        configureFor("localhost", wireMock.port());
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
@@ -2418,8 +2416,8 @@ public class NetworkModificationTest {
         TestUtils.assertQueuesEmptyThenClear(List.of(studyUpdateDestination), output);
 
         try {
-            wireMock.checkForUnmatchedRequests(); // resquests no matched ?
-            assertEquals(0, wireMock.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size()); // resquests no verified ?
+            wireMock.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
+            assertEquals(0, wireMock.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size()); // requests no verified ?
         } finally {
             wireMock.shutdown();
         }
@@ -2504,8 +2502,8 @@ public class NetworkModificationTest {
         verifyPostRequest(stubId, url, false, queryParams, null);
     }
 
-    private void verifyPostRequest(UUID stubId, String url, boolean urlMatching, Map<String, StringValuePattern> queryParams, String body) {
-        RequestPatternBuilder requestBuilder = urlMatching ? WireMock.postRequestedFor(WireMock.urlMatching(url)) : WireMock.postRequestedFor(WireMock.urlPathEqualTo(url));
+    private void verifyPostRequest(UUID stubId, String url, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
+        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.postRequestedFor(WireMock.urlPathMatching(url)) : WireMock.postRequestedFor(WireMock.urlPathEqualTo(url));
         verifyRequest(stubId, requestBuilder, queryParams, body);
     }
 
@@ -2513,13 +2511,13 @@ public class NetworkModificationTest {
         verifyPutRequest(stubId, url, true, queryParams, body);
     }
 
-    private void verifyPutRequest(UUID stubId, String url, boolean urlMatching, Map<String, StringValuePattern> queryParams, String body) {
-        RequestPatternBuilder requestBuilder = urlMatching ? WireMock.putRequestedFor(WireMock.urlMatching(url)) : WireMock.putRequestedFor(WireMock.urlPathEqualTo(url));
+    private void verifyPutRequest(UUID stubId, String url, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
+        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.putRequestedFor(WireMock.urlMatching(url)) : WireMock.putRequestedFor(WireMock.urlPathEqualTo(url));
         verifyRequest(stubId, requestBuilder, queryParams, body);
     }
 
-    private void verifyDeleteRequest(UUID stubId, String url, boolean urlMatching, Map<String, StringValuePattern> queryParams) {
-        RequestPatternBuilder requestBuilder = urlMatching ? WireMock.deleteRequestedFor(WireMock.urlMatching(url)) : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(url));
+    private void verifyDeleteRequest(UUID stubId, String url, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.deleteRequestedFor(WireMock.urlMatching(url)) : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(url));
         verifyRequest(stubId, requestBuilder, queryParams, null);
     }
 
@@ -2533,8 +2531,8 @@ public class NetworkModificationTest {
     }
 
     private void removeRequestForStub(UUID stubId) {
-        List<ServeEvent> serveEvents = WireMock.getAllServeEvents(ServeEventQuery.forStubMapping(stubId));
+        List<ServeEvent> serveEvents = wireMock.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
         assertEquals(1, serveEvents.size());
-        WireMock.removeServeEvent(serveEvents.get(0).getId());
+        wireMock.removeServeEvent(serveEvents.get(0).getId());
     }
 }
