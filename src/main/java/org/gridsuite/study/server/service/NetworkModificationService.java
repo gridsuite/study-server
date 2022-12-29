@@ -139,7 +139,7 @@ public class NetworkModificationService {
 
         String message = responseBody;
         try {
-            JsonNode node = new ObjectMapper().readTree(responseBody).path("message");
+            JsonNode node = objectMapper.readTree(responseBody).path("message");
             if (!node.isMissingNode()) {
                 message = node.asText();
             }

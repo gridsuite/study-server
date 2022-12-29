@@ -2400,6 +2400,66 @@ public class NetworkModificationTest {
         return modificationNode;
     }
 
+    @SneakyThrows
+    @Test
+    public void testApplyModificationWithErrors() {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        String userId = "userId";
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+            UUID.randomUUID(), VARIANT_ID, "node 1", userId);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        Map<String, Object> createLoadInfos = Map.of("type", ModificationType.LOAD_CREATION, "equipmentId", "loadId");
+        String jsonCreateLoadInfos = mapper.writeValueAsString(createLoadInfos);
+        String responseBody = createEquipmentModificationInfosBody(ModificationType.LOAD_CREATION, "s1");
+        UUID stubId = stubNetworkModificationPostWithBody(jsonCreateLoadInfos, responseBody);
+
+        // Create network modification on first modification node
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1"));
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, VARIANT_ID);
+
+        // String message error
+        String errorMessage = "Internal Server Error";
+        stubId = stubNetworkModificationPostWithError(jsonCreateLoadInfos);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubId, jsonCreateLoadInfos);
+
+        // Json message error
+        stubId = stubNetworkModificationPostWithError(jsonCreateLoadInfos, String.format("{\"message\" : \"%s\"}", errorMessage));
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubId, jsonCreateLoadInfos);
+
+        // Bad json message error
+        errorMessage = String.format("{\"foo\" : \"%s\"}", errorMessage);
+        stubId = stubNetworkModificationPostWithError(jsonCreateLoadInfos, errorMessage);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubId, jsonCreateLoadInfos);
+    }
+
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
         Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
@@ -2451,9 +2511,13 @@ public class NetworkModificationTest {
     }
 
     private UUID stubNetworkModificationPostWithError(String requestBody) {
+        return stubNetworkModificationPostWithError(requestBody, "Internal Server Error");
+    }
+
+    private UUID stubNetworkModificationPostWithError(String requestBody, String errorMessage) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
             .withRequestBody(WireMock.equalToJson(requestBody))
-            .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+            .willReturn(WireMock.serverError().withBody(errorMessage))
         ).getId();
     }
 
