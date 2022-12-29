@@ -1788,12 +1788,16 @@ public class NetworkModificationTest {
 
         List<UUID> modificationUuidList = Collections.singletonList(modification1);
         String expectedBody = mapper.writeValueAsString(modificationUuidList);
-        String url = "/v1/groups/" + modificationNode.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
-            "&reportUuid=(.*)\\" +
-            "&reporterId=" + modificationNode.getId() +
-            "&variantId=" + VARIANT_ID +
-            "&originGroupUuid=" + modificationNode.getModificationGroupUuid() + "&build=false$";
-        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(), expectedBody);
+        String url = "/v1/groups/" + modificationNode.getModificationGroupUuid();
+        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                        "action", WireMock.equalTo("MOVE"),
+                        "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
+                        "reportUuid", WireMock.matching(".*"),
+                        "reporterId", WireMock.equalTo(modificationNode.getId().toString()),
+                        "variantId", WireMock.equalTo(VARIANT_ID),
+                        "originGroupUuid", WireMock.equalTo(modificationNode.getModificationGroupUuid().toString()),
+                        "build", WireMock.equalTo("false")),
+                expectedBody);
 
         // switch back the 2 modifications order (modification1 is set before modification2)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
@@ -1804,12 +1808,17 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        url = "/v1/groups/" + modificationNode.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
-            "&reportUuid=(.*)\\" +
-            "&reporterId=" + modificationNode.getId() +
-            "&variantId=" + VARIANT_ID +
-            "&originGroupUuid=" + modificationNode.getModificationGroupUuid() + "&build=false&before=" + modification2 + "$";
-        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(), expectedBody);
+        url = "/v1/groups/" + modificationNode.getModificationGroupUuid();
+        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                        "action", WireMock.equalTo("MOVE"),
+                        "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
+                        "reportUuid", WireMock.matching(".*"),
+                        "reporterId", WireMock.equalTo(modificationNode.getId().toString()),
+                        "variantId", WireMock.equalTo(VARIANT_ID),
+                        "originGroupUuid", WireMock.equalTo(modificationNode.getModificationGroupUuid().toString()),
+                        "build", WireMock.equalTo("false"),
+                        "before", WireMock.equalTo(modification2.toString())),
+                expectedBody);
     }
 
     @Test
@@ -1856,11 +1865,14 @@ public class NetworkModificationTest {
 
         List<UUID> expectedList = List.of(modification1, modification2);
         String expectedBody = mapper.writeValueAsString(expectedList);
-        String url = "/v1/groups/" + node1.getModificationGroupUuid() + "\\?action=COPY&networkUuid=" + NETWORK_UUID_STRING +
-            "&reportUuid=(.*)\\" +
-            "&reporterId=" + node1.getId() +
-            "&variantId=" + VARIANT_ID + "$";
-        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(), expectedBody);
+        String url = "/v1/groups/" + node1.getModificationGroupUuid();
+        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                        "action", WireMock.equalTo("COPY"),
+                        "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
+                        "reportUuid", WireMock.matching(".*"),
+                        "reporterId", WireMock.equalTo(node1.getId().toString()),
+                        "variantId", WireMock.equalTo(VARIANT_ID)),
+                expectedBody);
     }
 
     @Test
@@ -1909,12 +1921,16 @@ public class NetworkModificationTest {
 
         List<UUID> expectedList = List.of(modification1, modification2);
         String expectedBody = mapper.writeValueAsString(expectedList);
-        String url = "/v1/groups/" + node1.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
-                "&reportUuid=(.*)\\" +
-                "&reporterId=" + node1.getId() +
-                "&variantId=" + VARIANT_ID +
-                "&originGroupUuid=" + node1.getModificationGroupUuid() + "&build=false$";
-        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(), expectedBody);
+        String url = "/v1/groups/" + node1.getModificationGroupUuid();
+        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                        "action", WireMock.equalTo("MOVE"),
+                        "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
+                        "reportUuid", WireMock.matching(".*"),
+                        "reporterId", WireMock.equalTo(node1.getId().toString()),
+                        "variantId", WireMock.equalTo(VARIANT_ID),
+                        "originGroupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
+                        "build", WireMock.equalTo("false")),
+                expectedBody);
 
         // move 2 modifications from node1 to node2
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
@@ -1936,12 +1952,16 @@ public class NetworkModificationTest {
 
         expectedList = List.of(modification1, modification2);
         expectedBody = mapper.writeValueAsString(expectedList);
-        url = "/v1/groups/" + node2.getModificationGroupUuid() + "\\?action=MOVE&networkUuid=" + NETWORK_UUID_STRING +
-            "&reportUuid=(.*)\\" +
-            "&reporterId=" + node2.getId() +
-            "&variantId=" + VARIANT_ID +
-            "&originGroupUuid=" + node1.getModificationGroupUuid() + "&build=true$";
-        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(), expectedBody);
+        url = "/v1/groups/" + node2.getModificationGroupUuid();
+        verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                        "action", WireMock.equalTo("MOVE"),
+                        "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
+                        "reportUuid", WireMock.matching(".*"),
+                        "reporterId", WireMock.equalTo(node2.getId().toString()),
+                        "variantId", WireMock.equalTo(VARIANT_ID),
+                        "originGroupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
+                        "build", WireMock.equalTo("true")),
+                expectedBody);
 
         // move modification without defining originNodeUuid
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
@@ -2498,26 +2518,26 @@ public class NetworkModificationTest {
         verifyPutRequest(stubId, "/v1/network-modifications/" + MODIFICATION_UUID, false, Map.of(), requestBody);
     }
 
-    private void verifyPostRequest(UUID stubId, String url, Map<String, StringValuePattern> queryParams) {
-        verifyPostRequest(stubId, url, false, queryParams, null);
+    private void verifyPostRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
+        verifyPostRequest(stubId, urlPath, false, queryParams, null);
     }
 
-    private void verifyPostRequest(UUID stubId, String url, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
-        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.postRequestedFor(WireMock.urlPathMatching(url)) : WireMock.postRequestedFor(WireMock.urlPathEqualTo(url));
+    private void verifyPostRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
+        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.postRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.postRequestedFor(WireMock.urlPathEqualTo(urlPath));
         verifyRequest(stubId, requestBuilder, queryParams, body);
     }
 
-    private void verifyPutRequestWithUrlMatching(UUID stubId, String url, Map<String, StringValuePattern> queryParams, String body) {
-        verifyPutRequest(stubId, url, true, queryParams, body);
+    private void verifyPutRequestWithUrlMatching(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
+        verifyPutRequest(stubId, urlPath, true, queryParams, body);
     }
 
-    private void verifyPutRequest(UUID stubId, String url, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
-        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.putRequestedFor(WireMock.urlMatching(url)) : WireMock.putRequestedFor(WireMock.urlPathEqualTo(url));
+    private void verifyPutRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
+        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.putRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.putRequestedFor(WireMock.urlPathEqualTo(urlPath));
         verifyRequest(stubId, requestBuilder, queryParams, body);
     }
 
-    private void verifyDeleteRequest(UUID stubId, String url, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
-        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.deleteRequestedFor(WireMock.urlMatching(url)) : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(url));
+    private void verifyDeleteRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.deleteRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(urlPath));
         verifyRequest(stubId, requestBuilder, queryParams, null);
     }
 
