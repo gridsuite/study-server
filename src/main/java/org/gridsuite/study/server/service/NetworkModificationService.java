@@ -133,23 +133,25 @@ public class NetworkModificationService {
 
     private StudyException handleError(HttpStatusCodeException httpException, StudyException.Type type) {
         String responseBody = httpException.getResponseBodyAsString();
-        if (responseBody.isEmpty()) {
-            return new StudyException(type, httpException.getStatusCode().toString());
-        }
 
-        String message = responseBody;
+        String errorMessage = responseBody.isEmpty() ? httpException.getStatusCode().toString() : parseError(responseBody);
+
+        LOGGER.error(errorMessage);
+
+        return new StudyException(type, errorMessage);
+    }
+
+    private String parseError(String responseBody) {
         try {
             JsonNode node = objectMapper.readTree(responseBody).path("message");
             if (!node.isMissingNode()) {
-                message = node.asText();
+                return node.asText();
             }
         } catch (JsonProcessingException e) {
-            // responseBody by default
+            // status code or responseBody by default
         }
 
-        LOGGER.error(message, httpException);
-
-        return new StudyException(type, message);
+        return responseBody;
     }
 
     public List<ModificationInfos> createModification(UUID studyUuid,
