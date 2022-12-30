@@ -440,7 +440,7 @@ public class NetworkModificationTest {
 
         Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, substationsSet);
+        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid), substationsSet);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -461,7 +461,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, substationsSet);
+        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode2Uuid), substationsSet);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -483,18 +483,7 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        //output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        try {
-            output.receive(TIMEOUT, studyUpdateDestination);
-        } catch (Exception e) {
-            throw e;
-        }
+        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid, modificationNode2Uuid), substationsSet);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         verifyPostWithBodyAndVariant(2, bodyJson, VARIANT_ID);
@@ -2218,9 +2207,9 @@ public class NetworkModificationTest {
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        //checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     private void checkEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
@@ -2257,19 +2246,22 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId,
-            Set<String> modifiedIdsSet) {
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId, Set<String> modifiedIdsSet) {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, List.of(nodeUuid), headerUpdateTypeId, modifiedIdsSet);
+    }
+
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids, String headerUpdateTypeId, Set<String> modifiedIdsSet) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
+        assertEquals(nodeUuids.get(0), headersStudyUpdate.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
+        checkUpdateNodesMessageReceived(studyNameUserIdUuid, nodeUuids);
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuids.get(0));
     }
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -2282,17 +2274,17 @@ public class NetworkModificationTest {
         assertEquals(NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkSwitchModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            Set<String> modifiedSubstationsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                modifiedSubstationsSet);
+    private void checkSwitchModificationMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids, Set<String> modifiedSubstationsSet) {
+        assertFalse(nodeUuids.isEmpty());
+
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuids, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, modifiedSubstationsSet);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageSwitch.getPayload()));
         MessageHeaders headersSwitch = messageSwitch.getHeaders();
         assertEquals(studyNameUserIdUuid, headersSwitch.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodeUuid, headersSwitch.get(NotificationService.HEADER_NODE));
+        assertEquals(nodeUuids.get(0), headersSwitch.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_SWITCH, headersSwitch.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
