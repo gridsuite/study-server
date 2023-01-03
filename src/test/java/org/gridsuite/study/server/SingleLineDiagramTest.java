@@ -611,12 +611,29 @@ public class SingleLineDiagramTest {
         UUID modificationNodeUuid = modificationNode1.getId();
 
         //get the voltage level diagram svg on a non existing variant
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
+            studyNameUserIdUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
+            status().isNoContent());
+
+        //get the voltage level diagram svg and metadata on a non existing variant
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
             studyNameUserIdUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON),
-            content().string("svgandmetadata"));
+            status().isNoContent());
 
+        //get the substation diagram svg on a non existing variant
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
+            studyNameUserIdUuid, modificationNodeUuid, "substationId")).andExpectAll(
+            status().isNoContent());
+
+        //get the substation diagram svg and metadata on a non existing variant
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
+            studyNameUserIdUuid, modificationNodeUuid, "substationId")).andExpectAll(
+            status().isNoContent());
+
+        //get the network area diagram on a non existing variant
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0&voltageLevelsIds=vlFr1A",
+            studyNameUserIdUuid, modificationNodeUuid)).andExpectAll(
+            status().isNoContent());
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
