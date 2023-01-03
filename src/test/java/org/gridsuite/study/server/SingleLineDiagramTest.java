@@ -94,6 +94,8 @@ public class SingleLineDiagramTest {
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String VARIANT_ID = "variant_1";
+    private static final String NETWORK_UUID_VARIANT_ERROR_STRING = "88400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final String VARIANT_ERROR_ID = "noVariant";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
@@ -159,6 +161,9 @@ public class SingleLineDiagramTest {
         when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_STRING)))
             .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
                 new VariantInfos(VARIANT_ID, 1)));
+
+        when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING)))
+            .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         // Values used in dispatcher
         String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
@@ -593,6 +598,25 @@ public class SingleLineDiagramTest {
 
         assertThrows(NestedServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, rootNodeUuid, "substationErrorId")));
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substation-svg-and-metadata/%s/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en", NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testDiagramsVariantError() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ERROR_ID, "node 1");
+        UUID modificationNodeUuid = modificationNode1.getId();
+
+        //get the voltage level diagram svg on a non existing variant
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
+            studyNameUserIdUuid, modificationNodeUuid, "voltageLevelId")).andExpectAll(
+            status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON),
+            content().string("svgandmetadata"));
+
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
