@@ -1677,6 +1677,61 @@ public class NetworkModificationTest {
 
     @SneakyThrows
     @Test
+    public void testLoadScaling() {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String loadScalingAttributes = "{\"type\":\"LOAD_SCALING\",\"variationType\":\"DELTA_P\",\"loadScalingVariations\":[{\"filters\":[{\"id\":\"b5c93a96-b325-47a6-8303-c6764ba680e5\",\"name\":\"filter\"},{\"id\":\"6c2137ec-6f2c-4aeb-ab76-e898263e972a\",\"name\":\"grouppppp\"}],\"variationValue\":\"300\",\"activeVariationMode\":\"PROPORTIONAL\", \"reactiveVariationMode\":\"TAN_FIXED\"}]}";
+
+        UUID stubPostId = stubNetworkModificationPostWithBody(loadScalingAttributes, List.of().toString());
+        UUID stubPutId = stubNetworkModificationPutWithBody(loadScalingAttributes);
+
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(loadScalingAttributes).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content(loadScalingAttributes).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+
+        verifyNetworkModificationPost(stubPostId, loadScalingAttributes);
+        verifyNetworkModificationPut(stubPutId, loadScalingAttributes);
+
+        String badBody = "{\"type\":\"" + ModificationType.LOAD_SCALING + "\",\"bogus\":\"bogus\"}";
+        stubPostId = stubNetworkModificationPostWithBodyAndError(badBody);
+        stubPutId = stubNetworkModificationPutWithBodyAndError(badBody);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().is5xxServerError());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().is5xxServerError());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubPostId, badBody);
+        verifyNetworkModificationPut(stubPutId, badBody);
+    }
+
+    @SneakyThrows
+    @Test
     @DisplayName("Should throw an exception when the body of a network modification is wrongly formatted")
     public void testNetworkModificationBodyBadFormat() {
 
