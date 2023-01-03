@@ -494,17 +494,16 @@ public class NetworkModificationTest {
         checkSwitchModificationMessagesReceived(studyNameUserIdUuid, List.of(modificationNode1Uuid, modificationNode2Uuid), substationsSet);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
+        verifyNetworkModificationPostWithVariant(stubId, bodyJson, VARIANT_ID);
+
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode1Uuid)); // modificationNode1
-                                                                                                               // is
-                                                                                                               // still
-                                                                                                               // built
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode2Uuid)); // modificationNode2
-                                                                                                                       // is
-                                                                                                                       // now
-                                                                                                                       // invalid
+        // modificationNode2 is still built
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNode1Uuid));
+
+        // modificationNode2 is now invalid
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode2Uuid));
     }
 
     @Test

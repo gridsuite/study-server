@@ -1766,12 +1766,6 @@ public class StudyTest {
         return nodesAfterDuplication.get(0);
     }
 
-    public void getDefaultLoadflowProvider() throws Exception {
-        mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
-                status().isOk(),
-                content().string(defaultLoadflowProvider));
-    }
-
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
         Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
