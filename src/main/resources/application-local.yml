@@ -15,30 +15,34 @@ powsybl-ws:
   database:
     host: localhost
 
-backing-services:
-  case-server:
-    base-uri: http://localhost:5000
-  single-line-diagram-server:
-    base-uri: http://localhost:5005
-  network-conversion-server:
-    base-uri: http://localhost:5003
-  geo-data-server:
-    base-uri: http://localhost:8087
-  network-map-server:
-    base-uri: http://localhost:5006
-  network-modification-server:
-    base-uri: http://localhost:5007
-  loadflow-server:
-    base-uri: http://localhost:5008
-  actions-server:
-    base-uri: http://localhost:5022
-  security-analysis-server:
-    base-uri: http://localhost:5023
-  report-server:
-    base-uri: http://localhost:5028
-  sensitivity-analysis-server:
-    base-uri: http://localhost:5030
-  shortcircuit-server:
-    base-uri: http://localhost:5031
-  network-store-server:
-    base-uri: http://localhost:8080/
+powsybl:
+  services:
+    network-store-server:
+      base-uri: http://localhost:8080
+    case-server:
+      base-uri: http://localhost:5000
+    network-conversion-server:
+      base-uri: http://localhost:5003
+    single-line-diagram-server:
+      base-uri: http://localhost:5005
+
+gridsuite:
+  services:  
+    geo-data-server:
+      base-uri: http://localhost:8087
+    network-map-server:
+      base-uri: http://localhost:5006
+    network-modification-server:
+      base-uri: http://localhost:5007
+    loadflow-server:
+      base-uri: http://localhost:5008
+    actions-server:
+      base-uri: http://localhost:5022
+    security-analysis-server:
+      base-uri: http://localhost:5023
+    report-server:
+      base-uri: http://localhost:5028
+    sensitivity-analysis-server:
+      base-uri: http://localhost:5030
+    shortcircuit-server:
+      base-uri: http://localhost:5031

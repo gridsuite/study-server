@@ -51,7 +51,7 @@ public class SingleLineDiagramService {
 
     private String singleLineDiagramServerBaseUri;
 
-    public SingleLineDiagramService(@Value("${backing-services.single-line-diagram-server.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri) {
+    public SingleLineDiagramService(@Value("${powsybl.services.single-line-diagram-server.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri) {
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
     }
 

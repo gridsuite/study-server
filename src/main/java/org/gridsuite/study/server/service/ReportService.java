@@ -44,7 +44,7 @@ public class ReportService {
     @Autowired
     public ReportService(
                          ObjectMapper objectMapper,
-                         @Value("${backing-services.report-server.base-uri:http://report-server/}") String reportServerBaseUri) {
+                         @Value("${gridsuite.services.report-server.base-uri:http://report-server/}") String reportServerBaseUri) {
         this.reportServerBaseUri = reportServerBaseUri;
         ReporterModelJsonModule reporterModelJsonModule = new ReporterModelJsonModule();
         reporterModelJsonModule.setSerializers(null); // FIXME: remove when dicos will be used on the front side

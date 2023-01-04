@@ -56,7 +56,7 @@ public class ShortCircuitService {
 
     @Autowired
     public ShortCircuitService(
-            @Value("${backing-services.shortcircuit-server.base-uri:http://shortcircuit-server/}") String shortCircuitServerBaseUri,
+            @Value("${gridsuite.services.shortcircuit-server.base-uri:http://shortcircuit-server/}") String shortCircuitServerBaseUri,
             NetworkModificationTreeService networkModificationTreeService,
             NetworkService networkStoreService, ObjectMapper objectMapper) {
         this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
