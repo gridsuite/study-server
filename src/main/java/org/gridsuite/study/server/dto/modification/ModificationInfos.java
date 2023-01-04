@@ -6,15 +6,19 @@
  */
 package org.gridsuite.study.server.dto.modification;
 
-import java.time.ZonedDateTime;
-import java.util.Set;
-import java.util.UUID;
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+
+import java.time.ZonedDateTime;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -41,7 +45,8 @@ import lombok.experimental.SuperBuilder;
     @JsonSubTypes.Type(value = ModificationInfos.class, name = "LINE_ATTACH_TO_VOLTAGE_LEVEL"),
     @JsonSubTypes.Type(value = ModificationInfos.class, name = "LINES_ATTACH_TO_SPLIT_LINES"),
     @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "BRANCH_STATUS"),
-    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "EQUIPMENT_ATTRIBUTE_MODIFICATION")
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "EQUIPMENT_ATTRIBUTE_MODIFICATION"),
+    @JsonSubTypes.Type(value = ModificationInfos.class, name = "GENERATOR_SCALING")
 })
 @SuperBuilder
 @NoArgsConstructor

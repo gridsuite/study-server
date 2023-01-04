@@ -30,7 +30,8 @@ public enum ModificationType {
     GROOVY_SCRIPT,
     BRANCH_STATUS,
     SHUNT_COMPENSATOR_CREATION,
-    LINES_ATTACH_TO_SPLIT_LINES;
+    LINES_ATTACH_TO_SPLIT_LINES,
+    GENERATOR_SCALING;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
@@ -58,6 +59,8 @@ public enum ModificationType {
                 return "generators-modification";
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return "lines-attach-to-split-lines";
+            case GENERATOR_SCALING:
+                return "generator-scaling";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
@@ -100,6 +103,8 @@ public enum ModificationType {
                 return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
             case BRANCH_STATUS:
                 return StudyException.Type.BRANCH_STATUS_FAILED;
+            case GENERATOR_SCALING:
+                return StudyException.Type.GENERATOR_SCALING_FAILED;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
