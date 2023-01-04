@@ -54,10 +54,6 @@ public class StudyController {
     private final ShortCircuitService shortCircuitService;
     private final CaseService caseService;
 
-    enum UpdateModificationAction {
-        MOVE, COPY
-    }
-
     public StudyController(StudyService studyService,
             NetworkService networkStoreService,
             NetworkModificationTreeService networkModificationTreeService,
@@ -76,37 +72,6 @@ public class StudyController {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
         this.caseService = caseService;
-    }
-
-    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
-        private final Class<E> enumClass;
-
-        public MyEnumConverter(Class<E> enumClass) {
-            this.enumClass = enumClass;
-        }
-
-        @Override
-        public void setAsText(final String text) throws IllegalArgumentException {
-            try {
-                E value = Enum.valueOf(enumClass, text.toUpperCase());
-                setValue(value);
-            } catch (IllegalArgumentException ex) {
-                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
-                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
-            }
-        }
-    }
-
-    static class MyModificationTypeConverter extends PropertyEditorSupport {
-
-        public MyModificationTypeConverter() {
-            super();
-        }
-
-        @Override
-        public void setAsText(final String text) throws IllegalArgumentException {
-            setValue(ModificationType.getTypeFromUri(text));
-        }
     }
 
     @InitBinder
@@ -234,9 +199,22 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode) {
-        byte[] result = studyService.getVoltageLevelSvg(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, sldDisplayMode), nodeUuid);
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .sldDisplayMode(sldDisplayMode)
+                .language(language)
+                .build();
+        byte[] result = studyService.getVoltageLevelSvg(
+                studyUuid,
+                voltageLevelId,
+                diagramParameters,
+                nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -254,9 +232,22 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode) {
-        String result = studyService.getVoltageLevelSvgAndMetadata(studyUuid, voltageLevelId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, sldDisplayMode), nodeUuid);
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .sldDisplayMode(sldDisplayMode)
+                .language(language)
+                .build();
+        String result = studyService.getVoltageLevelSvgAndMetadata(
+                studyUuid,
+                voltageLevelId,
+                diagramParameters,
+                nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -366,9 +357,10 @@ public class StudyController {
     public ResponseEntity<String> getTwoWindingsTransformersMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getTwoWindingsTransformersMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getTwoWindingsTransformersMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/{twoWindingsTransformerId}")
@@ -389,9 +381,10 @@ public class StudyController {
     public ResponseEntity<String> getThreeWindingsTransformersMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getThreeWindingsTransformersMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getThreeWindingsTransformersMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators")
@@ -424,9 +417,10 @@ public class StudyController {
     public ResponseEntity<String> getBatteriesMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getBatteriesMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getBatteriesMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/dangling-lines")
@@ -435,9 +429,10 @@ public class StudyController {
     public ResponseEntity<String> getDanglingLinesMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getDanglingLinesMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getDanglingLinesMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines")
@@ -446,9 +441,10 @@ public class StudyController {
     public ResponseEntity<String> getHvdcLinesMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getHvdcLinesMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getHvdcLinesMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lcc-converter-stations")
@@ -457,9 +453,10 @@ public class StudyController {
     public ResponseEntity<String> getLccConverterStationsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLccConverterStationsMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLccConverterStationsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/vsc-converter-stations")
@@ -468,9 +465,10 @@ public class StudyController {
     public ResponseEntity<String> getVscConverterStationsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVscConverterStationsMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVscConverterStationsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads")
@@ -503,9 +501,10 @@ public class StudyController {
     public ResponseEntity<String> getShuntCompensatorsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getShuntCompensatorsMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getShuntCompensatorsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/{shuntCompensatorId}")
@@ -526,9 +525,10 @@ public class StudyController {
     public ResponseEntity<String> getStaticVarCompensatorsMapData(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStaticVarCompensatorsMapData(studyUuid, nodeUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStaticVarCompensatorsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}")
@@ -604,14 +604,18 @@ public class StudyController {
         if (originNodeUuid != null) {
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
+        String failureIds;
         switch (action) {
             case COPY:
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId));
+                failureIds = studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
+                break;
             case MOVE:
-                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId));
+                failureIds = studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
+                break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(failureIds);
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
@@ -800,11 +804,20 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .language(language)
+                .build();
         byte[] result = studyService.getSubstationSvg(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, null), substationLayout, nodeUuid);
+                diagramParameters, substationLayout, nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
-            ResponseEntity.noContent().build();
+                ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
@@ -820,9 +833,22 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary) {
-        String result = studyService.getSubstationSvgAndMetadata(studyUuid, substationId,
-            new DiagramParameters(useName, centerLabel, diagonalLabel, topologicalColoring, componentLibrary, null), substationLayout, nodeUuid);
+            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+        DiagramParameters diagramParameters = DiagramParameters.builder()
+                .useName(useName)
+                .labelCentered(centerLabel)
+                .diagonalLabel(diagonalLabel)
+                .topologicalColoring(topologicalColoring)
+                .componentLibrary(componentLibrary)
+                .language(language)
+                .build();
+        String result = studyService.getSubstationSvgAndMetadata(
+                studyUuid,
+                substationId,
+                diagramParameters,
+                substationLayout,
+                nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -845,8 +871,8 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
     public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = securityAnalysisService.getSecurityAnalysisStatus(nodeUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
+        SecurityAnalysisStatus status = securityAnalysisService.getSecurityAnalysisStatus(nodeUuid);
+        return status != null ? ResponseEntity.ok().body(status.name()) :
                 ResponseEntity.noContent().build();
     }
 
@@ -1066,7 +1092,7 @@ public class StudyController {
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Void> stopBuild(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        studyService.stopBuild(studyUuid, nodeUuid);
+        studyService.stopBuild(nodeUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -1152,5 +1178,52 @@ public class StudyController {
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments")
+    @Operation(summary = "Get network map equipments data")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The lists of lines and substations data")})
+    public ResponseEntity<String> getMapEquipments(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getMapEquipments(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
+    }
+
+    enum UpdateModificationAction {
+        MOVE, COPY
+    }
+
+    static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
+        private final Class<E> enumClass;
+
+        public MyEnumConverter(Class<E> enumClass) {
+            this.enumClass = enumClass;
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            try {
+                E value = Enum.valueOf(enumClass, text.toUpperCase());
+                setValue(value);
+            } catch (IllegalArgumentException ex) {
+                String avail = StringUtils.join(enumClass.getEnumConstants(), ", ");
+                throw new IllegalArgumentException(String.format("Enum unknown entry '%s' should be among %s", text, avail));
+            }
+        }
+    }
+
+    static class MyModificationTypeConverter extends PropertyEditorSupport {
+
+        public MyModificationTypeConverter() {
+            super();
+        }
+
+        @Override
+        public void setAsText(final String text) throws IllegalArgumentException {
+            setValue(ModificationType.getTypeFromUri(text));
+        }
     }
 }

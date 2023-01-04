@@ -13,6 +13,7 @@ import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -268,26 +269,34 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public String moveModifications(UUID groupUuid, UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid) {
-        Objects.requireNonNull(groupUuid);
+    public String moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
+        Objects.requireNonNull(networkUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "MOVE")
-            .queryParam("originGroupUuid", originGroupUuid);
+            .queryParam("networkUuid", networkUuid)
+            .queryParam("reportUuid", nodeInfos.getReportUuid())
+            .queryParam("reporterId", nodeInfos.getId())
+            .queryParam("variantId", nodeInfos.getVariantId())
+            .queryParam("originGroupUuid", originGroupUuid)
+            .queryParam("build", buildTargetNode);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
         }
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
     }
 
-    public String duplicateModification(UUID groupUuid, List<UUID> modificationUuidList) {
-        Objects.requireNonNull(groupUuid);
+    public String duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
-            .queryParam("action", "COPY");
+            .queryParam("action", "COPY")
+            .queryParam("networkUuid", networkUuid)
+            .queryParam("reportUuid", nodeInfos.getReportUuid())
+            .queryParam("reporterId", nodeInfos.getId())
+            .queryParam("variantId", nodeInfos.getVariantId());
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
     }
 
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid) {
