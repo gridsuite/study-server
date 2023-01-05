@@ -31,7 +31,9 @@ public enum ModificationType {
     BRANCH_STATUS,
     SHUNT_COMPENSATOR_CREATION,
     LINES_ATTACH_TO_SPLIT_LINES,
-    LOAD_SCALING;
+    LOAD_SCALING,
+    DELETE_VOLTAGE_LEVEL_ON_LINE,
+    DELETE_ATTACHING_LINE;
 
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
@@ -61,6 +63,10 @@ public enum ModificationType {
                 return "lines-attach-to-split-lines";
             case LOAD_SCALING:
                 return "load-scaling";
+            case DELETE_VOLTAGE_LEVEL_ON_LINE:
+                return "delete-voltage-level-on-line";
+            case DELETE_ATTACHING_LINE:
+                return "delete-attaching-line";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
@@ -101,10 +107,14 @@ public enum ModificationType {
                 return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
+            case DELETE_VOLTAGE_LEVEL_ON_LINE:
+                return StudyException.Type.DELETE_VOLTAGE_LEVEL_ON_LINE;
             case BRANCH_STATUS:
                 return StudyException.Type.BRANCH_STATUS_FAILED;
             case LOAD_SCALING:
                 return  StudyException.Type.LOAD_SCALING_FAILED;
+            case DELETE_ATTACHING_LINE:
+                return StudyException.Type.DELETE_ATTACHING_LINE;
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
