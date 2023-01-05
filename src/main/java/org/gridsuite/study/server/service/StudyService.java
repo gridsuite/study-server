@@ -544,7 +544,7 @@ public class StudyService {
                                      UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        if (networkStoreService.existeVariant(networkUuid, variantId)) {
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
         } else {
             return null;
@@ -555,7 +555,7 @@ public class StudyService {
                                                 UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        if (networkStoreService.existeVariant(networkUuid, variantId)) {
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
         } else {
             return null;
@@ -900,7 +900,7 @@ public class StudyService {
                                    String substationLayout, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        if (networkStoreService.existeVariant(networkUuid, variantId)) {
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
         } else {
             return null;
@@ -911,7 +911,7 @@ public class StudyService {
                                               String substationLayout, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        if (networkStoreService.existeVariant(networkUuid, variantId)) {
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout);
         } else {
             return null;
@@ -921,7 +921,7 @@ public class StudyService {
     public String getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        if (networkStoreService.existeVariant(networkUuid, variantId)) {
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
             return singleLineDiagramService.getNeworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth);
         } else {
             return null;
