@@ -45,6 +45,7 @@ public final class StudyConstants {
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_MESSAGE = "message";
     public static final String HEADER_USER_ID = "userId";
+    public static final String HEADER_USER_ID_INFO = "userIdInfo";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,

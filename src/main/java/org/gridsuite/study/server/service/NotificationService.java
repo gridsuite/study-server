@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID_INFO;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
@@ -119,7 +120,7 @@ public class NotificationService {
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .setHeader(HEADER_ERROR, errorMessage)
-                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_USER_ID_INFO, userId) // this header escape the filter in study_notification_server
                 .build());
     }
 
