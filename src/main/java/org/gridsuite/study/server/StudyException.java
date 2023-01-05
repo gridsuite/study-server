@@ -65,7 +65,8 @@ public class StudyException extends RuntimeException {
         UNKNOWN_ACTION_TYPE,
         MISSING_PARAMETER,
         DELETE_VOLTAGE_LEVEL_ON_LINE,
-        DELETE_ATTACHING_LINE;
+        DELETE_ATTACHING_LINE,
+        GENERATOR_SCALING_FAILED
     }
 
     private final Type type;
