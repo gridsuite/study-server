@@ -1679,14 +1679,14 @@ public class NetworkModificationTest {
     @Test
     public void testLoadScaling() {
         String userId = "userId";
-        String loadScalingAttributes = "{\"type\":\"LOAD_SCALING\",\"variationType\":\"DELTA_P\",\"loadScalingVariations\":[{\"filters\":[{\"id\":\"b5c93a96-b325-47a6-8303-c6764ba680e5\",\"name\":\"filter\"},{\"id\":\"6c2137ec-6f2c-4aeb-ab76-e898263e972a\",\"name\":\"grouppppp\"}],\"variationValue\":\"300\",\"activeVariationMode\":\"PROPORTIONAL\", \"reactiveVariationMode\":\"TAN_FIXED\"}]}";
-        
+        String loadScalingAttributes = "{\"type\":\"LOAD_SCALING\",\"variationType\":\"DELTA_P\",\"loadScalingVariations\":[{\"filters\":[{\"id\":\"b5c93a96-b325-47a6-8303-c6764ba680e5\",\"name\":\"filter\"},{\"id\":\"6c2137ec-6f2c-4aeb-ab76-e898263e972a\",\"name\":\"grouppppp\"}],\"variationValue\":\"300\",\"variationMode\":\"PROPORTIONAL\", \"reactiveVariationMode\":\"TAN_FIXED\"}]}";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
         UUID modificationNodeUuid = modificationNode.getId();
         UUID stubPostId = stubNetworkModificationPostWithBody(loadScalingAttributes, List.of().toString());
+        UUID stubPutId = stubNetworkModificationPutWithBody(loadScalingAttributes);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(loadScalingAttributes).contentType(MediaType.APPLICATION_JSON)
@@ -1727,7 +1727,9 @@ public class NetworkModificationTest {
         verifyNetworkModificationPost(stubPostId, badBody);
         verifyNetworkModificationPut(stubPutId, badBody);
     }
-  
+
+    @SneakyThrows
+    @Test
     public void testDeleteVoltageLevelOnline() {
         String userId = "userId";
         EquipmentModificationInfos lineToAttachTo = EquipmentModificationInfos.builder()
@@ -1749,6 +1751,7 @@ public class NetworkModificationTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
         UUID modificationNodeUuid = modificationNode.getId();
+
         String createDeleteVoltageLevelOnlineAttributes = "{\"type\":\"" + ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE + "\",\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name\"}";
 
         UUID stubIdPost = stubNetworkModificationPostWithBody(createDeleteVoltageLevelOnlineAttributes, responseBody);
@@ -1757,7 +1760,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(createDeleteVoltageLevelOnlineAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                        .andExpect(status().isOk());
+                .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1766,7 +1769,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content(createDeleteVoltageLevelOnlineAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                        .andExpect(status().isOk());
+                .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1776,7 +1779,7 @@ public class NetworkModificationTest {
         UUID stubIdPostErr = stubNetworkModificationPostWithBodyAndError(badBody);
         UUID stubIdPutErr = stubNetworkModificationPutWithBodyAndError(badBody);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid).header(USER_ID_HEADER, userId)
-                .content(badBody).contentType(MediaType.APPLICATION_JSON))
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is5xxServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1785,7 +1788,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .header(USER_ID_HEADER, userId)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON))
-                        .andExpect(status().is5xxServerError());
+                .andExpect(status().is5xxServerError());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPut(stubIdPutErr, badBody);
@@ -1821,9 +1824,9 @@ public class NetworkModificationTest {
         UUID stubIdPut = stubNetworkModificationPutWithBody(createDeleteAttachingLineAttributes);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                    .content(createDeleteAttachingLineAttributes).contentType(MediaType.APPLICATION_JSON)
-                    .header(USER_ID_HEADER, userId))
-                    .andExpect(status().isOk());
+                        .content(createDeleteAttachingLineAttributes).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1844,7 +1847,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                        .andExpect(status().is5xxServerError());
+                .andExpect(status().is5xxServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPost(stubIdPostErr, badBody);
@@ -1852,7 +1855,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                        .andExpect(status().is5xxServerError());
+                .andExpect(status().is5xxServerError());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPut(stubIdPutErr, badBody);
