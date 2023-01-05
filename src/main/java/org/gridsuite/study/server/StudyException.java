@@ -63,7 +63,9 @@ public class StudyException extends RuntimeException {
         BRANCH_STATUS_FAILED,
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
-        MISSING_PARAMETER
+        MISSING_PARAMETER,
+        DELETE_VOLTAGE_LEVEL_ON_LINE,
+        DELETE_ATTACHING_LINE;
     }
 
     private final Type type;
