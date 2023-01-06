@@ -56,7 +56,7 @@ public class ShortCircuitService {
 
     @Autowired
     public ShortCircuitService(
-            @Value("${backing-services.shortcircuit-server.base-uri:http://shortcircuit-server/}") String shortCircuitServerBaseUri,
+            @Value("${gridsuite.services.shortcircuit-server.base-uri:http://shortcircuit-server/}") String shortCircuitServerBaseUri,
             NetworkModificationTreeService networkModificationTreeService,
             NetworkService networkStoreService, ObjectMapper objectMapper) {
         this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
@@ -79,9 +79,9 @@ public class ShortCircuitService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam("reportUuid", reportUuid.toString())
                 .queryParam("receiver", receiver)
-                .queryParam("reportName", "shortcircuit");
+                .queryParam("reportUuid", reportUuid.toString())
+                .queryParam("reporterId", nodeUuid.toString());
 
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
