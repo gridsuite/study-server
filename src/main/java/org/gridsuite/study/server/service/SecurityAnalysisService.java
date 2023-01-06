@@ -53,7 +53,7 @@ public class SecurityAnalysisService {
     private final NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    public SecurityAnalysisService(@Value("${backing-services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
+    public SecurityAnalysisService(@Value("${gridsuite.services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
             NetworkModificationTreeService networkModificationTreeService,
             ObjectMapper objectMapper) {
         this.securityAnalysisServerBaseUri = securityAnalysisServerBaseUri;
