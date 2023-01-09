@@ -112,7 +112,7 @@ public enum ModificationType {
             case BRANCH_STATUS:
                 return StudyException.Type.BRANCH_STATUS_FAILED;
             case LOAD_SCALING:
-                return  StudyException.Type.LOAD_SCALING_FAILED;
+                return StudyException.Type.LOAD_SCALING_FAILED;
             case DELETE_ATTACHING_LINE:
                 return StudyException.Type.DELETE_ATTACHING_LINE;
             default:
