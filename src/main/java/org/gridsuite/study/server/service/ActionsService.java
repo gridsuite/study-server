@@ -40,7 +40,8 @@ public class ActionsService {
     private String actionsServerBaseUri;
 
     @Autowired
-    public ActionsService(@Value("${backing-services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri) {
+    public ActionsService(
+            @Value("${gridsuite.services.actions-server.base-uri:http://actions-server/}") String actionsServerBaseUri) {
         this.actionsServerBaseUri = actionsServerBaseUri;
     }
 

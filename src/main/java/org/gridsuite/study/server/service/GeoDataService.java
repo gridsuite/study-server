@@ -34,21 +34,22 @@ public class GeoDataService {
     private String geoDataServerBaseUri;
 
     @Autowired
-    public GeoDataService(@Value("${backing-services.geo-data.base-uri:http://geo-data-server/}") String geoDataServerBaseUri) {
+    public GeoDataService(
+            @Value("${gridsuite.services.geo-data-server.base-uri:http://geo-data-server/}") String geoDataServerBaseUri) {
         this.geoDataServerBaseUri = geoDataServerBaseUri;
     }
 
     public String getLinesGraphics(UUID networkUuid, String variantId) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/lines")
-            .queryParam(NETWORK_UUID, networkUuid);
+                .queryParam(NETWORK_UUID, networkUuid);
 
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
         var path = uriComponentsBuilder
-            .buildAndExpand()
-            .toUriString();
+                .buildAndExpand()
+                .toUriString();
 
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
