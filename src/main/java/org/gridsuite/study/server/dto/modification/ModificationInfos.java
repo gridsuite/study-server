@@ -41,7 +41,9 @@ import lombok.experimental.SuperBuilder;
     @JsonSubTypes.Type(value = ModificationInfos.class, name = "LINE_ATTACH_TO_VOLTAGE_LEVEL"),
     @JsonSubTypes.Type(value = ModificationInfos.class, name = "LINES_ATTACH_TO_SPLIT_LINES"),
     @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "BRANCH_STATUS"),
-    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "EQUIPMENT_ATTRIBUTE_MODIFICATION")
+    @JsonSubTypes.Type(value = EquipmentModificationInfos.class, name = "EQUIPMENT_ATTRIBUTE_MODIFICATION"),
+    @JsonSubTypes.Type(value = ModificationInfos.class, name = "DELETE_VOLTAGE_LEVEL_ON_LINE"),
+    @JsonSubTypes.Type(value = ModificationInfos.class, name = "DELETE_ATTACHING_LINE")
 })
 @SuperBuilder
 @NoArgsConstructor
