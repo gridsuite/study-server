@@ -21,8 +21,6 @@ import java.util.UUID;
 public interface TombstonedEquipmentInfosRepository extends ElasticsearchRepository<TombstonedEquipmentInfos, String> {
     List<TombstonedEquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 
-    List<TombstonedEquipmentInfos> findAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
-
     void deleteAllByNetworkUuid(@NonNull UUID networkUuid);
 
     void deleteAllByNetworkUuidAndVariantId(@NonNull UUID networkUuid, @NonNull String variantId);
