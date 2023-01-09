@@ -46,11 +46,13 @@ public class NetworkMapService {
     private String networkMapServerBaseUri;
 
     @Autowired
-    public NetworkMapService(@Value("${backing-services.network-map.base-uri:http://network-map-server/}") String networkMapServerBaseUri) {
+    public NetworkMapService(
+            @Value("${gridsuite.services.network-map-server.base-uri:http://network-map-server/}") String networkMapServerBaseUri) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
 
-    public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentPath) {
+    public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
+            String equipmentPath) {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath);
         if (substationsIds != null) {
@@ -65,7 +67,8 @@ public class NetworkMapService {
     }
 
     public String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentUuid}");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
+                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath + "/{equipmentUuid}");
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -97,7 +100,8 @@ public class NetworkMapService {
                 }).getBody();
     }
 
-    public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId, String voltageLevelId,
+    public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId,
+            String voltageLevelId,
             String busPath) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
                 + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + busPath);
@@ -106,7 +110,8 @@ public class NetworkMapService {
         }
 
         return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-            new ParameterizedTypeReference<List<IdentifiableInfos>>() { }, networkUuid, voltageLevelId).getBody();
+                new ParameterizedTypeReference<List<IdentifiableInfos>>() {
+                }, networkUuid, voltageLevelId).getBody();
     }
 
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
