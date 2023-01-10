@@ -1764,7 +1764,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(createDeleteVoltageLevelOnlineAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isOk());
+                        .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1773,7 +1773,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content(createDeleteVoltageLevelOnlineAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isOk());
+                        .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1783,7 +1783,7 @@ public class NetworkModificationTest {
         UUID stubIdPostErr = stubNetworkModificationPostWithBodyAndError(badBody);
         UUID stubIdPutErr = stubNetworkModificationPutWithBodyAndError(badBody);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid).header(USER_ID_HEADER, userId)
-                        .content(badBody).contentType(MediaType.APPLICATION_JSON))
+                .content(badBody).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is5xxServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1792,7 +1792,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .header(USER_ID_HEADER, userId)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                        .andExpect(status().is5xxServerError());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPut(stubIdPutErr, badBody);
@@ -1828,8 +1828,8 @@ public class NetworkModificationTest {
         UUID stubIdPut = stubNetworkModificationPutWithBody(createDeleteAttachingLineAttributes);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .content(createDeleteAttachingLineAttributes).contentType(MediaType.APPLICATION_JSON)
-                        .header(USER_ID_HEADER, userId))
+                    .content(createDeleteAttachingLineAttributes).contentType(MediaType.APPLICATION_JSON)
+                    .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
@@ -1851,7 +1851,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().is5xxServerError());
+                        .andExpect(status().is5xxServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPost(stubIdPostErr, badBody);
@@ -1859,7 +1859,7 @@ public class NetworkModificationTest {
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().is5xxServerError());
+                        .andExpect(status().is5xxServerError());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPut(stubIdPutErr, badBody);
