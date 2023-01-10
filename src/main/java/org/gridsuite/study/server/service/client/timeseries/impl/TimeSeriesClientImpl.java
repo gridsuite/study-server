@@ -30,7 +30,7 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeriesClient {
 
     @Autowired
-    public TimeSeriesClientImpl(@Value("${backing-services.timeseries-server.base-uri:http://timeseries-server/}") String baseUri,
+    public TimeSeriesClientImpl(@Value("${gridsuite.services.timeseries-server.base-uri:http://timeseries-server/}") String baseUri,
                                 RestTemplate restTemplate) {
         super(baseUri, restTemplate);
     }

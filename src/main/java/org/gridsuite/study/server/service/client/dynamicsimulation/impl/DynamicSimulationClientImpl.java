@@ -27,7 +27,7 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 public class DynamicSimulationClientImpl extends AbstractRestClient implements DynamicSimulationClient {
 
     @Autowired
-    public DynamicSimulationClientImpl(@Value("${backing-services.dynamic-simulation-server.base-uri:http://dynamic-simulation-server/}") String baseUri,
+    public DynamicSimulationClientImpl(@Value("${gridsuite.services.dynamic-simulation-server.base-uri:http://dynamic-simulation-server/}") String baseUri,
                                        RestTemplate restTemplate) {
         super(baseUri, restTemplate);
     }

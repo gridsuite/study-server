@@ -32,7 +32,7 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 public class DynamicMappingClientImpl extends AbstractRestClient implements DynamicMappingClient {
 
     @Autowired
-    public DynamicMappingClientImpl(@Value("${backing-services.dynamic-mapping-server.base-uri:http://dynamic-mapping-server/}") String baseUri,
+    public DynamicMappingClientImpl(@Value("${gridsuite.services.dynamic-mapping-server.base-uri:http://dynamic-mapping-server/}") String baseUri,
                                     RestTemplate restTemplate) {
         super(baseUri, restTemplate);
     }
