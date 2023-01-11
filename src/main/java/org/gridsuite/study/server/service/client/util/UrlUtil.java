@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.service.client.util;
 
+import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.StudyException;
 
 import java.net.URI;
@@ -34,10 +35,10 @@ public final class UrlUtil {
         try {
             var sb = new StringBuilder(baseUri);
             sb.append(DELIMITER);
-            if (apiVersion != null && !apiVersion.isBlank()) {
+            if (Strings.isNotBlank(apiVersion)) {
                 sb.append(apiVersion).append(DELIMITER);
             }
-            if (endPoint != null && !endPoint.isBlank()) {
+            if (Strings.isNotBlank(endPoint)) {
                 sb.append(endPoint).append(DELIMITER);
             }
             var url = sb.toString();

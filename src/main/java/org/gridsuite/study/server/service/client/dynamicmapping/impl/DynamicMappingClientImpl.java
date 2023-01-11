@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,6 +47,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
         // call dynamic-mapping REST API
         var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<MappingInfos>>() { });
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            getLogger().debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriBuilder.toUriString()));
             return responseEntity.getBody();
         } else {
             return Collections.emptyList();

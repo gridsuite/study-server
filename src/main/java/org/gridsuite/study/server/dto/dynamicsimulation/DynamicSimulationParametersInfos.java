@@ -8,7 +8,6 @@
 package org.gridsuite.study.server.dto.dynamicsimulation;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +16,6 @@ import lombok.Setter;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
