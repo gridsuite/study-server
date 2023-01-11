@@ -13,8 +13,10 @@ import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.junit.Before;
@@ -43,6 +45,13 @@ import static org.mockito.BDDMockito.given;
 public class DynamicSimulationServiceTest {
 
     private static final String MAPPING_NAME_01 = "_01";
+    private static final String MAPPING_NAME_02 = "_02";
+
+    // all mappings
+    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
+
+    private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
+            new MappingInfos(MAPPING_NAMES[1]));
 
     private static final String VARIANT_1_ID = "variant_1";
 
@@ -72,6 +81,9 @@ public class DynamicSimulationServiceTest {
 
     public static final String RESULT_UUID_RUNNING_STRING = "99999999-1111-0000-0000-000000000000";
     public static final UUID RESULT_UUID_RUNNING = UUID.fromString(RESULT_UUID_RUNNING_STRING);
+
+    @MockBean
+    private DynamicMappingClient dynamicMappingClient;
 
     @MockBean
     private DynamicSimulationClient dynamicSimulationClient;
@@ -183,5 +195,18 @@ public class DynamicSimulationServiceTest {
 
         // test running
         dynamicSimulationService.assertDynamicSimulationNotRunning(NODE_UUID_RUNNING);
+    }
+
+    @Test
+    public void testGetMappings() {
+        // setup DynamicSimulationClient mock
+        given(dynamicMappingClient.getAllMappings()).willReturn(MAPPINGS);
+
+        // call method to be tested
+        List<MappingInfos> mappingInfos = dynamicSimulationService.getMappings(NODE_UUID);
+
+        // check result
+        // must return 2 mappings
+        assertEquals(MAPPINGS.size(), mappingInfos.size());
     }
 }

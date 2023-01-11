@@ -7,11 +7,14 @@
 
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
+import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
@@ -38,7 +41,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,11 +64,19 @@ public class StudyControllerDynamicSimulationTest {
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/mappings";
 
     private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
 
     private static final String MAPPING_NAME_01 = "_01";
+    private static final String MAPPING_NAME_02 = "_02";
+
+    // all mappings
+    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
+
+    private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
+            new MappingInfos(MAPPING_NAMES[1]));
 
     private static final int START_TIME = 0;
 
@@ -259,5 +270,28 @@ public class StudyControllerDynamicSimulationTest {
         getLogger().info("Status expected = " + statusExpected);
         getLogger().info("Status result = " + statusResult);
         assertEquals(statusExpected, statusResult);
+    }
+
+    @Test
+    public void testGetDynamicSimulationMappings() throws Exception {
+        // setup StudyService mock
+        given(studyService.getDynamicSimulationMappings(NODE_UUID)).willReturn(MAPPINGS);
+
+        // --- call endpoint to be tested --- //
+        // get all mapping infos
+        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS, STUDY_UUID, NODE_UUID)
+                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .andExpect(status().isOk()).andReturn();
+        String content = result.getResponse().getContentAsString();
+
+        assertFalse("Content not null or empty", Strings.isBlank(content));
+
+        List<MappingInfos> mappingInfos = objectMapper.readValue(content, new TypeReference<List<MappingInfos>>() { });
+
+        // --- check result --- //
+        getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
+        getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
+        assertEquals(MAPPINGS.size(), mappingInfos.size());
+
     }
 }

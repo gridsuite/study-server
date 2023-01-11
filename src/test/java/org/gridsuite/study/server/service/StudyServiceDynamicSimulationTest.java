@@ -14,6 +14,7 @@ import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.StudyApplication;
+import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.junit.Before;
@@ -47,6 +48,13 @@ import static org.mockito.BDDMockito.willDoNothing;
 public class StudyServiceDynamicSimulationTest {
 
     private static final String MAPPING_NAME_01 = "_01";
+    private static final String MAPPING_NAME_02 = "_02";
+
+    // all mappings
+    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
+
+    private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
+            new MappingInfos(MAPPING_NAMES[1]));
 
     private static final String VARIANT_1_ID = "variant_1";
 
@@ -197,5 +205,21 @@ public class StudyServiceDynamicSimulationTest {
         getLogger().info("Status expected = " + DynamicSimulationStatus.CONVERGED.name());
         getLogger().info("Status result = " + status);
         assertEquals(DynamicSimulationStatus.CONVERGED.name(), status);
+    }
+
+    @Test
+    public void testGetDynamicSimulationMappings() throws JsonProcessingException {
+        // setup
+        given(dynamicSimulationService.getMappings(any(UUID.class))).willReturn(MAPPINGS);
+
+        // call method to be tested
+        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(NODE_UUID);
+
+        // --- check result --- //
+        // must return 2 mappings
+        ObjectMapper mapper = new ObjectMapper();
+        getLogger().info("Mapping infos expected in Json = " + mapper.writeValueAsString(MAPPINGS));
+        getLogger().info("Mapping infos result in Json = " + mapper.writeValueAsString(mappingInfos));
+        assertEquals(MAPPINGS.size(), mappingInfos.size());
     }
 }

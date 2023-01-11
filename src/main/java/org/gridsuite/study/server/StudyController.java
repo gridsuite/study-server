@@ -1198,7 +1198,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All mappings of dynamic simulation"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation mappings"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation mappings has not been found")})
-    public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappingNames(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappings(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<MappingInfos> mappings = studyService.getDynamicSimulationMappings(nodeUuid);
         return mappings != null ? ResponseEntity.ok().body(mappings) :
