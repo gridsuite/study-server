@@ -117,11 +117,11 @@ public class StudyController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The id of the network imported"),
         @ApiResponse(responseCode = "409", description = "The study already exists or the case doesn't exist")})
-    public ResponseEntity<BasicStudyInfos> createStudyFromExistingCase(@PathVariable("caseUuid") UUID caseUuid,
-                                                                       @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
-                                                                       @RequestParam(required = false, value = "duplicateCase", defaultValue = "false") Boolean duplicateCase,
-                                                                       @RequestBody(required = false) Map<String, Object> importParameters,
-                                                                       @RequestHeader("userId") String userId) {
+    public ResponseEntity<BasicStudyInfos> createStudy(@PathVariable("caseUuid") UUID caseUuid,
+                                                       @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
+                                                       @RequestParam(required = false, value = "duplicateCase", defaultValue = "false") Boolean duplicateCase,
+                                                       @RequestBody(required = false) Map<String, Object> importParameters,
+                                                       @RequestHeader("userId") String userId) {
         caseService.assertCaseExists(caseUuid);
         BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters, duplicateCase);
         return ResponseEntity.ok().body(createStudy);
