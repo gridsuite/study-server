@@ -766,4 +766,20 @@ public class NetworkModificationTreeService {
         }
         return nodeModificationInfos;
     }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getChildren(UUID id) {
+        List<UUID> children = new ArrayList<>();
+        doGetChildren(id, children);
+        return children;
+    }
+
+    private void doGetChildren(UUID id, List<UUID> children) {
+        Optional<NodeEntity> optNode = nodesRepository.findById(id);
+        optNode.ifPresent(node -> nodesRepository.findAllByParentNodeIdNode(id)
+                .forEach(child -> {
+                    children.add(child.getIdNode());
+                    doGetChildren(child.getIdNode(), children);
+                }));
+    }
 }
