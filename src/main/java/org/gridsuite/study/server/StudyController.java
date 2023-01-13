@@ -1145,10 +1145,24 @@ public class StudyController {
     }
 
     @GetMapping(value = "/loadflow-default-provider")
-    @Operation(summary = "get load flow default provider value")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider value has been found"))
+    @Operation(summary = "get load flow default provider")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the load flow default provider has been found"))
     public ResponseEntity<String> getDefaultLoadflowProvider() {
-        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProviderValue());
+        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProvider());
+    }
+
+    @GetMapping(value = "/security-analysis-default-provider")
+    @Operation(summary = "get security analysis default provider")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the security analysis default provider has been found"))
+    public ResponseEntity<String> getDefaultSecurityAnalysisProvider() {
+        return ResponseEntity.ok().body(studyService.getDefaultSecurityAnalysisProvider());
+    }
+
+    @GetMapping(value = "/sensitivity-analysis-default-provider")
+    @Operation(summary = "get sensitivity analysis default provider value")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the sensitivity analysis default provider has been found"))
+    public ResponseEntity<String> getDefaultSensitivityAnalysisProvider() {
+        return ResponseEntity.ok().body(studyService.getDefaultSensitivityAnalysisProvider());
     }
 
     @PostMapping(value = "/studies/{studyUuid}/reindex-all")

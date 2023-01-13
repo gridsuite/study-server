@@ -820,23 +820,33 @@ public class StudyService {
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
     }
 
+    public String getDefaultLoadflowProvider() {
+        return defaultLoadflowProvider;
+    }
+
     public String getLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getLoadFlowProvider)
                 .orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
     }
 
-    private void updateProvider(UUID studyUuid, String provider, String userId, Consumer<StudyEntity> providerSetter) {
+    private void updateProvider(UUID studyUuid, String userId, Consumer<StudyEntity> providerSetter) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        studyEntity.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider);
-        networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        providerSetter.accept(studyEntity);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
     public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, provider, userId, studyEntity -> studyEntity.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider);
+            networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        });
+    }
+
+    public String getDefaultSecurityAnalysisProvider() {
+        return defaultSecurityAnalysisProvider;
     }
 
     public String getSecurityAnalysisProvider(UUID studyUuid) {
@@ -847,7 +857,11 @@ public class StudyService {
 
     @Transactional
     public void updateSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, provider, userId, studyEntity -> studyEntity.setSecurityAnalysisProvider(provider != null ? provider : defaultSecurityAnalysisProvider));
+        updateProvider(studyUuid, userId, studyEntity -> studyEntity.setSecurityAnalysisProvider(provider != null ? provider : defaultSecurityAnalysisProvider));
+    }
+
+    public String getDefaultSensitivityAnalysisProvider() {
+        return defaultSensitivityAnalysisProvider;
     }
 
     public String getSensitivityAnalysisProvider(UUID studyUuid) {
@@ -858,7 +872,7 @@ public class StudyService {
 
     @Transactional
     public void updateSensitivityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, provider, userId, studyEntity -> studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider));
+        updateProvider(studyUuid, userId, studyEntity -> studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider));
     }
 
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
@@ -1402,10 +1416,6 @@ public class StudyService {
 
     public void deleteNodeReport(UUID nodeUuid) {
         reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
-    }
-
-    public String getDefaultLoadflowProviderValue() {
-        return defaultLoadflowProvider;
     }
 
     private Set<String> getSubstationIds(List<ModificationInfos> modificationInfosList) {
