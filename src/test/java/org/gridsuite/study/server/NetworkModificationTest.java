@@ -37,13 +37,28 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.modification.*;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.dto.modification.BusbarSectionCreationInfos;
+import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
+import org.gridsuite.study.server.dto.modification.LineSplitWithVoltageLevelInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.modification.VoltageLevelCreationInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NotificationService;
+import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.SecurityAnalysisService;
+import org.gridsuite.study.server.service.SensitivityAnalysisService;
+import org.gridsuite.study.server.service.ShortCircuitService;
 import org.gridsuite.study.server.utils.RequestWithBody;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -84,9 +99,15 @@ import static org.gridsuite.study.server.service.NetworkModificationService.QUER
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -1678,29 +1699,30 @@ public class NetworkModificationTest {
     @SneakyThrows
     @Test
     public void testGeneratorScaling() {
-        String userId = "userId";
+        var userId = "userId";
+        var modificationInfos = ModificationInfos.builder().type(ModificationType.GENERATOR_SCALING).substationIds(Set.of("s1", "s2")).build();
+        var requestBody = mapper.writeValueAsString(modificationInfos);
+
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        var studyNameUserIdUuid = studyEntity.getId();
+        var rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
-        UUID modificationNodeUuid = modificationNode.getId();
-
-        String generatorScalingRequest = "{\"type\":\"GENERATOR_SCALING\",\"variationType\":\"DELTA_P\",\"isIterative\":true,\"generatorScalingVariations\":[{\"filters\":[{\"id\":\"b5c93a96-b325-47a6-8303-c6764ba680e5\",\"name\":\"filter1\"},{\"id\":\"6c2137ec-6f2c-4aeb-ab76-e898263e972a\",\"name\":\"filter2\"}],\"variationValue\":\"300\",\"variationMode\":\"PROPORTIONAL_TO_PMAX\"}]}";
-
-        UUID stubPostId = stubNetworkModificationPostWithBody(generatorScalingRequest, List.of().toString());
-        UUID stubPutId = stubNetworkModificationPutWithBody(generatorScalingRequest);
+        var modificationNodeUuid = modificationNode.getId();
+        var stubPostId = stubNetworkModificationPostWithBody(requestBody, "[]");
+        var stubPutId = stubNetworkModificationPutWithBody(requestBody);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .content(generatorScalingRequest).contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .content(generatorScalingRequest).contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1708,26 +1730,27 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
-        verifyNetworkModificationPost(stubPostId, generatorScalingRequest);
-        verifyNetworkModificationPut(stubPutId, generatorScalingRequest);
+        verifyNetworkModificationPost(stubPostId, requestBody);
+        verifyNetworkModificationPut(stubPutId, requestBody);
 
-        String badBody = "{\"type\":\"" + ModificationType.GENERATOR_SCALING + "\",\"bogus\":\"bogus\"}";
-        stubPostId = stubNetworkModificationPostWithBodyAndError(badBody);
-        stubPutId = stubNetworkModificationPutWithBodyAndError(badBody);
+        // test with errors
+        stubPostId = stubNetworkModificationPostWithBodyAndError(requestBody);
+        stubPutId = stubNetworkModificationPutWithBodyAndError(requestBody);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .content(badBody).contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().is5xxServerError());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .content(badBody).contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().is5xxServerError());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        verifyNetworkModificationPost(stubPostId, badBody);
-        verifyNetworkModificationPut(stubPutId, badBody);
+        verifyNetworkModificationPost(stubPostId, requestBody);
+        verifyNetworkModificationPut(stubPutId, requestBody);
     }
 
     @SneakyThrows
