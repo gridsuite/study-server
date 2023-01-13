@@ -422,10 +422,10 @@ public class StudyService {
     @Transactional
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
-        if (studyCreationRequestEntity.isEmpty()) {
-            StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
-            UUID caseUuid = studyEntity.getCaseUuid();
+        if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
+            UUID caseUuid = studyEntity.get().getCaseUuid();
             UUID networkUuid = networkStoreService.doGetNetworkUuid(studyUuid);
             List<NodeModificationInfos> nodesModificationInfos;
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
