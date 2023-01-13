@@ -209,20 +209,14 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, Boolean duplicateCase) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
-        UUID caseUuidToUse;
-        if (Boolean.TRUE.equals(duplicateCase)) {
-            try {
-                caseUuidToUse = caseService.duplicateCase(caseUuid, true);
-            } catch (Exception e) {
-                throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
-            }
-        } else {
-            caseUuidToUse = caseUuid;
-        }
+        UUID caseUuidToUse = caseUuid;
         try {
+            if (duplicateCase) {
+                caseUuidToUse = caseService.duplicateCase(caseUuid, true);
+            }
             persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
