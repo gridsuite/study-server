@@ -827,7 +827,7 @@ public class StudyService {
     public String getLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getLoadFlowProvider)
-                .orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+                .orElse("");
     }
 
     private void updateProvider(UUID studyUuid, String userId, Consumer<StudyEntity> providerSetter) {
@@ -852,7 +852,7 @@ public class StudyService {
     public String getSecurityAnalysisProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getSecurityAnalysisProvider)
-                .orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+                .orElse("");
     }
 
     @Transactional
@@ -867,7 +867,7 @@ public class StudyService {
     public String getSensitivityAnalysisProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getSensitivityAnalysisProvider)
-                .orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+                .orElse("");
     }
 
     @Transactional
@@ -895,7 +895,7 @@ public class StudyService {
         Objects.requireNonNull(nodeUuid);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getLoadFlowProvider(studyUuid);
+        String provider = getSecurityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
@@ -1488,7 +1488,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisResult);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getLoadFlowProvider(studyUuid);
+        String provider = getSensitivityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
