@@ -425,16 +425,17 @@ public class StudyService {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
         if (studyCreationRequestEntity.isEmpty()) {
-            UUID caseUuid = studyEntity.isPresent() ? studyEntity.get().getCaseUuid() : null;
+            AtomicReference<UUID> caseUuid = null;
             UUID networkUuid = networkStoreService.doGetNetworkUuid(studyUuid);
             List<NodeModificationInfos> nodesModificationInfos;
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
-            deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid, nodesModificationInfos);
             studyEntity.ifPresent(s -> {
+                caseUuid.set(studyEntity.get().getCaseUuid());
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
             });
+            deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
