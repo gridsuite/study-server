@@ -60,6 +60,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.service.NotificationService.HEADER_UPDATE_TYPE;
@@ -84,7 +85,7 @@ public class SensitivityAnalysisTest {
     private static final String SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SENSITIVITY_ANALYSIS_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
-    private static final String SENSITIVITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"factors\":[],\"contingencies\":[],\"values\":[]}";
+    //private static final String SENSITIVITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"factors\":[],\"contingencies\":[],\"values\":[]}";
     private static final String TABBED_RESULT_JSON = "fake tabbed result json";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
@@ -231,14 +232,14 @@ public class SensitivityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
-                    return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_RESULT_JSON)
+                    return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status")
                            || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status")) {
                     return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/tabbed\\?.*")
-                    || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/tabbed\\?.*")) {
+                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "\\?.*")
+                    || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "\\?.*")) {
                     if (difficultyOfFind == 0) {
                         return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -252,7 +253,7 @@ public class SensitivityAnalysisTest {
                         return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else if (difficultyOfFind == 0) {
-                        return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_RESULT_JSON)
+                        return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else if (difficultyOfFind == 1) {
                         return new MockResponse().setResponseCode(404);
@@ -278,7 +279,7 @@ public class SensitivityAnalysisTest {
         String resultAsString;
 
         // sensitivity analysis not found
-        //mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
         // run sensitivity analysis
         mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, nodeUuid)
@@ -307,10 +308,10 @@ public class SensitivityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
 
         // get sensitivity analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
             .andExpectAll(status().isOk(), content().string(TABBED_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("tabbed")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("results")));
 
         // get sensitivity analysis status
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/status", studyUuid, nodeUuid)).andExpectAll(
@@ -352,26 +353,31 @@ public class SensitivityAnalysisTest {
         testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode1Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         testSensitivityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, NOT_FOUND_SENSITIVITY_ANALYSIS_UUID, "fakeJsonSelector"))
             .andExpectAll(status().isNoContent());
 
         difficultyOfFind = 1;
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNotFound());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("tabbed")));
+        assertEquals(getRequest(server), "/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "?selector=fakeJsonSelector");
 
         difficultyOfFind = 2;
         try {
-            mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result-tabbed?selector={selector}",
+            mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                     studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"));
 
             fail("should have thrown");
         } catch (Exception e) {
-            assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("tabbed")));
+            assertEquals(getRequest(server), "/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "?selector=fakeJsonSelector");
         }
+    }
+
+    private static String getRequest(MockWebServer webServer) {
+        Set<String> requestsDone = TestUtils.getRequestsDone(1, webServer);
+        return requestsDone.iterator().next();
     }
 
     // test sensitivity analysis on network 2 will fail
