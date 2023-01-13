@@ -1408,7 +1408,7 @@ public class StudyService {
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
                 break;
             }
-            case BRANCH_STATUS: {
+            case BRANCH_STATUS_MODIFICATION: {
                 Set<String> substationIds = getSubstationIds(modifications);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
                 updateStatuses(studyUuid, nodeUuid);
