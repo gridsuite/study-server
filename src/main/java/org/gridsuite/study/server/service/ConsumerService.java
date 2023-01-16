@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.powsybl.shortcircuit.ShortCircuitParameters;
+import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -71,7 +72,7 @@ public class ConsumerService {
         return message -> {
             UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            if (receiver != null) {
+            if (!Strings.isBlank(receiver)) {
                 NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),

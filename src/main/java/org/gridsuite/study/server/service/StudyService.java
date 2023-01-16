@@ -1525,6 +1525,15 @@ public class StudyService {
         Objects.requireNonNull(parameters);
         Objects.requireNonNull(mappingName);
 
+        // create receiver for getting back the notification in rabbitmq
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
         // get associated network
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
@@ -1544,7 +1553,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(networkUuid, variantId, dynamicSimulationParameters.getStartTime(), dynamicSimulationParameters.getStopTime(), mappingName);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, variantId, dynamicSimulationParameters.getStartTime(), dynamicSimulationParameters.getStopTime(), mappingName);
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);

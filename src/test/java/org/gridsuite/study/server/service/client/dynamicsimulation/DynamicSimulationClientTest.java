@@ -148,7 +148,7 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
     @Test
     public void testRun() {
-        UUID resultUuid = dynamicSimulationClient.run(UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, 0, 500, MAPPING_NAME_01);
+        UUID resultUuid = dynamicSimulationClient.run("", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, 0, 500, MAPPING_NAME_01);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());

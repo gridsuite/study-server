@@ -33,7 +33,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID run(UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName) {
+    public UUID run(String receiver, UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
@@ -44,7 +44,8 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         uriComponentsBuilder
                 .queryParam("startTime", startTime)
                 .queryParam("stopTime", stopTime)
-                .queryParam("mappingName", mappingName);
+                .queryParam("mappingName", mappingName)
+                .queryParam("receiver", receiver);
         var uriComponent = uriComponentsBuilder
                 .buildAndExpand(networkUuid);
 

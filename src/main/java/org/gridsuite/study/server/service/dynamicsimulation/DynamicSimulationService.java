@@ -26,7 +26,7 @@ public interface DynamicSimulationService {
      * @param mappingName
      * @return the UUID of the dynamic simulation
      */
-    UUID runDynamicSimulation(UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName);
+    UUID runDynamicSimulation(String receiver, UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName);
 
     /**
      * Get a list of curves from a given node UUID

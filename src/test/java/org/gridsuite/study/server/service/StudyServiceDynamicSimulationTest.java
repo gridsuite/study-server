@@ -35,7 +35,7 @@ import java.util.*;
 
 import static org.gridsuite.study.server.service.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 
@@ -114,7 +114,7 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulationGivenWithVariant() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(anyString(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01))).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
 
         // call method to be tested
@@ -127,7 +127,7 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulationGivenWithoutVariant() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, null, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(anyString(), eq(NETWORK_UUID), eq(null), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01))).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
 
         // call method to be tested
@@ -140,7 +140,7 @@ public class StudyServiceDynamicSimulationTest {
     @Test(expected = UncheckedIOException.class)
     public void testRunDynamicSimulationGivenBadFormattedParameters() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation("", NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
 
         // call method to be tested => must throw exception
         studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, "", MAPPING_NAME_01);
