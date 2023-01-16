@@ -54,9 +54,9 @@ public class LoadflowService {
 
     @Autowired
     public LoadflowService(
-        @Value("${backing-services.loadflow.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
-        NetworkModificationTreeService networkModificationTreeService,
-        NetworkService networkStoreService) {
+            @Value("${gridsuite.services.loadflow-server.base-uri:http://loadflow-server/}") String loadFlowServerBaseUri,
+            NetworkModificationTreeService networkModificationTreeService,
+            NetworkService networkStoreService) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -71,9 +71,9 @@ public class LoadflowService {
             UUID reportUuid = getReportUuid(nodeUuid);
 
             var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
-                .queryParam("reportId", reportUuid.toString())
-                .queryParam("reportName", nodeUuid.toString());
+                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run")
+                    .queryParam("reportId", reportUuid.toString())
+                    .queryParam("reportName", nodeUuid.toString());
             if (!provider.isEmpty()) {
                 uriComponentsBuilder.queryParam("provider", provider);
             }
@@ -89,7 +89,7 @@ public class LoadflowService {
 
             setLoadFlowRunning(studyUuid, nodeUuid);
             ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT,
-                httpEntity, LoadFlowResult.class);
+                    httpEntity, LoadFlowResult.class);
             result = resp.getBody();
             updateLoadFlowResultAndStatus(nodeUuid, result, computeLoadFlowStatus(result), false);
         } catch (Exception e) {
@@ -133,18 +133,19 @@ public class LoadflowService {
     public static LoadFlowResult.ComponentResult fromEntity(ComponentResultEmbeddable entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowResultImpl.ComponentResultImpl(entity.getConnectedComponentNum(),
-            entity.getSynchronousComponentNum(),
-            entity.getStatus(),
-            entity.getIterationCount(),
-            entity.getSlackBusId(),
-            entity.getSlackBusActivePowerMismatch(),
-            entity.getDistributedActivePower());
+                entity.getSynchronousComponentNum(),
+                entity.getStatus(),
+                entity.getIterationCount(),
+                entity.getSlackBusId(),
+                entity.getSlackBusActivePowerMismatch(),
+                entity.getDistributedActivePower());
     }
 
     public static LoadFlowResult fromEntity(LoadFlowResultEntity entity) {
         LoadFlowResult result = null;
         if (entity != null) {
-            // This is a workaround to prepare the componentResultEmbeddables which will be used later in the webflux pipeline
+            // This is a workaround to prepare the componentResultEmbeddables which will be
+            // used later in the webflux pipeline
             // The goal is to avoid LazyInitializationException
             @SuppressWarnings("unused")
             int ignoreSize = entity.getComponentResults().size();
@@ -154,7 +155,8 @@ public class LoadflowService {
             result = new LoadFlowResultImpl(entity.isOk(),
                     entity.getMetrics(),
                     entity.getLogs(),
-                    entity.getComponentResults().stream().map(LoadflowService::fromEntity).collect(Collectors.toList()));
+                    entity.getComponentResults().stream().map(LoadflowService::fromEntity)
+                            .collect(Collectors.toList()));
         }
         return result;
     }
@@ -181,40 +183,41 @@ public class LoadflowService {
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
         return new LoadFlowParameters(entity.getVoltageInitMode(),
-            entity.isTransformerVoltageControlOn(),
-            entity.isNoGeneratorReactiveLimits(),
-            entity.isPhaseShifterRegulationOn(),
-            entity.isTwtSplitShuntAdmittance(),
-            entity.isShuntCompensatorVoltageControlOn(),
-            entity.isReadSlackBus(),
-            entity.isWriteSlackBus(),
-            entity.isDc(),
-            entity.isDistributedSlack(),
-            entity.getBalanceType(),
-            entity.isDcUseTransformerRatio(),
-            entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
-            entity.getConnectedComponentMode(),
-            entity.isHvdcAcEmulation()
-            );
+                entity.isTransformerVoltageControlOn(),
+                entity.isNoGeneratorReactiveLimits(),
+                entity.isPhaseShifterRegulationOn(),
+                entity.isTwtSplitShuntAdmittance(),
+                entity.isShuntCompensatorVoltageControlOn(),
+                entity.isReadSlackBus(),
+                entity.isWriteSlackBus(),
+                entity.isDc(),
+                entity.isDistributedSlack(),
+                entity.getBalanceType(),
+                entity.isDcUseTransformerRatio(),
+                entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
+                entity.getConnectedComponentMode(),
+                entity.isHvdcAcEmulation());
     }
 
     public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
         Objects.requireNonNull(componentResult);
         return new ComponentResultEmbeddable(componentResult.getConnectedComponentNum(),
-            componentResult.getSynchronousComponentNum(),
-            componentResult.getStatus(),
-            componentResult.getIterationCount(),
-            componentResult.getSlackBusId(),
-            componentResult.getSlackBusActivePowerMismatch(),
-            componentResult.getDistributedActivePower());
+                componentResult.getSynchronousComponentNum(),
+                componentResult.getStatus(),
+                componentResult.getIterationCount(),
+                componentResult.getSlackBusId(),
+                componentResult.getSlackBusActivePowerMismatch(),
+                componentResult.getDistributedActivePower());
     }
 
     public static LoadFlowResultEntity toEntity(LoadFlowResult result) {
         return result != null
                 ? new LoadFlowResultEntity(result.isOk(),
-                      result.getMetrics(),
-                      result.getLogs(),
-                      result.getComponentResults().stream().map(LoadflowService::toEntity).collect(Collectors.toList())) : null;
+                        result.getMetrics(),
+                        result.getLogs(),
+                        result.getComponentResults().stream().map(LoadflowService::toEntity)
+                                .collect(Collectors.toList()))
+                : null;
     }
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
