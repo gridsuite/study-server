@@ -544,15 +544,22 @@ public class StudyService {
                                      UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-        return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
+            return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
+        } else {
+            return null;
+        }
     }
 
     public String getVoltageLevelSvgAndMetadata(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
                                                 UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
-        return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
+            return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
+        } else {
+            return null;
+        }
     }
 
     private void persistentStoreWithNotificationOnError(UUID caseUuid, UUID studyUuid, String userId, UUID importReportUuid, Map<String, Object> importParameters) {
@@ -565,16 +572,16 @@ public class StudyService {
         }
     }
 
-    public String getLinesGraphics(UUID networkUuid, UUID nodeUuid) {
+    public String getLinesGraphics(UUID networkUuid, UUID nodeUuid, List<String> linesIds) {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        return geoDataService.getLinesGraphics(networkUuid, variantId);
+        return geoDataService.getLinesGraphics(networkUuid, variantId, linesIds);
     }
 
-    public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid) {
+    public String getSubstationsGraphics(UUID networkUuid, UUID nodeUuid, List<String> substationsIds) {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
-        return geoDataService.getSubstationsGraphics(networkUuid, variantId);
+        return geoDataService.getSubstationsGraphics(networkUuid, variantId, substationsIds);
     }
 
     public String getSubstationsMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
@@ -893,23 +900,32 @@ public class StudyService {
                                    String substationLayout, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
-        return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
+            return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
+        } else {
+            return null;
+        }
     }
 
     public String getSubstationSvgAndMetadata(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
                                               String substationLayout, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
-        return singleLineDiagramService.getSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout);
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
+            return singleLineDiagramService.getSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout);
+        } else {
+            return null;
+        }
     }
 
     public String getNeworkAreaDiagram(UUID studyUuid, UUID nodeUuid, List<String> voltageLevelsIds, int depth) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
-        return singleLineDiagramService.getNeworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth);
+        if (networkStoreService.existVariant(networkUuid, variantId)) {
+            return singleLineDiagramService.getNeworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth);
+        } else {
+            return null;
+        }
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
@@ -984,7 +1000,8 @@ public class StudyService {
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
         ModificationType modificationType = getModificationType(createModificationAttributes);
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
@@ -994,18 +1011,19 @@ public class StudyService {
                     .createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
             updateStatuses(studyUuid, nodeUuid, modificationInfosList, modificationType);
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateModification(updateModificationAttributes, modificationUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1175,7 +1193,8 @@ public class StudyService {
 
     @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_DELETING_IN_PROGRESS);
         try {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
@@ -1185,7 +1204,7 @@ public class StudyService {
             networkModificationTreeService.removeModificationsToExclude(nodeUuid, modificationsUuids);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1269,9 +1288,12 @@ public class StudyService {
         boolean targetNodeBelongsToSourceNodeSubTree = moveBetweenNodes && networkModificationTreeService.hasAncestor(targetNodeUuid, originNodeUuid);
         boolean buildTargetNode = moveBetweenNodes && !targetNodeBelongsToSourceNodeSubTree;
 
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(targetNodeUuid);
+        List<UUID> originNodeChildrenUuids = new ArrayList<>();
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         if (moveBetweenNodes) {
-            notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+            originNodeChildrenUuids = networkModificationTreeService.getChildren(originNodeUuid);
+            notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         }
         try {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
@@ -1288,9 +1310,9 @@ public class StudyService {
                 updateStatuses(studyUuid, originNodeUuid, false, true);
             }
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (moveBetweenNodes) {
-                notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid);
+                notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
             }
         }
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1300,7 +1322,8 @@ public class StudyService {
 
     @Transactional
     public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId) {
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         String response;
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
@@ -1310,7 +1333,7 @@ public class StudyService {
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
             updateStatuses(studyUuid, nodeUuid, true, true);
         } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid);
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
         return response;

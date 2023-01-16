@@ -76,7 +76,7 @@ public class NotificationService {
     public static final String NODE_CREATED = "nodeCreated";
     public static final String NODE_MOVED = "nodeMoved";
 
-    private static final String CATEGORY_BROKER_OUTPUT = NetworkModificationTreeService.class.getName() + ".output-broker-messages";
+    private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
@@ -197,22 +197,22 @@ public class NotificationService {
         );
     }
 
-    public void emitStartModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid, String modificationType) {
-
+    public void emitStartModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids, String modificationType) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_PARENT_NODE, nodeUuid)
+                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                .setHeader(HEADER_NODES, childrenUuids)
                 .setHeader(HEADER_UPDATE_TYPE, modificationType)
                 .build()
         );
     }
 
     @PostCompletion
-    public void emitEndModificationEquipmentNotification(UUID studyUuid, UUID nodeUuid) {
-
+    public void emitEndModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_PARENT_NODE, nodeUuid)
+                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
+                .setHeader(HEADER_NODES, childrenUuids)
                 .setHeader(HEADER_UPDATE_TYPE, MODIFICATIONS_UPDATING_FINISHED)
                 .build()
         );

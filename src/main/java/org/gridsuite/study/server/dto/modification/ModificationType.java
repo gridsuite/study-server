@@ -29,7 +29,9 @@ public enum ModificationType {
     GROOVY_SCRIPT,
     BRANCH_STATUS,
     SHUNT_COMPENSATOR_CREATION,
-    LINES_ATTACH_TO_SPLIT_LINES;
+    LINES_ATTACH_TO_SPLIT_LINES,
+    DELETE_VOLTAGE_LEVEL_ON_LINE,
+    DELETE_ATTACHING_LINE;
 
     // TODO transfer method to the enum
     public static String getUriFromType(ModificationType modificationType) {
@@ -58,6 +60,10 @@ public enum ModificationType {
                 return "generators-modification";
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return "lines-attach-to-split-lines";
+            case DELETE_VOLTAGE_LEVEL_ON_LINE:
+                return "delete-voltage-level-on-line";
+            case DELETE_ATTACHING_LINE:
+                return "delete-attaching-line";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }
