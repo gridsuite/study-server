@@ -29,6 +29,9 @@ import static org.gridsuite.study.server.service.client.dynamicsimulation.Dynami
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
     private static final int DYNAMIC_SIMULATION_PORT = 5032;

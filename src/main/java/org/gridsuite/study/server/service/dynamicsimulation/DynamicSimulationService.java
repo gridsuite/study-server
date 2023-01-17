@@ -57,6 +57,10 @@ public interface DynamicSimulationService {
      */
     void deleteResult(UUID resultUuid);
 
+    /**
+     * @param nodeUuid a given node UUID
+     * @return StudyException(DYNAMIC_SIMULATION_RUNNING) if ce node in RUNNING status
+     */
     void assertDynamicSimulationNotRunning(UUID nodeUuid);
 
     /**

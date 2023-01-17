@@ -1568,15 +1568,12 @@ public class StudyService {
             throw new UncheckedIOException(e);
         }
 
-        // get variant defined in the node
-        String variantId = dynamicSimulationParameters.isWithVariant() ? networkModificationTreeService.getVariantId(nodeUuid) : null;
-
         // clean previous result if exist
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, variantId, dynamicSimulationParameters.getStartTime(), dynamicSimulationParameters.getStopTime(), mappingName);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, "", dynamicSimulationParameters.getStartTime(), dynamicSimulationParameters.getStopTime(), mappingName);
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);

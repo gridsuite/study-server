@@ -30,11 +30,11 @@ public class InvalidateNodeInfos {
 
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
-    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
-
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
+
+    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
 
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
@@ -48,15 +48,15 @@ public class InvalidateNodeInfos {
         securityAnalysisResultUuids.add(securityAnalysisResultUuid);
     }
 
-    public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
-        dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
-    }
-
     public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
         sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
     }
 
     public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
         shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
+    }
+
+    public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
+        dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
     }
 }

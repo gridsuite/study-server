@@ -81,12 +81,62 @@ public class ConsumerService {
                     LOGGER.info("Dynamic Simulation result '{}' available for node '{}'", resultUuid,
                             receiverObj.getNodeUuid());
 
-                    // update DB
+                    // insert resultUuid into DB
                     updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), resultUuid);
                     // send notifications
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (!Strings.isBlank(receiver)) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            NodeReceiver.class);
+
+                    LOGGER.info("Dynamic Simulation stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete dynamic simulation resultUuid into DB
+                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
+                    // send notification for stopped computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (!Strings.isBlank(receiver)) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            NodeReceiver.class);
+
+                    LOGGER.info("Dynamic Simulation failed for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete dynamic simulation resultUuid into DB
+                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
+                    // send notification for failed computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
+
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

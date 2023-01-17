@@ -32,11 +32,11 @@ public class DeleteNodeInfos {
 
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
 
-    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
-
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
+
+    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
 
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);

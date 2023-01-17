@@ -22,5 +22,4 @@ import lombok.Setter;
 public class DynamicSimulationParametersInfos {
     private int startTime;
     private int stopTime;
-    private boolean withVariant;
 }

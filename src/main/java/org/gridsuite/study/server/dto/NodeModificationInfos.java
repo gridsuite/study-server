@@ -27,9 +27,9 @@ public class NodeModificationInfos {
 
     private UUID securityAnalysisUuid;
 
-    private UUID dynamicSimulationUuid;
-
     private UUID sensitivityAnalysisUuid;
 
     private UUID shortCircuitAnalysisUuid;
+
+    private UUID dynamicSimulationUuid;
 }

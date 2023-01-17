@@ -177,18 +177,6 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateDynamicSimulationResultUuid(AbstractNode node, UUID dynamicSimulationResultUuid) {
-        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setDynamicSimulationResultUuid(dynamicSimulationResultUuid);
-        updateNode(modificationNode);
-    }
-
-    @Override
-    public UUID getDynamicSimulationResultUuid(AbstractNode node) {
-        return ((NetworkModificationNode) node).getDynamicSimulationResultUuid();
-    }
-
-    @Override
     public void updateSensitivityAnalysisResultUuid(AbstractNode node, UUID sensitivityAnalysisResultUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
@@ -198,6 +186,18 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public UUID getSensitivityAnalysisResultUuid(AbstractNode node) {
         return ((NetworkModificationNode) node).getSensitivityAnalysisResultUuid();
+    }
+
+    @Override
+    public void updateDynamicSimulationResultUuid(AbstractNode node, UUID dynamicSimulationResultUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setDynamicSimulationResultUuid(dynamicSimulationResultUuid);
+        updateNode(modificationNode);
+    }
+
+    @Override
+    public UUID getDynamicSimulationResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getDynamicSimulationResultUuid();
     }
 
     private void updateNode(NetworkModificationNode node, List<UUID> changedNodes) {

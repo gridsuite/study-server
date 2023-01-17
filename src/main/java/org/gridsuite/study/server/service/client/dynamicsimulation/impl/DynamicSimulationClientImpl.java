@@ -7,17 +7,21 @@
 
 package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_NOT_FOUND;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
@@ -63,7 +67,15 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        UUID timeseriesUuid = getRestTemplate().getForObject(uriComponents.toUriString(), UUID.class);
+        UUID timeseriesUuid;
+        try {
+            timeseriesUuid = getRestTemplate().getForObject(uriComponents.toUriString(), UUID.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SIMULATION_NOT_FOUND);
+            }
+            throw e;
+        }
         return timeseriesUuid;
     }
 
@@ -76,7 +88,15 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        UUID timelineUuid = getRestTemplate().getForObject(uriComponents.toUriString(), UUID.class);
+        UUID timelineUuid;
+        try {
+            timelineUuid = getRestTemplate().getForObject(uriComponents.toUriString(), UUID.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SIMULATION_NOT_FOUND);
+            }
+            throw e;
+        }
         return timelineUuid;
     }
 
@@ -89,7 +109,15 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        String status = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
+        String status;
+        try {
+            status = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SIMULATION_NOT_FOUND);
+            }
+            throw e;
+        }
         return status;
     }
 
