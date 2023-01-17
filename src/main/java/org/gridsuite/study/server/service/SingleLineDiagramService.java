@@ -52,7 +52,7 @@ public class SingleLineDiagramService {
 
     private String singleLineDiagramServerBaseUri;
 
-    public SingleLineDiagramService(@Value("${backing-services.single-line-diagram.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri) {
+    public SingleLineDiagramService(@Value("${powsybl.services.single-line-diagram-server.base-uri:http://single-line-diagram-server/}") String singleLineDiagramServerBaseUri) {
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
     }
 
@@ -122,7 +122,7 @@ public class SingleLineDiagramService {
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
                 .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
                 .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isLabelCentered())
+                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
                 .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
                 .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
         addParameters(diagramParameters, uriComponentsBuilder, variantId);

@@ -57,8 +57,10 @@ spring:
           group: studyCaseImportFailedGroup
       output-bindings: publishStudyUpdate;publishElementUpdate
 
-network-store-server:
-  preloading-strategy: COLLECTION
+powsybl:
+  services:
+    network-store-server:
+      preloading-strategy: COLLECTION
 
 powsybl-ws:
   database:
