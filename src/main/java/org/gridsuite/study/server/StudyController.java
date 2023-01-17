@@ -286,22 +286,24 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines")
     @Operation(summary = "Get Network lines graphics")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of lines graphics")})
-    public ResponseEntity<String> getLinesGraphics(
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of line graphics with the given ids, all otherwise")})
+    public ResponseEntity<String> getLineGraphics(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid) {
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Lines ids") @RequestParam(name = "lineId", required = false) List<String> linesIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getLinesGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, linesIds));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/substations")
     @Operation(summary = "Get Network substations graphics")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substations graphics")})
-    public ResponseEntity<String> getSubstationsGraphic(
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of substation graphics with the given ids, all otherwise")})
+    public ResponseEntity<String> getSubstationGraphics(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid) {
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsGraphics(networkStoreService.getNetworkUuid(studyUuid), nodeUuid, substationsIds));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines")
@@ -862,7 +864,9 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Voltage levels ids") @RequestParam(name = "voltageLevelsIds") List<String> voltageLevelsIds,
             @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNeworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth));
+        String result = studyService.getNeworkAreaDiagram(studyUuid, nodeUuid, voltageLevelsIds, depth);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
+            ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/status")
