@@ -43,6 +43,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.workflow.Action;
+import org.gridsuite.study.server.service.workflow.WorkflowService;
+import org.gridsuite.study.server.service.workflow.impl.Actions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,6 +122,8 @@ public class StudyService {
 
     private final ObjectMapper objectMapper;
 
+    private final WorkflowService workflowService;
+
     @Autowired
     StudyService self;
 
@@ -145,7 +150,8 @@ public class StudyService {
             SecurityAnalysisService securityAnalysisService,
             ActionsService actionsService,
             SensitivityAnalysisService sensitivityAnalysisService,
-            DynamicSimulationService dynamicSimulationService) {
+            DynamicSimulationService dynamicSimulationService,
+            WorkflowService workflowService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -168,6 +174,7 @@ public class StudyService {
         this.securityAnalysisService = securityAnalysisService;
         this.actionsService = actionsService;
         this.dynamicSimulationService = dynamicSimulationService;
+        this.workflowService = workflowService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -1598,5 +1605,14 @@ public class StudyService {
 
     public String getDynamicSimulationStatus(UUID nodeUuid) {
         return dynamicSimulationService.getStatus(nodeUuid);
+    }
+
+    public String canExecute(String actionName, UUID nodeUuid) {
+        AbstractNode node = networkModificationTreeService.getNode(nodeUuid);
+
+        // lookup action
+        Action action = Actions.getInstance().getAction(actionName);
+
+        return workflowService.canExecute(action, node);
     }
 }
