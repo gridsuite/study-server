@@ -28,7 +28,7 @@ public enum ModificationType {
     LINE_SPLIT_WITH_VOLTAGE_LEVEL,
     LINE_ATTACH_TO_VOLTAGE_LEVEL,
     GROOVY_SCRIPT,
-    BRANCH_STATUS,
+    BRANCH_STATUS_MODIFICATION,
     SHUNT_COMPENSATOR_CREATION,
     LINES_ATTACH_TO_SPLIT_LINES,
     DELETE_VOLTAGE_LEVEL_ON_LINE,
@@ -106,7 +106,7 @@ public enum ModificationType {
                 return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
             case DELETE_VOLTAGE_LEVEL_ON_LINE:
                 return StudyException.Type.DELETE_VOLTAGE_LEVEL_ON_LINE;
-            case BRANCH_STATUS:
+            case BRANCH_STATUS_MODIFICATION:
                 return StudyException.Type.BRANCH_STATUS_FAILED;
             case DELETE_ATTACHING_LINE:
                 return StudyException.Type.DELETE_ATTACHING_LINE;
