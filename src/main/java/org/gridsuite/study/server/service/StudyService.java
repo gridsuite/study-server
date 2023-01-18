@@ -864,7 +864,10 @@ public class StudyService {
 
     @Transactional
     public void updateSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> studyEntity.setSecurityAnalysisProvider(provider != null ? provider : defaultSecurityAnalysisProvider));
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setSecurityAnalysisProvider(provider != null ? provider : defaultSecurityAnalysisProvider);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        });
     }
 
     public String getDefaultSensitivityAnalysisProvider() {
@@ -879,7 +882,10 @@ public class StudyService {
 
     @Transactional
     public void updateSensitivityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider));
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        });
     }
 
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {

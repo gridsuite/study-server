@@ -1845,6 +1845,9 @@ public class StudyTest {
                         .contentType(MediaType.TEXT_PLAIN)
                         .header(USER_ID_HEADER, USER_ID_HEADER))
                 .andExpect(status().isOk());
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid)
@@ -1852,6 +1855,9 @@ public class StudyTest {
                         .contentType(MediaType.TEXT_PLAIN)
                         .header(USER_ID_HEADER, USER_ID_HEADER))
                 .andExpect(status().isOk());
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
