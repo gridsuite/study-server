@@ -15,11 +15,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -34,11 +30,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.SENSITIVITY_ANALYSIS_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.SENSITIVITY_ANALYSIS_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.SENSITIVITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -121,7 +115,7 @@ public class SensitivityAnalysisService {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
             } else {
-                throw e;
+                throw handleHttpError(e, SENSITIVITY_ANALYSIS_ERROR);
             }
         }
         return result;

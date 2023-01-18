@@ -57,20 +57,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.service.NotificationService.HEADER_UPDATE_TYPE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.junit.Assert.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -365,14 +356,11 @@ public class SensitivityAnalysisTest {
         assertEquals(getRequest(server), "/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "?selector=fakeJsonSelector");
 
         difficultyOfFind = 2;
-        try {
-            mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
-                    studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
+                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
+            .andExpectAll(status().is5xxServerError());
 
-            fail("should have thrown");
-        } catch (Exception e) {
-            assertEquals(getRequest(server), "/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "?selector=fakeJsonSelector");
-        }
+        assertEquals(getRequest(server), "/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "?selector=fakeJsonSelector");
     }
 
     private static String getRequest(MockWebServer webServer) {
