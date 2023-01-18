@@ -14,19 +14,31 @@ import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
+import org.gridsuite.study.server.utils.TestUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cloud.stream.binder.test.InputDestination;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
@@ -35,6 +47,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -102,6 +116,7 @@ public class StudyControllerDynamicSimulationTest {
     private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
     private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
 
+    private static final long TIMEOUT = 1000;
     @Autowired
     private MockMvc studyClient;
 
@@ -109,7 +124,22 @@ public class StudyControllerDynamicSimulationTest {
     private ObjectMapper objectMapper;
 
     @MockBean
+    private NetworkModificationTreeService networkModificationTreeService;
+
+    @MockBean
     StudyService studyService;
+
+    @Autowired
+    private OutputDestination output;
+
+    @Autowired
+    private InputDestination input;
+
+    //output destinations
+    private final String studyUpdateDestination = "study.update";
+    private final String dsResultDestination = "ds.result";
+    private final String dsStoppedDestination = "ds.stopped";
+    private final String dsFailedDestination = "ds.failed";
 
     private Logger getLogger() {
         return LoggerFactory.getLogger(this.getClass());
@@ -120,6 +150,12 @@ public class StudyControllerDynamicSimulationTest {
         // setup StudyService mock
         // setup root node as read only
         willThrow(new StudyException(NOT_ALLOWED)).given(studyService).assertIsNodeNotReadOnly(ROOT_NODE_UUID);
+    }
+
+    @After
+    public void tearDown() {
+        List<String> destinations = List.of(studyUpdateDestination, dsFailedDestination, dsResultDestination, dsStoppedDestination);
+        TestUtils.assertQueuesEmptyThenClear(destinations, output);
     }
 
     @Test
@@ -135,7 +171,27 @@ public class StudyControllerDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulationGivenRegularNode() throws Exception {
         // setup StudyService mock
-        given(studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public UUID answer(InvocationOnMock invocation) throws Throwable {
+                final Object[] args = invocation.getArguments();
+
+                // mock the notification from dynamic-simulation server in case of having the result
+                String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver((UUID) args[1] /* nodeUuid */)),
+                        StandardCharsets.UTF_8);
+                input.send(MessageBuilder.withPayload("")
+                        .setHeader("resultUuid", RESULT_UUID_STRING)
+                        .setHeader("receiver", receiver)
+                        .build(), dsResultDestination
+                );
+
+                return RESULT_UUID;
+            }
+        }).when(studyService).runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+
+        // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
+        doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
+        given(networkModificationTreeService.getStudyUuidForNodeId(NODE_UUID)).willReturn(STUDY_UUID);
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -152,6 +208,116 @@ public class StudyControllerDynamicSimulationTest {
         UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
 
         assertEquals(RESULT_UUID, resultUuid);
+
+        // --- check async messages emitted by consumeDsResult of ConsumerService then consumed by web client --- //
+
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(STUDY_UUID, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT from channel : studyUpdateDestination
+        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(STUDY_UUID, dynamicSimulationResultMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT, dynamicSimulationResultMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    public void testRunDynamicSimulationGivenRegularNodeAndStopped() throws Exception {
+        // setup StudyService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public UUID answer(InvocationOnMock invocation) throws Throwable {
+                final Object[] args = invocation.getArguments();
+
+                // mock the notification from dynamic-simulation server in case of stop
+                String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver((UUID) args[1] /* nodeUuid */)),
+                        StandardCharsets.UTF_8);
+                input.send(MessageBuilder.withPayload("")
+                        .setHeader("resultUuid", RESULT_UUID_STRING)
+                        .setHeader("receiver", receiver)
+                        .build(), dsStoppedDestination
+                );
+
+                return RESULT_UUID;
+            }
+        }).when(studyService).runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+
+        // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
+        doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
+        given(networkModificationTreeService.getStudyUuidForNodeId(NODE_UUID)).willReturn(STUDY_UUID);
+
+        MvcResult result;
+        // --- call endpoint to be tested --- //
+        // run on a regular node which allows a run
+        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
+                        STUDY_UUID, NODE_UUID, MAPPING_NAME_01)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PARAMETERS))
+                .andExpect(status().isOk()).andReturn();
+
+        // --- check result --- //
+        String resultUuidJson = result.getResponse().getContentAsString();
+        UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
+
+        assertEquals(RESULT_UUID, resultUuid);
+
+        // --- check async messages emitted by consumeDsStopped of ConsumerService then consumed by web client --- //
+
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(STUDY_UUID, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    public void testRunDynamicSimulationGivenRegularNodeAndFailed() throws Exception {
+        // setup StudyService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public UUID answer(InvocationOnMock invocation) throws Throwable {
+                final Object[] args = invocation.getArguments();
+
+                // mock the notification from dynamic-simulation server in case of stop
+                String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver((UUID) args[1] /* nodeUuid */)),
+                        StandardCharsets.UTF_8);
+                input.send(MessageBuilder.withPayload("")
+                        .setHeader("resultUuid", RESULT_UUID_STRING)
+                        .setHeader("receiver", receiver)
+                        .build(), dsFailedDestination
+                );
+
+                return RESULT_UUID;
+            }
+        }).when(studyService).runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+
+        // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
+        doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
+        given(networkModificationTreeService.getStudyUuidForNodeId(NODE_UUID)).willReturn(STUDY_UUID);
+
+        MvcResult result;
+        // --- call endpoint to be tested --- //
+        // run on a regular node which allows a run
+        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
+                        STUDY_UUID, NODE_UUID, MAPPING_NAME_01)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PARAMETERS))
+                .andExpect(status().isOk()).andReturn();
+
+        // --- check result --- //
+        String resultUuidJson = result.getResponse().getContentAsString();
+        UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
+
+        assertEquals(RESULT_UUID, resultUuid);
+
+        // --- check async messages emitted by consumeDsStopped of ConsumerService then consumed by web client --- //
+
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED from channel : studyUpdateDestination
+        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(STUDY_UUID, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     @Test

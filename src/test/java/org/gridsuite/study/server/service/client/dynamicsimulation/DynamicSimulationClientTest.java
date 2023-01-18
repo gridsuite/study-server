@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
@@ -45,6 +46,7 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
     public static final String TIME_SERIES_UUID_STRING = "77777777-0000-0000-0000-000000000000";
     public static final String TIME_LINE_UUID_STRING = "88888888-0000-0000-0000-000000000000";
     public static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
+    public static final String RESULT_NOT_FOUND_UUID_STRING = "99999999-1111-0000-0000-000000000000";
 
     private DynamicSimulationClient dynamicSimulationClient;
 
@@ -165,6 +167,11 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
         assertEquals(TIME_SERIES_UUID_STRING, timeSeriesUuid.toString());
     }
 
+    @Test(expected = StudyException.class)
+    public void testGetTimeSeriesResultGivenBadUuid() {
+        dynamicSimulationClient.getTimeSeriesResult(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
+    }
+
     @Test
     public void testGetTimeLineResult() {
         UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(UUID.fromString(RESULT_UUID_STRING));
@@ -173,12 +180,22 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
         assertEquals(TIME_LINE_UUID_STRING, timeLineUuid.toString());
     }
 
+    @Test(expected = StudyException.class)
+    public void testGetTimeLineResultGivenBadUuid() {
+        dynamicSimulationClient.getTimeLineResult(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
+    }
+
     @Test
     public void testGetStatus() {
         String status = dynamicSimulationClient.getStatus(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
         assertEquals(DynamicSimulationStatus.CONVERGED.name(), status);
+    }
+
+    @Test(expected = StudyException.class)
+    public void testGetStatusGivenBadUuid() {
+        dynamicSimulationClient.getStatus(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
     }
 
     @Test
