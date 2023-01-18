@@ -173,6 +173,12 @@ public class StudyTest {
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
 
+    @Value("${security-analysis.default-provider}")
+    String defaultSecurityAnalysisProvider;
+
+    @Value("${sensitivity-analysis.default-provider}")
+    String defaultSensitivityAnalysisProvider;
+
     @Autowired
     private OutputDestination output;
 
@@ -1187,6 +1193,8 @@ public class StudyTest {
         StudyEntity study = studyRepository.findAll().get(0);
 
         assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
+        assertEquals(study.getSecurityAnalysisProvider(), defaultSecurityAnalysisProvider);
+        assertEquals(study.getSensitivityAnalysisProvider(), defaultSensitivityAnalysisProvider);
     }
 
     @Test
@@ -1763,10 +1771,25 @@ public class StudyTest {
         return allNodesAfterDuplication.get(0).getIdNode();
     }
 
+    @Test
     public void getDefaultLoadflowProvider() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
                 status().isOk(),
                 content().string(defaultLoadflowProvider));
+    }
+
+    @Test
+    public void getDefaultSecurityAnalysisProvider() throws Exception {
+        mockMvc.perform(get("/v1/security-analysis-default-provider")).andExpectAll(
+                status().isOk(),
+                content().string(defaultSecurityAnalysisProvider));
+    }
+
+    @Test
+    public void getDefaultSensitivityAnalysisProvider() throws Exception {
+        mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
+                status().isOk(),
+                content().string(defaultSensitivityAnalysisProvider));
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
