@@ -16,7 +16,10 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
-import com.powsybl.iidm.network.*;
+import com.powsybl.iidm.network.Line;
+import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.TopologyKind;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -34,20 +37,16 @@ import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkModificationService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NotificationService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.SensitivityAnalysisService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.gridsuite.study.server.utils.RequestWithBody;
@@ -1815,6 +1814,55 @@ public class StudyTest {
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    public void providerTest() throws Exception {
+        UUID studyUuid = createStudy(USER_ID_HEADER, CASE_UUID);
+        assertNotNull(studyUuid);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                              content().string(defaultLoadflowProvider));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string(defaultSecurityAnalysisProvider));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string(defaultSensitivityAnalysisProvider));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
+                        .content("SuperLF")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                .andExpect(status().isOk());
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid)
+                        .content("SuperSA")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                .andExpect(status().isOk());
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid)
+                        .content("SuperSE")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                .andExpect(status().isOk());
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string("SuperLF"));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string("SuperSA"));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string("SuperSE"));
     }
 
     @After
