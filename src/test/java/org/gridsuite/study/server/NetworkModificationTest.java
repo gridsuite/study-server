@@ -1015,11 +1015,11 @@ public class NetworkModificationTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         HashMap<String, Object> bodyLineInfos = new HashMap<>();
-        bodyLineInfos.put("type", ModificationType.BRANCH_STATUS);
+        bodyLineInfos.put("type", ModificationType.BRANCH_STATUS_MODIFICATION);
         bodyLineInfos.put("equipmentId", "line12");
         bodyLineInfos.put("action", "lockout");
         String bodyJsonCreate1 = mapper.writeValueAsString(bodyLineInfos);
-        String responseBody1 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s1", "s2");
+        String responseBody1 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS_MODIFICATION, "s1", "s2");
         UUID stubPostId = stubNetworkModificationPostWithBody(bodyJsonCreate1, responseBody1);
 
         // change line status on root node (not allowed)
@@ -1054,7 +1054,7 @@ public class NetworkModificationTest {
         bodyLineInfos.put("equipmentId", "line23");
         bodyLineInfos.put("action", "trip");
         String bodyJsonCreate3 = mapper.writeValueAsString(bodyLineInfos);
-        String responseBody3 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s2", "s3");
+        String responseBody3 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS_MODIFICATION, "s2", "s3");
         stubPostId = stubNetworkModificationPostWithBody(bodyJsonCreate3, responseBody3);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate3).contentType(MediaType.APPLICATION_JSON)
@@ -1081,7 +1081,7 @@ public class NetworkModificationTest {
         bodyLineInfos.put("equipmentId", "line13");
         bodyLineInfos.put("action", "energiseEndOne");
         String bodyJsonCreate5 = mapper.writeValueAsString(bodyLineInfos);
-        String responseBody5 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s1", "s3");
+        String responseBody5 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS_MODIFICATION, "s1", "s3");
         stubPostId = stubNetworkModificationPostWithBody(bodyJsonCreate5, responseBody5);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate5).contentType(MediaType.APPLICATION_JSON)
