@@ -15,6 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.HttpStatusCodeException;
 
+/**
+ * @author Slimane amar <slimane.amar at rte-france.com
+ */
 public final class StudyUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyUtils.class);
 

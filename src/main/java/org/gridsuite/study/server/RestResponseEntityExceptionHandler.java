@@ -45,23 +45,16 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
-            case LINE_MODIFICATION_FAILED:
-            case LOAD_CREATION_FAILED:
-            case GENERATOR_CREATION_FAILED:
-            case SHUNT_COMPENSATOR_CREATION_FAILED:
-            case LINE_CREATION_FAILED:
-            case TWO_WINDINGS_TRANSFORMER_CREATION_FAILED:
-            case SUBSTATION_CREATION_FAILED:
-            case VOLTAGE_LEVEL_CREATION_FAILED:
-            case LINE_SPLIT_FAILED:
-            case BRANCH_STATUS_FAILED:
+            case CREATE_NETWORK_MODIFICATION_FAILED:
+            case UPDATE_NETWORK_MODIFICATION_FAILED:
+            case DELETE_NETWORK_MODIFICATION_FAILED:
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
             case NETWORK_NOT_FOUND:
             case NETWORK_INDEXATION_FAILED:
             case NODE_NOT_BUILT:
             case DELETE_EQUIPMENT_FAILED:
             case DELETE_NODE_FAILED:
             case DELETE_STUDY_FAILED:
-            case DELETE_MODIFICATIONS_FAILED:
             case GET_MODIFICATIONS_FAILED:
             case SENSITIVITY_ANALYSIS_ERROR:
             case NODE_BUILD_ERROR:
