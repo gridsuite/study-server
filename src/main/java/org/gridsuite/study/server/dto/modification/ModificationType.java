@@ -8,7 +8,6 @@ package org.gridsuite.study.server.dto.modification;
 
 import com.powsybl.commons.PowsyblException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.gridsuite.study.server.StudyException;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -35,6 +34,7 @@ public enum ModificationType {
     DELETE_VOLTAGE_LEVEL_ON_LINE,
     DELETE_ATTACHING_LINE;
 
+    // TODO transfer method to the enum
     public static String getUriFromType(ModificationType modificationType) {
         switch (modificationType) {
             case LOAD_CREATION:
@@ -80,43 +80,5 @@ public enum ModificationType {
                 throw new IllegalArgumentException("Enum unknown entry");
         }
     }
-
-    public static StudyException.Type getExceptionFromType(ModificationType modificationType) {
-        switch (modificationType) {
-            case LOAD_CREATION:
-                return StudyException.Type.LOAD_CREATION_FAILED;
-            case LOAD_MODIFICATION:
-                return StudyException.Type.LOAD_MODIFICATION_FAILED;
-            case GENERATOR_CREATION:
-                return StudyException.Type.GENERATOR_CREATION_FAILED;
-            case SHUNT_COMPENSATOR_CREATION:
-                return StudyException.Type.SHUNT_COMPENSATOR_CREATION_FAILED;
-            case LINE_CREATION:
-                return StudyException.Type.LINE_CREATION_FAILED;
-            case TWO_WINDINGS_TRANSFORMER_CREATION:
-                return StudyException.Type.TWO_WINDINGS_TRANSFORMER_CREATION_FAILED;
-            case SUBSTATION_CREATION:
-                return StudyException.Type.SUBSTATION_CREATION_FAILED;
-            case VOLTAGE_LEVEL_CREATION:
-                return StudyException.Type.VOLTAGE_LEVEL_CREATION_FAILED;
-            case LINE_SPLIT_WITH_VOLTAGE_LEVEL:
-                return StudyException.Type.LINE_SPLIT_FAILED;
-            case LINE_ATTACH_TO_VOLTAGE_LEVEL:
-                return StudyException.Type.LINE_ATTACH_FAILED;
-            case GENERATOR_MODIFICATION:
-                return StudyException.Type.GENERATOR_MODIFICATION_FAILED;
-            case LINES_ATTACH_TO_SPLIT_LINES:
-                return StudyException.Type.LINES_ATTACH_TO_SPLIT_LINES;
-            case DELETE_VOLTAGE_LEVEL_ON_LINE:
-                return StudyException.Type.DELETE_VOLTAGE_LEVEL_ON_LINE;
-            case BRANCH_STATUS_MODIFICATION:
-                return StudyException.Type.BRANCH_STATUS_FAILED;
-            case LOAD_SCALING:
-                return StudyException.Type.LOAD_SCALING_FAILED;
-            case DELETE_ATTACHING_LINE:
-                return StudyException.Type.DELETE_ATTACHING_LINE;
-            default:
-                throw new PowsyblException("Argument " + modificationType + " not expected !!");
-        }
-    }
 }
+
