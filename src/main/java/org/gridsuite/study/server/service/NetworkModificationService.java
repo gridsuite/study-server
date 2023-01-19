@@ -7,17 +7,13 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -39,6 +35,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -46,8 +43,6 @@ import static org.gridsuite.study.server.StudyException.Type.*;
  */
 @Service
 public class NetworkModificationService {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationService.class);
 
     private static final String DELIMITER = "/";
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
@@ -97,7 +92,7 @@ public class NetworkModificationService {
         try {
             return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleError(e, GET_MODIFICATIONS_FAILED);
+            throw handleHttpError(e, GET_MODIFICATIONS_FAILED);
         }
     }
 
@@ -111,7 +106,7 @@ public class NetworkModificationService {
         try {
             restTemplate.delete(getNetworkModificationServerURI(false) + path);
         } catch (HttpStatusCodeException e) {
-            throw handleError(e, DELETE_NETWORK_MODIFICATION_FAILED);
+            throw handleHttpError(e, DELETE_NETWORK_MODIFICATION_FAILED);
         }
     }
 
@@ -127,31 +122,8 @@ public class NetworkModificationService {
         try {
             restTemplate.delete(path);
         } catch (HttpStatusCodeException e) {
-            throw handleError(e, DELETE_NETWORK_MODIFICATION_FAILED);
+            throw handleHttpError(e, DELETE_NETWORK_MODIFICATION_FAILED);
         }
-    }
-
-    private StudyException handleError(HttpStatusCodeException httpException, StudyException.Type type) {
-        String responseBody = httpException.getResponseBodyAsString();
-
-        String errorMessage = responseBody.isEmpty() ? httpException.getStatusCode().toString() : parseError(responseBody);
-
-        LOGGER.error(errorMessage);
-
-        return new StudyException(type, errorMessage);
-    }
-
-    private String parseError(String responseBody) {
-        try {
-            JsonNode node = objectMapper.readTree(responseBody).path("message");
-            if (!node.isMissingNode()) {
-                return node.asText();
-            }
-        } catch (JsonProcessingException e) {
-            // status code or responseBody by default
-        }
-
-        return responseBody;
     }
 
     public List<ModificationInfos> createModification(UUID studyUuid,
@@ -188,7 +160,7 @@ public class NetworkModificationService {
                     new ParameterizedTypeReference<List<ModificationInfos>>() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
-            throw handleError(e, CREATE_NETWORK_MODIFICATION_FAILED);
+            throw handleHttpError(e, CREATE_NETWORK_MODIFICATION_FAILED);
         }
 
         return result;
@@ -211,7 +183,7 @@ public class NetworkModificationService {
             restTemplate.exchange(path, HttpMethod.PUT, httpEntity,
                     Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
+            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
         }
     }
 
@@ -312,7 +284,7 @@ public class NetworkModificationService {
         try {
             restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
         } catch (HttpStatusCodeException e) {
-            throw handleError(e, STUDY_CREATION_FAILED);
+            throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
     }
 }
