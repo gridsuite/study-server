@@ -1677,6 +1677,63 @@ public class NetworkModificationTest {
 
     @SneakyThrows
     @Test
+    public void testLoadScaling() {
+        var userId = "userId";
+        var modificationInfos = ModificationInfos.builder().type(ModificationType.LOAD_SCALING).substationIds(Set.of("s1", "s2")).build();
+        var requestBody = mapper.writeValueAsString(modificationInfos);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        var studyNameUserIdUuid = studyEntity.getId();
+        var rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
+        var modificationNodeUuid = modificationNode.getId();
+        var stubPostId = stubNetworkModificationPostWithBody(requestBody, "[]");
+        var stubPutId = stubNetworkModificationPutWithBody(requestBody);
+
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+
+        verifyNetworkModificationPost(stubPostId, requestBody);
+        verifyNetworkModificationPut(stubPutId, requestBody);
+
+        // test with errors
+        stubPostId = stubNetworkModificationPostWithBodyAndError(requestBody);
+        stubPutId = stubNetworkModificationPutWithBodyAndError(requestBody);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().is5xxServerError());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().is5xxServerError());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubPostId, requestBody);
+        verifyNetworkModificationPut(stubPutId, requestBody);
+    }
+
+    @SneakyThrows
+    @Test
     public void testDeleteVoltageLevelOnline() {
         String userId = "userId";
         EquipmentModificationInfos lineToAttachTo = EquipmentModificationInfos.builder()

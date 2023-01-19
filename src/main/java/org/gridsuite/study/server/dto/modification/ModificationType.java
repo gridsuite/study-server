@@ -31,6 +31,7 @@ public enum ModificationType {
     BRANCH_STATUS_MODIFICATION,
     SHUNT_COMPENSATOR_CREATION,
     LINES_ATTACH_TO_SPLIT_LINES,
+    LOAD_SCALING,
     DELETE_VOLTAGE_LEVEL_ON_LINE,
     DELETE_ATTACHING_LINE;
 
@@ -60,6 +61,8 @@ public enum ModificationType {
                 return "generators-modification";
             case LINES_ATTACH_TO_SPLIT_LINES:
                 return "lines-attach-to-split-lines";
+            case LOAD_SCALING:
+                return "load-scaling";
             case DELETE_VOLTAGE_LEVEL_ON_LINE:
                 return "delete-voltage-level-on-line";
             case DELETE_ATTACHING_LINE:
@@ -108,6 +111,8 @@ public enum ModificationType {
                 return StudyException.Type.DELETE_VOLTAGE_LEVEL_ON_LINE;
             case BRANCH_STATUS_MODIFICATION:
                 return StudyException.Type.BRANCH_STATUS_FAILED;
+            case LOAD_SCALING:
+                return StudyException.Type.LOAD_SCALING_FAILED;
             case DELETE_ATTACHING_LINE:
                 return StudyException.Type.DELETE_ATTACHING_LINE;
             default:

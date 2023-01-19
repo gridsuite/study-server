@@ -64,6 +64,7 @@ public class StudyException extends RuntimeException {
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
         MISSING_PARAMETER,
+        LOAD_SCALING_FAILED,
         DELETE_VOLTAGE_LEVEL_ON_LINE,
         DELETE_ATTACHING_LINE;
     }
