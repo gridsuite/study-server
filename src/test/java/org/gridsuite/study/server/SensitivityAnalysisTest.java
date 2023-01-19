@@ -76,8 +76,8 @@ public class SensitivityAnalysisTest {
     private static final String SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SENSITIVITY_ANALYSIS_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
-    //private static final String SENSITIVITY_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"factors\":[],\"contingencies\":[],\"values\":[]}";
-    private static final String TABBED_RESULT_JSON = "fake tabbed result json";
+
+    private static final String FAKE_RESULT_JSON                 = "fake result json";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -223,7 +223,7 @@ public class SensitivityAnalysisTest {
                     return new MockResponse().setResponseCode(200)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
-                    return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
+                    return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
                         .addHeader("Content-Type", "application/json; charset=utf-8");
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status")
                            || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status")) {
@@ -232,7 +232,7 @@ public class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "\\?.*")
                     || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "\\?.*")) {
                     if (difficultyOfFind == 0) {
-                        return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
+                        return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else if (difficultyOfFind == 1) {
                         return new MockResponse().setResponseCode(404);
@@ -244,7 +244,7 @@ public class SensitivityAnalysisTest {
                         return new MockResponse().setResponseCode(200).setBody(SENSITIVITY_ANALYSIS_STATUS_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else if (difficultyOfFind == 0) {
-                        return new MockResponse().setResponseCode(200).setBody(TABBED_RESULT_JSON)
+                        return new MockResponse().setResponseCode(200).setBody(FAKE_RESULT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     } else if (difficultyOfFind == 1) {
                         return new MockResponse().setResponseCode(404);
@@ -300,7 +300,7 @@ public class SensitivityAnalysisTest {
 
         // get sensitivity analysis result
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, nodeUuid, "fakeJsonSelector"))
-            .andExpectAll(status().isOk(), content().string(TABBED_RESULT_JSON));
+            .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("results")));
 
