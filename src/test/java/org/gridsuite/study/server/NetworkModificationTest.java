@@ -15,6 +15,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
@@ -39,6 +40,7 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -2143,8 +2145,8 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid,
-                NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
-                "LOAD", NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
+                        NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENTS, ImmutableList.of("{\"id\":\"idLoadToDelete\",\"type\":\"LOAD\"}"),
+                        NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, bodyJson, VARIANT_ID);
@@ -2156,8 +2158,8 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid,
-                NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
-                "LOAD", NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
+                        NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENTS, ImmutableList.of("{\"id\":\"idLoadToDelete\",\"type\":\"LOAD\"}"),
+                        NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, bodyJson, VARIANT_ID_2);
@@ -2460,8 +2462,8 @@ public class NetworkModificationTest {
     }
 
     private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            String headerUpdateTypeEquipmentType, String equipmentType, String headerUpdateTypeEquipmentId,
-            String equipmentId, String headerUpdateTypeSubstationsIds, Set<String> modifiedSubstationsIdsSet) {
+                    String headerUpdateTypeDeletedEquipments, List<String> deletedEquipments,
+                    String headerUpdateTypeSubstationsIds, Set<String> modifiedSubstationsIdsSet) {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
@@ -2469,8 +2471,7 @@ public class NetworkModificationTest {
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(equipmentType, headersStudyUpdate.get(headerUpdateTypeEquipmentType));
-        assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
+        assertEquals(deletedEquipments, headersStudyUpdate.get(headerUpdateTypeDeletedEquipments));
         assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
 
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));

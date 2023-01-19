@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.notification;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -35,6 +36,7 @@ public class NotificationService {
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
     public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
+    public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENTS = "deletedEquipments";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
@@ -131,13 +133,12 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
+    public void emitStudyEquipmentsDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, List<String> deletedEquipments) {
         sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
-                .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, equipmentType)
-                .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, equipmentId)
+                .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENTS, deletedEquipments)
                 .build());
     }
 

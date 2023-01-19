@@ -38,6 +38,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.notification.EquipmentDeletionNotification;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1415,30 +1417,24 @@ public class StudyService {
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
                 break;
             }
-            case EQUIPMENT_DELETION: {
-                modifications.stream()
-                    .map(EquipmentDeletionInfos.class::cast)
-                    .forEach(deletionInfo ->
-                        notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
-                            deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId()));
-                updateStatuses(studyUuid, nodeUuid);
-                break;
-            }
-            case LINE_SPLIT_WITH_VOLTAGE_LEVEL: {
-                Set<String> allImpactedSubstationIds = modifications.stream()
-                        .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
+            default: {
                 List<EquipmentModificationInfos> deletions = modifications.stream()
                         .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
                         .map(EquipmentDeletionInfos.class::cast)
                         .collect(Collectors.toList());
-                deletions.forEach(modif -> notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
-                        allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
-                updateStatuses(studyUuid, nodeUuid);
-                break;
-            }
-            default: {
-                Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
+
+                Set<String> impactedSubstationIds = getSubstationIds(modifications).stream()
+                        .filter(id -> deletions.stream()
+                                .noneMatch(deletion -> deletion.getEquipmentId().equals(id)))
+                        .collect(Collectors.toSet());
+
+                List<String> deletedEquipmentsList = deletions.stream()
+                        .map(d -> new EquipmentDeletionNotification(d.getEquipmentId(), d.getEquipmentType())
+                                .toString())
+                        .collect(Collectors.toList());
+
+                notificationService.emitStudyEquipmentsDeleted(studyUuid, nodeUuid,
+                        NotificationService.UPDATE_TYPE_STUDY, impactedSubstationIds, deletedEquipmentsList);
                 updateStatuses(studyUuid, nodeUuid);
                 break;
             }
