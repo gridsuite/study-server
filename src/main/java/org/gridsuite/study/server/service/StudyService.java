@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.powsybl.commons.reporter.ReporterModel;
@@ -43,7 +42,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -63,6 +61,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -532,28 +531,6 @@ public class StudyService {
         return newStudy;
     }
 
-    private StudyException handleStudyCreationError(HttpStatusCodeException httpException, String serverName) {
-        HttpStatus httpStatusCode = httpException.getStatusCode();
-        String errorMessage = httpException.getResponseBodyAsString();
-        String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
-                : errorMessage;
-
-        LOGGER.error(errorToParse, httpException);
-
-        try {
-            JsonNode node = new ObjectMapper().readTree(errorToParse).path("message");
-            if (!node.isMissingNode()) {
-                return new StudyException(STUDY_CREATION_FAILED, node.asText());
-            }
-        } catch (JsonProcessingException e) {
-            if (!errorToParse.isEmpty()) {
-                return new StudyException(STUDY_CREATION_FAILED, errorToParse);
-            }
-        }
-
-        return new StudyException(STUDY_CREATION_FAILED, errorToParse);
-    }
-
     public byte[] getVoltageLevelSvg(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
                                      UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
@@ -580,9 +557,7 @@ public class StudyService {
         try {
             networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, importParameters);
         } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(e, "network-conversion-server");
-        } catch (Exception e) {
-            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
+            throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
     }
 
@@ -1022,7 +997,7 @@ public class StudyService {
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
             List<ModificationInfos> modificationInfosList = networkModificationService
-                    .createModification(studyUuid, createModificationAttributes, groupUuid, modificationType, variantId, reportUuid, nodeInfos.getId().toString());
+                    .createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
             updateStatuses(studyUuid, nodeUuid, modificationInfosList, modificationType);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1031,11 +1006,10 @@ public class StudyService {
     }
 
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
-        ModificationType modificationType = getModificationType(updateModificationAttributes);
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
-            networkModificationService.updateModification(updateModificationAttributes, modificationType, modificationUuid);
+            networkModificationService.updateModification(updateModificationAttributes, modificationUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1422,7 +1396,7 @@ public class StudyService {
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
                 break;
             }
-            case BRANCH_STATUS: {
+            case BRANCH_STATUS_MODIFICATION: {
                 Set<String> substationIds = getSubstationIds(modifications);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
                 updateStatuses(studyUuid, nodeUuid);
