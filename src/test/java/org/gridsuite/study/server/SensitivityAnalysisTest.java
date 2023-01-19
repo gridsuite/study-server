@@ -146,8 +146,6 @@ public class SensitivityAnalysisTest {
     private final String sensitivityAnalysisStoppedDestination = "sensitivityanalysis.stopped";
     private final String sensitivityAnalysisFailedDestination  = "sensitivityanalysis.failed";
 
-    private int difficultyOfFind = 0;
-
     @Before
     public void setup() throws IOException {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
@@ -201,7 +199,6 @@ public class SensitivityAnalysisTest {
             @NotNull
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                LOGGER.debug(path + " shouldNotFind " + difficultyOfFind);
                 request.getBody();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*")) {
@@ -348,7 +345,7 @@ public class SensitivityAnalysisTest {
 
         UUID stub1Id;
         stub1Id = wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
-            .willReturn(WireMock.notFound())).getId();
+            .willReturn(WireMock.notFound().withBody("Oups did I ever let think suc a thing existed ?"))).getId();
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().isNotFound());
@@ -356,7 +353,15 @@ public class SensitivityAnalysisTest {
         removeRequestForStub(stub1Id);
 
         stub1Id = wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
-            .willReturn(WireMock.serverError())).getId();
+            .willReturn(WireMock.serverError().withBody("{ \"message\": \"Oups\" }"))).getId();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
+                studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
+            .andExpectAll(status().is5xxServerError());
+        wireMock.verify(1, WireMock.getRequestedFor(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
+        removeRequestForStub(stub1Id);
+
+        stub1Id = wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID))
+            .willReturn(WireMock.serverError().withBody("flat message"))).getId();
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, modificationNode1Uuid, "fakeJsonSelector"))
             .andExpectAll(status().is5xxServerError());
@@ -368,11 +373,6 @@ public class SensitivityAnalysisTest {
         List<ServeEvent> serveEvents = wireMock.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
         assertEquals(1, serveEvents.size());
         wireMock.removeServeEvent(serveEvents.get(0).getId());
-    }
-
-    private static String getRequest(MockWebServer webServer) {
-        Set<String> requestsDone = TestUtils.getRequestsDone(1, webServer);
-        return requestsDone.iterator().next();
     }
 
     // test sensitivity analysis on network 2 will fail
