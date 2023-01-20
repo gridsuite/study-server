@@ -974,7 +974,6 @@ public class NetworkModificationTest {
                         .queryParam("uuids", node3.getId().toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
-
         checkEquipmentDeletingMessagesReceived(studyUuid1, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid1, modificationNode.getId());
 
@@ -984,10 +983,21 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         verifyDeleteRequest(stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
-
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkUpdateNodesMessageReceived(studyUuid, List.of(modificationNode.getId()));
         checkUpdateModelsStatusMessagesReceived(studyUuid, modificationNode.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
+
+        String errorMessage = "Internal Server Error";
+        stubId = wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications.*"))
+            .willReturn(WireMock.serverError().withBody(errorMessage))
+        ).getId();
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", studyUuid, modificationNode.getId())
+                .queryParam("uuids", modificationUuid.toString())
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isBadRequest());
+        verifyDeleteRequest(stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
+        checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNode.getId());
     }
 
@@ -1005,11 +1015,11 @@ public class NetworkModificationTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         HashMap<String, Object> bodyLineInfos = new HashMap<>();
-        bodyLineInfos.put("type", ModificationType.BRANCH_STATUS);
+        bodyLineInfos.put("type", ModificationType.BRANCH_STATUS_MODIFICATION);
         bodyLineInfos.put("equipmentId", "line12");
         bodyLineInfos.put("action", "lockout");
         String bodyJsonCreate1 = mapper.writeValueAsString(bodyLineInfos);
-        String responseBody1 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s1", "s2");
+        String responseBody1 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS_MODIFICATION, "s1", "s2");
         UUID stubPostId = stubNetworkModificationPostWithBody(bodyJsonCreate1, responseBody1);
 
         // change line status on root node (not allowed)
@@ -1035,7 +1045,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate2);
@@ -1044,7 +1054,7 @@ public class NetworkModificationTest {
         bodyLineInfos.put("equipmentId", "line23");
         bodyLineInfos.put("action", "trip");
         String bodyJsonCreate3 = mapper.writeValueAsString(bodyLineInfos);
-        String responseBody3 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s2", "s3");
+        String responseBody3 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS_MODIFICATION, "s2", "s3");
         stubPostId = stubNetworkModificationPostWithBody(bodyJsonCreate3, responseBody3);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate3).contentType(MediaType.APPLICATION_JSON)
@@ -1062,7 +1072,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate4).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate4);
@@ -1071,7 +1081,7 @@ public class NetworkModificationTest {
         bodyLineInfos.put("equipmentId", "line13");
         bodyLineInfos.put("action", "energiseEndOne");
         String bodyJsonCreate5 = mapper.writeValueAsString(bodyLineInfos);
-        String responseBody5 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS, "s1", "s3");
+        String responseBody5 = createEquipmentModificationInfosBody(ModificationType.BRANCH_STATUS_MODIFICATION, "s1", "s3");
         stubPostId = stubNetworkModificationPostWithBody(bodyJsonCreate5, responseBody5);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate5).contentType(MediaType.APPLICATION_JSON)
@@ -1089,7 +1099,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate6).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate6);
@@ -1116,7 +1126,7 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate8).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate8);
@@ -1537,7 +1547,7 @@ public class NetworkModificationTest {
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpectAll(
-                        status().is5xxServerError(),
+                        status().isBadRequest(),
                         content().string("400 BAD_REQUEST"));
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1545,7 +1555,7 @@ public class NetworkModificationTest {
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpectAll(
-                        status().is5xxServerError(),
+                        status().isBadRequest(),
                         content().string("400 BAD_REQUEST"));
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1662,13 +1672,13 @@ public class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPost(stubPostId, badBody);
@@ -1677,30 +1687,31 @@ public class NetworkModificationTest {
 
     @SneakyThrows
     @Test
-    public void testGeneratorScaling() {
-        String userId = "userId";
+    public void testLoadScaling() {
+        var userId = "userId";
+        var modificationInfos = ModificationInfos.builder().type(ModificationType.LOAD_SCALING).substationIds(Set.of("s1", "s2")).build();
+        var requestBody = mapper.writeValueAsString(modificationInfos);
+
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        var studyNameUserIdUuid = studyEntity.getId();
+        var rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
-        UUID modificationNodeUuid = modificationNode.getId();
-
-        String generatorScalingRequest = "{\"type\":\"GENERATOR_SCALING\",\"variationType\":\"DELTA_P\",\"isIterative\":true,\"generatorScalingVariations\":[{\"filters\":[{\"id\":\"b5c93a96-b325-47a6-8303-c6764ba680e5\",\"name\":\"filter1\"},{\"id\":\"6c2137ec-6f2c-4aeb-ab76-e898263e972a\",\"name\":\"filter2\"}],\"variationValue\":\"300\",\"variationMode\":\"PROPORTIONAL_TO_PMAX\"}]}";
-
-        UUID stubPostId = stubNetworkModificationPostWithBody(generatorScalingRequest, List.of().toString());
-        UUID stubPutId = stubNetworkModificationPutWithBody(generatorScalingRequest);
+        var modificationNodeUuid = modificationNode.getId();
+        var stubPostId = stubNetworkModificationPostWithBody(requestBody, "[]");
+        var stubPutId = stubNetworkModificationPutWithBody(requestBody);
 
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
-                        .content(generatorScalingRequest).contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
-                        .content(generatorScalingRequest).contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -1708,26 +1719,160 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
-        verifyNetworkModificationPost(stubPostId, generatorScalingRequest);
-        verifyNetworkModificationPut(stubPutId, generatorScalingRequest);
+        verifyNetworkModificationPost(stubPostId, requestBody);
+        verifyNetworkModificationPut(stubPutId, requestBody);
 
-        String badBody = "{\"type\":\"" + ModificationType.GENERATOR_SCALING + "\",\"bogus\":\"bogus\"}";
-        stubPostId = stubNetworkModificationPostWithBodyAndError(badBody);
-        stubPutId = stubNetworkModificationPutWithBodyAndError(badBody);
+        // test with errors
+        stubPostId = stubNetworkModificationPostWithBodyAndError(requestBody);
+        stubPutId = stubNetworkModificationPutWithBodyAndError(requestBody);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().is4xxClientError());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content(requestBody).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().is4xxClientError());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubPostId, requestBody);
+        verifyNetworkModificationPut(stubPutId, requestBody);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testDeleteVoltageLevelOnline() {
+        String userId = "userId";
+        EquipmentModificationInfos lineToAttachTo = EquipmentModificationInfos.builder()
+                .type(ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> deleteVoltageLevelOnlineInfo = new ArrayList<>();
+        deleteVoltageLevelOnlineInfo.add(lineToAttachTo);
+        EquipmentModificationInfos deleteVoltageLevelOnline = EquipmentModificationInfos.builder()
+                .type(ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE)
+                .equipmentId("line3").equipmentType("DELETE_VOLTAGE_LEVEL_ON_LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> deleteVoltageLevelOnlineResponseInfos = new ArrayList<>();
+        deleteVoltageLevelOnlineInfo.add(deleteVoltageLevelOnline);
+        String responseBody = mapper.writeValueAsString(deleteVoltageLevelOnlineResponseInfos);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String createDeleteVoltageLevelOnlineAttributes = "{\"type\":\"" + ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE + "\",\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name\"}";
+
+        UUID stubIdPost = stubNetworkModificationPostWithBody(createDeleteVoltageLevelOnlineAttributes, responseBody);
+        UUID stubIdPut = stubNetworkModificationPutWithBody(createDeleteVoltageLevelOnlineAttributes);
+
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                        .content(createDeleteVoltageLevelOnlineAttributes).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                        .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubIdPost, createDeleteVoltageLevelOnlineAttributes);
+
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .content(createDeleteVoltageLevelOnlineAttributes).contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId))
+                        .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPut(stubIdPut, createDeleteVoltageLevelOnlineAttributes);
+
+        String badBody = "{\"type\":\"" + ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE + "\",\"bogus\":\"bogus\"}";
+        UUID stubIdPostErr = stubNetworkModificationPostWithBodyAndError(badBody);
+        UUID stubIdPutErr = stubNetworkModificationPutWithBodyAndError(badBody);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid).header(USER_ID_HEADER, userId)
+                .content(badBody).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubIdPostErr, badBody);
+
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .header(USER_ID_HEADER, userId)
+                        .content(badBody).contentType(MediaType.APPLICATION_JSON))
+                        .andExpect(status().isBadRequest());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPut(stubIdPutErr, badBody);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testDeleteAttachingline() {
+        String userId = "userId";
+        EquipmentModificationInfos lineToAttachTo = EquipmentModificationInfos.builder()
+                .type(ModificationType.DELETE_ATTACHING_LINE)
+                .equipmentId("line3").equipmentType("LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> deleteAttachinglineInfo = new ArrayList<>();
+        deleteAttachinglineInfo.add(lineToAttachTo);
+        EquipmentModificationInfos deleteAttachingLine = EquipmentModificationInfos.builder()
+                .type(ModificationType.DELETE_ATTACHING_LINE)
+                .equipmentId("line3").equipmentType("DELETE_ATTACHING_LINE").substationIds(Set.of("s1", "s2"))
+                .build();
+        List<EquipmentModificationInfos> deleteAttachinglineResponseInfos = new ArrayList<>();
+        deleteAttachinglineInfo.add(deleteAttachingLine);
+        String responseBody = mapper.writeValueAsString(deleteAttachinglineResponseInfos);
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, VARIANT_ID, "node", "userId");
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        String createDeleteAttachingLineAttributes = "{\"type\":\"" + ModificationType.DELETE_ATTACHING_LINE + "\",\"lineToAttachTo1Id\":\"line1\",\"lineToAttachTo2Id\":\"line2\",\"attachedLineId\":\"line3\",\"replacingLine1Id\":\"replacingLine1Id\",\"replacingLine1Name\":\"replacingLine1Name\"}";
+
+        UUID stubIdPost = stubNetworkModificationPostWithBody(createDeleteAttachingLineAttributes, responseBody);
+        UUID stubIdPut = stubNetworkModificationPutWithBody(createDeleteAttachingLineAttributes);
+
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                    .content(createDeleteAttachingLineAttributes).contentType(MediaType.APPLICATION_JSON)
+                    .header(USER_ID_HEADER, userId))
+                    .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubIdPost, createDeleteAttachingLineAttributes);
+
+        mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
+                        .header(USER_ID_HEADER, userId)
+                        .content(createDeleteAttachingLineAttributes).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkUpdateEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPut(stubIdPut, createDeleteAttachingLineAttributes);
+
+        String badBody = "{\"type\":\"" + ModificationType.DELETE_ATTACHING_LINE + "\",\"bogus\":\"bogus\"}";
+        UUID stubIdPostErr = stubNetworkModificationPostWithBodyAndError(badBody);
+        UUID stubIdPutErr = stubNetworkModificationPutWithBodyAndError(badBody);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().is5xxServerError());
+                        .andExpect(status().isBadRequest());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubIdPostErr, badBody);
+
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().is5xxServerError());
+                        .andExpect(status().isBadRequest());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        verifyNetworkModificationPost(stubPostId, badBody);
-        verifyNetworkModificationPut(stubPutId, badBody);
+        verifyNetworkModificationPut(stubIdPutErr, badBody);
     }
 
     @SneakyThrows
@@ -2473,6 +2618,66 @@ public class NetworkModificationTest {
         return modificationNode;
     }
 
+    @SneakyThrows
+    @Test
+    public void testApplyModificationWithErrors() {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        String userId = "userId";
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+            UUID.randomUUID(), VARIANT_ID, "node 1", userId);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        Map<String, Object> createLoadInfos = Map.of("type", ModificationType.LOAD_CREATION, "equipmentId", "loadId");
+        String jsonCreateLoadInfos = mapper.writeValueAsString(createLoadInfos);
+        String responseBody = createEquipmentModificationInfosBody(ModificationType.LOAD_CREATION, "s1");
+        UUID stubId = stubNetworkModificationPostWithBody(jsonCreateLoadInfos, responseBody);
+
+        // Create network modification on first modification node
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1"));
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
+        verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, VARIANT_ID);
+
+        // String message error
+        String errorMessage = "Internal Server Error";
+        stubId = stubNetworkModificationPostWithError(jsonCreateLoadInfos);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubId, jsonCreateLoadInfos);
+
+        // Json message error
+        stubId = stubNetworkModificationPostWithError(jsonCreateLoadInfos, String.format("{\"message\" : \"%s\"}", errorMessage));
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubId, jsonCreateLoadInfos);
+
+        // Bad json message error
+        errorMessage = String.format("{\"foo\" : \"%s\"}", errorMessage);
+        stubId = stubNetworkModificationPostWithError(jsonCreateLoadInfos, errorMessage);
+        mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
+                .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
+                .header(USER_ID_HEADER, userId))
+            .andExpectAll(status().isBadRequest(), content().string(errorMessage));
+        checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        verifyNetworkModificationPost(stubId, jsonCreateLoadInfos);
+    }
+
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
         Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
@@ -2524,9 +2729,13 @@ public class NetworkModificationTest {
     }
 
     private UUID stubNetworkModificationPostWithError(String requestBody) {
+        return stubNetworkModificationPostWithError(requestBody, "Internal Server Error");
+    }
+
+    private UUID stubNetworkModificationPostWithError(String requestBody, String errorMessage) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
             .withRequestBody(WireMock.equalToJson(requestBody))
-            .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+            .willReturn(WireMock.serverError().withBody(errorMessage))
         ).getId();
     }
 
