@@ -1158,9 +1158,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis result"),
         @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
-    public ResponseEntity<String> getSensitivityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = sensitivityAnalysisService.getSensitivityAnalysisResult(nodeUuid);
+    public ResponseEntity<String> getSensitivityAnalysisResult(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "results selector") @RequestParam("selector") String selector) {
+        String result = sensitivityAnalysisService.getSensitivityAnalysisResult(nodeUuid, selector);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
