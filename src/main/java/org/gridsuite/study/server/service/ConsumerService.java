@@ -11,15 +11,9 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
@@ -33,16 +27,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.loadflow.LoadFlowParameters;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    public static final String HEADER_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
     static final String NETWORK_UUID = "networkUuid";
     static final String NETWORK_ID = "networkId";
@@ -425,6 +425,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeShortCircuitAnalysisFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -438,7 +440,7 @@ public class ConsumerService {
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
+                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, errorMessage, userId);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
