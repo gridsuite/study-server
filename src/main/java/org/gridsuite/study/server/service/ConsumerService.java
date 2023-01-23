@@ -54,16 +54,19 @@ public class ConsumerService {
 
     NotificationService notificationService;
     StudyService studyService;
+    CaseService caseService;
     NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
-            NotificationService notificationService,
-            StudyService studyService,
-            NetworkModificationTreeService networkModificationTreeService) {
+                           NotificationService notificationService,
+                           StudyService studyService,
+                           CaseService caseService,
+                           NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
+        this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
     }
 
@@ -321,6 +324,7 @@ public class ConsumerService {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
                     studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
+                    caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {
