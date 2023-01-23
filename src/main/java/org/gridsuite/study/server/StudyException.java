@@ -24,6 +24,7 @@ public class StudyException extends RuntimeException {
         SECURITY_ANALYSIS_NOT_FOUND,
         SENSITIVITY_ANALYSIS_RUNNING,
         SENSITIVITY_ANALYSIS_NOT_FOUND,
+        SENSITIVITY_ANALYSIS_ERROR,
         SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
         SHORT_CIRCUIT_ANALYSIS_RUNNING,
         NOT_ALLOWED,
@@ -54,7 +55,7 @@ public class StudyException extends RuntimeException {
         MISSING_PARAMETER,
         LOAD_SCALING_FAILED,
         DELETE_VOLTAGE_LEVEL_ON_LINE,
-        DELETE_ATTACHING_LINE;
+        DELETE_ATTACHING_LINE
     }
 
     private final Type type;

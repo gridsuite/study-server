@@ -173,6 +173,12 @@ public class StudyTest {
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
 
+    @Value("${security-analysis.default-provider}")
+    String defaultSecurityAnalysisProvider;
+
+    @Value("${sensitivity-analysis.default-provider}")
+    String defaultSensitivityAnalysisProvider;
+
     @Autowired
     private OutputDestination output;
 
@@ -1187,6 +1193,8 @@ public class StudyTest {
         StudyEntity study = studyRepository.findAll().get(0);
 
         assertEquals(study.getLoadFlowProvider(), defaultLoadflowProvider);
+        assertEquals(study.getSecurityAnalysisProvider(), defaultSecurityAnalysisProvider);
+        assertEquals(study.getSensitivityAnalysisProvider(), defaultSensitivityAnalysisProvider);
     }
 
     @Test
@@ -1763,10 +1771,25 @@ public class StudyTest {
         return allNodesAfterDuplication.get(0).getIdNode();
     }
 
+    @Test
     public void getDefaultLoadflowProvider() throws Exception {
         mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
                 status().isOk(),
                 content().string(defaultLoadflowProvider));
+    }
+
+    @Test
+    public void getDefaultSecurityAnalysisProvider() throws Exception {
+        mockMvc.perform(get("/v1/security-analysis-default-provider")).andExpectAll(
+                status().isOk(),
+                content().string(defaultSecurityAnalysisProvider));
+    }
+
+    @Test
+    public void getDefaultSensitivityAnalysisProvider() throws Exception {
+        mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
+                status().isOk(),
+                content().string(defaultSensitivityAnalysisProvider));
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
@@ -1792,6 +1815,61 @@ public class StudyTest {
         Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    public void providerTest() throws Exception {
+        UUID studyUuid = createStudy(USER_ID_HEADER, CASE_UUID);
+        assertNotNull(studyUuid);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                              content().string(defaultLoadflowProvider));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string(defaultSecurityAnalysisProvider));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string(defaultSensitivityAnalysisProvider));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
+                        .content("SuperLF")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                .andExpect(status().isOk());
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid)
+                        .content("SuperSA")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                .andExpect(status().isOk());
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid)
+                        .content("SuperSE")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .header(USER_ID_HEADER, USER_ID_HEADER))
+                .andExpect(status().isOk());
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(message);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string("SuperLF"));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string("SuperSA"));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string("SuperSE"));
     }
 
     @After
