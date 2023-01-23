@@ -35,6 +35,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.gridsuite.study.server.StudyConstants.*;
+
 @Service
 public class ConsumerService {
 
