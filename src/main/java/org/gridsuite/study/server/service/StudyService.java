@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.powsybl.commons.reporter.ReporterModel;
@@ -47,7 +46,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -59,6 +57,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,6 +66,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 import static org.gridsuite.study.server.service.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
 
 /**
@@ -98,6 +98,10 @@ public class StudyService {
 
     private final String defaultLoadflowProvider;
 
+    private final String defaultSecurityAnalysisProvider;
+
+    private final String defaultSensitivityAnalysisProvider;
+
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
     private final NetworkService networkStoreService;
@@ -125,6 +129,8 @@ public class StudyService {
     @Autowired
     public StudyService(
             @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
+            @Value("${security-analysis.default-provider}") String defaultSecurityAnalysisProvider,
+            @Value("${sensitivity-analysis.default-provider}") String defaultSensitivityAnalysisProvider,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             NetworkService networkStoreService,
@@ -146,6 +152,9 @@ public class StudyService {
             ActionsService actionsService,
             SensitivityAnalysisService sensitivityAnalysisService,
             DynamicSimulationService dynamicSimulationService) {
+        this.defaultLoadflowProvider = defaultLoadflowProvider;
+        this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
+        this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -154,7 +163,6 @@ public class StudyService {
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.objectMapper = objectMapper;
         this.studyServerExecutionService = studyServerExecutionService;
         this.notificationService = notificationService;
@@ -513,7 +521,9 @@ public class StudyService {
         Objects.requireNonNull(newLoadFlowParameters);
 
         UUID reportUuid = UUID.randomUUID();
-        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(), sourceStudy.getCaseUuid(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), newLoadFlowParameters, newShortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(),
+                sourceStudy.getCaseUuid(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),
+                sourceStudy.getSensitivityAnalysisProvider(), newLoadFlowParameters, newShortCircuitParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -526,28 +536,6 @@ public class StudyService {
         StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid);
         notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
-    }
-
-    private StudyException handleStudyCreationError(HttpStatusCodeException httpException, String serverName) {
-        HttpStatus httpStatusCode = httpException.getStatusCode();
-        String errorMessage = httpException.getResponseBodyAsString();
-        String errorToParse = errorMessage.isEmpty() ? "{\"message\": \"" + serverName + ": " + httpStatusCode + "\"}"
-                : errorMessage;
-
-        LOGGER.error(errorToParse, httpException);
-
-        try {
-            JsonNode node = new ObjectMapper().readTree(errorToParse).path("message");
-            if (!node.isMissingNode()) {
-                return new StudyException(STUDY_CREATION_FAILED, node.asText());
-            }
-        } catch (JsonProcessingException e) {
-            if (!errorToParse.isEmpty()) {
-                return new StudyException(STUDY_CREATION_FAILED, errorToParse);
-            }
-        }
-
-        return new StudyException(STUDY_CREATION_FAILED, errorToParse);
     }
 
     public byte[] getVoltageLevelSvg(UUID studyUuid, String voltageLevelId, DiagramParameters diagramParameters,
@@ -576,9 +564,7 @@ public class StudyService {
         try {
             networkConversionService.persistentStore(caseUuid, studyUuid, userId, importReportUuid, importParameters);
         } catch (HttpStatusCodeException e) {
-            throw handleStudyCreationError(e, "network-conversion-server");
-        } catch (Exception e) {
-            throw new StudyException(STUDY_CREATION_FAILED, e.getMessage());
+            throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
     }
 
@@ -829,19 +815,67 @@ public class StudyService {
         networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
     }
 
+    public String getDefaultLoadflowProvider() {
+        return defaultLoadflowProvider;
+    }
+
     public String getLoadFlowProvider(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(StudyEntity::getLoadFlowProvider)
                 .orElse("");
     }
 
+    private void updateProvider(UUID studyUuid, String userId, Consumer<StudyEntity> providerSetter) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        providerSetter.accept(studyEntity);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     @Transactional
     public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider));
-        networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
-        notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitElementUpdated(studyUuid, userId);
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setLoadFlowProvider(provider != null ? provider : defaultLoadflowProvider);
+            networkModificationTreeService.updateStudyLoadFlowStatus(studyUuid, LoadFlowStatus.NOT_DONE);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        });
+    }
+
+    public String getDefaultSecurityAnalysisProvider() {
+        return defaultSecurityAnalysisProvider;
+    }
+
+    public String getSecurityAnalysisProvider(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(StudyEntity::getSecurityAnalysisProvider)
+                .orElse("");
+    }
+
+    @Transactional
+    public void updateSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setSecurityAnalysisProvider(provider != null ? provider : defaultSecurityAnalysisProvider);
+            invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        });
+    }
+
+    public String getDefaultSensitivityAnalysisProvider() {
+        return defaultSensitivityAnalysisProvider;
+    }
+
+    public String getSensitivityAnalysisProvider(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(StudyEntity::getSensitivityAnalysisProvider)
+                .orElse("");
+    }
+
+    @Transactional
+    public void updateSensitivityAnalysisProvider(UUID studyUuid, String provider, String userId) {
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setSensitivityAnalysisProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
+            invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        });
     }
 
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
@@ -864,7 +898,7 @@ public class StudyService {
         Objects.requireNonNull(nodeUuid);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getLoadFlowProvider(studyUuid);
+        String provider = getSecurityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
@@ -961,7 +995,8 @@ public class StudyService {
         Objects.requireNonNull(loadFlowParameters);
         Objects.requireNonNull(shortCircuitParameters);
 
-        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider, loadFlowParameters, shortCircuitParameters);
+        StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, loadFlowParameters, shortCircuitParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
@@ -1025,7 +1060,7 @@ public class StudyService {
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
             List<ModificationInfos> modificationInfosList = networkModificationService
-                    .createModification(studyUuid, createModificationAttributes, groupUuid, modificationType, variantId, reportUuid, nodeInfos.getId().toString());
+                    .createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
             updateStatuses(studyUuid, nodeUuid, modificationInfosList, modificationType);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1034,11 +1069,10 @@ public class StudyService {
     }
 
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
-        ModificationType modificationType = getModificationType(updateModificationAttributes);
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
-            networkModificationService.updateModification(updateModificationAttributes, modificationType, modificationUuid);
+            networkModificationService.updateModification(updateModificationAttributes, modificationUuid);
             updateStatuses(studyUuid, nodeUuid, false);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1409,10 +1443,6 @@ public class StudyService {
         reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
     }
 
-    public String getDefaultLoadflowProviderValue() {
-        return defaultLoadflowProvider;
-    }
-
     private Set<String> getSubstationIds(List<ModificationInfos> modificationInfosList) {
         return modificationInfosList.stream().flatMap(modification -> modification.getSubstationIds().stream())
                 .collect(Collectors.toSet());
@@ -1483,7 +1513,7 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(sensitivityAnalysisService::deleteSensitivityAnalysisResult);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String provider = getLoadFlowProvider(studyUuid);
+        String provider = getSensitivityAnalysisProvider(studyUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
         UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid);
 
