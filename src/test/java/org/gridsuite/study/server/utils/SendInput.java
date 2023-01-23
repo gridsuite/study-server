@@ -14,8 +14,8 @@ import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.messaging.support.MessageBuilder;
 
-import static org.gridsuite.study.server.service.ConsumerService.HEADER_RECEIVER;
-import static org.gridsuite.study.server.service.NetworkModificationService.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 
 /**
  * Class that implements an action we want to execute after mocking an API call

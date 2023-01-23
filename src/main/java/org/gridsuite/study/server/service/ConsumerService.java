@@ -40,7 +40,6 @@ public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    public static final String HEADER_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
     static final String NETWORK_UUID = "networkUuid";
     static final String NETWORK_ID = "networkId";
@@ -427,6 +426,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeShortCircuitAnalysisFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -440,7 +441,7 @@ public class ConsumerService {
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
+                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, errorMessage, userId);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

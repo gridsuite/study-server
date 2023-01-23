@@ -71,5 +71,11 @@ powsybl-ws:
 loadflow:
   default-provider: OpenLoadFlow
 
+security-analysis:
+  default-provider: OpenLoadFlow
+
+sensitivity-analysis:
+  default-provider: OpenLoadFlow
+
 server:
   max-http-header-size: 64000

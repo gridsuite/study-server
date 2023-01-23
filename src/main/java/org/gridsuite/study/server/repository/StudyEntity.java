@@ -49,6 +49,12 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "loadFlowProvider")
     private String loadFlowProvider;
 
+    @Column(name = "securityAnalysisProvider")
+    private String securityAnalysisProvider;
+
+    @Column(name = "sensitivityAnalysisProvider")
+    private String sensitivityAnalysisProvider;
+
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "loadFlowParametersEntity_id",
             referencedColumnName = "id",

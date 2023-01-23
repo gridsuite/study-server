@@ -40,7 +40,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class SensitivityAnalysisService {
 
-    static final String QUERY_PARAM_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
 
     private String sensitivityAnalysisServerBaseUri;
