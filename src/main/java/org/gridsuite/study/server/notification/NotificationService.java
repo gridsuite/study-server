@@ -126,6 +126,17 @@ public class NotificationService {
     }
 
     @PostCompletion
+    public void emitStudyError(UUID studyUuid, UUID nodeUuid, String updateType, String errorMessage, String userId) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_ERROR, errorMessage)
+                .setHeader(HEADER_USER_ID, userId)
+                .build());
+    }
+
+    @PostCompletion
     public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds) {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
