@@ -94,6 +94,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -890,7 +891,7 @@ public class StudyTest {
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
@@ -901,7 +902,7 @@ public class StudyTest {
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
@@ -929,7 +930,7 @@ public class StudyTest {
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
@@ -940,7 +941,7 @@ public class StudyTest {
         message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
@@ -966,7 +967,7 @@ public class StudyTest {
         Message<byte[]> message = output.receive(TIMEOUT, "study.update");
 
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
@@ -993,13 +994,13 @@ public class StudyTest {
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(TIMEOUT, "study.update");
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
 
         // study error message
         message = output.receive(TIMEOUT, "study.update");
         headers = message.getHeaders();
-        assertEquals(userId, headers.get(NotificationService.HEADER_USER_ID));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(STUDY_CREATION_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
 

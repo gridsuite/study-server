@@ -11,11 +11,17 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.CASE_UUID;
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.NETWORK_CONVERSION_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.REPORT_UUID;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.CaseImportReceiver;
+import org.gridsuite.study.server.dto.ExportNetworkInfos;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -23,28 +29,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
-import org.gridsuite.study.server.dto.CaseImportReceiver;
-import org.gridsuite.study.server.dto.ExportNetworkInfos;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class NetworkConversionService {
 
     private static final String FIRST_VARIANT_ID = "first_variant_id";
-    private static final String QUERY_PARAM_RECEIVER = "receiver";
 
     @Autowired
     private RestTemplate restTemplate;
