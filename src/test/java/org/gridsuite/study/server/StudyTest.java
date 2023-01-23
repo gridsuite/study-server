@@ -38,6 +38,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.payload.NetworkImpcatsNotificationPayload;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -799,9 +800,9 @@ public class StudyTest {
         if (!createdStudyBasicInfosList.get(0).getId().equals(oldStudyUuid)) {
             Collections.reverse(createdStudyBasicInfosList);
         }
-        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid,  "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid, "UCTE")
                 .matchesSafely(createdStudyBasicInfosList.get(0)));
-        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid,  "UCTE")
+        assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid, "UCTE")
                 .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 
@@ -1132,16 +1133,14 @@ public class StudyTest {
         assertEquals(NotificationService.NODE_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId,
-            Set<String> modifiedIdsSet) {
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpcatsNotificationPayload expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        assertEquals(mapper.writeValueAsString(expectedPayload), new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
 
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
@@ -1175,10 +1174,8 @@ public class StudyTest {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            Set<String> modifiedIdsSet) {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                modifiedIdsSet);
+    private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpcatsNotificationPayload expectedPayload) throws Exception {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, expectedPayload);
     }
 
     @Test
@@ -1206,8 +1203,9 @@ public class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
+        NetworkImpcatsNotificationPayload expectedPayload = NetworkImpcatsNotificationPayload.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
@@ -1223,7 +1221,7 @@ public class StudyTest {
             .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
@@ -1312,8 +1310,9 @@ public class StudyTest {
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsNotificationPayload expectedPayload = NetworkImpcatsNotificationPayload.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
@@ -1329,7 +1328,7 @@ public class StudyTest {
                 .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
@@ -1564,8 +1563,9 @@ public class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
+        NetworkImpcatsNotificationPayload expectedPayload = NetworkImpcatsNotificationPayload.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
@@ -1581,7 +1581,7 @@ public class StudyTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
 
