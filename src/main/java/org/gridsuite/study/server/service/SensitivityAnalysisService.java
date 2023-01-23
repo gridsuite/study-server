@@ -15,17 +15,14 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -33,11 +30,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.SENSITIVITY_ANALYSIS_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.SENSITIVITY_ANALYSIS_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.SENSITIVITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -45,7 +40,6 @@ import static org.gridsuite.study.server.StudyException.Type.SENSITIVITY_ANALYSI
 @Service
 public class SensitivityAnalysisService {
 
-    static final String QUERY_PARAM_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
 
     private String sensitivityAnalysisServerBaseUri;
@@ -103,22 +97,24 @@ public class SensitivityAnalysisService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResult(UUID nodeUuid) {
+    public String getSensitivityAnalysisResult(UUID nodeUuid, String selector) {
         String result;
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getSensitivityAnalysisResultUuid(nodeUuid);
         if (resultUuidOpt.isEmpty()) {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(resultUuidOpt.get()).toUriString();
+        // initializing from uri string (not from path string) allows build() to escape selector content
+        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+            .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, "results", resultUuidOpt.get().toString())
+            .queryParam("selector", selector).build().encode().toUri();
         try {
-            result = restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+            result = restTemplate.getForObject(uri, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
             } else {
-                throw e;
+                throw handleHttpError(e, SENSITIVITY_ANALYSIS_ERROR);
             }
         }
         return result;
