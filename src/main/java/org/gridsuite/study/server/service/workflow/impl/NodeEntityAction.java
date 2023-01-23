@@ -11,7 +11,8 @@ import org.gridsuite.study.server.service.workflow.Action;
 
 public enum NodeEntityAction implements Action {
 
-    RUN_DYNAMIC_SIMULATION_ACTION("Run a dynamic simulation");
+    RUN_DYNAMIC_SIMULATION_ACTION("Run a dynamic simulation"),
+    STOP_DYNAMIC_SIMULATION_ACTION("Stop a dynamic simulation");
 
     private String description;
 

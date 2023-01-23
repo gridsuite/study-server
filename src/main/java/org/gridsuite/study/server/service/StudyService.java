@@ -1608,11 +1608,11 @@ public class StudyService {
     }
 
     public String canExecute(String actionName, UUID nodeUuid) {
-        AbstractNode node = networkModificationTreeService.getNode(nodeUuid);
+        NodeEntity nodeEntity = networkModificationTreeService.getNodeEntity(nodeUuid);
 
         // lookup action
         Action action = Actions.getInstance().getAction(actionName);
 
-        return workflowService.canExecute(action, node);
+        return workflowService.canExecute(action, nodeEntity);
     }
 }

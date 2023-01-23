@@ -365,6 +365,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public NodeEntity getNodeEntity(UUID nodeId) {
+        return nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
+    }
+
+    @Transactional
     public AbstractNode getSimpleNode(UUID nodeId) {
         return nodesRepository.findById(nodeId).map(n -> repositories.get(n.getType()).getNode(nodeId)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
