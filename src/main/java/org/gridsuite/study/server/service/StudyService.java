@@ -42,6 +42,9 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.workflow.Action;
+import org.gridsuite.study.server.service.workflow.WorkflowService;
+import org.gridsuite.study.server.service.workflow.impl.Actions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +70,6 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.elasticsearch.EquipmentInfosService.EQUIPMENT_TYPE_SCORES;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
-import static org.gridsuite.study.server.service.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -124,6 +126,8 @@ public class StudyService {
 
     private final ObjectMapper objectMapper;
 
+    private final WorkflowService workflowService;
+
     @Autowired
     StudyService self;
 
@@ -153,7 +157,8 @@ public class StudyService {
             ActionsService actionsService,
             CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService,
-            DynamicSimulationService dynamicSimulationService) {
+            DynamicSimulationService dynamicSimulationService,
+            WorkflowService workflowService) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -179,6 +184,7 @@ public class StudyService {
         this.actionsService = actionsService;
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
+        this.workflowService = workflowService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -1621,7 +1627,7 @@ public class StudyService {
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         return resultUuid;
     }
@@ -1642,5 +1648,14 @@ public class StudyService {
 
     public String getDynamicSimulationStatus(UUID nodeUuid) {
         return dynamicSimulationService.getStatus(nodeUuid);
+    }
+
+    public String canExecute(String actionName, UUID nodeUuid) {
+        NodeEntity nodeEntity = networkModificationTreeService.getNodeEntity(nodeUuid);
+
+        // lookup action
+        Action action = Actions.getInstance().getAction(actionName);
+
+        return workflowService.canExecute(action, nodeEntity);
     }
 }
