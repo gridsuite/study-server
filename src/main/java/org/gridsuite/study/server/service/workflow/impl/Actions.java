@@ -16,9 +16,12 @@ import java.util.Objects;
 
 import static org.gridsuite.study.server.StudyException.Type.ACTION_NOT_FOUND;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 public final class Actions {
 
-    private List<Action> actionList = new ArrayList<>();
+    private final List<Action> actionList = new ArrayList<>();
 
     private Actions() {
     }

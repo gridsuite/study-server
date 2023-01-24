@@ -20,6 +20,9 @@ import java.util.function.Function;
 
 import static org.gridsuite.study.server.StudyException.Type.ACTION_RULE_NOT_FOUND;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 public abstract class AbstractActionChecker<T> implements ActionChecker<T> {
 
     private final Map<Action, Function<T, String>> actionRuleMap = new HashMap<>();

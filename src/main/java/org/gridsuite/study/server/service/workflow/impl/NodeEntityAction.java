@@ -9,12 +9,15 @@ package org.gridsuite.study.server.service.workflow.impl;
 
 import org.gridsuite.study.server.service.workflow.Action;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 public enum NodeEntityAction implements Action {
 
     RUN_DYNAMIC_SIMULATION_ACTION("Run a dynamic simulation"),
     STOP_DYNAMIC_SIMULATION_ACTION("Stop a dynamic simulation");
 
-    private String description;
+    private final String description;
 
     NodeEntityAction(String description) {
         this.description = description;
@@ -23,7 +26,7 @@ public enum NodeEntityAction implements Action {
 
     @Override
     public String getDescription() {
-        return null;
+        return description;
     }
 
     @Override

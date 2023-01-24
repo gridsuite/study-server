@@ -19,12 +19,18 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 @Component
 public class NodeEntityActionChecker extends AbstractActionChecker<NodeEntity> {
 
     public static final String LOAD_FLOW_MUST_RUN_SUCCESSFULLY_BEFORE_RUNNING_DYNAMIC_SIMULATION = "Load flow must run successfully before running dynamic simulation";
-    private NetworkModificationTreeService networkModificationTreeService;
-    private DynamicSimulationService dynamicSimulationService;
+    public static final String DYNAMIC_SIMULATION_IS_NOT_RUNNING = "Dynamic simulation is not running";
+    public static final String DYNAMIC_SIMULATION_RESULT_NOT_FOUND = "Dynamic simulation result not found";
+
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final DynamicSimulationService dynamicSimulationService;
 
     public NodeEntityActionChecker(NetworkModificationTreeService networkModificationTreeService,
                                    DynamicSimulationService dynamicSimulationService) {
@@ -52,12 +58,12 @@ public class NodeEntityActionChecker extends AbstractActionChecker<NodeEntity> {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeEntity.getIdNode());
 
         if (resultUuidOpt.isEmpty()) {
-            return "Dynamic simulation result not found";
+            return DYNAMIC_SIMULATION_RESULT_NOT_FOUND;
         }
 
         String status = dynamicSimulationService.getStatus(resultUuidOpt.get());
-        if (!Objects.equals(status, DynamicSimulationStatus.RUNNING)) {
-            return "Dynamic simulation is not running";
+        if (!Objects.equals(status, DynamicSimulationStatus.RUNNING.name())) {
+            return DYNAMIC_SIMULATION_IS_NOT_RUNNING;
         }
 
         return Strings.EMPTY; // means OK
