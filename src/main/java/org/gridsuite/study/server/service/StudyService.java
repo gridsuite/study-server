@@ -117,6 +117,7 @@ public class StudyService {
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ActionsService actionsService;
+    private final CaseService caseService;
 
     private final ObjectMapper objectMapper;
 
@@ -147,6 +148,7 @@ public class StudyService {
             NetworkMapService networkMapService,
             SecurityAnalysisService securityAnalysisService,
             ActionsService actionsService,
+            CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
@@ -171,6 +173,7 @@ public class StudyService {
         this.networkMapService = networkMapService;
         this.securityAnalysisService = securityAnalysisService;
         this.actionsService = actionsService;
+        this.caseService = caseService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -217,11 +220,15 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters) {
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase) {
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         UUID importReportUuid = UUID.randomUUID();
+        UUID caseUuidToUse = caseUuid;
         try {
-            persistentStoreWithNotificationOnError(caseUuid, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
+            if (duplicateCase) {
+                caseUuidToUse = caseService.duplicateCase(caseUuid, true);
+            }
+            persistentStoreWithNotificationOnError(caseUuidToUse, basicStudyInfos.getId(), userId, importReportUuid, importParameters);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
@@ -230,7 +237,7 @@ public class StudyService {
         return basicStudyInfos;
     }
 
-    public BasicStudyInfos createStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
+    public BasicStudyInfos duplicateStudy(UUID sourceStudyUuid, UUID studyUuid, String userId) {
         Objects.requireNonNull(sourceStudyUuid);
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElse(null);
@@ -254,10 +261,11 @@ public class StudyService {
             List<String> targetVariantIds = networkVariants.stream().map(VariantInfos::getId).limit(2).collect(Collectors.toList());
             Network clonedNetwork = networkStoreService.cloneNetwork(sourceStudy.getNetworkUuid(), targetVariantIds);
             UUID clonedNetworkUuid = networkStoreService.getNetworkUuid(clonedNetwork);
+            UUID clonedCaseUuid = caseService.duplicateCase(sourceStudy.getCaseUuid(), false);
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid);
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid, clonedCaseUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -425,17 +433,20 @@ public class StudyService {
     @Transactional
     public Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
         if (studyCreationRequestEntity.isEmpty()) {
+            AtomicReference<UUID> caseUuid = new AtomicReference<>(null);
             UUID networkUuid = networkStoreService.doGetNetworkUuid(studyUuid);
             List<NodeModificationInfos> nodesModificationInfos;
             nodesModificationInfos = networkModificationTreeService.getAllNodesModificationInfos(studyUuid);
-            deleteStudyInfos = new DeleteStudyInfos(networkUuid, nodesModificationInfos);
-            studyRepository.findById(studyUuid).ifPresent(s -> {
+            studyEntity.ifPresent(s -> {
+                caseUuid.set(studyEntity.get().getCaseUuid());
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
             });
+            deleteStudyInfos = new DeleteStudyInfos(networkUuid, caseUuid.get(), nodesModificationInfos);
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
@@ -458,16 +469,18 @@ public class StudyService {
                 startTime.set(System.nanoTime());
 
                 CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                        .map(NodeModificationInfos::getSecurityAnalysisUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                        .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                        .map(NodeModificationInfos::getShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
-                    studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
-                    studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
-                    studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid()))
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                                .map(NodeModificationInfos::getSecurityAnalysisUuid).filter(Objects::nonNull).forEach(securityAnalysisService::deleteSaResult)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                                .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                                .map(NodeModificationInfos::getShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
+                        studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
+                        studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
+                        })
                 );
 
                 executeInParallel.get();
@@ -504,10 +517,11 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, String userId, UUID clonedNetworkUuid) {
+    public CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
         Objects.requireNonNull(clonedNetworkUuid);
+        Objects.requireNonNull(clonedCaseUuid);
         Objects.requireNonNull(sourceStudy.getNetworkId());
         Objects.requireNonNull(sourceStudy.getCaseFormat());
         Objects.requireNonNull(sourceStudy.getCaseUuid());
@@ -515,7 +529,7 @@ public class StudyService {
 
         UUID reportUuid = UUID.randomUUID();
         StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(),
-                sourceStudy.getCaseUuid(), sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),
+                clonedCaseUuid, sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),
                 sourceStudy.getSensitivityAnalysisProvider(), newLoadFlowParameters, newShortCircuitParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
