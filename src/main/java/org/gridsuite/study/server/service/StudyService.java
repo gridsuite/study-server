@@ -28,7 +28,6 @@ import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
-import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -38,8 +37,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.notification.payload.EquipmentDeletionNotification;
-import org.gridsuite.study.server.notification.payload.NetworkImpcatsNotificationPayload;
+import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1450,38 +1448,38 @@ public class StudyService {
             case EQUIPMENT_ATTRIBUTE_MODIFICATION: {
                 // for now only one sub type (switch), but after need to extract the equipment type to select the right update type
                 Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitNetworkImpacts(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsNotificationPayload.builder().impactedSubstationsIds(substationIds).build());
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsInfos.builder().impactedSubstationsIds(substationIds).build());
                 updateStatuses(studyUuid, nodeUuid);
-                notificationService.emitNetworkImpacts(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH, NetworkImpcatsNotificationPayload.builder().build());
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
                 break;
             }
             case BRANCH_STATUS_MODIFICATION: {
                 Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitNetworkImpacts(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsNotificationPayload.builder().impactedSubstationsIds(substationIds).build());
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsInfos.builder().impactedSubstationsIds(substationIds).build());
                 updateStatuses(studyUuid, nodeUuid);
-                notificationService.emitNetworkImpacts(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE, NetworkImpcatsNotificationPayload.builder().build());
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
                 break;
             }
             default: {
-                Set<EquipmentModificationInfos> deletions = modifications.stream()
+                Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos = modifications.stream()
                         .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
                         .map(EquipmentDeletionInfos.class::cast)
-                        .collect(Collectors.toSet());
-
-                Set<EquipmentDeletionNotification> deletedEquipmentsList = deletions.stream()
-                        .map(d -> new EquipmentDeletionNotification(d.getEquipmentId(), d.getEquipmentType()))
+                        .map(d -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(d.getEquipmentId(), d.getEquipmentType()))
                         .collect(Collectors.toSet());
 
                 // we need to filter out the substation ids that are deleted
+                Set<String> deletionsIds = deletionsInfos.stream().map(org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos::getId)
+                        .collect(Collectors.toSet());
                 Set<String> impactedSubstationIds = getSubstationIds(modifications).stream()
-                        .filter(id -> deletions.stream()
-                                .noneMatch(deletion -> deletion.getEquipmentId().equals(id)))
+                        .filter(id -> !deletionsIds.contains(id))
                         .collect(Collectors.toSet());
 
-                notificationService.emitNetworkImpacts(studyUuid, nodeUuid,
-                        NotificationService.UPDATE_TYPE_STUDY,
-                        NetworkImpcatsNotificationPayload.builder().impactedSubstationsIds(impactedSubstationIds)
-                                .deletedEquipments(deletedEquipmentsList).build());
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
+                        NetworkImpcatsInfos
+                                .builder()
+                                .impactedSubstationsIds(impactedSubstationIds)
+                                .deletedEquipments(deletionsInfos)
+                                .build());
                 updateStatuses(studyUuid, nodeUuid);
                 break;
             }

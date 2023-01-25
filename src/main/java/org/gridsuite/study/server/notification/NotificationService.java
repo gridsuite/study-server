@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.notification;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.notification.payload.NetworkImpcatsNotificationPayload;
+import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,12 +83,7 @@ public class NotificationService {
     @Autowired
     private StreamBridge updatePublisher;
 
-    private void sendUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
-        updatePublisher.send("publishStudyUpdate-out-0", message);
-    }
-
-    private void sendNetworkImpactsMessage(Message<NetworkImpcatsNotificationPayload> message) {
+    private void sendUpdateMessage(Message<?> message) {
         MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
         updatePublisher.send("publishStudyUpdate-out-0", message);
     }
@@ -147,8 +142,8 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNetworkImpacts(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpcatsNotificationPayload impactNotificationPayload) {
-        sendNetworkImpactsMessage(MessageBuilder.withPayload(impactNotificationPayload).setHeader(HEADER_STUDY_UUID, studyUuid)
+    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpcatsInfos networkImpcatsInfos) {
+        sendUpdateMessage(MessageBuilder.withPayload(networkImpcatsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());
