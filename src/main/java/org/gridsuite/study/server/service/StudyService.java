@@ -1468,7 +1468,7 @@ public class StudyService {
                         .collect(Collectors.toSet());
 
                 // we need to filter out the substation ids that are deleted
-                Set<String> deletionsIds = deletionsInfos.stream().map(org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos::getId)
+                Set<String> deletionsIds = deletionsInfos.stream().map(org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos::getEquipmentId)
                         .collect(Collectors.toSet());
                 Set<String> impactedSubstationIds = getSubstationIds(modifications).stream()
                         .filter(id -> !deletionsIds.contains(id))

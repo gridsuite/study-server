@@ -21,7 +21,7 @@ import lombok.Setter;
 @Getter
 @EqualsAndHashCode
 public class EquipmentDeletionInfos {
-    String id;
-    String type;
+    String equipmentId;
+    String equipmentType;
 }
 
