@@ -196,6 +196,11 @@ public class NetworkMapTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/map-equipments":
                         return new MockResponse().setResponseCode(200).setBody(mapEquipmentsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/branches/" + TWO_WINDINGS_TRANSFORMER_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(twoWindingsTransformerDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                         return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -399,6 +404,23 @@ public class NetworkMapTest {
         requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches(
                 "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/busbar-sections")));
+    }
+
+    @Test
+    public void testGetBranchMapServer() throws Exception {
+        //create study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        //get the branch data for a 2WT
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branches/{branchId}",
+                studyNameUserIdUuid, rootNodeUuid, TWO_WINDINGS_TRANSFORMER_ID_1)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/branches/%s",
+                NETWORK_UUID_STRING, TWO_WINDINGS_TRANSFORMER_ID_1)));
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {

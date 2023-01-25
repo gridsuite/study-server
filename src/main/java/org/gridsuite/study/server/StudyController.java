@@ -1285,4 +1285,16 @@ public class StudyController {
             setValue(ModificationType.getTypeFromUri(text));
         }
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branches/{branchId}")
+    @Operation(summary = "Get branch status and branch light description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The branch data")})
+    public ResponseEntity<String> getBranchMapData(
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "branch id") @PathVariable("branchId") String branchId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getBranchMapData(studyUuid, nodeUuid, branchId, inUpstreamBuiltParentNode));
+    }
 }
