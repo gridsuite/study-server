@@ -95,7 +95,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.service.NetworkModificationService.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.hamcrest.MatcherAssert.assertThat;

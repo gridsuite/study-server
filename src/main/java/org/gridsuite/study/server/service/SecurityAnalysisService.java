@@ -11,11 +11,20 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.SECURITY_ANALYSIS_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_RUNNING;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.security.SecurityAnalysisParameters;
+import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -25,30 +34,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.powsybl.security.SecurityAnalysisParameters;
-import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.SECURITY_ANALYSIS_RUNNING;
 
 @Service
 public class SecurityAnalysisService {
 
-    static final String QUERY_PARAM_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
 
     @Autowired
