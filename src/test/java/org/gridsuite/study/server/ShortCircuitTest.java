@@ -7,12 +7,7 @@
 
 package org.gridsuite.study.server;
 
-/**
- * @author Etienne Homer <etienne.homer at rte-france.com>
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
- */
-
-import static org.gridsuite.study.server.service.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -31,12 +26,12 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -261,7 +256,7 @@ public class ShortCircuitTest {
 
         NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
                 modificationNode3Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 4");
-        UUID modificationNode4Uuid = modificationNode4  .getId();
+        UUID modificationNode4Uuid = modificationNode4.getId();
 
         // run a short circuit analysis on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, rootNodeUuid))

@@ -4,9 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.notification;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +34,6 @@ public class NotificationService {
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
-    public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID = "deletedEquipmentId";
-    public static final String HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE = "deletedEquipmentType";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
@@ -75,6 +74,7 @@ public class NotificationService {
     public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
     public static final String NODE_MOVED = "nodeMoved";
+    public static final String MESSAGE_LOG = "Sending message : {}";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
@@ -83,13 +83,13 @@ public class NotificationService {
     @Autowired
     private StreamBridge updatePublisher;
 
-    private void sendUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+    private void sendUpdateMessage(Message<?> message) {
+        MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
         updatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
     private void sendElementUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
         updatePublisher.send("publishElementUpdate-out-0", message);
     }
 
@@ -131,13 +131,10 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyEquipmentDeleted(UUID studyUuid, UUID nodeUuid, String updateType, Set<String> substationsIds, String equipmentType, String equipmentId) {
-        sendUpdateMessage(MessageBuilder.withPayload("").setHeader(HEADER_STUDY_UUID, studyUuid)
+    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpcatsInfos networkImpcatsInfos) {
+        sendUpdateMessage(MessageBuilder.withPayload(networkImpcatsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
-                .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
-                .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE, equipmentType)
-                .setHeader(HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, equipmentId)
                 .build());
     }
 
