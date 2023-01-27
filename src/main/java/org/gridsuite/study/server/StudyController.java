@@ -1240,16 +1240,28 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments")
-    @Operation(summary = "Get network map equipments data")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The lists of lines and substations data")})
-    public ResponseEntity<String> getMapEquipments(
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-substations")
+    @Operation(summary = "Get network map substations data")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The lists of substations data")})
+    public ResponseEntity<String> getMapSubstations(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getMapEquipments(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getMapSubstations(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-lines")
+    @Operation(summary = "Get network map lines data")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The lists of lines data")})
+    public ResponseEntity<String> getMapLines(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getMapLines(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/mappings")

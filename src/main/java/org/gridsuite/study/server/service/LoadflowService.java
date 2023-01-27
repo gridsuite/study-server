@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ComponentResultEmbeddable;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
