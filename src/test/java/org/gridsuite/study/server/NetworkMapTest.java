@@ -193,11 +193,8 @@ public class NetworkMapTest {
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVELS_EQUIPMENTS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-substations":
-                        return new MockResponse().setResponseCode(200).setBody(substationDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-lines":
-                        return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-equipments":
+                        return new MockResponse().setResponseCode(200).setBody(mapEquipmentsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -348,37 +345,20 @@ public class NetworkMapTest {
     }
 
     @Test
-    public void testGetMapSubstations() throws Exception {
+    public void testGetMapEquipments() throws Exception {
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
-        //get the substations with it's voltage levels
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-substations",
+        //get the voltage levels and its equipments
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-equipments",
                 studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON));
 
         assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/map-substations", NETWORK_UUID_STRING)));
-    }
-
-    @Test
-    public void testGetMapLines() throws Exception {
-        //create study
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-
-        //get the lines
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-lines",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/map-lines", NETWORK_UUID_STRING)));
+                .contains(String.format("/v1/networks/%s/map-equipments", NETWORK_UUID_STRING)));
     }
 
     @Test

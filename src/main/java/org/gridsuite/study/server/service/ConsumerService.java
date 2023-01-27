@@ -20,7 +20,6 @@ import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

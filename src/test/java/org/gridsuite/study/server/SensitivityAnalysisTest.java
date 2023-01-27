@@ -31,7 +31,6 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -66,7 +65,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.io.IOException;
 import java.util.*;
 
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.service.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;

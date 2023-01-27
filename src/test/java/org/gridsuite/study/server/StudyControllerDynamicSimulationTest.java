@@ -18,7 +18,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.service.NotificationService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.utils.TestUtils;
