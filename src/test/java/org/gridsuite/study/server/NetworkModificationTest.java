@@ -37,28 +37,18 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.modification.BusbarSectionCreationInfos;
-import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
-import org.gridsuite.study.server.dto.modification.LineSplitWithVoltageLevelInfos;
-import org.gridsuite.study.server.dto.modification.ModificationInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.VoltageLevelCreationInfos;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos;
+import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.NetworkModificationService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NotificationService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.SecurityAnalysisService;
-import org.gridsuite.study.server.service.SensitivityAnalysisService;
-import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.RequestWithBody;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -467,9 +457,10 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
-        Set<String> substationsSet = ImmutableSet.of("s1", "s2", "s3");
+        Set<String> substationsSet = ImmutableSet.of("s3", "s1", "s2");
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(substationsSet).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, substationsSet);
+        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -482,7 +473,7 @@ public class NetworkModificationTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<List<CreatedStudyBasicInfos>>() { });
 
-        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid,  "UCTE"));
+        assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid, "UCTE"));
 
         // update switch on second modification node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode2Uuid)
@@ -490,7 +481,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, substationsSet);
+        checkSwitchModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -579,9 +570,15 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
 
         Set<String> substationsSet = ImmutableSet.of("s4", "s5", "s6", "s7");
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos
+                        .builder()
+                        .impactedSubstationsIds(substationsSet)
+                        .deletedEquipments(ImmutableSet.of())
+                        .build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                substationsSet);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid,
+                        NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
+                        expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPost(stubId, bodyJson);
 
@@ -601,7 +598,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsSet);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -653,8 +650,9 @@ public class NetworkModificationTest {
                         .content(bodyJsonCreate).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, bodyJsonCreate, VARIANT_ID);
@@ -665,7 +663,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, bodyJsonCreate, VARIANT_ID_2);
@@ -732,8 +730,9 @@ public class NetworkModificationTest {
                         .content(createShuntCompensatorAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -800,8 +799,9 @@ public class NetworkModificationTest {
                         .content(createLineAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createLineAttributes, VARIANT_ID);
@@ -812,7 +812,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createLineAttributes, VARIANT_ID_2);
@@ -884,8 +884,9 @@ public class NetworkModificationTest {
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createTwoWindingsTransformerAttributes, VARIANT_ID);
@@ -896,7 +897,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createTwoWindingsTransformerAttributes, VARIANT_ID_2);
@@ -1054,8 +1055,9 @@ public class NetworkModificationTest {
                         .content(bodyJsonCreate1).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1", "s2")).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s2"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate1);
@@ -1081,8 +1083,9 @@ public class NetworkModificationTest {
                         .content(bodyJsonCreate3).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        expectedPayload.setImpactedSubstationsIds(ImmutableSet.of("s3", "s2"));
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2", "s3"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate3);
@@ -1109,7 +1112,8 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s3"));
+        expectedPayload.setImpactedSubstationsIds(ImmutableSet.of("s3", "s1"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate5);
@@ -1136,7 +1140,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s1", "s3"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPost(stubPostId, bodyJsonCreate7);
@@ -1161,7 +1165,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s1", "s3"));
+        checkLineModificationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, bodyJsonCreate9, VARIANT_ID_2);
@@ -1198,8 +1202,9 @@ public class NetworkModificationTest {
                         .content(createLoadAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, VARIANT_ID);
@@ -1210,7 +1215,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, VARIANT_ID_2);
@@ -1271,8 +1276,9 @@ public class NetworkModificationTest {
                         .content(loadModificationAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, loadModificationAttributes, VARIANT_ID);
@@ -1283,7 +1289,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
-        checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
+        checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, loadModificationAttributes, VARIANT_ID_2);
@@ -1326,8 +1332,9 @@ public class NetworkModificationTest {
                         .content(equipmentModificationAttribute).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, equipmentModificationAttribute, VARIANT_ID);
@@ -1338,7 +1345,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
-        checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, ImmutableSet.of("s2"));
+        checkEquipmentModificationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid2);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, equipmentModificationAttribute, VARIANT_ID_2);
@@ -1390,8 +1397,9 @@ public class NetworkModificationTest {
                         .content(createSubstationAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of()).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, new HashSet<>());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createSubstationAttributes, VARIANT_ID);
@@ -1402,7 +1410,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, new HashSet<>());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createSubstationAttributes, VARIANT_ID_2);
@@ -1464,8 +1472,9 @@ public class NetworkModificationTest {
                         .content(createVoltageLevelAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of()).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, new HashSet<>());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createVoltageLevelAttributes, VARIANT_ID);
@@ -1476,7 +1485,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, new HashSet<>());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, createVoltageLevelAttributes, VARIANT_ID_2);
@@ -1544,8 +1553,9 @@ public class NetworkModificationTest {
                         .content(lineSplitWoVLasJSON).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1", "s2")).deletedEquipments(ImmutableSet.of(new EquipmentDeletionInfos("line3", "LINE"))).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -1618,8 +1628,9 @@ public class NetworkModificationTest {
                         .content(createLineAttachToVoltageLevelAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1", "s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1", "s2"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -1670,8 +1681,9 @@ public class NetworkModificationTest {
                         .content(createLinesAttachToSplitLinesAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of()).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -1730,9 +1742,9 @@ public class NetworkModificationTest {
                         .content(requestBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
-
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of()).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
@@ -1801,8 +1813,9 @@ public class NetworkModificationTest {
                         .content(createDeleteVoltageLevelOnlineAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                         .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of()).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPost(stubIdPost, createDeleteVoltageLevelOnlineAttributes);
 
@@ -1867,8 +1880,9 @@ public class NetworkModificationTest {
                     .content(createDeleteAttachingLineAttributes).contentType(MediaType.APPLICATION_JSON)
                     .header(USER_ID_HEADER, userId))
                     .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of()).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, Set.of());
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         verifyNetworkModificationPost(stubIdPost, createDeleteAttachingLineAttributes);
 
@@ -2234,10 +2248,12 @@ public class NetworkModificationTest {
                         .content(bodyJson).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder()
+                .impactedSubstationsIds(ImmutableSet.of("s2"))
+                .deletedEquipments(ImmutableSet.of(new EquipmentDeletionInfos("idLoadToDelete", "LOAD")))
+                .build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid,
-                NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
-                "LOAD", NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
+        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, bodyJson, VARIANT_ID);
@@ -2248,9 +2264,7 @@ public class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid,
-                NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_ID, "idLoadToDelete", NotificationService.HEADER_UPDATE_TYPE_DELETED_EQUIPMENT_TYPE,
-                "LOAD", NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, ImmutableSet.of("s2"));
+        checkEquipmentDeletedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubPostId, bodyJson, VARIANT_ID_2);
@@ -2420,9 +2434,9 @@ public class NetworkModificationTest {
     }
 
     private void checkEquipmentCreationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            Set<String> modifiedIdsSet) {
+            NetworkImpcatsInfos expectedPayload) throws Exception {
         checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                modifiedIdsSet);
+                expectedPayload);
     }
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -2455,15 +2469,15 @@ public class NetworkModificationTest {
     }
 
     private void checkEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            Set<String> modifiedIdsSet) {
+            NetworkImpcatsInfos expectedPayload) throws Exception {
         checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                modifiedIdsSet);
+                expectedPayload);
     }
 
     private void checkLineModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            Set<String> modifiedSubstationsSet) {
+            NetworkImpcatsInfos expectedPayload) throws Exception {
         checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                modifiedSubstationsSet);
+                expectedPayload);
 
         // assert that the broker message has been sent
         Message<byte[]> messageLine = output.receive(TIMEOUT, studyUpdateDestination);
@@ -2489,16 +2503,16 @@ public class NetworkModificationTest {
     }
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId,
-            Set<String> modifiedIdsSet) {
+            NetworkImpcatsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        NetworkImpcatsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpcatsInfos>() {
+        });
+        assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(modifiedIdsSet, headersStudyUpdate.get(headerUpdateTypeId));
-
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
@@ -2514,9 +2528,9 @@ public class NetworkModificationTest {
     }
 
     private void checkSwitchModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            Set<String> modifiedSubstationsSet) {
+            NetworkImpcatsInfos expectedPayload) throws Exception {
         checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuid, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS,
-                modifiedSubstationsSet);
+                expectedPayload);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(TIMEOUT, studyUpdateDestination);
@@ -2552,19 +2566,16 @@ public class NetworkModificationTest {
         assertEquals(NotificationService.MODIFICATIONS_UPDATING_FINISHED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            String headerUpdateTypeEquipmentType, String equipmentType, String headerUpdateTypeEquipmentId,
-            String equipmentId, String headerUpdateTypeSubstationsIds, Set<String> modifiedSubstationsIdsSet) {
+    private void checkEquipmentDeletedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpcatsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        NetworkImpcatsInfos actualPayload = mapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<NetworkImpcatsInfos>() {
+        });
+        assertThat(expectedPayload, new MatcherJson<>(mapper, actualPayload));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-        assertEquals(equipmentType, headersStudyUpdate.get(headerUpdateTypeEquipmentType));
-        assertEquals(equipmentId, headersStudyUpdate.get(headerUpdateTypeEquipmentId));
-        assertEquals(modifiedSubstationsIdsSet, headersStudyUpdate.get(headerUpdateTypeSubstationsIds));
 
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
 
@@ -2665,8 +2676,9 @@ public class NetworkModificationTest {
                 .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
+        NetworkImpcatsInfos expectedPayload = NetworkImpcatsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, ImmutableSet.of("s1"));
+        checkEquipmentCreationMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         verifyNetworkModificationPostWithVariant(stubId, jsonCreateLoadInfos, VARIANT_ID);

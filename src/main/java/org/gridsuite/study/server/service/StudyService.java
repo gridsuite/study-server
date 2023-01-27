@@ -28,7 +28,6 @@ import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
-import org.gridsuite.study.server.dto.modification.EquipmentModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -37,6 +36,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -329,7 +330,7 @@ public class StudyService {
     }
 
     public List<EquipmentInfos> searchEquipments(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userInput,
-                                                 @NonNull EquipmentInfosService.FieldSelector  fieldSelector, String equipmentType,
+                                                 @NonNull EquipmentInfosService.FieldSelector fieldSelector, String equipmentType,
                                                  boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
@@ -1188,11 +1189,11 @@ public class StudyService {
         }
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
-                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                studyServerExecutionService.runAsync(() ->  invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getReportUuids().forEach(reportService::deleteReport)),  // TODO delete all with one request only
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
 
         try {
@@ -1269,12 +1270,12 @@ public class StudyService {
         networkModificationTreeService.doDeleteNode(studyUuid, nodeId, deleteChildren, deleteNodeInfos);
 
         CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-                studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
-                studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-                studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                studyServerExecutionService.runAsync(() ->  deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                studyServerExecutionService.runAsync(() ->  networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getReportUuids().forEach(reportService::deleteReport)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
         );
 
         try {
@@ -1409,7 +1410,7 @@ public class StudyService {
             if (subReporters.get(0).getTaskKey().equals(ROOT_NODE_NAME)) {
                 return subReporters;
             }
-            Optional<UUID> parentUuid =  networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
+            Optional<UUID> parentUuid = networkModificationTreeService.getParentNodeUuid(UUID.fromString(subReporters.get(0).getTaskKey()));
             return parentUuid.isEmpty() ? subReporters : Stream.concat(getSubReportersByNodeFrom(parentUuid.get(), false).stream(), subReporters.stream()).collect(Collectors.toList());
         }
     }
@@ -1447,42 +1448,38 @@ public class StudyService {
             case EQUIPMENT_ATTRIBUTE_MODIFICATION: {
                 // for now only one sub type (switch), but after need to extract the equipment type to select the right update type
                 Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsInfos.builder().impactedSubstationsIds(substationIds).build());
                 updateStatuses(studyUuid, nodeUuid);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
                 break;
             }
             case BRANCH_STATUS_MODIFICATION: {
                 Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsInfos.builder().impactedSubstationsIds(substationIds).build());
                 updateStatuses(studyUuid, nodeUuid);
                 notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
                 break;
             }
-            case EQUIPMENT_DELETION: {
-                modifications.stream()
-                    .map(EquipmentDeletionInfos.class::cast)
-                    .forEach(deletionInfo ->
-                        notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, deletionInfo.getSubstationIds(),
-                            deletionInfo.getEquipmentType(), deletionInfo.getEquipmentId()));
-                updateStatuses(studyUuid, nodeUuid);
-                break;
-            }
-            case LINE_SPLIT_WITH_VOLTAGE_LEVEL: {
-                Set<String> allImpactedSubstationIds = modifications.stream()
-                        .map(ModificationInfos::getSubstationIds).flatMap(Set::stream).collect(Collectors.toSet());
-                List<EquipmentModificationInfos> deletions = modifications.stream()
+            default: {
+                Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos = modifications.stream()
                         .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
                         .map(EquipmentDeletionInfos.class::cast)
-                        .collect(Collectors.toList());
-                deletions.forEach(modif -> notificationService.emitStudyEquipmentDeleted(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
-                        allImpactedSubstationIds, modif.getEquipmentType(), modif.getEquipmentId()));
-                updateStatuses(studyUuid, nodeUuid);
-                break;
-            }
-            default: {
-                Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, substationIds);
+                        .map(d -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(d.getEquipmentId(), d.getEquipmentType()))
+                        .collect(Collectors.toSet());
+
+                // we need to filter out the substation ids that are deleted
+                Set<String> deletionsIds = deletionsInfos.stream().map(org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos::getEquipmentId)
+                        .collect(Collectors.toSet());
+                Set<String> impactedSubstationIds = getSubstationIds(modifications).stream()
+                        .filter(id -> !deletionsIds.contains(id))
+                        .collect(Collectors.toSet());
+
+                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
+                        NetworkImpcatsInfos
+                                .builder()
+                                .impactedSubstationsIds(impactedSubstationIds)
+                                .deletedEquipments(deletionsInfos)
+                                .build());
                 updateStatuses(studyUuid, nodeUuid);
                 break;
             }
@@ -1533,7 +1530,7 @@ public class StudyService {
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId) {
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
-        UUID result =  shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, userId);
+        UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, userId);
 
         updateShortCircuitAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
