@@ -16,6 +16,7 @@ import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,7 +34,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.io.UncheckedIOException;
 import java.util.*;
 
-import static org.gridsuite.study.server.service.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
