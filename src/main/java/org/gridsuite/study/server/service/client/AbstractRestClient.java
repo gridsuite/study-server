@@ -15,9 +15,8 @@ import org.springframework.web.client.RestTemplate;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 public abstract class AbstractRestClient implements RestClient {
-    public final Logger getLogger() {
-        return LoggerFactory.getLogger(this.getClass());
-    }
+
+    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final RestTemplate restTemplate;
 
