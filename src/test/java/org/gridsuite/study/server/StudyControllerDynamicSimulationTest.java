@@ -342,7 +342,7 @@ public class StudyControllerDynamicSimulationTest {
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
         // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeSeries(NODE_UUID)).willReturn(TimeSeries.toJson(timeSeries));
+        given(studyService.getDynamicSimulationTimeSeries(NODE_UUID)).willReturn(timeSeries);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -358,7 +358,6 @@ public class StudyControllerDynamicSimulationTest {
         getLogger().info("Time series expected Json = " + timeSeriesExpectedJson);
         getLogger().info("Time series result Json = " + timeSeriesResultJson);
 
-        ObjectMapper objectMapper = new ObjectMapper();
         assertEquals(objectMapper.readTree(timeSeriesExpectedJson), objectMapper.readTree(timeSeriesResultJson));
     }
 
@@ -385,7 +384,7 @@ public class StudyControllerDynamicSimulationTest {
                 "CLA_2_4 - CLA : arming by over-current constraint");
 
         // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeLine(NODE_UUID)).willReturn(TimeSeries.toJson(Arrays.asList(timeLine)));
+        given(studyService.getDynamicSimulationTimeLine(NODE_UUID)).willReturn(List.of(timeLine));
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -401,7 +400,6 @@ public class StudyControllerDynamicSimulationTest {
         getLogger().info("Time line expected Json = " + timeLineExpectedJson);
         getLogger().info("Time line result Json = " + timeLineResultJson);
 
-        ObjectMapper objectMapper = new ObjectMapper();
         assertEquals(objectMapper.readTree(timeLineExpectedJson), objectMapper.readTree(timeLineResultJson));
     }
 
@@ -419,9 +417,9 @@ public class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    public void testGetDynamicSimulationStatusResult() throws Exception {
+    public void testGetDynamicSimulationStatus() throws Exception {
         // setup StudyService mock
-        given(studyService.getDynamicSimulationStatus(NODE_UUID)).willReturn(DynamicSimulationStatus.DIVERGED.name());
+        given(studyService.getDynamicSimulationStatus(NODE_UUID)).willReturn(DynamicSimulationStatus.DIVERGED);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
@@ -429,10 +427,10 @@ public class StudyControllerDynamicSimulationTest {
                         STUDY_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
-        String statusResult = result.getResponse().getContentAsString();
+        DynamicSimulationStatus statusResult = objectMapper.readValue(result.getResponse().getContentAsString(), DynamicSimulationStatus.class);
 
         // --- check result --- //
-        String statusExpected = DynamicSimulationStatus.DIVERGED.name();
+        DynamicSimulationStatus statusExpected = DynamicSimulationStatus.DIVERGED;
         getLogger().info("Status expected = " + statusExpected);
         getLogger().info("Status result = " + statusResult);
         assertEquals(statusExpected, statusResult);

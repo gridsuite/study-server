@@ -15,6 +15,7 @@ import com.powsybl.loadflow.json.LoadFlowResultJsonModule;
 import com.powsybl.security.json.SecurityAnalysisJsonModule;
 import com.powsybl.sensitivity.json.SensitivityJsonModule;
 import com.powsybl.shortcircuit.json.ShortCircuitAnalysisJsonModule;
+import com.powsybl.timeseries.json.TimeSeriesJsonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -55,6 +56,7 @@ public class RestTemplateConfig {
         objectMapper.registerModule(new SecurityAnalysisJsonModule());
         objectMapper.registerModule(new ShortCircuitAnalysisJsonModule());
         objectMapper.registerModule(new SensitivityJsonModule());
+        objectMapper.registerModule(new TimeSeriesJsonModule());
 
         return objectMapper;
     }

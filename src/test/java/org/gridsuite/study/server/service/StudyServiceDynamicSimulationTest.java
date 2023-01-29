@@ -54,7 +54,7 @@ public class StudyServiceDynamicSimulationTest {
     // all mappings
     private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
 
-    private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
+    private static final List<MappingInfos> MAPPINGS = List.of(new MappingInfos(MAPPING_NAMES[0]),
             new MappingInfos(MAPPING_NAMES[1]));
 
     private static final String VARIANT_1_ID = "variant_1";
@@ -91,6 +91,9 @@ public class StudyServiceDynamicSimulationTest {
 
     @Autowired
     StudyService studyService;
+
+    @Autowired
+    ObjectMapper objectMapper;
 
     public final Logger getLogger() {
         return LoggerFactory.getLogger(this.getClass());
@@ -146,14 +149,13 @@ public class StudyServiceDynamicSimulationTest {
         given(dynamicSimulationService.getTimeSeriesResult(NODE_UUID)).willReturn(timeSeries);
 
         // call method to be tested
-        String timeSeriesResultJson = studyService.getDynamicSimulationTimeSeries(NODE_UUID);
+        String timeSeriesResultJson = TimeSeries.toJson(studyService.getDynamicSimulationTimeSeries(NODE_UUID));
 
         // --- check result --- //
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
         getLogger().info("Time series expected in Json = " + timeSeriesExpectedJson);
         getLogger().info("Time series result in Json = " + timeSeriesResultJson);
-        ObjectMapper mapper = new ObjectMapper();
-        assertEquals(mapper.readTree(timeSeriesExpectedJson), mapper.readTree(timeSeriesResultJson));
+        assertEquals(objectMapper.readTree(timeSeriesExpectedJson), objectMapper.readTree(timeSeriesResultJson));
     }
 
     @Test
@@ -170,28 +172,27 @@ public class StudyServiceDynamicSimulationTest {
         given(dynamicSimulationService.getTimeLineResult(NODE_UUID)).willReturn(Arrays.asList(timeLine));
 
         // call method to be tested
-        String timeLineResutlJson = studyService.getDynamicSimulationTimeLine(NODE_UUID);
+        String timeLineResultJson = TimeSeries.toJson(studyService.getDynamicSimulationTimeLine(NODE_UUID));
 
         // --- check result --- //
         String timeLineExpectedJson = TimeSeries.toJson(Arrays.asList(timeLine));
         getLogger().info("Time line expected in Json = " + timeLineExpectedJson);
-        getLogger().info("Time line result in Json = " + timeLineResutlJson);
-        ObjectMapper mapper = new ObjectMapper();
-        assertEquals(mapper.readTree(timeLineExpectedJson), mapper.readTree(timeLineResutlJson));
+        getLogger().info("Time line result in Json = " + timeLineResultJson);
+        assertEquals(objectMapper.readTree(timeLineExpectedJson), objectMapper.readTree(timeLineResultJson));
     }
 
     @Test
     public void testGetDynamicSimulationStatus() {
         // setup
-        given(dynamicSimulationService.getStatus(NODE_UUID)).willReturn(DynamicSimulationStatus.CONVERGED.name());
+        given(dynamicSimulationService.getStatus(NODE_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
         // call method to be tested
-        String status = studyService.getDynamicSimulationStatus(NODE_UUID);
+        DynamicSimulationStatus status = studyService.getDynamicSimulationStatus(NODE_UUID);
 
         // --- check result --- //
         getLogger().info("Status expected = " + DynamicSimulationStatus.CONVERGED.name());
         getLogger().info("Status result = " + status);
-        assertEquals(DynamicSimulationStatus.CONVERGED.name(), status);
+        assertEquals(DynamicSimulationStatus.CONVERGED, status);
     }
 
     @Test
@@ -204,9 +205,8 @@ public class StudyServiceDynamicSimulationTest {
 
         // --- check result --- //
         // must return 2 mappings
-        ObjectMapper mapper = new ObjectMapper();
-        getLogger().info("Mapping infos expected in Json = " + mapper.writeValueAsString(MAPPINGS));
-        getLogger().info("Mapping infos result in Json = " + mapper.writeValueAsString(mappingInfos));
+        getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
+        getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
         assertEquals(MAPPINGS.size(), mappingInfos.size());
     }
 }

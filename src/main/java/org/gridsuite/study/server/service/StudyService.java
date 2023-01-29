@@ -30,6 +30,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -487,14 +488,14 @@ public class StudyService {
                                 .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                                .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getReportUuid).filter(Objects::nonNull).forEach(reportService::deleteReport)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteEquipmentIndexes(deleteStudyInfos.getNetworkUuid())),
                         studyServerExecutionService.runAsync(() -> networkStoreService.deleteNetwork(deleteStudyInfos.getNetworkUuid())),
                         studyServerExecutionService.runAsync(deleteStudyInfos.getCaseUuid() != null ? () -> caseService.deleteCase(deleteStudyInfos.getCaseUuid()) : () -> {
-                        }),
-                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
-                                .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)) // TODO delete all with one request only
+                        })
                 );
 
                 executeInParallel.get();
@@ -1591,9 +1592,7 @@ public class StudyService {
 
     public List<MappingInfos> getDynamicSimulationMappings(UUID nodeUuid) {
         // get mapping from node uuid
-        List<MappingInfos> mappings = dynamicSimulationService.getMappings(nodeUuid);
-
-        return mappings;
+        return dynamicSimulationService.getMappings(nodeUuid);
     }
 
     @Transactional
@@ -1637,21 +1636,17 @@ public class StudyService {
         return resultUuid;
     }
 
-    public String getDynamicSimulationTimeSeries(UUID nodeUuid) {
+    public List<TimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid) {
         // get timeseries from node uuid
-        List<TimeSeries> timeseries = dynamicSimulationService.getTimeSeriesResult(nodeUuid);
-
-        return TimeSeries.toJson(timeseries);
+        return dynamicSimulationService.getTimeSeriesResult(nodeUuid);
     }
 
-    public String getDynamicSimulationTimeLine(UUID nodeUuid) {
+    public List<TimeSeries> getDynamicSimulationTimeLine(UUID nodeUuid) {
         // get timeline from node uuid
-        List<TimeSeries> timeline = dynamicSimulationService.getTimeLineResult(nodeUuid);
-
-        return TimeSeries.toJson(timeline); // timeline has only one element
+        return dynamicSimulationService.getTimeLineResult(nodeUuid); // timeline has only one element
     }
 
-    public String getDynamicSimulationStatus(UUID nodeUuid) {
+    public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid) {
         return dynamicSimulationService.getStatus(nodeUuid);
     }
 

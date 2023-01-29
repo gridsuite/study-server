@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 
 import java.util.List;
 import java.util.UUID;
@@ -49,7 +50,7 @@ public interface DynamicSimulationService {
      * @param nodeUuid a given node UUID
      * @return the status of the dynamic simulation
      */
-    String getStatus(UUID nodeUuid);
+    DynamicSimulationStatus getStatus(UUID nodeUuid);
 
     /**
      * Delete result uuid

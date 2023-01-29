@@ -97,7 +97,7 @@ public class WorkflowServiceNodeEntityActionCheckerTest {
         // setup networkModificationTreeService mock for dynamic simulation result uuid
         given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID)).willReturn(Optional.of(RESULT_UUID));
         // setup dynamicSimulationService mock for status of dynamic simulation result uuid
-        given(dynamicSimulationService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.RUNNING.name());
+        given(dynamicSimulationService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.RUNNING);
 
         // call method to be tested
         String message = workflowService.canExecute(STOP_DYNAMIC_SIMULATION_ACTION, nodeEntity);
@@ -111,7 +111,7 @@ public class WorkflowServiceNodeEntityActionCheckerTest {
         // setup networkModificationTreeService mock for dynamic simulation result uuid
         given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID)).willReturn(Optional.of(RESULT_UUID));
         // setup dynamicSimulationService mock for status of dynamic simulation result uuid
-        given(dynamicSimulationService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.NOT_DONE.name());
+        given(dynamicSimulationService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.NOT_DONE);
 
         // call method to be tested
         String message = workflowService.canExecute(STOP_DYNAMIC_SIMULATION_ACTION, nodeEntity);

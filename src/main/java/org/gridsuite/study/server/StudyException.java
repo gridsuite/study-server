@@ -29,6 +29,7 @@ public class StudyException extends RuntimeException {
         SHORT_CIRCUIT_ANALYSIS_RUNNING,
         DYNAMIC_SIMULATION_RUNNING,
         DYNAMIC_SIMULATION_NOT_FOUND,
+        DYNAMIC_MAPPING_NOT_FOUND,
         NOT_ALLOWED,
         STUDY_CREATION_FAILED,
         CANT_DELETE_ROOT_NODE,

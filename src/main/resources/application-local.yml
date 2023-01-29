@@ -47,7 +47,7 @@ gridsuite:
     shortcircuit-server:
       base-uri: http://localhost:5031
     study-server:
-      base-uri: http://localhost:5001/
+      base-uri: http://localhost:5001
     dynamic-simulation-server:
       base-uri: http://localhost:5032
     timeseries-server:

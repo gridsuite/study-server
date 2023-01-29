@@ -32,6 +32,9 @@ import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesCli
 import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.TIME_SERIES_END_POINT;
 import static org.junit.Assert.assertEquals;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 public class TimeSeriesClientTest extends AbstractRestClientTest {
 
     private static final int TIME_SERIES_PORT = 5037;

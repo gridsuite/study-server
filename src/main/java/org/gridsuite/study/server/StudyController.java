@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
+import com.powsybl.timeseries.TimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -18,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1272,7 +1274,7 @@ public class StudyController {
     public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappings(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<MappingInfos> mappings = studyService.getDynamicSimulationMappings(nodeUuid);
-        return mappings != null ? ResponseEntity.ok().body(mappings) :
+        return mappings != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(mappings) :
                 ResponseEntity.noContent().build();
     }
 
@@ -1286,7 +1288,7 @@ public class StudyController {
         String nonNullParameters = Objects.toString(parameters, "");
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().body(studyService.runDynamicSimulation(studyUuid, nodeUuid, nonNullParameters, mappingName));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, nonNullParameters, mappingName));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries")
@@ -1294,10 +1296,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All time series of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<String> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<List<TimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = studyService.getDynamicSimulationTimeSeries(nodeUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
+        List<TimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
 
@@ -1306,10 +1308,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The timeline of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<String> getDynamicSimulationTimeLineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = studyService.getDynamicSimulationTimeLine(nodeUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
+    public ResponseEntity<List<TimeSeries>> getDynamicSimulationTimeLineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<TimeSeries> result = studyService.getDynamicSimulationTimeLine(nodeUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
 
@@ -1318,10 +1320,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<String> getDynamicSimulationStatusResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = studyService.getDynamicSimulationStatus(nodeUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
+    public ResponseEntity<DynamicSimulationStatus> getDynamicSimulationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        DynamicSimulationStatus result = studyService.getDynamicSimulationStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
 

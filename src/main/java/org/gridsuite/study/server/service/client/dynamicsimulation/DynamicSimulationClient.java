@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.service.client.dynamicsimulation;
 
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.RestClient;
 
 import java.util.UUID;
@@ -28,7 +29,7 @@ public interface DynamicSimulationClient extends RestClient {
 
     UUID getTimeLineResult(UUID resultUuid);
 
-    String getStatus(UUID resultUuid);
+    DynamicSimulationStatus getStatus(UUID resultUuid);
 
     void deleteResult(UUID resultUuid);
 }

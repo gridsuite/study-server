@@ -15,7 +15,6 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -61,8 +60,8 @@ public class NodeEntityActionChecker extends AbstractActionChecker<NodeEntity> {
             return DYNAMIC_SIMULATION_RESULT_NOT_FOUND;
         }
 
-        String status = dynamicSimulationService.getStatus(resultUuidOpt.get());
-        if (!Objects.equals(status, DynamicSimulationStatus.RUNNING.name())) {
+        DynamicSimulationStatus status = dynamicSimulationService.getStatus(resultUuidOpt.get());
+        if (status != DynamicSimulationStatus.RUNNING) {
             return DYNAMIC_SIMULATION_IS_NOT_RUNNING;
         }
 

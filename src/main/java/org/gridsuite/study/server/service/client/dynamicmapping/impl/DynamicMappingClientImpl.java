@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.service.client.dynamicmapping.impl;
 
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
@@ -16,13 +17,14 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.text.MessageFormat;
-import java.util.Collections;
 import java.util.List;
 
+import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_MAPPING_NOT_FOUND;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**
@@ -44,12 +46,15 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
         var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
 
         // call dynamic-mapping REST API
-        var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<MappingInfos>>() { });
-        if (responseEntity.getStatusCode() == HttpStatus.OK) {
-            getLogger().debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriBuilder.toUriString()));
+        try {
+            var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<MappingInfos>>() { });
+            logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriBuilder.toUriString()));
             return responseEntity.getBody();
-        } else {
-            return Collections.emptyList();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_MAPPING_NOT_FOUND);
+            }
+            throw e;
         }
     }
 }

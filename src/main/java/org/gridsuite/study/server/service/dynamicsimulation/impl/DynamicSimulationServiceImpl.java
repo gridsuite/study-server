@@ -74,7 +74,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public String getStatus(UUID nodeUuid) {
+    public DynamicSimulationStatus getStatus(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
@@ -91,8 +91,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public void assertDynamicSimulationNotRunning(UUID nodeUuid) {
-        String status = getStatus(nodeUuid);
-        if (DynamicSimulationStatus.RUNNING.name().equals(status)) {
+        DynamicSimulationStatus status = getStatus(nodeUuid);
+        if (DynamicSimulationStatus.RUNNING == status) {
             throw new StudyException(DYNAMIC_SIMULATION_RUNNING);
         }
     }

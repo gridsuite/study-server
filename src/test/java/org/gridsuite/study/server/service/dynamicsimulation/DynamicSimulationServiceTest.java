@@ -163,14 +163,14 @@ public class DynamicSimulationServiceTest {
     @Test
     public void testGetStatus() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED.name());
+        given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
         // call method to be tested
-        String status = dynamicSimulationService.getStatus(NODE_UUID);
+        DynamicSimulationStatus status = dynamicSimulationService.getStatus(NODE_UUID);
 
         // check result
         // status must be "CONVERGED"
-        assertEquals(DynamicSimulationStatus.CONVERGED.name(), status);
+        assertEquals(DynamicSimulationStatus.CONVERGED, status);
     }
 
     @Test
@@ -190,7 +190,7 @@ public class DynamicSimulationServiceTest {
     @Test(expected = StudyException.class)
     public void testAssertDynamicSimulationRunning() {
         // setup for running node
-        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING.name());
+        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
         given(networkModificationTreeService.getDynamicSimulationResultUuid(NODE_UUID_RUNNING)).willReturn(Optional.of(RESULT_UUID_RUNNING));
 
         // test running

@@ -120,12 +120,17 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
                         }
                     } else if ("status".equals(pathEnding)) { // test get status result - results/{resultUuid}/status
                         String resultUuid = pathSegments.stream().limit(pathSegments.size() - 1).reduce((first, second) -> second).orElse("");
-                        if (RESULT_UUID_STRING.equals(resultUuid)) {
-                            response = new MockResponse()
-                                    .setResponseCode(HttpStatus.OK.value())
-                                    .addHeader("Content-Type", "application/json; charset=utf-8")
-                                    .setBody(DynamicSimulationStatus.CONVERGED.name());
+                        try {
+                            if (RESULT_UUID_STRING.equals(resultUuid)) {
+                                    response = new MockResponse()
+                                            .setResponseCode(HttpStatus.OK.value())
+                                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                                            .setBody(objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED));
+                            }
+                        } catch (JsonProcessingException e) {
+                            return new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
                         }
+
                     }
                 } else if ("DELETE".equals(method)
                         && path.matches(resultEndPointUrl + ".*")) { // test delete result - results/{resultUuid}
@@ -187,10 +192,10 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
     @Test
     public void testGetStatus() {
-        String status = dynamicSimulationClient.getStatus(UUID.fromString(RESULT_UUID_STRING));
+        DynamicSimulationStatus status = dynamicSimulationClient.getStatus(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
-        assertEquals(DynamicSimulationStatus.CONVERGED.name(), status);
+        assertEquals(DynamicSimulationStatus.CONVERGED, status);
     }
 
     @Test(expected = StudyException.class)

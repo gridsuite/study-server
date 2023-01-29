@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,8 +55,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
                 .buildAndExpand(networkUuid);
 
         // call dynamic-simulation REST API
-        UUID resultUuid = getRestTemplate().postForObject(uriComponent.toUriString(), null, UUID.class);
-        return resultUuid;
+        return getRestTemplate().postForObject(uriComponent.toUriString(), null, UUID.class);
     }
 
     @Override
@@ -101,7 +101,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public String getStatus(UUID resultUuid) {
+    public DynamicSimulationStatus getStatus(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
@@ -109,9 +109,9 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
                 .buildAndExpand(resultUuid);
 
         // call dynamic-simulation REST API
-        String status;
+        DynamicSimulationStatus status;
         try {
-            status = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
+            status = getRestTemplate().getForObject(uriComponents.toUriString(), DynamicSimulationStatus.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(DYNAMIC_SIMULATION_NOT_FOUND);

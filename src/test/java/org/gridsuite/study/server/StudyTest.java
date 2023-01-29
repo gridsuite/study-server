@@ -1262,9 +1262,9 @@ public class StudyTest {
         node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
         node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
-        //node2.setDynamicSimulationResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
+        node2.setDynamicSimulationResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(study1Uuid, userId);

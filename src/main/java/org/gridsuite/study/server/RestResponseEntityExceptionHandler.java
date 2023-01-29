@@ -28,6 +28,8 @@ public class RestResponseEntityExceptionHandler {
             case NODE_NOT_FOUND:
             case SECURITY_ANALYSIS_NOT_FOUND:
             case SENSITIVITY_ANALYSIS_NOT_FOUND:
+            case DYNAMIC_SIMULATION_NOT_FOUND:
+            case DYNAMIC_MAPPING_NOT_FOUND:
             case EQUIPMENT_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
             case CASE_NOT_FOUND:
@@ -38,6 +40,7 @@ public class RestResponseEntityExceptionHandler {
             case LOADFLOW_RUNNING:
             case SECURITY_ANALYSIS_RUNNING:
             case SENSITIVITY_ANALYSIS_RUNNING:
+            case DYNAMIC_SIMULATION_RUNNING:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED:
             case BAD_NODE_TYPE:
