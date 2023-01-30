@@ -60,9 +60,6 @@ public class StudyException extends RuntimeException {
         DELETE_VOLTAGE_LEVEL_ON_LINE,
         DELETE_ATTACHING_LINE,
         URI_SYNTAX,
-        ACTION_CHECKER_NOT_FOUND,
-        ACTION_RULE_NOT_FOUND,
-        ACTION_NOT_FOUND,
     }
 
     private final Type type;

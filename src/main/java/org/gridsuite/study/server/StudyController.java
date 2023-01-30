@@ -1327,19 +1327,6 @@ public class StudyController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/can-execute")
-    @Operation(summary = "Check whether can run an action on a node of a study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Check whether can run an action, empty string means ok"),
-        @ApiResponse(responseCode = "204", description = "No information when asking can execute an action"),
-        @ApiResponse(responseCode = "404", description = "Check whether can run an action on a node has not been found")})
-    public ResponseEntity<String> canExecuteActionOnNode(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @RequestParam("action") String action) {
-        String result = studyService.canExecute(action, nodeUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
-                ResponseEntity.noContent().build();
-    }
-
     enum UpdateModificationAction {
         MOVE, COPY
     }

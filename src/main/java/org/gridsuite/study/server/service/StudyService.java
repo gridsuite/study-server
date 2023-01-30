@@ -44,9 +44,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.workflow.Action;
-import org.gridsuite.study.server.service.workflow.WorkflowService;
-import org.gridsuite.study.server.service.workflow.impl.Actions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,8 +125,6 @@ public class StudyService {
 
     private final ObjectMapper objectMapper;
 
-    private final WorkflowService workflowService;
-
     @Autowired
     StudyService self;
 
@@ -159,8 +154,7 @@ public class StudyService {
             ActionsService actionsService,
             CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService,
-            DynamicSimulationService dynamicSimulationService,
-            WorkflowService workflowService) {
+            DynamicSimulationService dynamicSimulationService) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -186,7 +180,6 @@ public class StudyService {
         this.actionsService = actionsService;
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
-        this.workflowService = workflowService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -1602,6 +1595,12 @@ public class StudyService {
         Objects.requireNonNull(parameters);
         Objects.requireNonNull(mappingName);
 
+        // pre-condition check
+        LoadFlowStatus lfStatus = getLoadFlowStatus(nodeUuid);
+        if (lfStatus != LoadFlowStatus.CONVERGED) {
+            throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic simulation");
+        }
+
         // create receiver for getting back the notification in rabbitmq
         String receiver;
         try {
@@ -1650,12 +1649,4 @@ public class StudyService {
         return dynamicSimulationService.getStatus(nodeUuid);
     }
 
-    public String canExecute(String actionName, UUID nodeUuid) {
-        NodeEntity nodeEntity = networkModificationTreeService.getNodeEntity(nodeUuid);
-
-        // lookup action
-        Action action = Actions.getInstance().getAction(actionName);
-
-        return workflowService.canExecute(action, nodeEntity);
-    }
 }
