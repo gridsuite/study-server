@@ -49,10 +49,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
 import static org.junit.Assert.*;
@@ -187,7 +184,7 @@ public class StudyControllerDynamicSimulationTest {
 
                 return RESULT_UUID;
             }
-        }).when(studyService).runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+        }).when(studyService).runDynamicSimulation(eq(STUDY_UUID), eq(NODE_UUID), any(), eq(MAPPING_NAME_01));
 
         // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
         doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
@@ -241,7 +238,7 @@ public class StudyControllerDynamicSimulationTest {
 
                 return RESULT_UUID;
             }
-        }).when(studyService).runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+        }).when(studyService).runDynamicSimulation(eq(STUDY_UUID), eq(NODE_UUID), any(), eq(MAPPING_NAME_01));
 
         // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
         doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
@@ -290,7 +287,7 @@ public class StudyControllerDynamicSimulationTest {
 
                 return RESULT_UUID;
             }
-        }).when(studyService).runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+        }).when(studyService).runDynamicSimulation(eq(STUDY_UUID), eq(NODE_UUID), any(), eq(MAPPING_NAME_01));
 
         // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
         doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);

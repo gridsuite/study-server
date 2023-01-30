@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -1284,11 +1285,10 @@ public class StudyController {
     public ResponseEntity<UUID> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @Parameter(description = "mappingName") @RequestParam("mappingName") String mappingName,
-                                                     @RequestBody(required = false) String parameters) {
-        String nonNullParameters = Objects.toString(parameters, "");
+                                                     @RequestBody(required = false) DynamicSimulationParametersInfos parameters) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, nonNullParameters, mappingName));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters, mappingName));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries")

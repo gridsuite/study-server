@@ -14,7 +14,9 @@ import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.StudyApplication;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -31,7 +33,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.io.UncheckedIOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS;
@@ -115,25 +116,21 @@ public class StudyServiceDynamicSimulationTest {
     }
 
     @Test
-    public void testRunDynamicSimulationGivenWellFormattedParameters() {
+    public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
         given(dynamicSimulationService.runDynamicSimulation(anyString(), eq(NETWORK_UUID), anyString(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01))).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
+        given(networkModificationTreeService.getLoadFlowStatus(NODE_UUID)).willReturn(Optional.of(LoadFlowStatus.CONVERGED));
+        // init parameters
+        DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
+        parameters.setStartTime(START_TIME);
+        parameters.setStopTime(STOP_TIME);
 
         // call method to be tested
-        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, PARAMETERS, MAPPING_NAME_01);
+        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters, MAPPING_NAME_01);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());
-    }
-
-    @Test(expected = UncheckedIOException.class)
-    public void testRunDynamicSimulationGivenBadFormattedParameters() {
-        // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(anyString(), eq(NETWORK_UUID), anyString(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01))).willReturn(RESULT_UUID);
-
-        // call method to be tested => must throw exception
-        studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, "", MAPPING_NAME_01);
     }
 
     @Test

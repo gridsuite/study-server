@@ -1589,7 +1589,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, String parameters, String mappingName) {
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String mappingName) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(parameters);
@@ -1613,20 +1613,12 @@ public class StudyService {
         // get associated network
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
 
-        // destructured parameters
-        DynamicSimulationParametersInfos dynamicSimulationParameters;
-        try {
-            dynamicSimulationParameters = objectMapper.readValue(parameters, DynamicSimulationParametersInfos.class);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
         // clean previous result if exist
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
 
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, "", dynamicSimulationParameters.getStartTime(), dynamicSimulationParameters.getStopTime(), mappingName);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, "", parameters.getStartTime(), parameters.getStopTime(), mappingName);
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);
