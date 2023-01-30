@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
@@ -19,6 +20,7 @@ import org.gridsuite.study.server.service.client.dynamicmapping.impl.DynamicMapp
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.validation.constraints.NotNull;
@@ -98,5 +100,35 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
         assertEquals(MAPPING_NAMES[0], allMappings.get(0).getName());
         // first element's name must be mappingNames[1]
         assertEquals(MAPPING_NAMES[1], allMappings.get(1).getName());
+    }
+
+    @Test(expected = StudyException.class)
+    public void testGetAllMappingsGivenNotFound() {
+        // setup mock server: replace the default dispatcher
+        server.setDispatcher(new Dispatcher() {
+                @Override
+                public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
+                    return new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
+                }
+            }
+        );
+
+        // call method to be tested
+        dynamicMappingClient.getAllMappings();
+    }
+
+    @Test(expected = HttpStatusCodeException.class)
+    public void testGetAllMappingsGivenBadRequest() {
+        // setup mock server: replace the default dispatcher
+        server.setDispatcher(new Dispatcher() {
+                @Override
+                public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
+                    return new MockResponse().setResponseCode(HttpStatus.BAD_REQUEST.value());
+                }
+            }
+        );
+
+        // call method to be tested
+        dynamicMappingClient.getAllMappings();
     }
 }
