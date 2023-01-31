@@ -242,6 +242,11 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
             }
 
+            UUID dynamicSimulationResultUuid = repositories.get(nodeToDelete.getType()).getDynamicSimulationResultUuid(id);
+            if (dynamicSimulationResultUuid != null) {
+                deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
+            }
+
             if (!deleteChildren) {
                 nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
