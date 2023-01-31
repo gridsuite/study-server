@@ -55,7 +55,8 @@ public class StudyException extends RuntimeException {
         MISSING_PARAMETER,
         LOAD_SCALING_FAILED,
         DELETE_VOLTAGE_LEVEL_ON_LINE,
-        DELETE_ATTACHING_LINE
+        DELETE_ATTACHING_LINE,
+        GENERATOR_SCALING_FAILED,
     }
 
     private final Type type;
