@@ -131,18 +131,25 @@ public class NetworkMapTest {
 
         String loadDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
+        String loadsIdsAsString = List.of("loads1", "loads2", "loads3").toString();
         String lineDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
+        String linesIdsAsString = List.of("line1", "line2", "line3").toString();
         String generatorDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(GENERATOR_ID_1).name("GENERATOR_NAME_1").build());
+        String generatorIdsAsString = List.of("generator1", "generator2", "generator3").toString();
         String shuntCompensatorDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(SHUNT_COMPENSATOR_ID_1).name("SHUNT_COMPENSATOR_NAME_1").build());
+        String shuntCompensatorIdsAsString = List.of("shuntCompensator1", "shuntCompensator2", "shuntCompensator3").toString();
         String twoWindingsTransformerDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
+        String twtIdsAsString = List.of("twt1", "twt2", "twt3").toString();
         String voltageLevelDataAsString = mapper.writeValueAsString(List.of(
                 IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build()));
+        String voltageLevelIdsAsString = List.of("voltageLevel1", "voltageLevel2", "voltageLevel3").toString();
         String substationDataAsString = mapper.writeValueAsString(List.of(
                 IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
+        String substationIdsAsString = List.of("substation1", "substation2", "substation3").toString();
         String mapEquipmentsDataAsString = mapper.writeValueAsString(List.of(lineDataAsString, substationDataAsString));
 
         final Dispatcher dispatcher = new Dispatcher() {
@@ -166,29 +173,58 @@ public class NetworkMapTest {
                         return new MockResponse().setResponseCode(200).setBody(loadDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads/ids":
+                        return new MockResponse().setResponseCode(200).setBody(loadsIdsAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/" + LINE_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/ids":
+                        return new MockResponse().setResponseCode(200).setBody(linesIdsAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/" + GENERATOR_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(generatorDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/ids":
+
+                        return new MockResponse().setResponseCode(200).setBody(generatorIdsAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators/" + SHUNT_COMPENSATOR_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(shuntCompensatorDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators/ids" :
+                        return new MockResponse().setResponseCode(200).setBody(shuntCompensatorIdsAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers/" + TWO_WINDINGS_TRANSFORMER_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(twoWindingsTransformerDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers/ids":
+                        return new MockResponse().setResponseCode(200).setBody(twtIdsAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/substations/" + SUBSTATION_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(substationDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/substations/ids":
+                        return new MockResponse().setResponseCode(200).setBody(substationIdsAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(voltageLevelDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/ids":
+                        return new MockResponse().setResponseCode(200).setBody(voltageLevelIdsAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels-equipments":
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVELS_EQUIPMENTS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -222,9 +258,17 @@ public class NetworkMapTest {
                         rootNodeUuid, LOAD_ID_1)).andExpectAll(
                                 status().isOk(),
                                 content().contentType(MediaType.APPLICATION_JSON));
-
         assertTrue(
                 TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, LOAD_ID_1)));
+
+        //get the load Ids of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/ids", studyNameUserIdUuid,
+                rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(
+                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/loads/ids", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -240,9 +284,18 @@ public class NetworkMapTest {
             .andExpectAll(
                     status().isOk(),
                     content().contentType(MediaType.APPLICATION_JSON));
-
         assertTrue(
                 TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/lines/%s", NETWORK_UUID_STRING, LINE_ID_1)));
+
+        //get the line ids of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/ids", studyNameUserIdUuid,
+                        rootNodeUuid))
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(
+                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/lines/ids", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -260,6 +313,15 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/generators/%s", NETWORK_UUID_STRING, GENERATOR_ID_1)));
+
+        //get the generator ids of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/ids",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server)
+                .contains(String.format("/v1/networks/%s/generators/ids", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -277,6 +339,15 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/2-windings-transformers/%s",
                 NETWORK_UUID_STRING, TWO_WINDINGS_TRANSFORMER_ID_1)));
+
+        //get the 2wt ids of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/ids",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/2-windings-transformers/ids",
+                NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -294,6 +365,15 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(
                 String.format("/v1/networks/%s/shunt-compensators/%s", NETWORK_UUID_STRING, SHUNT_COMPENSATOR_ID_1)));
+
+        //get the shunt compensator ids of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/ids",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(
+                String.format("/v1/networks/%s/shunt-compensators/ids", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -311,6 +391,15 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/substations/%s", NETWORK_UUID_STRING, SUBSTATION_ID_1)));
+
+        //get the substation ids of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/ids",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server)
+                .contains(String.format("/v1/networks/%s/substations/ids", NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -328,6 +417,15 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/voltage-levels/%s", NETWORK_UUID_STRING, VL_ID_1)));
+
+        //get the voltage level ids of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/ids",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server)
+                .contains(String.format("/v1/networks/%s/voltage-levels/ids", NETWORK_UUID_STRING)));
     }
 
     @Test

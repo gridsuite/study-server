@@ -52,18 +52,21 @@ public class NetworkMapService {
     }
 
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
-            String equipmentPath) {
+            String equipmentPath, boolean onlyIds) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
+        if (onlyIds) {
+            path = path.concat("/ids");
+        }
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath);
+                .fromPath(path);
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
         }
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        String url = builder.buildAndExpand(networkUuid).toUriString();
+        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
     public String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {
