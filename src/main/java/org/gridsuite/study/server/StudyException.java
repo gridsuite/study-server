@@ -59,6 +59,7 @@ public class StudyException extends RuntimeException {
         LOAD_SCALING_FAILED,
         DELETE_VOLTAGE_LEVEL_ON_LINE,
         DELETE_ATTACHING_LINE,
+        GENERATOR_SCALING_FAILED,
         URI_SYNTAX,
     }
 

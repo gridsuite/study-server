@@ -28,6 +28,7 @@ public class ModificationTypeTest {
         assertEquals("load-scaling", ModificationType.getUriFromType(ModificationType.LOAD_SCALING));
         assertEquals("delete-voltage-level-on-line", ModificationType.getUriFromType(ModificationType.DELETE_VOLTAGE_LEVEL_ON_LINE));
         assertEquals("delete-attaching-line", ModificationType.getUriFromType(ModificationType.DELETE_ATTACHING_LINE));
+        assertEquals("generator-scaling", ModificationType.getUriFromType(ModificationType.GENERATOR_SCALING));
         assertThrows(PowsyblException.class, () -> ModificationType.getUriFromType(ModificationType.EQUIPMENT_ATTRIBUTE_MODIFICATION));
     }
 }
