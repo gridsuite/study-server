@@ -36,6 +36,8 @@ public class DeleteNodeInfos {
 
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
+
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);
     }
@@ -50,6 +52,10 @@ public class DeleteNodeInfos {
 
     public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {
         securityAnalysisResultUuids.add(securityAnalysisResultUuid);
+    }
+
+    public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
+        dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
     }
 
     public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {

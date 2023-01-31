@@ -1148,6 +1148,7 @@ public class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
     private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
@@ -1263,6 +1264,7 @@ public class StudyTest {
         node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         node2.setSensitivityAnalysisResultUuid(UUID.randomUUID());
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
+        node2.setDynamicSimulationResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1633,7 +1635,7 @@ public class StudyTest {
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(node2.getId())).count());
 
         // duplicate the node1 after node2
-        UUID duplicatedNodeUuid = duplicateNode(study1Uuid, node1.getId(), node2.getId(), InsertMode.AFTER, userId);
+        UUID duplicatedNodeUuid = duplicateNode(study1Uuid, node1, node2.getId(), InsertMode.AFTER, userId);
 
         //node2 should now have 1 child
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
@@ -1644,7 +1646,7 @@ public class StudyTest {
                 .count());
 
         // duplicate the node2 before node1
-        UUID duplicatedNodeUuid2 = duplicateNode(study1Uuid, node2.getId(), node1.getId(), InsertMode.BEFORE, userId);
+        UUID duplicatedNodeUuid2 = duplicateNode(study1Uuid, node2, node1.getId(), InsertMode.BEFORE, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         assertEquals(1, allNodes.stream()
                 .filter(nodeEntity -> nodeEntity.getParentNode() != null
@@ -1654,7 +1656,7 @@ public class StudyTest {
 
         //now the tree looks like root -> modificationNode -> duplicatedNode2 -> node1 -> node2 -> duplicatedNode1
         //duplicate node1 in a new branch starting from duplicatedNode2
-        UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, node1.getId(), duplicatedNodeUuid2, InsertMode.CHILD, userId);
+        UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, node1, duplicatedNodeUuid2, InsertMode.CHILD, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         //expect to have modificationNode as a parent
         assertEquals(1, allNodes.stream()
@@ -1692,11 +1694,11 @@ public class StudyTest {
         // Test Built status when duplicating an empty node
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
 
-        duplicateNode(study1Uuid, emptyNode.getId(), node3.getId(), InsertMode.BEFORE, userId);
+        duplicateNode(study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
     }
 
-    public void cutAndPasteNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, int childCount, String userId) throws Exception {
+    private void cutAndPasteNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, int childCount, String userId) throws Exception {
         boolean isNodeBuilt = networkModificationTreeService.getBuildStatus(nodeToCopyUuid).equals(BuildStatus.BUILT);
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
@@ -1742,6 +1744,8 @@ public class StudyTest {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
                 //shortCircuitAnalysis_status
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                //dynamicSimulation_status
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             });
 
             /*
@@ -1757,6 +1761,8 @@ public class StudyTest {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //shortCircuitAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            //dynamicSimulation_status
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         } else {
             /*
              * Invalidating moved node
@@ -1766,34 +1772,31 @@ public class StudyTest {
         }
     }
 
-    public UUID duplicateNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) throws Exception {
-        List<NodeEntity> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(studyUuid);
+    private UUID duplicateNode(UUID studyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, String userId) throws Exception {
+        List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(studyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
 
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
-                studyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode)
+                studyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
-        output.receive(TIMEOUT, studyUpdateDestination);
+        List<UUID> nodesAfterDuplication = networkModificationTreeService.getAllNodes(studyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
+        nodesAfterDuplication.removeAll(allNodesBeforeDuplication);
+        assertTrue(nodesAfterDuplication.size() == 1);
+
+        output.receive(TIMEOUT, studyUpdateDestination); // nodeCreated
+        if (!EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid())) {
+            output.receive(TIMEOUT, studyUpdateDestination); // nodeUpdated
+        }
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodesAfterDuplication.get(0));
         checkElementUpdatedMessageSent(studyUuid, userId);
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/groups/.*/modifications\\?errorOnGroupNotFound=(true|false)")));
 
-        List<NodeEntity> allNodesAfterDuplication = networkModificationTreeService.getAllNodes(studyUuid);
-
-        List<NodeEntity> newNodeUuid;
-        //newNodeUuid = allNodesAfterDuplication.stream().filter(nodeEntity -> !allNodesBeforeDuplication.contains(nodeEntity)).collect(Collectors.toList());
-        allNodesAfterDuplication.removeIf(nodeEntity -> allNodesBeforeDuplication.stream().anyMatch(nodeEntity1 -> nodeEntity.getIdNode().equals(nodeEntity1.getIdNode())));
-
-        return allNodesAfterDuplication.get(0).getIdNode();
+        return nodesAfterDuplication.get(0);
     }
 
     @Test

@@ -30,4 +30,6 @@ public class NodeModificationInfos {
     private UUID sensitivityAnalysisUuid;
 
     private UUID shortCircuitAnalysisUuid;
+
+    private UUID dynamicSimulationUuid;
 }

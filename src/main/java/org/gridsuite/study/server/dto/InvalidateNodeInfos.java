@@ -34,6 +34,8 @@ public class InvalidateNodeInfos {
 
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
+
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
     }
@@ -52,5 +54,9 @@ public class InvalidateNodeInfos {
 
     public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
         shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
+    }
+
+    public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
+        dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
     }
 }
