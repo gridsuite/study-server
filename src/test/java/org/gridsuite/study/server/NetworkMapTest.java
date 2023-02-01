@@ -188,8 +188,8 @@ public class NetworkMapTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/" + GENERATOR_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(generatorDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/ids":
 
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/ids":
                         return new MockResponse().setResponseCode(200).setBody(generatorIdsAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -232,6 +232,7 @@ public class NetworkMapTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/map-substations":
                         return new MockResponse().setResponseCode(200).setBody(substationDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/map-lines":
                         return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
