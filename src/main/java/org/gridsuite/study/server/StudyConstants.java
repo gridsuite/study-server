@@ -37,6 +37,8 @@ public final class StudyConstants {
 
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
+    public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
+
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
     public static final String REPORTER_ID = "reporterId";
@@ -52,5 +54,22 @@ public final class StudyConstants {
     public enum SldDisplayMode {
         FEEDER_POSITION,
         STATE_VARIABLE;
+    }
+
+    public enum EquipmentType {
+        GENERATOR,
+        LINE,
+        SUBSTATION,
+        TWT,
+        THWT,
+        BATTERY,
+        DANGLING_LINE,
+        HVDC_LINE,
+        LCC_CONVERTER_STATION,
+        LOAD,
+        SHUNT_COMPENSATOR,
+        STATIC_VAR_COMPENSATOR,
+        VSC_CONVERTER_STATION,
+        VOLTAGE_LEVEL;
     }
 }
