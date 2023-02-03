@@ -31,7 +31,7 @@ gridsuite:
     geo-data-server:
       base-uri: http://localhost:8087
     network-map-server:
-      base-uri: http://172.17.0.1:5006
+      base-uri: http://localhost:5006
     network-modification-server:
       base-uri: http://localhost:5007
     loadflow-server:

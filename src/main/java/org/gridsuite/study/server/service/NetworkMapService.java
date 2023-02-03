@@ -18,10 +18,10 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.VoltageLevelMapData;
+import org.gridsuite.study.server.utils.EquipmentType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -66,7 +66,7 @@ public class NetworkMapService {
     }
 
     public String getEquipmentsIds(UUID networkUuid, String variantId, List<String> substationsIds,
-                                   StudyConstants.EquipmentType equipmentType) {
+                                   EquipmentType equipmentType) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/equipments-ids";
 
         UriComponentsBuilder builder = UriComponentsBuilder

@@ -27,6 +27,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.utils.EquipmentType;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -333,9 +334,9 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode,
-            @Parameter(description = "equipment type") @RequestParam(name = "equipmentType", required = true) StudyConstants.EquipmentType equipmentType) {
+            @Parameter(description = "equipment type") @RequestParam(name = "equipmentType", required = true) EquipmentType equipmentType) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(getIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getEquipmentsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/{lineId}")
@@ -359,7 +360,7 @@ public class StudyController {
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, false));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getSubstationsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/{substationId}")
@@ -1355,40 +1356,6 @@ public class StudyController {
 
     enum UpdateModificationAction {
         MOVE, COPY
-    }
-
-    private String getIds(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, StudyConstants.EquipmentType equipmentType) {
-        switch (equipmentType) {
-            case LINE:
-                return studyService.getLinesIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case SUBSTATION:
-                return studyService.getSubstationsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case TWT:
-                return studyService.getTwoWindingsTransformersIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case THWT:
-                return studyService.getThreeWindingsTransformersIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case GENERATOR:
-                return studyService.getGeneratorsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case BATTERY:
-                return studyService.getBatteriesIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case DANGLING_LINE:
-                return studyService.getDanglingLinesIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case HVDC_LINE:
-                return studyService.getHvdcLinesIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case LCC_CONVERTER_STATION:
-                return studyService.getLccConverterStationsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case VSC_CONVERTER_STATION:
-                return studyService.getVscConverterStationsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case LOAD:
-                return studyService.getLoadsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case SHUNT_COMPENSATOR:
-                return studyService.getShuntCompensatorsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case STATIC_VAR_COMPENSATOR:
-                return studyService.getStaticVarCompensatorsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-            case VOLTAGE_LEVEL:
-                return studyService.getVoltageLevelsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode);
-        }
-        return "";
     }
 
     static class MyEnumConverter<E extends Enum<E>> extends PropertyEditorSupport {
