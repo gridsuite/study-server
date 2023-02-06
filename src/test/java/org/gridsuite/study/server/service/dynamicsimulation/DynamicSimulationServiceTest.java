@@ -134,6 +134,25 @@ public class DynamicSimulationServiceTest {
         assertEquals(2, timeSeriesResult.size());
     }
 
+    @Test(expected = StudyException.class)
+    public void testGetTimeSeriesResultGivenBadType() {
+        // setup DynamicSimulationClient mock
+        given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
+
+        // setup timeSeriesClient mock
+        // create a bad type timeseries
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
+        List<TimeSeries> timeSeries = List.of(TimeSeries.createString("TimeLine", index,
+                "CLA_2_5 - CLA : order to change topology",
+                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
+                "CLA_2_5 - CLA : order to change topology",
+                "CLA_2_4 - CLA : arming by over-current constraint"));
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID)).willReturn(timeSeries);
+
+        // call method to be tested
+        dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
+    }
+
     @Test
     public void testGetTimeLineResult() {
         // setup DynamicSimulationClient mock
@@ -155,6 +174,22 @@ public class DynamicSimulationServiceTest {
         // check result
         // must contain only one
         assertEquals(1, timeLineResult.size());
+    }
+
+    @Test(expected = StudyException.class)
+    public void testGetTimeLineResultGivenBadType() {
+        // setup DynamicSimulationClient mock
+        given(dynamicSimulationClient.getTimeLineResult(RESULT_UUID)).willReturn(TIME_LINE_UUID);
+
+        // setup timeSeriesClient mock
+        // create a bad type timeline
+        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
+        List<TimeSeries> timeLines = List.of(TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259));
+
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID)).willReturn(timeLines);
+
+        // call method to be tested
+        dynamicSimulationService.getTimeLineResult(NODE_UUID);
     }
 
     @Test

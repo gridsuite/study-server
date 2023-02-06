@@ -69,7 +69,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         if (timeSeries != null &&
                 !timeSeries.isEmpty() &&
                 !(timeSeries.get(0) instanceof StoredDoubleTimeSeries)) {
-            throw new StudyException(StudyException.Type.TIME_SERIES_ILLEGAL_TYPE, "Time series can not be a type: " + timeSeries.get(0).getClass().getSimpleName());
+            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: " + timeSeries.get(0).getClass().getSimpleName());
         }
 
         return (List) timeSeries;
@@ -91,7 +91,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         if (timeLines != null &&
                 !timeLines.isEmpty() &&
                 !(timeLines.get(0) instanceof StringTimeSeries)) {
-            throw new StudyException(StudyException.Type.TIME_SERIES_ILLEGAL_TYPE, "Time lines can not be a type: " + timeLines.get(0).getClass().getSimpleName());
+            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: " + timeLines.get(0).getClass().getSimpleName());
         }
 
         return (List) timeLines;

@@ -61,7 +61,7 @@ public class StudyException extends RuntimeException {
         DELETE_ATTACHING_LINE,
         GENERATOR_SCALING_FAILED,
         URI_SYNTAX,
-        TIME_SERIES_ILLEGAL_TYPE,
+        TIME_SERIES_BAD_TYPE,
     }
 
     private final Type type;
