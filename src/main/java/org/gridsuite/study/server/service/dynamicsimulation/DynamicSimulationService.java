@@ -7,7 +7,8 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation;
 
-import com.powsybl.timeseries.TimeSeries;
+import com.powsybl.timeseries.StoredDoubleTimeSeries;
+import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 
@@ -35,7 +36,7 @@ public interface DynamicSimulationService {
      * @param nodeUuid a given node UUID
      * @return a list of curves
      */
-    List<TimeSeries> getTimeSeriesResult(UUID nodeUuid);
+    List<StoredDoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid);
 
     /**
      * Get timeline from a given node UUID
@@ -43,7 +44,7 @@ public interface DynamicSimulationService {
      * @param nodeUuid a given node UUID
      * @return a list of timeline (only one element)
      */
-    List<TimeSeries> getTimeLineResult(UUID nodeUuid);
+    List<StringTimeSeries> getTimeLineResult(UUID nodeUuid);
 
     /**
      * Get the current status of the simulation

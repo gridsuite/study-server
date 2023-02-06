@@ -11,7 +11,6 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.StoredDoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
-import com.powsybl.timeseries.TimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -1300,14 +1299,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<StoredDoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimeSeries> timeSeries = studyService.getDynamicSimulationTimeSeries(nodeUuid);
-        // get first element to check type
-        if (timeSeries != null &&
-                !timeSeries.isEmpty() &&
-                !(timeSeries.get(0) instanceof StoredDoubleTimeSeries)) {
-            throw new RuntimeException("Time series can not be a type: " + timeSeries.get(0).getClass().getName());
-        }
-        List<StoredDoubleTimeSeries> result = (List) timeSeries;
+        List<StoredDoubleTimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1319,7 +1311,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
     public ResponseEntity<List<StringTimeSeries>> getDynamicSimulationTimeLineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<StringTimeSeries> result = (List) studyService.getDynamicSimulationTimeLine(nodeUuid);
+        List<StringTimeSeries> result = studyService.getDynamicSimulationTimeLine(nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }

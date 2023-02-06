@@ -7,10 +7,7 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation;
 
-import com.powsybl.timeseries.IrregularTimeSeriesIndex;
-import com.powsybl.timeseries.StringTimeSeries;
-import com.powsybl.timeseries.TimeSeries;
-import com.powsybl.timeseries.TimeSeriesIndex;
+import com.powsybl.timeseries.*;
 import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -130,7 +127,7 @@ public class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID)).willReturn(timeSeries);
 
         // call method to be tested
-        List<TimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
+        List<StoredDoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
 
         // check result
         // must contain two elements
@@ -153,7 +150,7 @@ public class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID)).willReturn(Arrays.asList(timeLine));
 
         // call method to be tested
-        List<TimeSeries> timeLineResult = dynamicSimulationService.getTimeLineResult(NODE_UUID);
+        List<StringTimeSeries> timeLineResult = dynamicSimulationService.getTimeLineResult(NODE_UUID);
 
         // check result
         // must contain only one
