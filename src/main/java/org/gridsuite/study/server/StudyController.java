@@ -9,7 +9,7 @@ package org.gridsuite.study.server;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.timeseries.StoredDoubleTimeSeries;
+import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -1297,9 +1297,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All time series of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<List<StoredDoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<StoredDoubleTimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid);
+    public ResponseEntity<List<DoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<DoubleTimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }

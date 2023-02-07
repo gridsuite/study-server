@@ -7,7 +7,7 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation.impl;
 
-import com.powsybl.timeseries.StoredDoubleTimeSeries;
+import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
@@ -54,7 +54,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<StoredDoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid) {
+    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
@@ -68,8 +68,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         // get first element to check type
         if (timeSeries != null &&
                 !timeSeries.isEmpty() &&
-                !(timeSeries.get(0) instanceof StoredDoubleTimeSeries)) {
-            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: " + timeSeries.get(0).getClass().getSimpleName());
+                !(timeSeries.get(0) instanceof DoubleTimeSeries)) {
+            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: " + timeSeries.get(0).getClass().getSimpleName()
+                    + ", expected type: " + DoubleTimeSeries.class.getSimpleName());
         }
 
         return (List) timeSeries;
@@ -91,7 +92,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         if (timeLines != null &&
                 !timeLines.isEmpty() &&
                 !(timeLines.get(0) instanceof StringTimeSeries)) {
-            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: " + timeLines.get(0).getClass().getSimpleName());
+            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: " + timeLines.get(0).getClass().getSimpleName()
+                    + ", expected type: " + StringTimeSeries.class.getSimpleName());
         }
 
         return (List) timeLines;

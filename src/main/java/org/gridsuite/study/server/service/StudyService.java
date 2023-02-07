@@ -17,7 +17,7 @@ import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.timeseries.StoredDoubleTimeSeries;
+import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
@@ -1628,7 +1628,7 @@ public class StudyService {
         return resultUuid;
     }
 
-    public List<StoredDoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid) {
+    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid) {
         // get timeseries from node uuid
         return dynamicSimulationService.getTimeSeriesResult(nodeUuid);
     }

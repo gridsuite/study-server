@@ -331,7 +331,7 @@ public class StudyControllerDynamicSimulationTest {
     public void testGetDynamicSimulationTimeSeriesResult() throws Exception {
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
-        List<StoredDoubleTimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
+        List<DoubleTimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
                 TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));

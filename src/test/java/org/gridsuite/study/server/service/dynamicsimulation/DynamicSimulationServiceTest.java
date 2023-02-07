@@ -127,7 +127,7 @@ public class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID)).willReturn(timeSeries);
 
         // call method to be tested
-        List<StoredDoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
+        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
 
         // check result
         // must contain two elements
