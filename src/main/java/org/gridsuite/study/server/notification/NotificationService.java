@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
@@ -34,7 +35,6 @@ public class NotificationService {
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
-    public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
