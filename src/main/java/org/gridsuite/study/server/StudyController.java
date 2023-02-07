@@ -9,7 +9,8 @@ package org.gridsuite.study.server;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.timeseries.TimeSeries;
+import com.powsybl.timeseries.DoubleTimeSeries;
+import com.powsybl.timeseries.StringTimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -1296,9 +1297,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All time series of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<List<TimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid);
+    public ResponseEntity<List<DoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<DoubleTimeSeries> result = studyService.getDynamicSimulationTimeSeries(nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1308,9 +1309,9 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The timeline of dynamic simulation result"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation has been done yet"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<List<TimeSeries>> getDynamicSimulationTimeLineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimeSeries> result = studyService.getDynamicSimulationTimeLine(nodeUuid);
+    public ResponseEntity<List<StringTimeSeries>> getDynamicSimulationTimeLineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<StringTimeSeries> result = studyService.getDynamicSimulationTimeLine(nodeUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
                 ResponseEntity.noContent().build();
     }
