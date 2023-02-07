@@ -28,7 +28,7 @@ jobs:
           ref: refs/heads/main
 
       - name: Build and install network store client with Maven
-        run: mvn --batch-mode -Pclient -DskipTests=true --file ../powsybl-network-store/pom.xml install
+        run: mvn --batch-mode -DskipTests=true --file ../powsybl-network-store/powsybl-network-store-client-parent/pom.xml install
 
       - name: Checkout sources
         uses: actions/checkout@v1
