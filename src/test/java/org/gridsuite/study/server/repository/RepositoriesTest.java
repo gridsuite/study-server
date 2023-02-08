@@ -10,6 +10,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.shortcircuit.StudyType;
 import org.apache.commons.collections4.map.HashedMap;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,6 +30,7 @@ import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@DisableElasticsearch
 public class RepositoriesTest {
 
     @Autowired
