@@ -7,6 +7,8 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation.impl;
 
+import com.powsybl.timeseries.DoubleTimeSeries;
+import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -52,25 +54,49 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<TimeSeries> getTimeSeriesResult(UUID nodeUuid) {
+    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
             return Collections.emptyList();
         }
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
-        return timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid); // get timeseries data
+
+        // get timeseries data
+        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid);
+
+        // get first element to check type
+        if (timeSeries != null &&
+                !timeSeries.isEmpty() &&
+                !(timeSeries.get(0) instanceof DoubleTimeSeries)) {
+            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: " + timeSeries.get(0).getClass().getSimpleName()
+                    + ", expected type: " + DoubleTimeSeries.class.getSimpleName());
+        }
+
+        return (List) timeSeries;
     }
 
     @Override
-    public List<TimeSeries> getTimeLineResult(UUID nodeUuid) {
+    public List<StringTimeSeries> getTimeLineResult(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
             return Collections.emptyList();
         }
         UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
-        return timeSeriesClient.getTimeSeriesGroup(timeLineUuid); // get timeline data
+
+        // get timeline data
+        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid);
+
+        // get first element to check type
+        if (timeLines != null &&
+                !timeLines.isEmpty() &&
+                !(timeLines.get(0) instanceof StringTimeSeries)) {
+            throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time lines can not be a type: " + timeLines.get(0).getClass().getSimpleName()
+                    + ", expected type: " + StringTimeSeries.class.getSimpleName());
+        }
+
+        return (List) timeLines;
     }
 
     @Override
