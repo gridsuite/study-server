@@ -9,10 +9,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.timeseries.IrregularTimeSeriesIndex;
-import com.powsybl.timeseries.StringTimeSeries;
-import com.powsybl.timeseries.TimeSeries;
-import com.powsybl.timeseries.TimeSeriesIndex;
+import com.powsybl.timeseries.*;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -338,7 +335,7 @@ public class StudyControllerDynamicSimulationTest {
     public void testGetDynamicSimulationTimeSeriesResult() throws Exception {
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
-        List<TimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
+        List<DoubleTimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
                 TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
