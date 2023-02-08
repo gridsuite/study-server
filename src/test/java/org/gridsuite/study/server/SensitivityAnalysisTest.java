@@ -39,7 +39,6 @@ import org.gridsuite.study.server.service.ActionsService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.ShortCircuitService;
-import org.gridsuite.study.server.utils.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;

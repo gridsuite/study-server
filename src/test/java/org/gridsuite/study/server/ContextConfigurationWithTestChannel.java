@@ -5,9 +5,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.utils;
+package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.StudyApplication;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.test.context.ContextConfiguration;
 
