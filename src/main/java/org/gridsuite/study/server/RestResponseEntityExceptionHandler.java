@@ -28,11 +28,10 @@ public class RestResponseEntityExceptionHandler {
             case NODE_NOT_FOUND:
             case SECURITY_ANALYSIS_NOT_FOUND:
             case SENSITIVITY_ANALYSIS_NOT_FOUND:
+            case DYNAMIC_SIMULATION_NOT_FOUND:
             case DYNAMIC_MAPPING_NOT_FOUND:
             case EQUIPMENT_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getType());
-            case DYNAMIC_SIMULATION_NOT_FOUND:
-                return ResponseEntity.noContent().build();
             case CASE_NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body(exception.getMessage());
             case STUDY_ALREADY_EXISTS:
