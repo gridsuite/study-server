@@ -192,7 +192,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void updateDynamicSimulationResultUuid(AbstractNode node, UUID dynamicSimulationResultUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setDynamicSimulationResultUuid(dynamicSimulationResultUuid);
-        updateNode(modificationNode);
+        updateNode(modificationNode, "dynamicSimulationResultUuid");
     }
 
     @Override
