@@ -86,6 +86,7 @@ public class NetworkMapTest {
     private static final String VOLTAGE_LEVEL_ID = "VOLTAGE_LEVEL_ID";
     private static final String VOLTAGE_LEVELS_EQUIPMENTS_JSON = "[{\"voltageLevel\":{\"id\":\"V1\",\"name\":\"VLGEN\",\"substationId\":\"P1\",\"nominalVoltage\":24,\"topologyKind\":\"BUS_BREAKER\"},\"equipments\":[{\"id\":\"GEN\",\"name\":\"GEN\",\"type\":\"GENERATOR\"},{\"id\":\"GEN2\",\"name\":\"GEN2\",\"type\":\"GENERATOR\"},{\"id\":\"LCC1\",\"name\":\"LCC1\",\"type\":\"HVDC_CONVERTER_STATION\"},{\"id\":\"SVC1\",\"name\":\"SVC1\",\"type\":\"STATIC_VAR_COMPENSATOR\"},{\"id\":\"NGEN_NHV1\",\"name\":\"NGEN_NHV1\",\"type\":\"TWO_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT\",\"name\":\"TWT\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT21\",\"name\":\"TWT21\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT32\",\"name\":\"TWT32\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"DL1\",\"name\":\"DL1\",\"type\":\"DANGLING_LINE\"},{\"id\":\"LINE3\",\"name\":\"LINE3\",\"type\":\"LINE\"}]}]";
     private static final String VOLTAGE_LEVEL_EQUIPMENTS_JSON = "[{\"id\":\"GEN\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"GEN2\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"LCC1\",\"name\":\"LCC1\",\"type\":\"HVDC_CONVERTER_STATION\"},{\"id\":\"SVC1\",\"name\":\"SVC1\",\"type\":\"STATIC_VAR_COMPENSATOR\"},{\"id\":\"NGEN_NHV1\",\"name\":null,\"type\":\"TWO_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT\",\"name\":\"TWT\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT21\",\"name\":\"TWT21\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT32\",\"name\":\"TWT32\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"DL1\",\"name\":\"DL1\",\"type\":\"DANGLING_LINE\"},{\"id\":\"LINE3\",\"name\":null,\"type\":\"LINE\"}]";
+    private static final String VOLTAGE_LEVEL_TOPOLOGY_JSON = "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":0.0,\"topologyKind\":\"NODE_BREAKER\"}]";
     private static final String EQUIPMENTS_IDS_ENDPOINT = "/equipments-ids";
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -151,12 +152,7 @@ public class NetworkMapTest {
         String substationDataAsString = mapper.writeValueAsString(List.of(
                 IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
         String substationIdsAsString = List.of("substation1", "substation2", "substation3").toString();
-        String batteriesIdsAsString = List.of("battery1", "battery2", "battery3").toString();
-        String danglingLineIdsAsString = List.of("DL1", "DL2", "DL3").toString();
         String hvdcLineIdsAsString = List.of("hvdc-line1", "hvdc-line2", "hvdc-line3").toString();
-        String lccConverterStationsIdsAsString = List.of("lcs1", "lcs2", "lcs3").toString();
-        String vscConverterStationsIdsAsString = List.of("vsc1", "vsc2", "vsc3").toString();
-        String staticVarCompensatorsIdsAsString = List.of("svc1", "svc2", "svc3").toString();
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -225,6 +221,10 @@ public class NetworkMapTest {
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-level-equipments/" + VL_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVEL_EQUIPMENTS_JSON)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels-topology":
+                        return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVEL_TOPOLOGY_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/map-substations":
@@ -422,6 +422,23 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/voltage-levels-equipments", NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testGetVoltageLevelsTopology() throws Exception {
+        //create study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        //get the voltage levels and its equipments
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels-topology",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server)
+                .contains(String.format("/v1/networks/%s/voltage-levels-topology", NETWORK_UUID_STRING)));
     }
 
     @Test
