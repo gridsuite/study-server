@@ -35,8 +35,6 @@ import static org.junit.Assert.assertTrue;
  */
 public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
-    private static final int DYNAMIC_SIMULATION_PORT = DYNAMIC_PORT;
-
     private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
 
     private static final String VARIANT_1_ID = "variant_1";
@@ -153,7 +151,7 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
         super.setup();
 
         // config client
-        dynamicSimulationClient = new DynamicSimulationClientImpl(initMockWebServer(DYNAMIC_SIMULATION_PORT), restTemplate);
+        dynamicSimulationClient = new DynamicSimulationClientImpl(initMockWebServer(), restTemplate);
     }
 
     @Test

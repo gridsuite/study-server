@@ -32,8 +32,6 @@ import java.io.IOException;
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
 public abstract class AbstractRestClientTest {
 
-    protected static final int DYNAMIC_PORT = 0;
-
     protected MockWebServer server;
 
     public final Logger getLogger() {
@@ -42,15 +40,10 @@ public abstract class AbstractRestClientTest {
 
     protected abstract Dispatcher getDispatcher();
 
-    protected String initMockWebServer(int port) throws RuntimeException {
+    protected String initMockWebServer() throws RuntimeException {
         server = new MockWebServer();
         try {
-            if (port == DYNAMIC_PORT) {
-                server.start();
-            } else {
-                server.start(port);
-            }
-
+            server.start();
             getLogger().info("Mock server started at port = " + server.getPort());
         } catch (IOException e) {
             throw new RuntimeException("Can not init the mock server " + this.getClass().getSimpleName(), e);
