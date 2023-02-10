@@ -37,7 +37,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class TimeSeriesClientTest extends AbstractRestClientTest {
 
-    private static final int TIME_SERIES_PORT = 5037;
+    private static final int TIME_SERIES_PORT = DYNAMIC_PORT;
     public static final String TIME_SERIES_GROUP_UUID = "33333333-0000-0000-0000-000000000000";
     public static final String TIME_LINE_GROUP_UUID = "44444444-0000-0000-0000-000000000000";
 

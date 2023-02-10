@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
-    private static final int DYNAMIC_SIMULATION_PORT = 5032;
+    private static final int DYNAMIC_SIMULATION_PORT = DYNAMIC_PORT;
 
     private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
 

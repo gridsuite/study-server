@@ -38,7 +38,7 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
     private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
                                                         new MappingInfos(MAPPING_NAMES[1]));
 
-    private static final int DYNAMIC_MAPPING_PORT = 5036;
+    private static final int DYNAMIC_MAPPING_PORT = DYNAMIC_PORT;
 
     private DynamicMappingClient dynamicMappingClient;
 
