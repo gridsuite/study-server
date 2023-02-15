@@ -9,10 +9,13 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
+import com.powsybl.iidm.network.*;
+import com.powsybl.security.LimitViolation;
+import com.powsybl.security.LimitViolationType;
+import com.powsybl.security.Security;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
@@ -957,6 +960,28 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid);
 
         return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
+    }
+
+    private static LimitViolationInfos toLimitViolationInfos(LimitViolation violation) {
+        return LimitViolationInfos.builder()
+                .subjectId(violation.getSubjectId())
+                .acceptableDuration(violation.getAcceptableDuration())
+                .limit(violation.getLimit())
+                .limitName(violation.getLimitName())
+                .acceptableDuration(violation.getAcceptableDuration())
+                .value(violation.getValue())
+                .side(violation.getSide() != null ? violation.getSide().name() : "").build();
+    }
+
+    public List<LimitViolationInfos> getOverloadedLines(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.ALL_COLLECTIONS_NEEDED_FOR_BUS_VIEW, networkModificationTreeService.getVariantId(nodeUuid));
+        List<LimitViolation> violations = Security.checkLimits(network, limitReduction);
+        return violations.stream()
+            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT && network.getLine(v.getSubjectId()) != null)
+            .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
     }
 
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
