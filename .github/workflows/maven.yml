@@ -21,15 +21,6 @@ jobs:
         with:
           java-version: 11
 
-      - name: Checkout network store sources
-        uses: actions/checkout@v1
-        with:
-          repository: powsybl/powsybl-network-store
-          ref: refs/heads/main
-
-      - name: Build and install network store client with Maven
-        run: mvn --batch-mode -DskipTests=true --file ../powsybl-network-store/powsybl-network-store-client-parent/pom.xml install
-
       - name: Checkout sources
         uses: actions/checkout@v1
 
