@@ -278,7 +278,7 @@ public class LoadflowTest {
 
         // setting loadFlow Parameters
         LoadFlowParameters lfpBody = new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
-                false, true, false, true, false, true, true, true,
+                true, true, false, true, false, true, true, true,
                 LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true);
         String lfpBodyJson = objectWriter.writeValueAsString(lfpBody);
