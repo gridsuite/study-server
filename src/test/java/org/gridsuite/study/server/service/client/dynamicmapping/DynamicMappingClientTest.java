@@ -38,8 +38,6 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
     private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
                                                         new MappingInfos(MAPPING_NAMES[1]));
 
-    private static final int DYNAMIC_MAPPING_PORT = 5036;
-
     private DynamicMappingClient dynamicMappingClient;
 
     @Autowired
@@ -84,7 +82,7 @@ public class DynamicMappingClientTest extends AbstractRestClientTest {
         super.setup();
 
         // config client
-        dynamicMappingClient = new DynamicMappingClientImpl(initMockWebServer(DYNAMIC_MAPPING_PORT), restTemplate);
+        dynamicMappingClient = new DynamicMappingClientImpl(initMockWebServer(), restTemplate);
     }
 
     @Test
