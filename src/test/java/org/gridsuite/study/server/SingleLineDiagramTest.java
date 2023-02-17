@@ -170,14 +170,14 @@ public class SingleLineDiagramTest {
         String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
                 VoltageLevelMapData.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
                 VoltageLevelMapData.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
+                VoltageLevelMapData.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").nominalVoltage(370).topologyKind(TopologyKind.BUS_BREAKER).build(),
                 VoltageLevelMapData.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
                 VoltageLevelMapData.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
                 VoltageLevelMapData.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
                 VoltageLevelMapData.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
                 VoltageLevelMapData.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
                 VoltageLevelMapData.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build()));
+                VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(390).topologyKind(TopologyKind.BUS_BREAKER).build()));
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -417,6 +417,16 @@ public class SingleLineDiagramTest {
                 VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
                         VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build())));
 
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
+
+        // get nominal voltages
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/nominal-voltages", studyNameUserIdUuid,
+                        rootNodeUuid)).andExpect(status().isOk())
+                .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        List<Double> nvList = mapper.readValue(resultAsString,  new TypeReference<>() { });
+
+        assertEquals(List.of(370.0, 380.0, 390.0), nvList);
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
 
         //get the lines-graphics of a network

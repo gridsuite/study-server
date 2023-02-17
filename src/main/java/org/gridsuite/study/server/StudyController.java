@@ -270,6 +270,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevels(studyUuid, nodeUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/nominal-voltages")
+    @Operation(summary = "Get the nominal voltages for a given network")
+    @ApiResponse(responseCode = "200", description = "The nominal voltage sorted list of the network")
+    public ResponseEntity<List<Double>> getNetworkNominalVoltages(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNominalVoltages(studyUuid, nodeUuid));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses")
     @Operation(summary = "get buses the for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
