@@ -11,9 +11,7 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.NETWORK_MAP_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.EQUIPMENT_NOT_FOUND;
 
 import java.util.List;
@@ -53,17 +51,34 @@ public class NetworkMapService {
 
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
             String equipmentPath) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath);
+                .fromPath(path);
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
         }
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
+        String url = builder.buildAndExpand(networkUuid).toUriString();
+        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
+    }
 
-        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+    public String getEquipmentsIds(UUID networkUuid, String variantId, List<String> substationsIds,
+                                   String equipmentType) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/equipments-ids";
+
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromPath(path);
+        if (substationsIds != null) {
+            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        builder = builder.queryParam(QUERY_PARAM_EQUIPMENT_TYPE, equipmentType);
+        String url = builder.buildAndExpand(networkUuid).toUriString();
+        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
     public String getEquipmentMapData(UUID networkUuid, String variantId, String equipmentPath, String equipmentId) {

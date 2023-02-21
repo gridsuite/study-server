@@ -40,10 +40,11 @@ public abstract class AbstractRestClientTest {
 
     protected abstract Dispatcher getDispatcher();
 
-    protected String initMockWebServer(int port) throws RuntimeException {
+    protected String initMockWebServer() throws RuntimeException {
         server = new MockWebServer();
         try {
-            server.start(port);
+            server.start();
+            getLogger().info("Mock server started at port = " + server.getPort());
         } catch (IOException e) {
             throw new RuntimeException("Can not init the mock server " + this.getClass().getSimpleName(), e);
         }
