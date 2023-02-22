@@ -124,10 +124,10 @@ public class DynamicSimulationServiceTest {
                 TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID)).willReturn(timeSeries);
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
+        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null);
 
         // check result
         // must contain two elements
@@ -147,10 +147,10 @@ public class DynamicSimulationServiceTest {
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
                 "CLA_2_4 - CLA : arming by over-current constraint"));
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID)).willReturn(timeSeries);
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        dynamicSimulationService.getTimeSeriesResult(NODE_UUID);
+        dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null);
     }
 
     @Test
@@ -166,7 +166,7 @@ public class DynamicSimulationServiceTest {
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
                 "CLA_2_4 - CLA : arming by over-current constraint");
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID)).willReturn(Arrays.asList(timeLine));
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(Arrays.asList(timeLine));
 
         // call method to be tested
         List<StringTimeSeries> timeLineResult = dynamicSimulationService.getTimeLineResult(NODE_UUID);
@@ -186,7 +186,7 @@ public class DynamicSimulationServiceTest {
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
         List<TimeSeries> timeLines = List.of(TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259));
 
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID)).willReturn(timeLines);
+        given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLines);
 
         // call method to be tested
         dynamicSimulationService.getTimeLineResult(NODE_UUID);

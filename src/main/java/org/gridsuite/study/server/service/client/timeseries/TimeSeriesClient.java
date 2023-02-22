@@ -23,5 +23,7 @@ public interface TimeSeriesClient extends RestClient {
     String DELIMITER = "/";
     String TIME_SERIES_END_POINT = "timeseries-group";
 
-    List<TimeSeries> getTimeSeriesGroup(UUID groupUuid);
+    List<TimeSeries> getTimeSeriesGroup(UUID groupUuid, List<String> timeSeriesNames);
+
+    String getTimeSeriesGroupMetadata(UUID groupUuid);
 }

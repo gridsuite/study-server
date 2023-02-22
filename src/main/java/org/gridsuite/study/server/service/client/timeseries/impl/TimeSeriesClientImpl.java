@@ -36,11 +36,15 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
     }
 
     @Override
-    public List<TimeSeries> getTimeSeriesGroup(UUID groupUuid) {
+    public List<TimeSeries> getTimeSeriesGroup(UUID groupUuid, List<String> timeSeriesNames) {
         Objects.requireNonNull(groupUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
 
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}")
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}");
+        if (timeSeriesNames != null && !timeSeriesNames.isEmpty()) {
+            uriComponentsBuilder.queryParam("timeSeriesNames", timeSeriesNames);
+        }
+        var uriComponents = uriComponentsBuilder
                 .buildAndExpand(groupUuid);
 
         // call time-series Rest API
@@ -48,5 +52,20 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
         // convert timeseries to json
         var timeSeriesObj = TimeSeries.parseJson(timeSeriesJson);
         return timeSeriesObj;
+    }
+
+    @Override
+    public String getTimeSeriesGroupMetadata(UUID groupUuid) {
+        Objects.requireNonNull(groupUuid);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{uuid}/metadata");
+        var uriComponents = uriComponentsBuilder
+                .buildAndExpand(groupUuid);
+
+        // call time-series Rest API
+        var timeSeriesMetadataJson = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
+
+        return timeSeriesMetadataJson;
     }
 }

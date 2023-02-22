@@ -317,7 +317,7 @@ public class StudyControllerDynamicSimulationTest {
     @Test
     public void testGetDynamicSimulationTimeSeriesResultGivenNodeNotDone() throws Exception {
         // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeSeries(NODE_NOT_DONE_UUID)).willReturn(null);
+        given(studyService.getDynamicSimulationTimeSeries(NODE_NOT_DONE_UUID, null)).willReturn(null);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
@@ -336,7 +336,7 @@ public class StudyControllerDynamicSimulationTest {
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
         // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeSeries(NODE_UUID)).willReturn(timeSeries);
+        given(studyService.getDynamicSimulationTimeSeries(NODE_UUID, null)).willReturn(timeSeries);
 
         // --- call endpoint to be tested --- //
         // get result from a node done

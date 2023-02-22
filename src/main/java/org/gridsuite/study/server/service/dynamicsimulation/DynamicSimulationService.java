@@ -34,9 +34,10 @@ public interface DynamicSimulationService {
      * Get a list of curves from a given node UUID
      *
      * @param nodeUuid a given node UUID
+     * @param timeSeriesNames a given list of time-series names
      * @return a list of curves
      */
-    List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid);
+    List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames);
 
     /**
      * Get timeline from a given node UUID
@@ -71,4 +72,11 @@ public interface DynamicSimulationService {
      * @return a list of mapping names
      */
     List<MappingInfos> getMappings(UUID nodeUuid);
+
+    /**
+     * Get metadata of timeseries
+     * @param nodeUuid a given node UUID
+     * @return a metatdata object in string representation
+     */
+    String getTimeSeriesMetadata(UUID nodeUuid);
 }

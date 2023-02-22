@@ -112,8 +112,8 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
     @Test
     public void testGetTimeSeriesGroup() throws JsonProcessingException {
-        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID));
-        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID));
+        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_SERIES_GROUP_UUID), null);
+        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(UUID.fromString(TIME_LINE_GROUP_UUID), null);
 
         // --- check result --- //
         // check time series

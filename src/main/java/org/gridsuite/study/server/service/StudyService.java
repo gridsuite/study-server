@@ -1642,9 +1642,13 @@ public class StudyService {
         return resultUuid;
     }
 
-    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid) {
+    public String getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid) {
+        return dynamicSimulationService.getTimeSeriesMetadata(nodeUuid);
+    }
+
+    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid, List<String> timeSeriesNames) {
         // get timeseries from node uuid
-        return dynamicSimulationService.getTimeSeriesResult(nodeUuid);
+        return dynamicSimulationService.getTimeSeriesResult(nodeUuid, timeSeriesNames);
     }
 
     public List<StringTimeSeries> getDynamicSimulationTimeLine(UUID nodeUuid) {

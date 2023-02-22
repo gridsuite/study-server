@@ -54,7 +54,22 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid) {
+    public String getTimeSeriesMetadata(UUID nodeUuid) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+        UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+
+        // get timeseries metadata
+        String metadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
+
+        return metadata;
+    }
+
+    @Override
+    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
@@ -63,7 +78,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
 
         // get timeseries data
-        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid);
+        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
 
         // get first element to check type
         if (timeSeries != null &&
@@ -86,7 +101,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
 
         // get timeline data
-        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid);
+        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
 
         // get first element to check type
         if (timeLines != null &&
@@ -127,4 +142,5 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     public List<MappingInfos> getMappings(UUID nodeUuid) {
         return dynamicMappingClient.getAllMappings();
     }
+
 }
