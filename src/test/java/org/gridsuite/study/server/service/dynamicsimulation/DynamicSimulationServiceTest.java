@@ -113,6 +113,40 @@ public class DynamicSimulationServiceTest {
     }
 
     @Test
+    public void testGetTimeSeriesMetadata() {
+        // setup DynamicSimulationClient mock
+        given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
+
+        // setup timeSeriesClient mock
+        // timeseries metadata
+        String timeSeriesGroupMetadataFormat = "{\n" +
+                "  \"id\": \"%s\",\n" +
+                "  \"indexType\": \"irregularIndex\",\n" +
+                "  \"irregularIndex\": [0, 2, 5, 7, 8],\n" +
+                "  \"metadatas\": [\n" +
+                "    {\n" +
+                "      \"name\": \"_GEN____1_SM_generator_UStatorPu\",\n" +
+                "      \"dataType\": \"DOUBLE\",\n" +
+                "      \"tags\": []\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"name\": \"_GEN____1_SM_generator_omegaPu\",\n" +
+                "      \"dataType\": \"DOUBLE\",\n" +
+                "      \"tags\": []\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}";
+        given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(String.format(timeSeriesGroupMetadataFormat, TIME_SERIES_UUID));
+
+        // call method to be tested
+        String resultTimeSeriesMetadata = dynamicSimulationService.getTimeSeriesMetadata(NODE_UUID);
+
+        // check result
+        // metadata must be identical to expected
+        assertEquals(String.format(timeSeriesGroupMetadataFormat, TIME_SERIES_UUID), resultTimeSeriesMetadata);
+    }
+
+    @Test
     public void testGetTimeSeriesResult() {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
