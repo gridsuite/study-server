@@ -7,11 +7,15 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.*;
 import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
@@ -79,6 +83,10 @@ public class DynamicSimulationServiceTest {
     public static final String RESULT_UUID_RUNNING_STRING = "99999999-1111-0000-0000-000000000000";
     public static final UUID RESULT_UUID_RUNNING = UUID.fromString(RESULT_UUID_RUNNING_STRING);
 
+    public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
+    public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    public static final String TIME_LINE_NAME = "TimeLine";
+
     @MockBean
     private DynamicMappingClient dynamicMappingClient;
 
@@ -90,6 +98,9 @@ public class DynamicSimulationServiceTest {
 
     @MockBean
     private NetworkModificationTreeService networkModificationTreeService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     DynamicSimulationService dynamicSimulationService;
@@ -113,37 +124,26 @@ public class DynamicSimulationServiceTest {
     }
 
     @Test
-    public void testGetTimeSeriesMetadata() {
+    public void testGetTimeSeriesMetadata() throws JsonProcessingException {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
 
         // setup timeSeriesClient mock
         // timeseries metadata
-        String timeSeriesGroupMetadataFormat = "{\n" +
-                "  \"id\": \"%s\",\n" +
-                "  \"indexType\": \"irregularIndex\",\n" +
-                "  \"irregularIndex\": [0, 2, 5, 7, 8],\n" +
-                "  \"metadatas\": [\n" +
-                "    {\n" +
-                "      \"name\": \"_GEN____1_SM_generator_UStatorPu\",\n" +
-                "      \"dataType\": \"DOUBLE\",\n" +
-                "      \"tags\": []\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"name\": \"_GEN____1_SM_generator_omegaPu\",\n" +
-                "      \"dataType\": \"DOUBLE\",\n" +
-                "      \"tags\": []\n" +
-                "    }\n" +
-                "  ]\n" +
-                "}";
-        given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(String.format(timeSeriesGroupMetadataFormat, TIME_SERIES_UUID));
+        TimeSeriesGroupInfos timeSeriesGroupInfos = new TimeSeriesGroupInfos();
+        timeSeriesGroupInfos.setId(TIME_SERIES_UUID);
+        timeSeriesGroupInfos.setMetadatas(List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2)));
+
+        given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(timeSeriesGroupInfos);
 
         // call method to be tested
-        String resultTimeSeriesMetadata = dynamicSimulationService.getTimeSeriesMetadata(NODE_UUID);
+        TimeSeriesGroupInfos resultTimeSeriesMetadata = dynamicSimulationService.getTimeSeriesMetadata(NODE_UUID);
 
         // check result
         // metadata must be identical to expected
-        assertEquals(String.format(timeSeriesGroupMetadataFormat, TIME_SERIES_UUID), resultTimeSeriesMetadata);
+        String expectedTimeSeriesMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupInfos);
+        String resultTimeSeriesMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesMetadata);
+        assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataJson), objectMapper.readTree(resultTimeSeriesMetadataJson));
     }
 
     @Test
@@ -155,8 +155,8 @@ public class DynamicSimulationServiceTest {
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
         List<TimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
-                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
-                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
+                TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259),
+                TimeSeries.createDouble(TIME_SERIES_NAME_2, index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
@@ -176,7 +176,7 @@ public class DynamicSimulationServiceTest {
         // setup timeSeriesClient mock
         // create a bad type timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        List<TimeSeries> timeSeries = List.of(TimeSeries.createString("TimeLine", index,
+        List<TimeSeries> timeSeries = List.of(TimeSeries.createString(TIME_LINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
@@ -195,7 +195,7 @@ public class DynamicSimulationServiceTest {
         // setup timeSeriesClient mock
         // timeline
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
+        StringTimeSeries timeLine = TimeSeries.createString(TIME_LINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
@@ -218,7 +218,7 @@ public class DynamicSimulationServiceTest {
         // setup timeSeriesClient mock
         // create a bad type timeline
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        List<TimeSeries> timeLines = List.of(TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259));
+        List<TimeSeries> timeLines = List.of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
 
         given(timeSeriesClient.getTimeSeriesGroup(TIME_LINE_UUID, null)).willReturn(timeLines);
 

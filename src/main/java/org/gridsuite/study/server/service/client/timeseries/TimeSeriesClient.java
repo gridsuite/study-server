@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.client.timeseries;
 
 import com.powsybl.timeseries.TimeSeries;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
 import org.gridsuite.study.server.service.client.RestClient;
 
 import java.util.List;
@@ -25,5 +26,5 @@ public interface TimeSeriesClient extends RestClient {
 
     List<TimeSeries> getTimeSeriesGroup(UUID groupUuid, List<String> timeSeriesNames);
 
-    String getTimeSeriesGroupMetadata(UUID groupUuid);
+    TimeSeriesGroupInfos getTimeSeriesGroupMetadata(UUID groupUuid);
 }

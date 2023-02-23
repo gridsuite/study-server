@@ -36,6 +36,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1642,7 +1643,7 @@ public class StudyService {
         return resultUuid;
     }
 
-    public String getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid) {
+    public TimeSeriesGroupInfos getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid) {
         return dynamicSimulationService.getTimeSeriesMetadata(nodeUuid);
     }
 

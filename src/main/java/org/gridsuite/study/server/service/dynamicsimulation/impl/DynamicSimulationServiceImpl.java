@@ -13,6 +13,7 @@ import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
@@ -54,7 +55,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public String getTimeSeriesMetadata(UUID nodeUuid) {
+    public TimeSeriesGroupInfos getTimeSeriesMetadata(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
@@ -63,7 +64,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
 
         // get timeseries metadata
-        String metadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
+        TimeSeriesGroupInfos metadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
 
         return metadata;
     }

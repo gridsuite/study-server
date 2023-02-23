@@ -17,6 +17,8 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.commons.collections4.ListUtils;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClientImpl;
@@ -42,29 +44,13 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     public static final String TIME_SERIES_GROUP_UUID = "33333333-0000-0000-0000-000000000000";
     public static final String TIME_LINE_GROUP_UUID = "44444444-0000-0000-0000-000000000000";
 
-    public static final String TIME_SERIES_GROUP_METADATA_FORMAT = "{\n" +
-            "  \"id\": \"%s\",\n" +
-            "  \"indexType\": \"irregularIndex\",\n" +
-            "  \"irregularIndex\": [0, 2, 5, 7, 8],\n" +
-            "  \"metadatas\": [\n" +
-            "    {\n" +
-            "      \"name\": \"_GEN____1_SM_generator_UStatorPu\",\n" +
-            "      \"dataType\": \"DOUBLE\",\n" +
-            "      \"tags\": []\n" +
-            "    },\n" +
-            "    {\n" +
-            "      \"name\": \"_GEN____1_SM_generator_omegaPu\",\n" +
-            "      \"dataType\": \"DOUBLE\",\n" +
-            "      \"tags\": []\n" +
-            "    }\n" +
-            "  ]\n" +
-            "}";
-
     public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
     public static final String TIME_LINE_NAME = "TimeLine";
 
     private final Map<String, List<TimeSeries>> database = new HashMap<>();
+
+    private final TimeSeriesGroupInfos timeSeriesGroupInfos = new TimeSeriesGroupInfos();
 
     private TimeSeriesClient timeSeriesClient;
 
@@ -94,13 +80,18 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
                     String pathEnding = pathSegments.get(pathSegments.size() - 1);
                     if ("metadata".equals(pathEnding)) {  // timeseries-group/{groupUuid}/metadata
                         String groupUuid = pathSegments.stream().limit(pathSegments.size() - 1).reduce((first, second) -> second).orElse("");
+                        try {
+                            if (TIME_SERIES_GROUP_UUID.equals(groupUuid)) {
+                                String timeSeriesGroupMetadataJson = null;
 
-                        if (TIME_SERIES_GROUP_UUID.equals(groupUuid)) {
-                            String timeSeriesGroupMetadata = String.format(TIME_SERIES_GROUP_METADATA_FORMAT, groupUuid);
-                            response = new MockResponse()
-                                    .setResponseCode(HttpStatus.OK.value())
-                                    .addHeader("Content-Type", "application/json; charset=utf-8")
-                                    .setBody(timeSeriesGroupMetadata);
+                                    timeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupInfos);
+                                    response = new MockResponse()
+                                            .setResponseCode(HttpStatus.OK.value())
+                                            .addHeader("Content-Type", "application/json; charset=utf-8")
+                                            .setBody(timeSeriesGroupMetadataJson);
+                            }
+                        } catch (JsonProcessingException e) {
+                            return new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
                         }
                     } else {
                         // take {groupUuid} at the last
@@ -152,6 +143,10 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
         database.put(TIME_SERIES_GROUP_UUID, timeSeries);
         database.put(TIME_LINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeLine)));
+
+        // group metadata for timeseries
+        timeSeriesGroupInfos.setId(UUID.fromString(TIME_SERIES_GROUP_UUID));
+        timeSeriesGroupInfos.setMetadatas(List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2)));
 
         // config client
         timeSeriesClient = new TimeSeriesClientImpl(initMockWebServer(), restTemplate);
@@ -216,14 +211,15 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
     }
 
     @Test
-    public void testGetTimeSeriesGroupMetadata() {
-        String resultTimeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(UUID.fromString(TIME_SERIES_GROUP_UUID));
+    public void testGetTimeSeriesGroupMetadata() throws JsonProcessingException {
+        TimeSeriesGroupInfos resultTimeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(UUID.fromString(TIME_SERIES_GROUP_UUID));
 
         // --- check result --- //
         // metadata must be identical to expected
-        String expectedTimeSeriesGroupMetadata = String.format(TIME_SERIES_GROUP_METADATA_FORMAT, TIME_SERIES_GROUP_UUID);
-        getLogger().info("expectedTimeSeriesGroupMetadata = " + expectedTimeSeriesGroupMetadata);
-        getLogger().info("resultTimeSeriesGroupMetadata = " + expectedTimeSeriesGroupMetadata);
-        assertEquals(expectedTimeSeriesGroupMetadata, resultTimeSeriesGroupMetadata);
+        String expectedTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupInfos);
+        String resultTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesGroupMetadata);
+        getLogger().info("expectedTimeSeriesGroupMetadataJson = " + expectedTimeSeriesGroupMetadataJson);
+        getLogger().info("resultTimeSeriesGroupMetadataJson = " + resultTimeSeriesGroupMetadataJson);
+        assertEquals(objectMapper.readTree(expectedTimeSeriesGroupMetadataJson), objectMapper.readTree(resultTimeSeriesGroupMetadataJson));
     }
 }

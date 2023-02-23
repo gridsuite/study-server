@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.client.timeseries.impl;
 
 import com.powsybl.timeseries.TimeSeries;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +56,7 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
     }
 
     @Override
-    public String getTimeSeriesGroupMetadata(UUID groupUuid) {
+    public TimeSeriesGroupInfos getTimeSeriesGroupMetadata(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, TIME_SERIES_END_POINT);
 
@@ -64,8 +65,8 @@ public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeri
                 .buildAndExpand(groupUuid);
 
         // call time-series Rest API
-        var timeSeriesMetadataJson = getRestTemplate().getForObject(uriComponents.toUriString(), String.class);
+        var timeSeriesGroupMetadata = getRestTemplate().getForObject(uriComponents.toUriString(), TimeSeriesGroupInfos.class);
 
-        return timeSeriesMetadataJson;
+        return timeSeriesGroupMetadata;
     }
 }
