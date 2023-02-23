@@ -129,6 +129,27 @@ public class NetworkMapService {
                 }, networkUuid, voltageLevelId).getBody();
     }
 
+    public String getBranchOrThreeWindingsTransformer(UUID networkUuid, String variantId, String equipmentId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(
+                DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/branch-or-3wt/{equipmentUuid}");
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
+
+        String equipmentMapData;
+        try {
+            equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(EQUIPMENT_NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+        return equipmentMapData;
+    }
+
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
