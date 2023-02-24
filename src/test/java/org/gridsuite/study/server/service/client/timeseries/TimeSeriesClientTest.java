@@ -17,8 +17,8 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.commons.collections4.ListUtils;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
+import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 import org.gridsuite.study.server.service.client.AbstractRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.timeseries.impl.TimeSeriesClientImpl;
@@ -50,7 +50,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
     private final Map<String, List<TimeSeries>> database = new HashMap<>();
 
-    private final TimeSeriesGroupInfos timeSeriesGroupInfos = new TimeSeriesGroupInfos();
+    private final TimeSeriesGroupRest timeSeriesGroupMetadata = new TimeSeriesGroupRest();
 
     private TimeSeriesClient timeSeriesClient;
 
@@ -84,7 +84,7 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
                             if (TIME_SERIES_GROUP_UUID.equals(groupUuid)) {
                                 String timeSeriesGroupMetadataJson = null;
 
-                                    timeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupInfos);
+                                    timeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupMetadata);
                                     response = new MockResponse()
                                             .setResponseCode(HttpStatus.OK.value())
                                             .addHeader("Content-Type", "application/json; charset=utf-8")
@@ -145,8 +145,8 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
         database.put(TIME_LINE_GROUP_UUID, new ArrayList<>(Arrays.asList(timeLine)));
 
         // group metadata for timeseries
-        timeSeriesGroupInfos.setId(UUID.fromString(TIME_SERIES_GROUP_UUID));
-        timeSeriesGroupInfos.setMetadatas(List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2)));
+        timeSeriesGroupMetadata.setId(UUID.fromString(TIME_SERIES_GROUP_UUID));
+        timeSeriesGroupMetadata.setMetadatas(List.of(new TimeSeriesMetadataRest(TIME_SERIES_NAME_1), new TimeSeriesMetadataRest(TIME_SERIES_NAME_2)));
 
         // config client
         timeSeriesClient = new TimeSeriesClientImpl(initMockWebServer(), restTemplate);
@@ -212,11 +212,11 @@ public class TimeSeriesClientTest extends AbstractRestClientTest {
 
     @Test
     public void testGetTimeSeriesGroupMetadata() throws JsonProcessingException {
-        TimeSeriesGroupInfos resultTimeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(UUID.fromString(TIME_SERIES_GROUP_UUID));
+        TimeSeriesGroupRest resultTimeSeriesGroupMetadata = timeSeriesClient.getTimeSeriesGroupMetadata(UUID.fromString(TIME_SERIES_GROUP_UUID));
 
         // --- check result --- //
         // metadata must be identical to expected
-        String expectedTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupInfos);
+        String expectedTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupMetadata);
         String resultTimeSeriesGroupMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesGroupMetadata);
         getLogger().info("expectedTimeSeriesGroupMetadataJson = " + expectedTimeSeriesGroupMetadataJson);
         getLogger().info("resultTimeSeriesGroupMetadataJson = " + resultTimeSeriesGroupMetadataJson);

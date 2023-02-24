@@ -13,7 +13,7 @@ import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
@@ -22,6 +22,7 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
 
@@ -55,7 +56,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public TimeSeriesGroupInfos getTimeSeriesMetadata(UUID nodeUuid) {
+    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
@@ -64,9 +65,12 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
 
         // get timeseries metadata
-        TimeSeriesGroupInfos metadata = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid);
+        List<TimeSeriesMetadataInfos> metadataList = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid)
+                .getMetadatas()
+                .stream()
+                .map(elem -> new TimeSeriesMetadataInfos(elem.getName())).collect(Collectors.toUnmodifiableList());
 
-        return metadata;
+        return metadataList;
     }
 
     @Override

@@ -14,8 +14,9 @@ import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
+import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
@@ -32,6 +33,7 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -124,26 +126,27 @@ public class DynamicSimulationServiceTest {
     }
 
     @Test
-    public void testGetTimeSeriesMetadata() throws JsonProcessingException {
+    public void testGetTimeSeriesMetadataList() throws JsonProcessingException {
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
 
         // setup timeSeriesClient mock
         // timeseries metadata
-        TimeSeriesGroupInfos timeSeriesGroupInfos = new TimeSeriesGroupInfos();
-        timeSeriesGroupInfos.setId(TIME_SERIES_UUID);
-        timeSeriesGroupInfos.setMetadatas(List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2)));
+        TimeSeriesGroupRest timeSeriesGroupMetadata = new TimeSeriesGroupRest();
+        timeSeriesGroupMetadata.setId(TIME_SERIES_UUID);
+        timeSeriesGroupMetadata.setMetadatas(List.of(new TimeSeriesMetadataRest(TIME_SERIES_NAME_1), new TimeSeriesMetadataRest(TIME_SERIES_NAME_2)));
 
-        given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(timeSeriesGroupInfos);
+        given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(timeSeriesGroupMetadata);
 
         // call method to be tested
-        TimeSeriesGroupInfos resultTimeSeriesMetadata = dynamicSimulationService.getTimeSeriesMetadata(NODE_UUID);
+        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationService.getTimeSeriesMetadataList(NODE_UUID);
 
         // check result
         // metadata must be identical to expected
-        String expectedTimeSeriesMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupInfos);
-        String resultTimeSeriesMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesMetadata);
-        assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataJson), objectMapper.readTree(resultTimeSeriesMetadataJson));
+        Stream<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(elem -> new TimeSeriesMetadataInfos(elem.getName()));
+        String expectedTimeSeriesMetadataListJson = objectMapper.writeValueAsString(expectedTimeSeriesMetadataList);
+        String resultTimeSeriesMetadataListJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataList);
+        assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataListJson), objectMapper.readTree(resultTimeSeriesMetadataListJson));
     }
 
     @Test

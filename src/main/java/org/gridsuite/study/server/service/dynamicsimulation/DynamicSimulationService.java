@@ -11,7 +11,7 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 
 import java.util.List;
 import java.util.UUID;
@@ -75,9 +75,9 @@ public interface DynamicSimulationService {
     List<MappingInfos> getMappings(UUID nodeUuid);
 
     /**
-     * Get metadata of timeseries
+     * Get list of timeseries metadata
      * @param nodeUuid a given node UUID
-     * @return a timeserie group info object
+     * @return a list of timeseries metadata
      */
-    TimeSeriesGroupInfos getTimeSeriesMetadata(UUID nodeUuid);
+    List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid);
 }

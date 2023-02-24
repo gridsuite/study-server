@@ -15,7 +15,6 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesGroupInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -562,16 +561,14 @@ public class StudyControllerDynamicSimulationTest {
     public void testGetDynamicSimulationTimeSeriesMetadata() throws Exception {
         // setup DynamicSimulationService mock
         // timeseries metadata
-        TimeSeriesGroupInfos timeSeriesGroupInfos = new TimeSeriesGroupInfos();
-        timeSeriesGroupInfos.setId(TIME_SERIES_UUID);
-        timeSeriesGroupInfos.setMetadatas(List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2)));
+        List<TimeSeriesMetadataInfos> timeSeriesMetadataInfosList = List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2));
 
         Mockito.doAnswer(new Answer() {
             @Override
-            public TimeSeriesGroupInfos answer(InvocationOnMock invocation) {
-                return timeSeriesGroupInfos;
+            public List<TimeSeriesMetadataInfos> answer(InvocationOnMock invocation) {
+                return timeSeriesMetadataInfosList;
             }
-        }).when(dynamicSimulationService).getTimeSeriesMetadata(NODE_UUID);
+        }).when(dynamicSimulationService).getTimeSeriesMetadataList(NODE_UUID);
 
         // --- call endpoint to be tested --- //
         // get timeseries metadata from a node done
@@ -580,12 +577,12 @@ public class StudyControllerDynamicSimulationTest {
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
 
-        TimeSeriesGroupInfos resultTimeSeriesGroupInfos = objectMapper.readValue(result.getResponse().getContentAsString(), TimeSeriesGroupInfos.class);
+        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataInfosList = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<TimeSeriesMetadataInfos>>() { });
 
         // --- check result --- //
         // metadata must be identical to expected
-        String expectedTimeSeriesMetadataJson = objectMapper.writeValueAsString(timeSeriesGroupInfos);
-        String resultTimeSeriesMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesGroupInfos);
+        String expectedTimeSeriesMetadataJson = objectMapper.writeValueAsString(timeSeriesMetadataInfosList);
+        String resultTimeSeriesMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataInfosList);
         assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataJson), objectMapper.readTree(resultTimeSeriesMetadataJson));
     }
 
