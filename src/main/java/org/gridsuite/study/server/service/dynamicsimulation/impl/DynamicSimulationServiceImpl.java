@@ -68,7 +68,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         List<TimeSeriesMetadataInfos> metadataList = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid)
                 .getMetadatas()
                 .stream()
-                .map(elem -> new TimeSeriesMetadataInfos(elem.getName())).collect(Collectors.toUnmodifiableList());
+                .map(TimeSeriesMetadataInfos::fromRest).collect(Collectors.toUnmodifiableList());
 
         return metadataList;
     }

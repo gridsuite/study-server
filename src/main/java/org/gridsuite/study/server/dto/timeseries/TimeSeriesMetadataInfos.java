@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -21,4 +22,8 @@ import lombok.Setter;
 @Setter
 public class TimeSeriesMetadataInfos {
     private String name;
+
+    public static TimeSeriesMetadataInfos fromRest(TimeSeriesMetadataRest timeSeriesMetadataRest) {
+        return new TimeSeriesMetadataInfos(timeSeriesMetadataRest.getName());
+    }
 }
