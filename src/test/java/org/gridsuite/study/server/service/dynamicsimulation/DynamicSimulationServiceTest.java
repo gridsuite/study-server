@@ -33,7 +33,7 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -143,7 +143,7 @@ public class DynamicSimulationServiceTest {
 
         // check result
         // metadata must be identical to expected
-        Stream<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(elem -> new TimeSeriesMetadataInfos(elem.getName()));
+        List<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(TimeSeriesMetadataInfos::fromRest).collect(Collectors.toUnmodifiableList());
         String expectedTimeSeriesMetadataListJson = objectMapper.writeValueAsString(expectedTimeSeriesMetadataList);
         String resultTimeSeriesMetadataListJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataList);
         assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataListJson), objectMapper.readTree(resultTimeSeriesMetadataListJson));
