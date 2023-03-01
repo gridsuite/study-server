@@ -789,10 +789,10 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/overloaded-lines")
     @Operation(summary = "Get lines in the network having a current overflow")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The overloaded lines")})
-    public @ResponseBody List<LimitViolationInfos> getOverloadedLines(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<List<LimitViolationInfos>> getOverloadedLines(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
-        return studyService.getOverloadedLines(studyUuid, nodeUuid, limitReduction);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getOverloadedLines(studyUuid, nodeUuid, limitReduction));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")

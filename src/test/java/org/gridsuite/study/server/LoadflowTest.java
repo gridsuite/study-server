@@ -7,7 +7,7 @@
 
 package org.gridsuite.study.server;
 
-/**
+/*
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -32,6 +33,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.VariantManagerConstants;
+import com.powsybl.iidm.network.test.EurostagTutorialExample1Factory;
+import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.client.PreloadingStrategy;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -54,12 +60,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
@@ -99,6 +107,7 @@ public class LoadflowTest {
     private static final UUID CASE_LOADFLOW_ERROR_UUID = UUID.fromString(CASE_LOADFLOW_ERROR_UUID_STRING);
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final UUID NETWORK_UUID_ID = UUID.fromString(NETWORK_UUID_STRING);
 
     public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.8\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
     public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.8\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
@@ -136,6 +145,11 @@ public class LoadflowTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockBean
+    private NetworkStoreService networkStoreService;
+
+    private Network network;
+
     //output destinations
     private String studyUpdateDestination = "study.update";
 
@@ -144,6 +158,11 @@ public class LoadflowTest {
         server = new MockWebServer();
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
+
+        when(networkStoreService.getNetwork(NETWORK_UUID_ID, PreloadingStrategy.ALL_COLLECTIONS_NEEDED_FOR_BUS_VIEW)).then((Answer<Network>) invocation -> {
+            network = EurostagTutorialExample1Factory.createWithFixedCurrentLimits();
+            return network;
+        });
 
         // Start the server.
         server.start();
@@ -353,6 +372,28 @@ public class LoadflowTest {
 
         assertThat(lfInfos, new MatcherLoadFlowInfos(
                         LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+    }
+
+    @Test
+    public void testOverloadedLines() throws Exception {
+        // create a study and a node
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VariantManagerConstants.INITIAL_VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        // retrieve overloaded lines data on node 1
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/overloaded-lines?limitReduction=1.0",
+                studyNameUserIdUuid,
+                modificationNode1Uuid)).andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        // the mocked network lines->terminals have no computed 'i' => no overload can be detected
+        assertEquals("[]", resultAsString);
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
