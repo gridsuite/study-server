@@ -150,7 +150,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void updateShortCircuitAnalysisResultUuid(AbstractNode node, UUID shortCircuitAnalysisUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setShortCircuitAnalysisResultUuid(shortCircuitAnalysisUuid);
-        updateNode(modificationNode);
+        updateNode(modificationNode, "shortCircuitAnalysisResultUuid");
     }
 
     @Override
@@ -168,7 +168,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void updateSecurityAnalysisResultUuid(AbstractNode node, UUID securityAnalysisResultUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setSecurityAnalysisResultUuid(securityAnalysisResultUuid);
-        updateNode(modificationNode);
+        updateNode(modificationNode, "securityAnalysisResultUuid");
     }
 
     @Override
@@ -180,7 +180,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void updateSensitivityAnalysisResultUuid(AbstractNode node, UUID sensitivityAnalysisResultUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
-        updateNode(modificationNode);
+        updateNode(modificationNode, "sensitivityAnalysisResultUuid");
     }
 
     @Override
@@ -192,7 +192,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     public void updateDynamicSimulationResultUuid(AbstractNode node, UUID dynamicSimulationResultUuid) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         modificationNode.setDynamicSimulationResultUuid(dynamicSimulationResultUuid);
-        updateNode(modificationNode);
+        updateNode(modificationNode, "dynamicSimulationResultUuid");
     }
 
     @Override
