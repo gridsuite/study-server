@@ -19,6 +19,7 @@ import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.slf4j.Logger;
@@ -30,12 +31,9 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -226,9 +224,9 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeBuildResult() {
+    public Consumer<Message<NetworkModificationResult>> consumeBuildResult() {
         return message -> {
-            Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
+            NetworkModificationResult networkModificationResult = message.getPayload();
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
@@ -241,7 +239,7 @@ public class ConsumerService {
                     updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

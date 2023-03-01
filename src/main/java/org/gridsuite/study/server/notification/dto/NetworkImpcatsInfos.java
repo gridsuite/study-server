@@ -9,19 +9,19 @@ package org.gridsuite.study.server.notification.dto;
 
 import java.util.Set;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @AllArgsConstructor
 @Setter
 @Getter
 @Builder
 @NoArgsConstructor
+@ToString
 public class NetworkImpcatsInfos {
-    private Set<String> impactedSubstationsIds;
-    private Set<EquipmentDeletionInfos> deletedEquipments;
+    @Builder.Default
+    private Set<String> impactedSubstationsIds = Set.of();
+
+    @Builder.Default
+    private Set<EquipmentDeletionInfos> deletedEquipments = Set.of();
 }
 

@@ -13,7 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -31,6 +31,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -125,12 +126,12 @@ public class NetworkModificationService {
         }
     }
 
-    public List<ModificationInfos> createModification(UUID studyUuid,
-                                                      String createModificationAttributes,
-                                                      UUID groupUuid,
-                                                      String variantId, UUID reportUuid,
-                                                      String reporterId) {
-        List<ModificationInfos> result;
+    public Optional<NetworkModificationResult> createModification(UUID studyUuid,
+                                                                  String createModificationAttributes,
+                                                                  UUID groupUuid,
+                                                                  String variantId, UUID reportUuid,
+                                                                  String reporterId) {
+        Optional<NetworkModificationResult>  result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createModificationAttributes);
 
@@ -156,7 +157,7 @@ public class NetworkModificationService {
 
         try {
             result = restTemplate.exchange(path, HttpMethod.POST, httpEntity,
-                    new ParameterizedTypeReference<List<ModificationInfos>>() {
+                    new ParameterizedTypeReference<Optional<NetworkModificationResult> >() {
                     }).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_NETWORK_MODIFICATION_FAILED);
