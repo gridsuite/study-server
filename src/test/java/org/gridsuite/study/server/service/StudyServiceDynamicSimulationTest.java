@@ -140,10 +140,10 @@ public class StudyServiceDynamicSimulationTest {
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
 
-        given(dynamicSimulationService.getTimeSeriesResult(NODE_UUID)).willReturn(timeSeries);
+        given(dynamicSimulationService.getTimeSeriesResult(NODE_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        String timeSeriesResultJson = TimeSeries.toJson(studyService.getDynamicSimulationTimeSeries(NODE_UUID));
+        String timeSeriesResultJson = TimeSeries.toJson(studyService.getDynamicSimulationTimeSeries(NODE_UUID, null));
 
         // --- check result --- //
         String timeSeriesExpectedJson = TimeSeries.toJson(timeSeries);
