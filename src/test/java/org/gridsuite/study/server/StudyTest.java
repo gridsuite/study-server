@@ -1837,12 +1837,20 @@ public class StudyTest {
 
     private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, String userId) throws Exception {
         List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(targetStudyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
-
-        mockMvc.perform(post(STUDIES_URL +
-                "/{targetStudyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
-                targetStudyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode, sourceStudyUuid)
-                .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isOk());
+        if (sourceStudyUuid.equals(targetStudyUuid)) {
+            //if source and target are the same no need to pass sourceStudy param
+            mockMvc.perform(post(STUDIES_URL +
+                            "/{targetStudyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                    targetStudyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
+                    .header(USER_ID_HEADER, "userId"))
+                    .andExpect(status().isOk());
+        } else {
+            mockMvc.perform(post(STUDIES_URL +
+                            "/{targetStudyUuid}/tree/nodes?nodeToCopyUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}&sourceStudyUuid={sourceStudyUuid}",
+                    targetStudyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode, sourceStudyUuid)
+                    .header(USER_ID_HEADER, "userId"))
+                    .andExpect(status().isOk());
+        }
 
         List<UUID> nodesAfterDuplication = networkModificationTreeService.getAllNodes(targetStudyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
         nodesAfterDuplication.removeAll(allNodesBeforeDuplication);
