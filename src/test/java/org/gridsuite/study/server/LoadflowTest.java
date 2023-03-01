@@ -14,9 +14,7 @@ package org.gridsuite.study.server;
 import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_RUNNABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -32,12 +30,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import com.powsybl.iidm.network.Branch;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.network.test.EurostagTutorialExample1Factory;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
+import com.powsybl.security.LimitViolation;
+import com.powsybl.security.LimitViolations;
+import org.gridsuite.study.server.dto.LimitViolationInfos;
 import org.gridsuite.study.server.dto.LoadFlowInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -49,9 +52,7 @@ import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.LoadflowService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.MatcherLoadFlowInfos;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -392,8 +393,27 @@ public class LoadflowTest {
                         content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        // the mocked network lines->terminals have no computed 'i' => no overload can be detected
+        // the mocked network lines/terminals have no computed 'i' => no overload can be detected
         assertEquals("[]", resultAsString);
+    }
+
+    @Test
+    public void testLimitViolationInfos() {
+        LimitViolation violation = LimitViolations.current()
+                .subject("id")
+                .duration(1, TimeUnit.MINUTES)
+                .limit(1500.0)
+                .limitName("limit")
+                .value(2000.0)
+                .side(Branch.Side.ONE)
+                .build();
+        LimitViolationInfos violationInfos = StudyService.toLimitViolationInfos(violation);
+        assertTrue(violationInfos.getSubjectId().equalsIgnoreCase("id") &&
+                violationInfos.getAcceptableDuration() == 60 &&
+                violationInfos.getLimit() == 1500.0 &&
+                violationInfos.getLimitName().equalsIgnoreCase("limit") &&
+                violationInfos.getValue() == 2000.0 &&
+                violationInfos.getSide().equalsIgnoreCase("ONE"));
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {

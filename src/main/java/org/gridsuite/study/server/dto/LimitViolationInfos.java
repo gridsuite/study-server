@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.dto;
 
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 /**
@@ -16,7 +15,6 @@ import lombok.Getter;
 
 @Builder
 @Getter
-@EqualsAndHashCode
 public class LimitViolationInfos {
 
     private String subjectId;
