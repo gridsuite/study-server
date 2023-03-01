@@ -226,11 +226,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<NetworkModificationResult>> consumeBuildResult() {
         return message -> {
-            NetworkModificationResult networkModificationResult = message.getPayload();
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
+                    NetworkModificationResult networkModificationResult = message.getPayload();
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
                             NodeReceiver.class);
 
@@ -240,7 +240,7 @@ public class ConsumerService {
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
-                } catch (JsonProcessingException e) {
+                } catch (Exception e) {
                     LOGGER.error(e.toString());
                 }
             }

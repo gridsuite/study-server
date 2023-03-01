@@ -113,7 +113,6 @@ public class NetworkModificationTest {
     private static final String VARIANT_ID_3 = "variant_3";
 
     private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
-    private static final String VL_ID_1 = "VL_ID_1";
 
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
@@ -136,6 +135,8 @@ public class NetworkModificationTest {
 
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications";
     private static final String URI_NETWORK_MODIF_WITH_ID = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{uuid}";
+
+    private static final NetworkModificationResult DEFAULT_BUILD_RESULT = createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LINE, "lineId", Set.of("s1", "s2")).get();
 
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
@@ -221,7 +222,7 @@ public class NetworkModificationTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
 
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
-            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "s1,s2", "destination", "build.result"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
             .willReturn(WireMock.ok()));
         buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.failed"))
