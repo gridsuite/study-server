@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ComponentResultEmbeddable;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
@@ -165,7 +166,7 @@ public class LoadflowService {
         Objects.requireNonNull(parameters);
         return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
                 parameters.isTransformerVoltageControlOn(),
-                parameters.isNoGeneratorReactiveLimits(),
+                !parameters.isUseReactiveLimits(),
                 parameters.isPhaseShifterRegulationOn(),
                 parameters.isTwtSplitShuntAdmittance(),
                 parameters.isShuntCompensatorVoltageControlOn(),
@@ -184,7 +185,7 @@ public class LoadflowService {
         Objects.requireNonNull(entity);
         return new LoadFlowParameters(entity.getVoltageInitMode(),
                 entity.isTransformerVoltageControlOn(),
-                entity.isNoGeneratorReactiveLimits(),
+                !entity.isNoGeneratorReactiveLimits(),
                 entity.isPhaseShifterRegulationOn(),
                 entity.isTwtSplitShuntAdmittance(),
                 entity.isShuntCompensatorVoltageControlOn(),

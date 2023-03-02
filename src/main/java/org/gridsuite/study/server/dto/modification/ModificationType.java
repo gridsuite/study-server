@@ -32,7 +32,8 @@ public enum ModificationType {
     LINES_ATTACH_TO_SPLIT_LINES,
     LOAD_SCALING,
     DELETE_VOLTAGE_LEVEL_ON_LINE,
-    DELETE_ATTACHING_LINE;
+    DELETE_ATTACHING_LINE,
+    GENERATOR_SCALING;
 
     // TODO transfer method to the enum
     public static String getUriFromType(ModificationType modificationType) {
@@ -67,6 +68,8 @@ public enum ModificationType {
                 return "delete-voltage-level-on-line";
             case DELETE_ATTACHING_LINE:
                 return "delete-attaching-line";
+            case GENERATOR_SCALING:
+                return "generator-scaling";
             default:
                 throw new PowsyblException("Argument " + modificationType + " not expected !!");
         }

@@ -48,6 +48,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID sensitivityAnalysisResultUuid;
 
+    UUID dynamicSimulationResultUuid;
+
     BuildStatus buildStatus;
 
     @Override

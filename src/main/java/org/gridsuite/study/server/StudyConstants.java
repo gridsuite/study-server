@@ -23,17 +23,23 @@ public final class StudyConstants {
     public static final String NETWORK_MODIFICATION_API_VERSION = "v1";
     public static final String LOADFLOW_API_VERSION = "v1";
     public static final String SECURITY_ANALYSIS_API_VERSION = "v1";
+    public static final String DYNAMIC_SIMULATION_API_VERSION = "v1";
     public static final String SENSITIVITY_ANALYSIS_API_VERSION = "v1";
     public static final String ACTIONS_API_VERSION = "v1";
     public static final String NETWORK_MAP_API_VERSION = "v1";
     public static final String REPORT_API_VERSION = "v1";
     public static final String SHORT_CIRCUIT_API_VERSION = "v1";
+    public static final String TIME_SERIES_API_VERSION = "v1";
+    public static final String DYNAMIC_MAPPING_API_VERSION = ""; // mapping server is now without version, must be v1 in the next time
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
 
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
+    public static final String QUERY_PARAM_INCLUDE_DETAILS = "includeDetails";
+    public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
+
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
     public static final String REPORTER_ID = "reporterId";
@@ -41,6 +47,10 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND = "errorOnGroupNotFound";
     public static final String QUERY_PARAM_ERROR_ON_REPORT_NOT_FOUND = "errorOnReportNotFound";
     public static final String QUERY_PARAM_REPORT_DEFAULT_NAME = "defaultName";
+    public static final String QUERY_PARAM_RECEIVER = "receiver";
+    public static final String HEADER_RECEIVER = "receiver";
+    public static final String HEADER_MESSAGE = "message";
+    public static final String HEADER_USER_ID = "userId";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,

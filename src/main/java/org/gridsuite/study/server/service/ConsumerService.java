@@ -11,6 +11,23 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.shortcircuit.ShortCircuitParameters;
+import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.dto.CaseImportReceiver;
+import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.messaging.Message;
+import org.springframework.stereotype.Service;
+
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
@@ -20,28 +37,13 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.powsybl.shortcircuit.ShortCircuitParameters;
-import org.gridsuite.study.server.dto.CaseImportReceiver;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.messaging.Message;
-import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.loadflow.LoadFlowParameters;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    public static final String HEADER_RECEIVER = "receiver";
     static final String RESULT_UUID = "resultUuid";
     static final String NETWORK_UUID = "networkUuid";
     static final String NETWORK_ID = "networkId";
@@ -53,17 +55,97 @@ public class ConsumerService {
 
     NotificationService notificationService;
     StudyService studyService;
+    CaseService caseService;
     NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
-            NotificationService notificationService,
-            StudyService studyService,
-            NetworkModificationTreeService networkModificationTreeService) {
+                           NotificationService notificationService,
+                           StudyService studyService,
+                           CaseService caseService,
+                           NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
+        this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsResult() {
+        return message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (!Strings.isBlank(receiver)) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            NodeReceiver.class);
+
+                    LOGGER.info("Dynamic Simulation result '{}' available for node '{}'", resultUuid,
+                            receiverObj.getNodeUuid());
+
+                    // insert resultUuid into DB
+                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), resultUuid);
+                    // send notifications
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (!Strings.isBlank(receiver)) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            NodeReceiver.class);
+
+                    LOGGER.info("Dynamic Simulation stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete dynamic simulation resultUuid into DB
+                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
+                    // send notification for stopped computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (!Strings.isBlank(receiver)) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
+                            NodeReceiver.class);
+
+                    LOGGER.info("Dynamic Simulation failed for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete dynamic simulation resultUuid into DB
+                    updateDynamicSimulationResultUuid(receiverObj.getNodeUuid(), null);
+                    // send notification for failed computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
+
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
     }
 
     @Bean
@@ -243,6 +325,7 @@ public class ConsumerService {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
                     studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
+                    caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 } finally {
@@ -357,6 +440,10 @@ public class ConsumerService {
         networkModificationTreeService.updateSecurityAnalysisResultUuid(nodeUuid, securityAnalysisResultUuid);
     }
 
+    void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
+        networkModificationTreeService.updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid);
+    }
+
     private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
     }
@@ -424,6 +511,8 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeShortCircuitAnalysisFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
@@ -437,7 +526,7 @@ public class ConsumerService {
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED);
+                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, errorMessage, userId);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }

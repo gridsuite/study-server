@@ -48,7 +48,6 @@ public class NetworkModificationService {
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
     private static final String MODIFICATIONS_PATH = "modifications";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
-    public static final String QUERY_PARAM_RECEIVER = "receiver";
 
     private String networkModificationServerBaseUri;
 

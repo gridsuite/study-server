@@ -74,6 +74,9 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "sensitivityAnalysisResultUuid")
     private UUID sensitivityAnalysisResultUuid;
 
+    @Column(name = "dynamicSimulationResultUuid")
+    private UUID dynamicSimulationResultUuid;
+
     @Column(name = "buildStatus", nullable = false)
     @Enumerated(EnumType.STRING)
     private BuildStatus buildStatus;

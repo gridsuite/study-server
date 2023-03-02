@@ -77,6 +77,13 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return null;
     }
 
+    public void updateDynamicSimulationResultUuid(AbstractNode node, UUID dynamicSimulationResultUuid) {
+    }
+
+    public UUID getDynamicSimulationResultUuid(AbstractNode node) {
+        return null;
+    }
+
     public void updateSensitivityAnalysisResultUuid(AbstractNode node, UUID sensitivityAnalysisResultUuid) {
     }
 
@@ -188,6 +195,14 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
 
     public UUID getSecurityAnalysisResultUuid(UUID nodeUuid) {
         return getSecurityAnalysisResultUuid(getNode(nodeUuid));
+    }
+
+    public void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
+        updateDynamicSimulationResultUuid(getNode(nodeUuid), dynamicSimulationResultUuid);
+    }
+
+    public UUID getDynamicSimulationResultUuid(UUID nodeUuid) {
+        return getDynamicSimulationResultUuid(getNode(nodeUuid));
     }
 
     public void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {

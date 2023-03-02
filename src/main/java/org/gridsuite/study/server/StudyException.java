@@ -27,6 +27,9 @@ public class StudyException extends RuntimeException {
         SENSITIVITY_ANALYSIS_ERROR,
         SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
         SHORT_CIRCUIT_ANALYSIS_RUNNING,
+        DYNAMIC_SIMULATION_RUNNING,
+        DYNAMIC_SIMULATION_NOT_FOUND,
+        DYNAMIC_MAPPING_NOT_FOUND,
         NOT_ALLOWED,
         STUDY_CREATION_FAILED,
         CANT_DELETE_ROOT_NODE,
@@ -55,7 +58,10 @@ public class StudyException extends RuntimeException {
         MISSING_PARAMETER,
         LOAD_SCALING_FAILED,
         DELETE_VOLTAGE_LEVEL_ON_LINE,
-        DELETE_ATTACHING_LINE
+        DELETE_ATTACHING_LINE,
+        GENERATOR_SCALING_FAILED,
+        URI_SYNTAX,
+        TIME_SERIES_BAD_TYPE,
     }
 
     private final Type type;

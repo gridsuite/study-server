@@ -11,27 +11,25 @@ package org.gridsuite.study.server;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.security.SecurityAnalysisParameters;
+import lombok.SneakyThrows;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -44,6 +42,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,19 +60,21 @@ import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.loadflow.LoadFlowParameters;
-import lombok.SneakyThrows;
-import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
@@ -145,10 +146,10 @@ public class SecurityAnalysisTest {
     private ObjectMapper objectMapper;
 
     //output destinations
-    private String studyUpdateDestination = "study.update";
-    private String saResultDestination = "sa.result";
-    private String saStoppedDestination = "sa.stopped";
-    private String saFailedDestination = "sa.failed";
+    private final String studyUpdateDestination = "study.update";
+    private final String saResultDestination = "sa.result";
+    private final String saStoppedDestination = "sa.stopped";
+    private final String saFailedDestination = "sa.failed";
 
     @Before
     public void setup() throws IOException {
@@ -250,7 +251,37 @@ public class SecurityAnalysisTest {
         testSecurityAnalysisWithNodeUuid(studyNameUserIdUuid, modificationNode3Uuid, UUID.fromString(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID), null);
     }
 
-  //test security analysis on network 2 will fail
+    @Test
+    @SneakyThrows
+    public void testResetUuidResultWhenSAFailed() {
+        UUID resultUuid = UUID.randomUUID();
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
+        String resultUuidJson = mapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
+
+        // Set an uuid result in the database
+        networkModificationTreeService.updateSecurityAnalysisResultUuid(modificationNode.getId(), resultUuid);
+        assertTrue(networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).get());
+
+        StudyService studyService = Mockito.mock(StudyService.class);
+        doAnswer(invocation -> {
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), saFailedDestination);
+            return resultUuid;
+        }).when(studyService).runSecurityAnalysis(any(), any(), any(), any());
+        studyService.runSecurityAnalysis(studyEntity.getId(), List.of(), "", modificationNode.getId());
+
+        // Test reset uuid result in the database
+        assertTrue(networkModificationTreeService.getSecurityAnalysisResultUuid(modificationNode.getId()).isEmpty());
+
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_FAILED, updateType);
+    }
+
+    //test security analysis on network 2 will fail
     @Test
     public void testSecurityAnalysisFailedForNotification() throws Exception {
         MvcResult mvcResult;

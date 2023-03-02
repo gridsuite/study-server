@@ -22,6 +22,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
 import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -138,6 +139,7 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
+                null,
                 BuildStatus.NOT_BUILT
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
@@ -238,6 +240,11 @@ public class NetworkModificationTreeService {
             UUID shortCircuitAnalysisResultUuid = repositories.get(nodeToDelete.getType()).getShortCircuitAnalysisResultUuid(id);
             if (shortCircuitAnalysisResultUuid != null) {
                 deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
+            }
+
+            UUID dynamicSimulationResultUuid = repositories.get(nodeToDelete.getType()).getDynamicSimulationResultUuid(id);
+            if (dynamicSimulationResultUuid != null) {
+                deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
             }
 
             if (!deleteChildren) {
@@ -361,6 +368,11 @@ public class NetworkModificationTreeService {
         repositories.get(node.getType()).updateNode(node);
         notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public NodeEntity getNodeEntity(UUID nodeId) {
+        return nodesRepository.findById(nodeId).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
 
     @Transactional
@@ -497,6 +509,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void updateDynamicSimulationResultUuid(UUID nodeUuid, UUID dynamicSimulationResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateDynamicSimulationResultUuid(nodeUuid, dynamicSimulationResultUuid));
+    }
+
+    @Transactional
     public void updateStudyLoadFlowStatus(UUID studyUuid, LoadFlowStatus loadFlowStatus) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
         nodes.forEach(n -> updateLoadFlowStatus(n.getIdNode(), loadFlowStatus));
@@ -515,6 +532,11 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UUID> getDynamicSimulationResultUuid(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getDynamicSimulationResultUuid(nodeUuid));
     }
 
     @Transactional(readOnly = true)
