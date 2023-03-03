@@ -29,6 +29,12 @@ public final class ImpactUtils {
             .build());
     }
 
+    public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleElementImpact impact) {
+        return Optional.of(NetworkModificationResult.builder()
+            .networkImpacts(List.of(impact))
+            .build());
+    }
+
     public static SimpleElementImpact createCreationImpactType(IdentifiableType elementType, String elementId, Set<String> substationIds) {
         return createElementImpact(SimpleImpactType.CREATION, elementType, elementId, substationIds);
     }

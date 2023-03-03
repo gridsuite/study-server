@@ -23,30 +23,34 @@ import static org.junit.Assert.assertEquals;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 public class WireMockUtils {
+    private static final String DELIMITER = "/";
+
+    private static final String URI_NETWORK_MODIFICATION = "/v1/network-modifications";
+
+    private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
+
     private final WireMockServer wireMock;
 
     public WireMockUtils(WireMockServer wireMock) {
         this.wireMock = wireMock;
     }
 
+    public UUID stubNetworkModificationGet() {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/modifications"))
+            .withQueryParam("errorOnGroupNotFound", WireMock.equalTo("false"))
+            .willReturn(WireMock.ok())
+        ).getId();
+    }
+
     public UUID stubNetworkModificationGet(String groupUuid, String result) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/groups/" + groupUuid + "/modifications"))
-                .withQueryParam("errorOnGroupNotFound", WireMock.equalTo("false"))
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/modifications"))
+            .withQueryParam("errorOnGroupNotFound", WireMock.equalTo("false"))
             .willReturn(WireMock.ok().withBody(result))
         ).getId();
     }
 
     public UUID stubNetworkModificationPost(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
-            .willReturn(WireMock.ok()
-                .withBody(responseBody)
-                .withHeader("Content-Type", "application/json"))
-        ).getId();
-    }
-
-    public UUID stubNetworkModificationPostWithBody(String requestBody, String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
-            .withRequestBody(WireMock.equalToJson(requestBody))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION))
             .willReturn(WireMock.ok()
                 .withBody(responseBody)
                 .withHeader("Content-Type", "application/json"))
@@ -58,66 +62,96 @@ public class WireMockUtils {
     }
 
     public UUID stubNetworkModificationPostWithError(String requestBody, String errorMessage) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION))
             .withRequestBody(WireMock.equalToJson(requestBody))
             .willReturn(WireMock.serverError().withBody(errorMessage))
         ).getId();
     }
 
     public UUID stubNetworkModificationPostWithBodyAndError(String requestBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-modifications"))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION))
             .withRequestBody(WireMock.equalToJson(requestBody))
             .willReturn(WireMock.badRequest())
         ).getId();
     }
 
     public UUID stubNetworkModificationPut(String modificationUuid) {
-        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/network-modifications/" + modificationUuid))
+        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid))
             .willReturn(WireMock.ok())
         ).getId();
     }
 
     public UUID stubNetworkModificationPutWithBody(String modificationUuid, String requestBody) {
-        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/network-modifications/" + modificationUuid))
+        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid))
             .withRequestBody(WireMock.equalToJson(requestBody))
             .willReturn(WireMock.ok())
         ).getId();
     }
 
     public UUID stubNetworkModificationPutWithBodyAndError(String modificationUuid, String requestBody) {
-        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/network-modifications/" + modificationUuid))
+        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid))
             .withRequestBody(WireMock.equalToJson(requestBody))
             .willReturn(WireMock.badRequest())
         ).getId();
     }
 
+    public UUID stubDuplicateModificationGroup() {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_MODIFICATION_GROUPS))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .withQueryParam("groupUuid", WireMock.matching(".*"))
+            .willReturn(WireMock.ok())
+        ).getId();
+    }
+
+    public UUID stubNetworkModificationDeleteGroup() {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*"))
+            .willReturn(WireMock.ok())
+        ).getId();
+    }
+
     public void verifyNetworkModificationsGet(UUID stubId, String groupUuid) {
-        verifyGetRequest(stubId, "/v1/groups/" + groupUuid + "/modifications", Map.of("errorOnGroupNotFound", WireMock.equalTo("false")));
+        verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/modifications", Map.of("errorOnGroupNotFound", WireMock.equalTo("false")));
     }
 
     public void verifyNetworkModificationPost(UUID stubId, String requestBody, String networkUuid) {
-        verifyPostRequest(stubId, "/v1/network-modifications", false,
+        verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
             Map.of("networkUuid", WireMock.equalTo(networkUuid), "groupUuid", WireMock.matching(".*")),
             requestBody);
     }
 
     public void verifyNetworkModificationPostWithVariant(UUID stubId, String requestBody, String networkUuid, String variantId) {
-        verifyPostRequest(stubId, "/v1/network-modifications", false,
+        verifyPostRequest(stubId, URI_NETWORK_MODIFICATION, false,
             Map.of("networkUuid", WireMock.equalTo(networkUuid), "groupUuid", WireMock.matching(".*"), "variantId", WireMock.equalTo(variantId)),
             requestBody);
     }
 
     public void verifyNetworkModificationPut(UUID stubId, String modificationUuid, String requestBody) {
-        verifyPutRequest(stubId, "/v1/network-modifications/" + modificationUuid, false, Map.of(), requestBody);
+        verifyPutRequest(stubId, URI_NETWORK_MODIFICATION + DELIMITER + modificationUuid, false, Map.of(), requestBody);
+    }
+
+    public void verifyDuplicateModificationGroup(UUID stubId, int nbRequests) {
+        verifyPostRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS, Map.of("duplicateFrom", WireMock.matching(".*"), "groupUuid", WireMock.matching(".*")), nbRequests);
+    }
+
+    public void verifyNetworkModificationDeleteGroup(UUID stubId) {
+        verifyDeleteRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*", true, Map.of());
     }
 
     public void verifyPostRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
-        verifyPostRequest(stubId, urlPath, false, queryParams, null);
+        verifyPostRequest(stubId, urlPath, queryParams, 1);
+    }
+
+    public void verifyPostRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, int nbRequests) {
+        verifyPostRequest(stubId, urlPath, false, queryParams, null, nbRequests);
     }
 
     public void verifyPostRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
+        verifyPostRequest(stubId, urlPath, regexMatching, queryParams, body, 1);
+    }
+
+    public void verifyPostRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body, int nbRequests) {
         RequestPatternBuilder requestBuilder = regexMatching ? WireMock.postRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.postRequestedFor(WireMock.urlPathEqualTo(urlPath));
-        verifyRequest(stubId, requestBuilder, queryParams, body);
+        verifyRequest(stubId, requestBuilder, queryParams, body, nbRequests);
     }
 
     public void verifyPutRequestWithUrlMatching(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
@@ -126,33 +160,35 @@ public class WireMockUtils {
 
     public void verifyPutRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
         RequestPatternBuilder requestBuilder = regexMatching ? WireMock.putRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.putRequestedFor(WireMock.urlPathEqualTo(urlPath));
-        verifyRequest(stubId, requestBuilder, queryParams, body);
+        verifyRequest(stubId, requestBuilder, queryParams, body, 1);
     }
 
     public void verifyDeleteRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
         RequestPatternBuilder requestBuilder = regexMatching ? WireMock.deleteRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(urlPath));
-        verifyRequest(stubId, requestBuilder, queryParams, null);
+        verifyRequest(stubId, requestBuilder, queryParams, null, 1);
     }
 
     public void verifyGetRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo(urlPath));
         queryParams.forEach(requestBuilder::withQueryParam);
         wireMock.verify(1, requestBuilder);
-        removeRequestForStub(stubId);
+        removeRequestForStub(stubId, 1);
     }
 
-    private void verifyRequest(UUID stubId, RequestPatternBuilder requestBuilder, Map<String, StringValuePattern> queryParams, String body) {
+    private void verifyRequest(UUID stubId, RequestPatternBuilder requestBuilder, Map<String, StringValuePattern> queryParams, String body, int nbRequests) {
         queryParams.forEach(requestBuilder::withQueryParam);
         if (body != null) {
             requestBuilder.withRequestBody(WireMock.equalToJson(body));
         }
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(stubId);
+        wireMock.verify(nbRequests, requestBuilder);
+        removeRequestForStub(stubId, nbRequests);
     }
 
-    private void removeRequestForStub(UUID stubId) {
+    private void removeRequestForStub(UUID stubId, int nbRequests) {
         List<ServeEvent> serveEvents = wireMock.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
-        assertEquals(1, serveEvents.size());
-        wireMock.removeServeEvent(serveEvents.get(0).getId());
+        assertEquals(nbRequests, serveEvents.size());
+        for (ServeEvent serveEvent : serveEvents) {
+            wireMock.removeServeEvent(serveEvent.getId());
+        }
     }
 }
