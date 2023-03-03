@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.notification;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
+import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,7 +145,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpcatsInfos networkImpcatsInfos) {
+    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpactsInfos networkImpcatsInfos) {
         sendUpdateMessage(MessageBuilder.withPayload(networkImpcatsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)

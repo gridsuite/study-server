@@ -17,7 +17,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @ToString
-public class NetworkImpcatsInfos {
+public class NetworkImpactsInfos {
     @Builder.Default
     private Set<String> impactedSubstationsIds = Set.of();
 
