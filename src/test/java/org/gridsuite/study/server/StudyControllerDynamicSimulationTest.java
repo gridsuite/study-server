@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -122,8 +123,15 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
 
+    public static final String TIME_SERIES_UUID_STRING = "77777777-0000-0000-0000-000000000000";
+    public static final UUID TIME_SERIES_UUID = UUID.fromString(TIME_SERIES_UUID_STRING);
+
     private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
     private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
+
+    public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
+    public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    public static final String TIME_LINE_NAME = "TimeLine";
 
     private static final long TIMEOUT = 1000;
 
@@ -435,7 +443,7 @@ public class StudyControllerDynamicSimulationTest {
             public List<DoubleTimeSeries> answer(InvocationOnMock invocation) {
                 return null;
             }
-        }).when(dynamicSimulationService).getTimeSeriesResult(NODE_NOT_DONE_UUID);
+        }).when(dynamicSimulationService).getTimeSeriesResult(NODE_NOT_DONE_UUID, null);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
@@ -450,8 +458,8 @@ public class StudyControllerDynamicSimulationTest {
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
         List<DoubleTimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
-                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
-                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
+                TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259),
+                TimeSeries.createDouble(TIME_SERIES_NAME_2, index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
 
         // setup DynamicSimulationService mock
@@ -460,7 +468,7 @@ public class StudyControllerDynamicSimulationTest {
             public List<DoubleTimeSeries> answer(InvocationOnMock invocation) {
                 return timeSeries;
             }
-        }).when(dynamicSimulationService).getTimeSeriesResult(NODE_UUID);
+        }).when(dynamicSimulationService).getTimeSeriesResult(NODE_UUID, null);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -500,7 +508,7 @@ public class StudyControllerDynamicSimulationTest {
     @Test
     public void testGetDynamicSimulationTimeLineResult() throws Exception {
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
+        StringTimeSeries timeLine = TimeSeries.createString(TIME_LINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
@@ -547,6 +555,35 @@ public class StudyControllerDynamicSimulationTest {
                         STUDY_UUID, NODE_NOT_RUN_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    public void testGetDynamicSimulationTimeSeriesMetadata() throws Exception {
+        // setup DynamicSimulationService mock
+        // timeseries metadata
+        List<TimeSeriesMetadataInfos> timeSeriesMetadataInfosList = List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2));
+
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public List<TimeSeriesMetadataInfos> answer(InvocationOnMock invocation) {
+                return timeSeriesMetadataInfosList;
+            }
+        }).when(dynamicSimulationService).getTimeSeriesMetadataList(NODE_UUID);
+
+        // --- call endpoint to be tested --- //
+        // get timeseries metadata from a node done
+        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries/metadata",
+                        STUDY_UUID, NODE_UUID)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .andExpect(status().isOk()).andReturn();
+
+        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataInfosList = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<TimeSeriesMetadataInfos>>() { });
+
+        // --- check result --- //
+        // metadata must be identical to expected
+        String expectedTimeSeriesMetadataJson = objectMapper.writeValueAsString(timeSeriesMetadataInfosList);
+        String resultTimeSeriesMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataInfosList);
+        assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataJson), objectMapper.readTree(resultTimeSeriesMetadataJson));
     }
 
     @Test

@@ -35,6 +35,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -1611,9 +1612,13 @@ public class StudyService {
         return resultUuid;
     }
 
-    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid) {
+    public List<TimeSeriesMetadataInfos> getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid) {
+        return dynamicSimulationService.getTimeSeriesMetadataList(nodeUuid);
+    }
+
+    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid, List<String> timeSeriesNames) {
         // get timeseries from node uuid
-        return dynamicSimulationService.getTimeSeriesResult(nodeUuid);
+        return dynamicSimulationService.getTimeSeriesResult(nodeUuid, timeSeriesNames);
     }
 
     public List<StringTimeSeries> getDynamicSimulationTimeLine(UUID nodeUuid) {
