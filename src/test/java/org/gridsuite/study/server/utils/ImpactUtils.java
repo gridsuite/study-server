@@ -39,7 +39,7 @@ public final class ImpactUtils {
         return createElementImpact(SimpleImpactType.CREATION, elementType, elementId, substationIds);
     }
 
-    private static SimpleElementImpact createElementImpact(SimpleImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
+    public static SimpleElementImpact createElementImpact(SimpleImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
         return SimpleElementImpact.builder()
             .impactType(impactType)
             .elementType(elementType)
