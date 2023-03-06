@@ -2,7 +2,7 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
     <changeSet author="homereti (generated)" id="1678095119616-5">
         <addColumn tableName="load_flow_parameters">
-            <column defaultValueBoolean="false" name="use_reactive_limits" type="boolean"/>
+            <column defaultValueBoolean="true" name="use_reactive_limits" type="boolean"/>
         </addColumn>
     </changeSet>
     <changeSet author="homereti (generated)" id="1678095119616-6">
