@@ -64,12 +64,20 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private LoadFlowParametersEntity loadFlowParameters;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name  =  "shortCircuitParametersEntity_id",
-            referencedColumnName  =  "id",
+    @JoinColumn(name = "shortCircuitParametersEntity_id",
+            referencedColumnName = "id",
             foreignKey = @ForeignKey(
                     name = "shortCircuitParameters_id_fk"
             ))
     private ShortCircuitParametersEntity shortCircuitParameters;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "dynamicSimulationParametersEntity_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                    name = "dynamicSimulationParameters_id_fk"
+            ))
+    private DynamicSimulationParametersEntity dynamicSimulationParameters;
 
     public ShortCircuitParametersEntity getShortCircuitParameters() {
         if (this.shortCircuitParameters == null) {
