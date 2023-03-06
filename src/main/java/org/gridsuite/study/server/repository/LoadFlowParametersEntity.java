@@ -52,7 +52,7 @@ public class LoadFlowParametersEntity {
     @Column(name = "transformerVoltageControlOn", columnDefinition = "boolean default false")
     private boolean transformerVoltageControlOn;
 
-    @Column(name = "useReactiveLimits", columnDefinition = "boolean default false")
+    @Column(name = "useReactiveLimits", columnDefinition = "boolean default true")
     private boolean useReactiveLimits;
 
     @Column(name = "phaseShifterRegulationOn", columnDefinition = "boolean default false")
