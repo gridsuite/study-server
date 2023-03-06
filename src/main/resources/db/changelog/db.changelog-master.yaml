@@ -115,3 +115,6 @@ databaseChangeLog:
       file: changesets/changelog_2023-03-06T17:45:41Z.xml
       relativeToChangelogFile: true
 
+  - include:
+      file: changesets/changelog_2023-03-06T09:31:39Z.xml
+      relativeToChangelogFile: true
