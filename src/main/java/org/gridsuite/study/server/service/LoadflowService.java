@@ -166,7 +166,7 @@ public class LoadflowService {
         Objects.requireNonNull(parameters);
         return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
                 parameters.isTransformerVoltageControlOn(),
-                !parameters.isUseReactiveLimits(),
+                parameters.isUseReactiveLimits(),
                 parameters.isPhaseShifterRegulationOn(),
                 parameters.isTwtSplitShuntAdmittance(),
                 parameters.isShuntCompensatorVoltageControlOn(),
@@ -185,7 +185,7 @@ public class LoadflowService {
         Objects.requireNonNull(entity);
         return new LoadFlowParameters(entity.getVoltageInitMode(),
                 entity.isTransformerVoltageControlOn(),
-                !entity.isNoGeneratorReactiveLimits(),
+                entity.isUseReactiveLimits(),
                 entity.isPhaseShifterRegulationOn(),
                 entity.isTwtSplitShuntAdmittance(),
                 entity.isShuntCompensatorVoltageControlOn(),

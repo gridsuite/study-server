@@ -30,13 +30,13 @@ import java.util.UUID;
 public class LoadFlowParametersEntity {
 
     public LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode voltageInitMode,
-                                    boolean transformerVoltageControlOn, boolean noGeneratorReactiveLimits,
+                                    boolean transformerVoltageControlOn, boolean useReactiveLimits,
                                     boolean phaseShifterRegulationOn, boolean twtSplitShuntAdmittance,
                                     boolean shuntCompensatorVoltageControlOn, boolean readSlackBus, boolean writeSlackBus, boolean dc,
                                     boolean distributedSlack, LoadFlowParameters.BalanceType balanceType, boolean dcUseTransformerRatio,
                                     Set<String> countriesToBalance, LoadFlowParameters.ConnectedComponentMode connectedComponentMode,
                                     boolean hvdcAcEmulation) {
-        this(null, voltageInitMode, transformerVoltageControlOn, noGeneratorReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
+        this(null, voltageInitMode, transformerVoltageControlOn, useReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
                 shuntCompensatorVoltageControlOn, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType, dcUseTransformerRatio, countriesToBalance, connectedComponentMode, hvdcAcEmulation);
     }
 
@@ -52,8 +52,8 @@ public class LoadFlowParametersEntity {
     @Column(name = "transformerVoltageControlOn", columnDefinition = "boolean default false")
     private boolean transformerVoltageControlOn;
 
-    @Column(name = "noGeneratorReactiveLimits", columnDefinition = "boolean default false")
-    private boolean noGeneratorReactiveLimits;
+    @Column(name = "useReactiveLimits", columnDefinition = "boolean default true")
+    private boolean useReactiveLimits;
 
     @Column(name = "phaseShifterRegulationOn", columnDefinition = "boolean default false")
     private boolean phaseShifterRegulationOn;
