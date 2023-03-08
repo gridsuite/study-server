@@ -1176,13 +1176,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
-        checkStudyContainsNode(studyUuid, nodeToCopyUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+    public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
+        checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
-        updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
-        notificationService.emitElementUpdated(studyUuid, userId);
+        updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, invalidateBuild);
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
     @Transactional
