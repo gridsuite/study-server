@@ -427,9 +427,9 @@ public class NetworkModificationTreeService {
                 .map(AbstractNodeInfoEntity::getName)
                 .collect(Collectors.toList());
 
-        String uniqueName = StringUtils.EMPTY;
+        String uniqueName = nodeName;
         int i = 1;
-        while (StringUtils.EMPTY.equals(uniqueName) || studyNodeNames.contains(uniqueName)) {
+        while (studyNodeNames.contains(uniqueName)) {
             uniqueName = nodeName + " (" + i + ")";
             i++;
         }
