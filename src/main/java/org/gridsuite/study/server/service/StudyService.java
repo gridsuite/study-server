@@ -1082,6 +1082,11 @@ public class StudyService {
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
     }
 
+    public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setDynamicSimulationParameters(dynamicSimulationParametersEntity));
+    }
+
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
         ModificationType modificationType = getModificationType(createModificationAttributes);
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
@@ -1603,6 +1608,18 @@ public class StudyService {
     public List<MappingInfos> getDynamicSimulationMappings(UUID nodeUuid) {
         // get mapping from node uuid
         return dynamicSimulationService.getMappings(nodeUuid);
+    }
+
+    @Transactional
+    public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
+        updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters()));
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters()) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
+                .orElse(null);
     }
 
     @Transactional

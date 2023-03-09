@@ -9,7 +9,6 @@ package org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationExtension;
@@ -18,14 +17,17 @@ import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverI
 import java.util.List;
 
 @SuperBuilder
-@NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
 public class DynaWaltzParametersInfos implements DynamicSimulationExtension {
     public static final String EXTENSION_NAME = "DynaWaltzParameters";
-    private String name;
+    private final String name;
     private String solverId;
     private List<SolverInfos> solvers;
+
+    public DynaWaltzParametersInfos() {
+        name = EXTENSION_NAME;
+    }
 
 }

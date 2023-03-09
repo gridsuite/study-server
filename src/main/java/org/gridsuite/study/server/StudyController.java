@@ -1319,6 +1319,25 @@ public class StudyController {
                 ResponseEntity.noContent().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
+    @Operation(summary = "set dynamic simulation parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
+    public ResponseEntity<Void> setDynamicSimulationParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) DynamicSimulationParametersInfos dsParameter,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
+    @Operation(summary = "Get dynamic simulation parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
+    public ResponseEntity<DynamicSimulationParametersInfos> getDynamicSimulationParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
     @Operation(summary = "run dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})

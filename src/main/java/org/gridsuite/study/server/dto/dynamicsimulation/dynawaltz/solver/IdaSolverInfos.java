@@ -17,11 +17,17 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 public class IdaSolverInfos extends AbstractSolverInfos {
+
     private int order;
+
     private double initStep;
+
     private double minStep;
+
     private double maxStep;
+
     private double absAccuracy;
+
     private double relAccuracy;
 
     /*
