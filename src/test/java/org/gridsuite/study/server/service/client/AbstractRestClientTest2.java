@@ -28,7 +28,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
-public class AbstractRestClientTest2 {
+public abstract class AbstractRestClientTest2 {
 
     public final Logger getLogger() {
         return LoggerFactory.getLogger(this.getClass());
