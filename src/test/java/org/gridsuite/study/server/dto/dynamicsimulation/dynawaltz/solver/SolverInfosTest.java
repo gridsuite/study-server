@@ -75,11 +75,11 @@ public class SolverInfosTest {
                 "  \"maxNewtonTry\" : 10,\n" +
                 "  \"linearSolverName\" : \"KLU\",\n" +
                 "  \"recalculateStep\" : false,\n" +
-                "  \"hmin\" : 1.0E-6,\n" +
-                "  \"hmax\" : 1.0,\n" +
-                "  \"kreduceStep\" : 0.5,\n" +
-                "  \"neff\" : 10.0,\n" +
-                "  \"ndeadband\" : 2\n" +
+                "  \"hMin\" : 1.0E-6,\n" +
+                "  \"hMax\" : 1.0,\n" +
+                "  \"kReduceStep\" : 0.5,\n" +
+                "  \"nEff\" : 10.0,\n" +
+                "  \"nDeadband\" : 2\n" +
                 "} ]";
 
         List<SolverInfos> solvers = SolverInfos.parseJson(json);

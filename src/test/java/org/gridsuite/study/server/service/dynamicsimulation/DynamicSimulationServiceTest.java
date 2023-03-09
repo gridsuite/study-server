@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -117,7 +118,7 @@ public class DynamicSimulationServiceTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run("", NETWORK_UUID, VARIANT_1_ID, any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), eq(NETWORK_UUID), eq(VARIANT_1_ID), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
         UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", NETWORK_UUID, VARIANT_1_ID, null);
