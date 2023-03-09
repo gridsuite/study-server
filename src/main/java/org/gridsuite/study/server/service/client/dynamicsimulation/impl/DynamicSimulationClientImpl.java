@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
@@ -38,7 +39,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID run(String receiver, UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName) {
+    public UUID run(String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
@@ -47,15 +48,12 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
         uriComponentsBuilder
-                .queryParam("startTime", startTime)
-                .queryParam("stopTime", stopTime)
-                .queryParam("mappingName", mappingName)
                 .queryParam("receiver", receiver);
         var uriComponent = uriComponentsBuilder
                 .buildAndExpand(networkUuid);
 
         // call dynamic-simulation REST API
-        return getRestTemplate().postForObject(uriComponent.toUriString(), null, UUID.class);
+        return getRestTemplate().postForObject(uriComponent.toUriString(), parameters, UUID.class);
     }
 
     @Override

@@ -9,12 +9,20 @@ package org.gridsuite.study.server.service.client.dynamicsimulation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationExtension;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.service.client.AbstractRestClientTest;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParametersInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.IdaSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SimSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverTypeInfos;
+import org.gridsuite.study.server.service.client.AbstractRestClientTest2;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
 import org.junit.Test;
@@ -33,7 +41,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-public class DynamicSimulationClientTest extends AbstractRestClientTest {
+public class DynamicSimulationClientTest extends AbstractRestClientTest2 {
 
     private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
 
@@ -54,7 +62,9 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Override
+    /**
+     * @return TODO remove before merge
+     */
     @NotNull
     protected Dispatcher getDispatcher() {
         return new Dispatcher() {
@@ -155,15 +165,68 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
     }
 
     @Test
-    public void testRun() {
-        UUID resultUuid = dynamicSimulationClient.run("", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, 0, 500, MAPPING_NAME_01);
+    public void testRun() throws JsonProcessingException {
+
+        // prepare parameters
+        DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
+        parameters.setStartTime(0);
+        parameters.setStopTime(500);
+        parameters.setMapping(MAPPING_NAME_01);
+
+        IdaSolverInfos idaSolver = new IdaSolverInfos();
+        idaSolver.setId("1");
+        idaSolver.setType(SolverTypeInfos.IDA);
+        idaSolver.setOrder(1);
+        idaSolver.setInitStep(0.000001);
+        idaSolver.setMinStep(0.000001);
+        idaSolver.setMaxStep(10);
+        idaSolver.setAbsAccuracy(0.0001);
+        idaSolver.setRelAccuracy(0.0001);
+
+        SimSolverInfos simSolver = new SimSolverInfos();
+        simSolver.setId("3");
+        simSolver.setType(SolverTypeInfos.SIM);
+        simSolver.setHMin(0.000001);
+        simSolver.setHMax(1);
+        simSolver.setKReduceStep(0.5);
+        simSolver.setNEff(10);
+        simSolver.setNDeadband(2);
+        simSolver.setMaxRootRestart(3);
+        simSolver.setMaxNewtonTry(10);
+        simSolver.setLinearSolverName("KLU");
+        simSolver.setRecalculateStep(false);
+
+        List<SolverInfos> solvers = List.of(idaSolver, simSolver);
+        DynaWaltzParametersInfos dynaWaltzParametersInfos = new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers);
+        List<DynamicSimulationExtension> extensions = List.of(dynaWaltzParametersInfos);
+
+        parameters.setExtensions(extensions);
+
+        // configure mock server response for test case run - networks/{networkUuid}/run?
+        String runEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
+        wireMockServer.stubFor(WireMock.post(WireMock.urlMatching(runEndPointUrl + NETWORK_UUID_STRING + DELIMITER + "run" + ".*"))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(UUID.fromString(RESULT_UUID_STRING)))
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
+                ));
+
+        UUID resultUuid = dynamicSimulationClient.run("", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, parameters);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());
     }
 
     @Test
-    public void testGetTimeSeriesResult() {
+    public void testGetTimeSeriesResult() throws JsonProcessingException {
+
+        // configure mock server response for test get timeseries result uuid - results/{resultUuid}/timeseries
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID_STRING + DELIMITER + "timeseries"))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(UUID.fromString(TIME_SERIES_UUID_STRING)))
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
+                        ));
+
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
@@ -171,12 +234,28 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
     }
 
     @Test(expected = StudyException.class)
-    public void testGetTimeSeriesResultGivenBadUuid() {
+    public void testGetTimeSeriesResultGivenBadUuid() throws JsonProcessingException {
+
+        // configure mock server response
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_NOT_FOUND_UUID_STRING + DELIMITER + "timeseries"))
+                .willReturn(WireMock.notFound()
+                ));
+
         dynamicSimulationClient.getTimeSeriesResult(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
     }
 
     @Test
-    public void testGetTimeLineResult() {
+    public void testGetTimeLineResult() throws JsonProcessingException {
+
+        // configure mock server response for test get timeline result - uuid results/{resultUuid}/timeline
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID_STRING + DELIMITER + "timeline"))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(UUID.fromString(TIME_LINE_UUID_STRING)))
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
+                ));
+
         UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
@@ -185,11 +264,27 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
     @Test(expected = StudyException.class)
     public void testGetTimeLineResultGivenBadUuid() {
+
+        // configure mock server response
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_NOT_FOUND_UUID_STRING + DELIMITER + "timeline"))
+                .willReturn(WireMock.notFound()
+                ));
+
         dynamicSimulationClient.getTimeLineResult(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
     }
 
     @Test
-    public void testGetStatus() {
+    public void testGetStatus() throws JsonProcessingException {
+
+        // configure mock server response for test get status result - results/{resultUuid}/status
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID_STRING + DELIMITER + "status"))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED))
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
+                ));
+
         DynamicSimulationStatus status = dynamicSimulationClient.getStatus(UUID.fromString(RESULT_UUID_STRING));
 
         // check result
@@ -198,11 +293,26 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
     @Test(expected = StudyException.class)
     public void testGetStatusGivenBadUuid() {
+
+        // configure mock server response
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + RESULT_NOT_FOUND_UUID_STRING + DELIMITER + "status"))
+                .willReturn(WireMock.notFound()
+                ));
+
         dynamicSimulationClient.getStatus(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
     }
 
     @Test
     public void testDeleteResult() {
+
+        // configure mock server response for test delete result - results/{resultUuid}
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlMatching(resultEndPointUrl + RESULT_UUID_STRING))
+                .willReturn(WireMock.ok()
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
+                ));
+
         dynamicSimulationClient.deleteResult(UUID.fromString(RESULT_UUID_STRING));
 
         // check result

@@ -47,6 +47,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1623,11 +1624,10 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String mappingName) {
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(parameters);
-        Objects.requireNonNull(mappingName);
 
         // pre-condition check
         LoadFlowStatus lfStatus = getLoadFlowStatus(nodeUuid);
@@ -1651,8 +1651,19 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
 
+        // load configured parameters persisted in the study server DB
+        DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
+        // override configured parameters by provided parameters (only provided fields)
+        DynamicSimulationParametersInfos mergeParameters = new DynamicSimulationParametersInfos();
+        if (configuredParameters != null) {
+            PropertyUtils.copyNonNullProperties(configuredParameters, mergeParameters);
+        }
+        if (parameters != null) {
+            PropertyUtils.copyNonNullProperties(parameters, mergeParameters);
+        }
+
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, "", parameters.getStartTime(), parameters.getStopTime(), mappingName);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, "", mergeParameters);
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);

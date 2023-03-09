@@ -249,7 +249,7 @@ public class StudyControllerDynamicSimulationTest {
             public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -326,7 +326,7 @@ public class StudyControllerDynamicSimulationTest {
             public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -391,7 +391,7 @@ public class StudyControllerDynamicSimulationTest {
             public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
