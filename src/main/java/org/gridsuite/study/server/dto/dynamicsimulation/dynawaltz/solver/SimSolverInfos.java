@@ -32,7 +32,7 @@ public class SimSolverInfos extends AbstractSolverInfos {
     private double kReduceStep;
 
     @JsonProperty("nEff")
-    private double nEff;
+    private int nEff;
 
     @JsonProperty("nDeadband")
     private int nDeadband;
