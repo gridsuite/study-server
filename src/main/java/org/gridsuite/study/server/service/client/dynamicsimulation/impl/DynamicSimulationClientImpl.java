@@ -13,12 +13,15 @@ import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -119,6 +122,28 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
             throw e;
         }
         return status;
+    }
+
+    @Override
+    public void invalidateStatus(List<UUID> resultUuids) {
+        Objects.requireNonNull(resultUuids);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "invalidate-status");
+
+        uriComponentsBuilder.queryParam("resultUuid", resultUuids);
+
+        var uriComponents = uriComponentsBuilder.build();
+
+        // call dynamic-simulation REST API
+        try {
+            getRestTemplate().exchange(uriComponents.toUriString(), HttpMethod.PUT, null, new ParameterizedTypeReference<List<UUID>>() { });
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SIMULATION_NOT_FOUND);
+            }
+            throw e;
+        }
     }
 
     @Override
