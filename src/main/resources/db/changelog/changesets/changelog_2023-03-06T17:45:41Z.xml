@@ -20,4 +20,9 @@
     <changeSet author="phamquy (generated)" id="1678124752737-7">
         <addForeignKeyConstraint baseColumnNames="dynamic_simulation_parameters_entity_id" baseTableName="study" constraintName="dynamicSimulationParameters_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="dynamic_simulation_parameters" validate="true"/>
     </changeSet>
+    <changeSet author="phamquy (generated)" id="1678806670005-8">
+        <addColumn tableName="study">
+            <column name="dynamic_simulation_provider" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -55,6 +55,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisProvider")
     private String sensitivityAnalysisProvider;
 
+    @Column(name = "dynamicSimulationProvider")
+    private String dynamicSimulationProvider;
+
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "loadFlowParametersEntity_id",
             referencedColumnName = "id",

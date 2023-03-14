@@ -859,6 +859,23 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getSensitivityAnalysisProvider(studyUuid));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
+    @Operation(summary = "Set dynamic simulation provider for the specified study, no body means reset to default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is set")})
+    public ResponseEntity<Void> setDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @RequestBody(required = false) String provider,
+                                                               @RequestHeader("userId") String userId) {
+        studyService.updateDynamicSimulationProvider(studyUuid, provider, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
+    @Operation(summary = "Get dynamic simulation provider for a specified study, empty string means default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
+    public ResponseEntity<String> getDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
@@ -1218,6 +1235,13 @@ public class StudyController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "the sensitivity analysis default provider has been found"))
     public ResponseEntity<String> getDefaultSensitivityAnalysisProvider() {
         return ResponseEntity.ok().body(studyService.getDefaultSensitivityAnalysisProvider());
+    }
+
+    @GetMapping(value = "/dynamic-simulation-default-provider")
+    @Operation(summary = "get dynamic simulation default provider")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the dynamic simulation default provider has been found"))
+    public ResponseEntity<String> getDefaultDynamicSimulationProvider() {
+        return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
     }
 
     @PostMapping(value = "/studies/{studyUuid}/reindex-all")

@@ -107,6 +107,8 @@ public class StudyService {
 
     private final String defaultSensitivityAnalysisProvider;
 
+    private final String defaultDynamicSimulationProvider;
+
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
     private final NetworkService networkStoreService;
@@ -137,6 +139,7 @@ public class StudyService {
             @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
             @Value("${security-analysis.default-provider}") String defaultSecurityAnalysisProvider,
             @Value("${sensitivity-analysis.default-provider}") String defaultSensitivityAnalysisProvider,
+            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             NetworkService networkStoreService,
@@ -162,6 +165,7 @@ public class StudyService {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
+        this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -543,7 +547,7 @@ public class StudyService {
         UUID reportUuid = UUID.randomUUID();
         StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(),
                 clonedCaseUuid, sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),
-                sourceStudy.getSensitivityAnalysisProvider(), newLoadFlowParameters, newShortCircuitParameters, newDynamicSimulationParameters);
+                sourceStudy.getSensitivityAnalysisProvider(), sourceStudy.getDynamicSimulationProvider(), newLoadFlowParameters, newShortCircuitParameters, newDynamicSimulationParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -911,6 +915,26 @@ public class StudyService {
         });
     }
 
+    public String getDefaultDynamicSimulationProvider() {
+        return defaultDynamicSimulationProvider;
+    }
+
+    public String getDynamicSimulationProvider(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(StudyEntity::getDynamicSimulationProvider)
+                .orElse("");
+    }
+
+    @Transactional
+    public void updateDynamicSimulationProvider(UUID studyUuid, String provider, String userId) {
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
+            // TODO wait merge https://github.com/gridsuite/study-server/pull/355
+            // invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        });
+    }
+
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> ShortCircuitService.fromEntity(studyEntity.getShortCircuitParameters()))
@@ -1029,7 +1053,7 @@ public class StudyService {
         Objects.requireNonNull(shortCircuitParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
