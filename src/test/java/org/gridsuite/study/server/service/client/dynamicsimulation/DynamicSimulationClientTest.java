@@ -210,7 +210,7 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest2 {
                         .withHeader("Content-Type", "application/json; charset=utf-8")
                 ));
 
-        UUID resultUuid = dynamicSimulationClient.run("", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, parameters);
+        UUID resultUuid = dynamicSimulationClient.run("", "", UUID.fromString(NETWORK_UUID_STRING), VARIANT_1_ID, parameters);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());

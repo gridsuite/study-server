@@ -115,7 +115,7 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(anyString(), eq(NETWORK_UUID), anyString(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
         given(networkModificationTreeService.getLoadFlowStatus(NODE_UUID)).willReturn(Optional.of(LoadFlowStatus.CONVERGED));
 

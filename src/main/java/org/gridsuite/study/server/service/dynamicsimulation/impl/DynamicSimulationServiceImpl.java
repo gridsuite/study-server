@@ -52,8 +52,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters) {
-        return dynamicSimulationClient.run(receiver, networkUuid, variantId, parameters);
+    public UUID runDynamicSimulation(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters) {
+        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, parameters);
     }
 
     @Override

@@ -121,10 +121,10 @@ public class DynamicSimulationServiceTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), eq(NETWORK_UUID), eq(VARIANT_1_ID), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), eq(""), eq(NETWORK_UUID), eq(VARIANT_1_ID), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", NETWORK_UUID, VARIANT_1_ID, null);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", "", NETWORK_UUID, VARIANT_1_ID, null);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());

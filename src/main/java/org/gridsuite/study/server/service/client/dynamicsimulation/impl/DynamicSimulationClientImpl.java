@@ -39,13 +39,16 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID run(String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters) {
+    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{networkUuid}/run");
         if (variantId != null && !variantId.isBlank()) {
             uriComponentsBuilder.queryParam("variantId", variantId);
+        }
+        if (provider != null && !provider.isBlank()) {
+            uriComponentsBuilder.queryParam("provider", provider);
         }
         uriComponentsBuilder
                 .queryParam("mappingName", parameters.getMapping())

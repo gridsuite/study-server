@@ -24,7 +24,7 @@ public interface DynamicSimulationClient extends RestClient {
     String DYNAMIC_SIMULATION_END_POINT_RUN = "networks";
     String DYNAMIC_SIMULATION_END_POINT_RESULT = "results";
 
-    UUID run(String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters);
+    UUID run(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters);
 
     UUID getTimeSeriesResult(UUID resultUuid);
 
