@@ -1630,9 +1630,9 @@ public class StudyService {
         }
     }
 
-    public List<MappingInfos> getDynamicSimulationMappings(UUID nodeUuid) {
+    public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
         // get mapping from node uuid
-        return dynamicSimulationService.getMappings(nodeUuid);
+        return dynamicSimulationService.getMappings(studyUuid);
     }
 
     @Transactional

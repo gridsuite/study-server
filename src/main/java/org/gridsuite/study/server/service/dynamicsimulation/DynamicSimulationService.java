@@ -160,10 +160,10 @@ public interface DynamicSimulationService {
 
     /**
      * Get mapping names
-     * @param nodeUuid a given node UUID
+     * @param studyUuid a given study UUID
      * @return a list of mapping names
      */
-    List<MappingInfos> getMappings(UUID nodeUuid);
+    List<MappingInfos> getMappings(UUID studyUuid);
 
     /**
      * Get list of timeseries metadata

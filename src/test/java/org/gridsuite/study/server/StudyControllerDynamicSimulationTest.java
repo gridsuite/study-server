@@ -83,7 +83,7 @@ public class StudyControllerDynamicSimulationTest {
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/mappings";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";
 
     private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
@@ -620,11 +620,11 @@ public class StudyControllerDynamicSimulationTest {
                 return MAPPINGS;
             }
         }).
-        when(dynamicSimulationService).getMappings(NODE_UUID);
+        when(dynamicSimulationService).getMappings(STUDY_UUID);
 
         // --- call endpoint to be tested --- //
         // get all mapping infos
-        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS, STUDY_UUID, NODE_UUID)
+        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS, STUDY_UUID)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
         String content = result.getResponse().getContentAsString();

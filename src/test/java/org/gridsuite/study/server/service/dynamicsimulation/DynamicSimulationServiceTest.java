@@ -64,6 +64,9 @@ public class DynamicSimulationServiceTest {
 
     private static final int STOP_TIME = 500;
 
+    private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
+    private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
+
     // converged node
     private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
     public static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
@@ -274,7 +277,7 @@ public class DynamicSimulationServiceTest {
         given(dynamicMappingClient.getAllMappings()).willReturn(MAPPINGS);
 
         // call method to be tested
-        List<MappingInfos> mappingInfos = dynamicSimulationService.getMappings(NODE_UUID);
+        List<MappingInfos> mappingInfos = dynamicSimulationService.getMappings(STUDY_UUID);
 
         // check result
         // must return 2 mappings

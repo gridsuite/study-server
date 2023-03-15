@@ -145,7 +145,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<MappingInfos> getMappings(UUID nodeUuid) {
+    public List<MappingInfos> getMappings(UUID studyUuid) {
         return dynamicMappingClient.getAllMappings();
     }
 

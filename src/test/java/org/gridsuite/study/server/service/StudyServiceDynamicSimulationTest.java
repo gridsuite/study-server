@@ -194,10 +194,10 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testGetDynamicSimulationMappings() throws JsonProcessingException {
         // setup
-        given(dynamicSimulationService.getMappings(any(UUID.class))).willReturn(MAPPINGS);
+        given(dynamicSimulationService.getMappings(STUDY_UUID)).willReturn(MAPPINGS);
 
         // call method to be tested
-        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(NODE_UUID);
+        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(STUDY_UUID);
 
         // --- check result --- //
         // must return 2 mappings
