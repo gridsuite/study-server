@@ -204,6 +204,19 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     }
 
     @Test
+    public void testInvalidateStatus() {
+        dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_UUID_STRING)));
+
+        // check result
+        assertTrue(true);
+    }
+
+    @Test(expected = StudyException.class)
+    public void testInvalidateStatusGivenBadUuid() {
+        dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING)));
+    }
+
+    @Test
     public void testDeleteResult() {
 
         // configure mock server response for test delete result - results/{resultUuid}

@@ -149,6 +149,13 @@ public interface DynamicSimulationService {
     DynamicSimulationStatus getStatus(UUID nodeUuid);
 
     /**
+     * invalidate status of the simulation results
+     * @param resultUuids a given list of result UUIDs
+     * @return
+     */
+    void invalidateStatus(List<UUID> resultUuids);
+
+    /**
      * Delete result uuid
      * @param resultUuid a given result UUID
      */

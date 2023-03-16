@@ -248,6 +248,12 @@ public class DynamicSimulationServiceTest {
     }
 
     @Test
+    public void testInvalidateStatus() {
+        dynamicSimulationService.invalidateStatus(List.of(RESULT_UUID));
+        assertTrue(true);
+    }
+
+    @Test
     public void testDeleteResult() {
         dynamicSimulationService.deleteResult(RESULT_UUID);
         assertTrue(true);

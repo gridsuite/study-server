@@ -841,6 +841,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
@@ -929,8 +930,7 @@ public class StudyService {
     public void updateDynamicSimulationProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
             studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
-            // TODO wait merge https://github.com/gridsuite/study-server/pull/355
-            // invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         });
     }
@@ -1038,6 +1038,10 @@ public class StudyService {
 
     public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
         sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(networkModificationTreeService.getStudySensitivityAnalysisResultUuids(studyUuid));
+    }
+
+    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
+        dynamicSimulationService.invalidateStatus(networkModificationTreeService.getStudyDynamicSimulationResultUuids(studyUuid));
     }
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,

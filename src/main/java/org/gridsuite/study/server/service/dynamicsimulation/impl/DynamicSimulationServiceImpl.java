@@ -131,6 +131,16 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
+    public void invalidateStatus(List<UUID> resultUuids) {
+
+        if (resultUuids.isEmpty()) {
+            return;
+        }
+
+        dynamicSimulationClient.invalidateStatus(resultUuids);
+    }
+
+    @Override
     public void deleteResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
         dynamicSimulationClient.deleteResult(resultUuid);
