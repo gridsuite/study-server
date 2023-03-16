@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 @SuperBuilder
 @NoArgsConstructor
 @Getter
@@ -30,25 +33,4 @@ public class IdaSolverInfos extends AbstractSolverInfos {
 
     private double relAccuracy;
 
-    /*
-    @Override
-    protected void writeJsonFields(JsonGenerator generator) {
-        Objects.requireNonNull(generator);
-        try {
-            generator.writeFieldName("order");
-            generator.writeNumber(order);
-            generator.writeFieldName("initStep");
-            generator.writeNumber(initStep);
-            generator.writeFieldName("minStep");
-            generator.writeNumber(minStep);
-            generator.writeFieldName("maxStep");
-            generator.writeNumber(maxStep);
-            generator.writeFieldName("absAccuracy");
-            generator.writeNumber(absAccuracy);
-            generator.writeFieldName("relAccuracy");
-            generator.writeNumber(relAccuracy);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    } */
 }

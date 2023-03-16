@@ -15,9 +15,7 @@ import java.util.UUID;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 @Setter
 @Entity

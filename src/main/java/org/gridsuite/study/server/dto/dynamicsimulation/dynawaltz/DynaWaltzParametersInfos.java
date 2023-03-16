@@ -16,6 +16,9 @@ import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverI
 
 import java.util.List;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 @SuperBuilder
 @AllArgsConstructor
 @Getter

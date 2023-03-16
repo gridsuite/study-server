@@ -13,6 +13,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 @SuperBuilder
 @NoArgsConstructor
 @Getter
@@ -45,31 +48,4 @@ public class SimSolverInfos extends AbstractSolverInfos {
 
     private boolean recalculateStep;
 
-    /*
-    @Override
-    protected void writeJsonFields(JsonGenerator generator) {
-        Objects.requireNonNull(generator);
-        try {
-            generator.writeFieldName("hMin");
-            generator.writeNumber(hMin);
-            generator.writeFieldName("hMax");
-            generator.writeNumber(hMax);
-            generator.writeFieldName("kReduceStep");
-            generator.writeNumber(kReduceStep);
-            generator.writeFieldName("nEff");
-            generator.writeNumber(nEff);
-            generator.writeFieldName("nDeadband");
-            generator.writeNumber(nDeadband);
-            generator.writeFieldName("maxRootRestart");
-            generator.writeNumber(maxRootRestart);
-            generator.writeFieldName("maxNewtonTry");
-            generator.writeNumber(maxNewtonTry);
-            generator.writeFieldName("linearSolverName");
-            generator.writeString(linearSolverName);
-            generator.writeFieldName("recalculateStep");
-            generator.writeBoolean(recalculateStep);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    } */
 }

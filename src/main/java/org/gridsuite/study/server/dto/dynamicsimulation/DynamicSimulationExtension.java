@@ -17,6 +17,9 @@ import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParam
 import java.io.UncheckedIOException;
 import java.util.List;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         property = "name",

@@ -7,6 +7,9 @@
 
 package org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 public enum SolverTypeInfos {
     SIM,
     IDA
