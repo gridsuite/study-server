@@ -28,6 +28,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -134,7 +135,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     }
 
     @Test(expected = StudyException.class)
-    public void testGetTimeSeriesResultGivenBadUuid() throws JsonProcessingException {
+    public void testGetTimeSeriesResultGivenBadUuid() {
 
         // configure mock server response
         String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
@@ -204,7 +205,17 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
     }
 
     @Test
-    public void testInvalidateStatus() {
+    public void testInvalidateStatus() throws JsonProcessingException {
+
+        // configure mock server response for test get status result - results/{resultUuid}/invalidate-status
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.put(WireMock.urlMatching(resultEndPointUrl + "invalidate-status" + ".*"))
+                .withQueryParam("resultUuid", equalTo(RESULT_UUID_STRING))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(List.of(UUID.fromString(RESULT_UUID_STRING))))
+                        .withHeader("Content-Type", "application/json; charset=utf-8")
+                ));
+
         dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_UUID_STRING)));
 
         // check result
@@ -213,6 +224,14 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
 
     @Test(expected = StudyException.class)
     public void testInvalidateStatusGivenBadUuid() {
+
+        // configure mock server response for test get status result - results/{resultUuid}/invalidate-status
+        String resultEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching(resultEndPointUrl + "invalidate-status" + ".*"))
+                .withQueryParam("resultUuid", equalTo(RESULT_NOT_FOUND_UUID_STRING))
+                .willReturn(WireMock.notFound()
+                ));
+
         dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING)));
     }
 
