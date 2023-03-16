@@ -579,6 +579,19 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
+    public List<UUID> getStudyDynamicSimulationResultUuids(UUID studyUuid) {
+        List<UUID> resultUuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            UUID resultUuid = repositories.get(n.getType()).getDynamicSimulationResultUuid(n.getIdNode());
+            if (resultUuid != null) {
+                resultUuids.add(resultUuid);
+            }
+        });
+        return resultUuids;
+    }
+
+    @Transactional(readOnly = true)
     public LoadFlowInfos getLoadFlowInfos(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getLoadFlowInfos(nodeUuid)).orElseThrow(() -> new StudyException(ELEMENT_NOT_FOUND));
     }
