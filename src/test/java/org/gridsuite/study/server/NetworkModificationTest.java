@@ -1854,6 +1854,44 @@ public class NetworkModificationTest {
                         "reporterId", WireMock.equalTo(node1.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID)),
                 expectedBody);
+
+        // now we do the same but on a built node
+        node1.setBuildStatus(BuildStatus.BUILT);  // mark node1 as built
+        networkModificationTreeService.updateNode(studyUuid, node1, userId);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+        output.receive(TIMEOUT, studyUpdateDestination);
+
+        groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+                .withQueryParam("action", WireMock.equalTo("COPY"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(UpdateModificationGroupResult.builder().networkModificationResult(Optional.of(NetworkModificationResult.builder().build())).build()))
+                        .withHeader("Content-Type", "application/json"))).getId();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().build();
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+        checkEquipmentMessagesReceived(studyUuid, List.of(nodeUuid1), NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, expectedPayload);
+        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        expectedList = List.of(modification1, modification2);
+        expectedBody = mapper.writeValueAsString(expectedList);
+        url = "/v1/groups/" + node1.getModificationGroupUuid();
+        wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                        "action", WireMock.equalTo("COPY"),
+                        "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
+                        "reportUuid", WireMock.matching(".*"),
+                        "reporterId", WireMock.equalTo(node1.getId().toString()),
+                        "variantId", WireMock.equalTo(VARIANT_ID)),
+                expectedBody);
     }
 
     @Test
