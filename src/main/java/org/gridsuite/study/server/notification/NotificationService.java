@@ -145,8 +145,8 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpactsInfos networkImpcatsInfos) {
-        sendUpdateMessage(MessageBuilder.withPayload(networkImpcatsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
+    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpactsInfos networkImpactsInfos) {
+        sendUpdateMessage(MessageBuilder.withPayload(networkImpactsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());

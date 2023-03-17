@@ -34,7 +34,6 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -96,7 +95,6 @@ import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.utils.ImpactUtils.createCreationImpactType;
-import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
@@ -829,7 +827,7 @@ public class StudyTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=metadata_updated", studyUuid)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkStudyMetadataUpdatedMessagesReceived(studyUuid);
+        checkStudyMetadataUpdatedMessagesReceived();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=NOT_EXISTING_TYPE", UUID.randomUUID())
                 .header(USER_ID_HEADER, "userId"))
@@ -1196,7 +1194,7 @@ public class StudyTest {
         assertEquals(NotificationService.MODIFICATIONS_UPDATING_FINISHED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkStudyMetadataUpdatedMessagesReceived(UUID studyNameUserIdUuid) {
+    private void checkStudyMetadataUpdatedMessagesReceived() {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
@@ -1230,17 +1228,13 @@ public class StudyTest {
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
-        Optional<NetworkModificationResult> networkModificationResult =
-            createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.TWO_WINDINGS_TRANSFORMER, "2wtId", Set.of("s1"));
-        UUID stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        UUID stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createTwoWindingsTransformerAttributes, NETWORK_UUID_STRING, VARIANT_ID);
@@ -1248,15 +1242,13 @@ public class StudyTest {
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
-        networkModificationResult = createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LOAD, "loadId1", Set.of("s1"));
-        stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(createLoadAttributes)
             .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
@@ -1606,33 +1598,26 @@ public class StudyTest {
 
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-        Optional<NetworkModificationResult> networkModificationResult =
-            createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.TWO_WINDINGS_TRANSFORMER, "2wtId", Set.of("s2"));
-        UUID stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        UUID stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createTwoWindingsTransformerAttributes, NETWORK_UUID_STRING, VARIANT_ID);
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
-        networkModificationResult =
-            createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LOAD, "loadId1", Set.of("s2"));
-        stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
@@ -1723,25 +1708,20 @@ public class StudyTest {
         NetworkModificationNode study2Node2 = createNetworkModificationNode(study2Uuid, study2ModificationNodeUuid, VARIANT_ID_2, "node2", userId);
 
         // add modification on study 1 node "node1"
-        Optional<NetworkModificationResult> networkModificationResult =
-            createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.TWO_WINDINGS_TRANSFORMER, "2wtId", Set.of("s2"));
-        UUID stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        UUID stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s2")).deletedEquipments(ImmutableSet.of()).build();
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node1.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createTwoWindingsTransformerAttributes, NETWORK_UUID_STRING, VARIANT_ID);
 
         // add modification on node "node2"
-        networkModificationResult = createModificationResultWithElementImpact(SimpleImpactType.CREATION, IdentifiableType.LOAD, "loadId1", Set.of("s2"));
-        stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(networkModificationResult));
+        stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -1749,7 +1729,6 @@ public class StudyTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkEquipmentCreationMessagesReceived(study1Uuid, node2.getId(), expectedPayload);
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
