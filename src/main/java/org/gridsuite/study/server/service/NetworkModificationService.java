@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.modification.UpdateModificationGroupResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -239,7 +240,7 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public String moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
+    public UpdateModificationGroupResult moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
         Objects.requireNonNull(networkUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "MOVE")
@@ -254,10 +255,16 @@ public class NetworkModificationService {
         }
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(),
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<UpdateModificationGroupResult>() {
+                }).getBody();
     }
 
-    public String duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
+    public UpdateModificationGroupResult duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "COPY")
             .queryParam("networkUuid", networkUuid)
@@ -266,7 +273,12 @@ public class NetworkModificationService {
             .queryParam("variantId", nodeInfos.getVariantId());
 
         HttpEntity<String> httpEntity = getModificationsUuidBody(modificationUuidList);
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(), HttpMethod.PUT, httpEntity, String.class).getBody();
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(),
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<UpdateModificationGroupResult>() {
+                }).getBody();
     }
 
     public void createModifications(UUID sourceGroupUuid, UUID groupUuid) {
