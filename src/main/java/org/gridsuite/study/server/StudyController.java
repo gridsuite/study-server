@@ -864,7 +864,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is set")})
     public ResponseEntity<Void> setDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid,
                                                                @RequestBody(required = false) String provider,
-                                                               @RequestHeader("userId") String userId) {
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateDynamicSimulationProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
     }

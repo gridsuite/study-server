@@ -280,7 +280,8 @@ public class StudyService {
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(copiedDynamicSimulationParameters), userId, clonedNetworkUuid, clonedCaseUuid);
+            DynamicSimulationParametersInfos dynamicSimulationParameters = copiedDynamicSimulationParameters != null ? copiedDynamicSimulationParameters : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters), userId, clonedNetworkUuid, clonedCaseUuid);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -929,7 +930,7 @@ public class StudyService {
     @Transactional
     public void updateDynamicSimulationProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultSensitivityAnalysisProvider);
+            studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         });
@@ -1635,7 +1636,7 @@ public class StudyService {
     }
 
     public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
-        // get mapping from node uuid
+        // get mapping from study uuid
         return dynamicSimulationService.getMappings(studyUuid);
     }
 

@@ -82,7 +82,7 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS =  "{studyUuid}/dynamic-simulation/parameters";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS = "{studyUuid}/dynamic-simulation/parameters";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";

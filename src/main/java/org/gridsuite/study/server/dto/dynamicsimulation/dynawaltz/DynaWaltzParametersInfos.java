@@ -32,5 +32,4 @@ public class DynaWaltzParametersInfos implements DynamicSimulationExtension {
     public DynaWaltzParametersInfos() {
         name = EXTENSION_NAME;
     }
-
 }

@@ -60,10 +60,6 @@ public class DynamicSimulationServiceTest {
 
     private static final String VARIANT_1_ID = "variant_1";
 
-    private static final int START_TIME = 0;
-
-    private static final int STOP_TIME = 500;
-
     private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
     private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
 

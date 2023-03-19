@@ -32,5 +32,4 @@ public class IdaSolverInfos extends AbstractSolverInfos {
     private double absAccuracy;
 
     private double relAccuracy;
-
 }

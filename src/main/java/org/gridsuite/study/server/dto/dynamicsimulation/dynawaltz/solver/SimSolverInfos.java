@@ -47,5 +47,4 @@ public class SimSolverInfos extends AbstractSolverInfos {
     private String linearSolverName;
 
     private boolean recalculateStep;
-
 }
