@@ -762,7 +762,7 @@ public class NetworkModificationTreeService {
     public NodeEntity doGetLastParentNodeBuilt(NodeEntity nodeEntity) {
         if (nodeEntity.getType() == NodeType.ROOT) {
             return nodeEntity;
-        } else if (getBuildStatus(nodeEntity.getIdNode()).isBuilt()) {
+        } else if (getBuildStatus(nodeEntity.getIdNode()) == BuildStatus.BUILT) {
             return nodeEntity;
         } else {
             return doGetLastParentNodeBuilt(nodeEntity.getParentNode());
