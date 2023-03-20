@@ -1877,7 +1877,7 @@ public class NetworkModificationTest {
         NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().build();
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        checkEquipmentMessagesReceived(studyUuid, List.of(nodeUuid1), NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, expectedPayload);
+        checkEquipmentMessagesReceived(studyUuid, List.of(nodeUuid1), expectedPayload);
         checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
@@ -2253,12 +2253,12 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId,
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
             NetworkImpactsInfos expectedPayload) throws Exception {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, List.of(nodeUuid), headerUpdateTypeId, expectedPayload);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, List.of(nodeUuid), expectedPayload);
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids, String headerUpdateTypeId,
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids,
                                                        NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
@@ -2285,7 +2285,7 @@ public class NetworkModificationTest {
             NetworkImpactsInfos expectedPayload) throws Exception {
         assertFalse(nodeUuids.isEmpty());
 
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuids, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, expectedPayload);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuids, expectedPayload);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(TIMEOUT, studyUpdateDestination);
