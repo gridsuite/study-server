@@ -19,6 +19,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -30,6 +31,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -38,6 +40,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,8 +61,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -125,10 +131,10 @@ public class ShortCircuitTest {
     private StudyRepository studyRepository;
 
     //output destinations
-    private String studyUpdateDestination = "study.update";
-    private String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
-    private String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
-    private String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
+    private final String studyUpdateDestination = "study.update";
+    private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
+    private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
+    private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.failed";
 
     @Before
     public void setup() throws IOException {
@@ -312,6 +318,36 @@ public class ShortCircuitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
+    }
+
+    @Test
+    @SneakyThrows
+    public void testResetUuidResultWhenSCFailed() {
+        UUID resultUuid = UUID.randomUUID();
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId());
+        NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId()));
+
+        // Set an uuid result in the database
+        networkModificationTreeService.updateShortCircuitAnalysisResultUuid(modificationNode.getId(), resultUuid);
+        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId()).isPresent());
+        assertEquals(resultUuid, networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId()).get());
+
+        StudyService studyService = Mockito.mock(StudyService.class);
+        doAnswer(invocation -> {
+            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
+            return resultUuid;
+        }).when(studyService).runShortCircuit(any(), any(), any());
+        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), "");
+
+        // Test reset uuid result in the database
+        assertTrue(networkModificationTreeService.getShortCircuitAnalysisResultUuid(modificationNode.getId()).isEmpty());
+
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED, updateType);
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck) {

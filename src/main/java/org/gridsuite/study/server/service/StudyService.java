@@ -27,6 +27,7 @@ import org.elasticsearch.index.query.TermsQueryBuilder;
 import org.elasticsearch.index.query.WildcardQueryBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
+import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -35,6 +36,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -726,10 +728,23 @@ public class StudyService {
                 substationsIds, "voltage-levels");
     }
 
+    public String getVoltageLevelsIdAndTopology(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
+                substationsIds, "voltage-levels-topology");
+    }
+
     public String getVoltageLevelsAndEquipment(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, "voltage-levels-equipments");
+    }
+
+    public String getVoltageLevelEquipments(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String voltageLevelId) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        String equipmentPath = "voltage-level-equipments" + (voltageLevelId == null ? "" : StudyConstants.DELIMITER + voltageLevelId);
+        return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
+                substationsIds, equipmentPath);
     }
 
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
@@ -820,6 +835,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
@@ -999,6 +1015,10 @@ public class StudyService {
         sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(networkModificationTreeService.getStudySensitivityAnalysisResultUuids(studyUuid));
     }
 
+    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
+        dynamicSimulationService.invalidateStatus(networkModificationTreeService.getStudyDynamicSimulationResultUuids(studyUuid));
+    }
+
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                           UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters) {
@@ -1161,13 +1181,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
-        checkStudyContainsNode(studyUuid, nodeToCopyUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+    public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
+        checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
-        updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
-        notificationService.emitElementUpdated(studyUuid, userId);
+        updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, invalidateBuild);
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
     @Transactional
@@ -1628,9 +1648,13 @@ public class StudyService {
         return resultUuid;
     }
 
-    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid) {
+    public List<TimeSeriesMetadataInfos> getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid) {
+        return dynamicSimulationService.getTimeSeriesMetadataList(nodeUuid);
+    }
+
+    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid, List<String> timeSeriesNames) {
         // get timeseries from node uuid
-        return dynamicSimulationService.getTimeSeriesResult(nodeUuid);
+        return dynamicSimulationService.getTimeSeriesResult(nodeUuid, timeSeriesNames);
     }
 
     public List<StringTimeSeries> getDynamicSimulationTimeLine(UUID nodeUuid) {
@@ -1640,6 +1664,12 @@ public class StudyService {
 
     public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid) {
         return dynamicSimulationService.getStatus(nodeUuid);
+    }
+
+    public String getEquipmentsIds(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
+        return networkMapService.getEquipmentsIds(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
+                substationsIds, equipmentType);
     }
 
 }

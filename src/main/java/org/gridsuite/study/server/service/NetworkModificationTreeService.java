@@ -427,9 +427,9 @@ public class NetworkModificationTreeService {
                 .map(AbstractNodeInfoEntity::getName)
                 .collect(Collectors.toList());
 
-        String uniqueName = StringUtils.EMPTY;
+        String uniqueName = nodeName;
         int i = 1;
-        while (StringUtils.EMPTY.equals(uniqueName) || studyNodeNames.contains(uniqueName)) {
+        while (studyNodeNames.contains(uniqueName)) {
             uniqueName = nodeName + " (" + i + ")";
             i++;
         }
@@ -576,6 +576,19 @@ public class NetworkModificationTreeService {
             }
         });
         return uuids;
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getStudyDynamicSimulationResultUuids(UUID studyUuid) {
+        List<UUID> resultUuids = new ArrayList<>();
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyUuid);
+        nodes.forEach(n -> {
+            UUID resultUuid = repositories.get(n.getType()).getDynamicSimulationResultUuid(n.getIdNode());
+            if (resultUuid != null) {
+                resultUuids.add(resultUuid);
+            }
+        });
+        return resultUuids;
     }
 
     @Transactional(readOnly = true)

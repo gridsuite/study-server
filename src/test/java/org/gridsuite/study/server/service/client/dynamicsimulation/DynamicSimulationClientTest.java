@@ -35,8 +35,6 @@ import static org.junit.Assert.assertTrue;
  */
 public class DynamicSimulationClientTest extends AbstractRestClientTest {
 
-    private static final int DYNAMIC_SIMULATION_PORT = 5032;
-
     private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
 
     private static final String VARIANT_1_ID = "variant_1";
@@ -132,6 +130,22 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
                         }
 
                     }
+                } else if ("PUT".equals(method)
+                        && path.matches(resultEndPointUrl + ".*")) {
+                    String pathEnding = pathSegments.get(pathSegments.size() - 1);
+                    if ("invalidate-status".equals(pathEnding)) { // test invalidate status result - results/status?resultUuid='99999999-0000-0000-0000-000000000000'
+                        String resultUuids = recordedRequest.getRequestUrl().queryParameter("resultUuid");
+                        if (resultUuids.contains(RESULT_UUID_STRING)) {
+                            try {
+                                response = new MockResponse()
+                                        .setResponseCode(HttpStatus.OK.value())
+                                        .addHeader("Content-Type", "application/json; charset=utf-8")
+                                        .setBody(objectMapper.writeValueAsString(List.of(UUID.fromString(RESULT_UUID_STRING))));
+                            } catch (JsonProcessingException e) {
+                                return new MockResponse().setResponseCode(HttpStatus.NOT_FOUND.value());
+                            }
+                        }
+                    }
                 } else if ("DELETE".equals(method)
                         && path.matches(resultEndPointUrl + ".*")) { // test delete result - results/{resultUuid}
                     // take {resultUuid} at the last item
@@ -153,7 +167,7 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
         super.setup();
 
         // config client
-        dynamicSimulationClient = new DynamicSimulationClientImpl(initMockWebServer(DYNAMIC_SIMULATION_PORT), restTemplate);
+        dynamicSimulationClient = new DynamicSimulationClientImpl(initMockWebServer(), restTemplate);
     }
 
     @Test
@@ -201,6 +215,19 @@ public class DynamicSimulationClientTest extends AbstractRestClientTest {
     @Test(expected = StudyException.class)
     public void testGetStatusGivenBadUuid() {
         dynamicSimulationClient.getStatus(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING));
+    }
+
+    @Test
+    public void testInvalidateStatus() {
+        dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_UUID_STRING)));
+
+        // check result
+        assertTrue(true);
+    }
+
+    @Test(expected = StudyException.class)
+    public void testInvalidateStatusGivenBadUuid() {
+        dynamicSimulationClient.invalidateStatus(List.of(UUID.fromString(RESULT_NOT_FOUND_UUID_STRING)));
     }
 
     @Test

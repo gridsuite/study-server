@@ -11,15 +11,26 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.*;
 import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,9 +41,10 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
@@ -44,15 +56,11 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
-import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.mockito.BDDMockito.*;
+import static org.junit.Assert.*;
+import static org.mockito.BDDMockito.any;
+import static org.mockito.BDDMockito.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,11 +101,16 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final int STOP_TIME = 500;
 
+    private static final String VARIANT_ID = "variant_1";
+
+    private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
+    private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+
     private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
     private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
 
-    private static final String ROOT_NODE_UUID_STRING = "22222222-0000-0000-0000-000000000000";
-    private static final UUID ROOT_NODE_UUID = UUID.fromString(ROOT_NODE_UUID_STRING);
+    private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
+    private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
 
     private static final String NODE_UUID_STRING = "22222222-1111-0000-0000-000000000000";
     public static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
@@ -110,21 +123,38 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
 
+    public static final String TIME_SERIES_UUID_STRING = "77777777-0000-0000-0000-000000000000";
+    public static final UUID TIME_SERIES_UUID = UUID.fromString(TIME_SERIES_UUID_STRING);
+
     private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
     private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
 
+    public static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
+    public static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
+    public static final String TIME_LINE_NAME = "TimeLine";
+
     private static final long TIMEOUT = 1000;
+
+    @Value("${loadflow.default-provider}")
+    String defaultLoadflowProvider;
+
     @Autowired
     private MockMvc studyClient;
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
 
-    @MockBean
+    @Autowired
     StudyService studyService;
+
+    @SpyBean
+    DynamicSimulationService dynamicSimulationService;
+
+    @Autowired
+    private StudyRepository studyRepository;
 
     @Autowired
     private OutputDestination output;
@@ -144,57 +174,165 @@ public class StudyControllerDynamicSimulationTest {
 
     @Before
     public void setup() {
-        // setup StudyService mock
-        // setup root node as read only
-        willThrow(new StudyException(NOT_ALLOWED)).given(studyService).assertIsNodeNotReadOnly(ROOT_NODE_UUID);
     }
 
     @After
     public void tearDown() {
+        cleanDB();
         List<String> destinations = List.of(studyUpdateDestination, dsFailedDestination, dsResultDestination, dsStoppedDestination);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
     }
 
+    private void cleanDB() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+    }
+
+    private RootNode getRootNode(UUID study) throws Exception {
+        return objectMapper.readValue(studyClient.perform(get("/v1/studies/{uuid}/tree", study))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(), new TypeReference<>() { });
+    }
+
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
+        LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder().build();
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, null);
+        var study = studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity, null);
+        return study;
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
+        return createNetworkModificationNode(studyUuid, parentNodeUuid,
+                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
+        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
+                .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
+                .loadFlowStatus(LoadFlowStatus.CONVERGED).buildStatus(buildStatus)
+                .children(Collections.emptyList()).build();
+
+        // Only for tests
+        String mnBodyJson = objectMapper.writeValueAsString(modificationNode);
+        JSONObject jsonObject = new JSONObject(mnBodyJson);
+        jsonObject.put("variantId", variantId);
+        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
+        mnBodyJson = jsonObject.toString();
+
+        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+                .andExpect(status().isOk());
+        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(mess);
+        modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+        return modificationNode;
+    }
+
+    @Test
+    public void testRunDynamicSimulationGivenRegularNodeAndFailed() throws Exception {
+
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        // setup DynamicSimulationService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public UUID answer(InvocationOnMock invocation) {
+                return RESULT_UUID;
+            }
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
+
+        MvcResult result;
+        // --- call endpoint to be tested --- //
+        // run on a regular node which allows a run
+        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
+                        studyUuid, modificationNode1Uuid, MAPPING_NAME_01)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(PARAMETERS))
+                .andExpect(status().isOk()).andReturn();
+
+        // --- check result --- //
+        String resultUuidJson = result.getResponse().getContentAsString();
+        UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
+
+        assertEquals(RESULT_UUID, resultUuid);
+
+        // --- check async messages emitted by runDynamicSimulation of StudyService --- //
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]>  dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        // resultUuid must be present in database at this moment
+        UUID actualResultUuid = networkModificationTreeService.getDynamicSimulationResultUuid(modificationNode1Uuid).get();
+        getLogger().info("Actual result uuid in the database = " + actualResultUuid);
+        assertEquals(RESULT_UUID, actualResultUuid);
+
+        // mock the notification from dynamic-simulation server in case of failed
+        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid)),
+                StandardCharsets.UTF_8);
+        input.send(MessageBuilder.withPayload("")
+                .setHeader("resultUuid", RESULT_UUID_STRING)
+                .setHeader("receiver", receiver)
+                .build(), dsFailedDestination
+        );
+
+        // --- check async messages emitted by consumeDsFailed of ConsumerService --- //
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED from channel : studyUpdateDestination
+        dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        // resultUuid must be empty in database at this moment
+        assertTrue(networkModificationTreeService.getDynamicSimulationResultUuid(modificationNode1Uuid).isEmpty());
+    }
+
     @Test
     public void testRunDynamicSimulationGivenRootNode() throws Exception {
+        // create a root node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
         studyClient.perform(post(UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT) + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                STUDY_UUID, ROOT_NODE_UUID, MAPPING_NAME_01)
+                studyUuid, rootNodeUuid, MAPPING_NAME_01)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     public void testRunDynamicSimulationGivenRegularNode() throws Exception {
-        // setup StudyService mock
+
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        // setup DynamicSimulationService mock
         Mockito.doAnswer(new Answer() {
             @Override
-            public UUID answer(InvocationOnMock invocation) throws Throwable {
-                final Object[] args = invocation.getArguments();
-
-                // mock the notification from dynamic-simulation server in case of having the result
-                String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver((UUID) args[1] /* nodeUuid */)),
-                        StandardCharsets.UTF_8);
-                input.send(MessageBuilder.withPayload("")
-                        .setHeader("resultUuid", RESULT_UUID_STRING)
-                        .setHeader("receiver", receiver)
-                        .build(), dsResultDestination
-                );
-
+            public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(studyService).runDynamicSimulation(eq(STUDY_UUID), eq(NODE_UUID), any(), eq(MAPPING_NAME_01));
-
-        // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
-        doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
-        given(networkModificationTreeService.getStudyUuidForNodeId(NODE_UUID)).willReturn(STUDY_UUID);
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
 
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
         result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                        STUDY_UUID, NODE_UUID, MAPPING_NAME_01)
+                        studyUuid, modificationNode1Uuid, MAPPING_NAME_01)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -206,49 +344,60 @@ public class StudyControllerDynamicSimulationTest {
 
         assertEquals(RESULT_UUID, resultUuid);
 
-        // --- check async messages emitted by consumeDsResult of ConsumerService then consumed by web client --- //
-
+        // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(STUDY_UUID, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        Message<byte[]>  dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        // resultUuid must be present in database at this moment
+        UUID actualResultUuid = networkModificationTreeService.getDynamicSimulationResultUuid(modificationNode1Uuid).get();
+        getLogger().info("Actual result uuid in the database = " + actualResultUuid);
+        assertEquals(RESULT_UUID, actualResultUuid);
+
+        // mock the notification from dynamic-simulation server in case of having the result
+        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid)),
+                StandardCharsets.UTF_8);
+        input.send(MessageBuilder.withPayload("")
+                .setHeader("resultUuid", RESULT_UUID_STRING)
+                .setHeader("receiver", receiver)
+                .build(), dsResultDestination
+        );
+
+        // --- check async messages emitted by consumeDsResult of ConsumerService --- //
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT from channel : studyUpdateDestination
         Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(STUDY_UUID, dynamicSimulationResultMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, dynamicSimulationResultMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT, dynamicSimulationResultMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     @Test
     public void testRunDynamicSimulationGivenRegularNodeAndStopped() throws Exception {
-        // setup StudyService mock
+
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        // setup DynamicSimulationService mock
         Mockito.doAnswer(new Answer() {
             @Override
-            public UUID answer(InvocationOnMock invocation) throws Throwable {
-                final Object[] args = invocation.getArguments();
-
-                // mock the notification from dynamic-simulation server in case of stop
-                String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver((UUID) args[1] /* nodeUuid */)),
-                        StandardCharsets.UTF_8);
-                input.send(MessageBuilder.withPayload("")
-                        .setHeader("resultUuid", RESULT_UUID_STRING)
-                        .setHeader("receiver", receiver)
-                        .build(), dsStoppedDestination
-                );
-
+            public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(studyService).runDynamicSimulation(eq(STUDY_UUID), eq(NODE_UUID), any(), eq(MAPPING_NAME_01));
-
-        // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
-        doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
-        given(networkModificationTreeService.getStudyUuidForNodeId(NODE_UUID)).willReturn(STUDY_UUID);
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
 
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
         result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                        STUDY_UUID, NODE_UUID, MAPPING_NAME_01)
+                        studyUuid, modificationNode1Uuid, MAPPING_NAME_01)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -260,67 +409,41 @@ public class StudyControllerDynamicSimulationTest {
 
         assertEquals(RESULT_UUID, resultUuid);
 
-        // --- check async messages emitted by consumeDsStopped of ConsumerService then consumed by web client --- //
-
+        // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(STUDY_UUID, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        Message<byte[]>  dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        // resultUuid must be present in database at this moment
+        UUID actualResultUuid = networkModificationTreeService.getDynamicSimulationResultUuid(modificationNode1Uuid).get();
+        getLogger().info("Actual result uuid in the database = " + actualResultUuid);
+        assertEquals(RESULT_UUID, actualResultUuid);
+
+        // mock the notification from dynamic-simulation server in case of stop
+        String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid)),
+                StandardCharsets.UTF_8);
+        input.send(MessageBuilder.withPayload("")
+                .setHeader("resultUuid", RESULT_UUID_STRING)
+                .setHeader("receiver", receiver)
+                .build(), dsStoppedDestination
+        );
+
+        // --- check async messages emitted by consumeDsStopped of ConsumerService --- //
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     @Test
-    public void testRunDynamicSimulationGivenRegularNodeAndFailed() throws Exception {
-        // setup StudyService mock
+    public void testGetDynamicSimulationTimeSeriesResultGivenNodeNotDone() throws Exception {
+        // setup DynamicSimulationService mock
         Mockito.doAnswer(new Answer() {
             @Override
-            public UUID answer(InvocationOnMock invocation) throws Throwable {
-                final Object[] args = invocation.getArguments();
-
-                // mock the notification from dynamic-simulation server in case of stop
-                String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver((UUID) args[1] /* nodeUuid */)),
-                        StandardCharsets.UTF_8);
-                input.send(MessageBuilder.withPayload("")
-                        .setHeader("resultUuid", RESULT_UUID_STRING)
-                        .setHeader("receiver", receiver)
-                        .build(), dsFailedDestination
-                );
-
-                return RESULT_UUID;
+            public List<DoubleTimeSeries> answer(InvocationOnMock invocation) {
+                return null;
             }
-        }).when(studyService).runDynamicSimulation(eq(STUDY_UUID), eq(NODE_UUID), any(), eq(MAPPING_NAME_01));
-
-        // setup NetworkModificationTreeService mock for methods invoked in the consumeDsResult of ConsumerService
-        doNothing().when(networkModificationTreeService).updateDynamicSimulationResultUuid(NODE_UUID, RESULT_UUID);
-        given(networkModificationTreeService.getStudyUuidForNodeId(NODE_UUID)).willReturn(STUDY_UUID);
-
-        MvcResult result;
-        // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
-        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                        STUDY_UUID, NODE_UUID, MAPPING_NAME_01)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(PARAMETERS))
-                .andExpect(status().isOk()).andReturn();
-
-        // --- check result --- //
-        String resultUuidJson = result.getResponse().getContentAsString();
-        UUID resultUuid = objectMapper.readValue(resultUuidJson, UUID.class);
-
-        assertEquals(RESULT_UUID, resultUuid);
-
-        // --- check async messages emitted by consumeDsStopped of ConsumerService then consumed by web client --- //
-
-        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(STUDY_UUID, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED, dynamicSimulationStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    @Test
-    public void testGetDynamicSimulationTimeSeriesResultGivenNodeNotDone() throws Exception {
-        // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeSeries(NODE_NOT_DONE_UUID)).willReturn(null);
+        }).when(dynamicSimulationService).getTimeSeriesResult(NODE_NOT_DONE_UUID, null);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
@@ -335,11 +458,17 @@ public class StudyControllerDynamicSimulationTest {
         // timeseries
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
         List<DoubleTimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
-                TimeSeries.createDouble("NETWORK__BUS____2-BUS____5-1_AC_iSide2", index, 333.847331, 333.847321, 333.847300, 333.847259),
-                TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
+                TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259),
+                TimeSeries.createDouble(TIME_SERIES_NAME_2, index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
-        // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeSeries(NODE_UUID)).willReturn(timeSeries);
+
+        // setup DynamicSimulationService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public List<DoubleTimeSeries> answer(InvocationOnMock invocation) {
+                return timeSeries;
+            }
+        }).when(dynamicSimulationService).getTimeSeriesResult(NODE_UUID, null);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -360,8 +489,13 @@ public class StudyControllerDynamicSimulationTest {
 
     @Test
     public void testGetDynamicSimulationTimeLineResultGivenNodeNotDone() throws Exception {
-        // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeLine(NODE_NOT_DONE_UUID)).willReturn(null);
+        // setup DynamicSimulationService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public List<TimeSeries> answer(InvocationOnMock invocation) {
+                return null;
+            }
+        }).when(dynamicSimulationService).getTimeLineResult(NODE_NOT_DONE_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
@@ -374,14 +508,19 @@ public class StudyControllerDynamicSimulationTest {
     @Test
     public void testGetDynamicSimulationTimeLineResult() throws Exception {
         TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        StringTimeSeries timeLine = TimeSeries.createString("TimeLine", index,
+        StringTimeSeries timeLine = TimeSeries.createString(TIME_LINE_NAME, index,
                 "CLA_2_5 - CLA : order to change topology",
                 "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
                 "CLA_2_5 - CLA : order to change topology",
                 "CLA_2_4 - CLA : arming by over-current constraint");
 
-        // setup StudyService mock
-        given(studyService.getDynamicSimulationTimeLine(NODE_UUID)).willReturn(List.of(timeLine));
+        // setup DynamicSimulationService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public List<TimeSeries> answer(InvocationOnMock invocation) {
+                return List.of(timeLine);
+            }
+        }).when(dynamicSimulationService).getTimeLineResult(NODE_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -402,8 +541,13 @@ public class StudyControllerDynamicSimulationTest {
 
     @Test
     public void testGetDynamicSimulationStatusResultGivenNodeNotRun() throws Exception {
-        // setup StudyService mock
-        given(studyService.getDynamicSimulationStatus(NODE_NOT_RUN_UUID)).willReturn(null);
+        // setup DynamicSimulationService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public DynamicSimulationStatus answer(InvocationOnMock invocation) {
+                return null;
+            }
+        }).when(dynamicSimulationService).getStatus(NODE_NOT_RUN_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
@@ -414,9 +558,43 @@ public class StudyControllerDynamicSimulationTest {
     }
 
     @Test
+    public void testGetDynamicSimulationTimeSeriesMetadata() throws Exception {
+        // setup DynamicSimulationService mock
+        // timeseries metadata
+        List<TimeSeriesMetadataInfos> timeSeriesMetadataInfosList = List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2));
+
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public List<TimeSeriesMetadataInfos> answer(InvocationOnMock invocation) {
+                return timeSeriesMetadataInfosList;
+            }
+        }).when(dynamicSimulationService).getTimeSeriesMetadataList(NODE_UUID);
+
+        // --- call endpoint to be tested --- //
+        // get timeseries metadata from a node done
+        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT + DELIMITER + "timeseries/metadata",
+                        STUDY_UUID, NODE_UUID)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .andExpect(status().isOk()).andReturn();
+
+        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataInfosList = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<TimeSeriesMetadataInfos>>() { });
+
+        // --- check result --- //
+        // metadata must be identical to expected
+        String expectedTimeSeriesMetadataJson = objectMapper.writeValueAsString(timeSeriesMetadataInfosList);
+        String resultTimeSeriesMetadataJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataInfosList);
+        assertEquals(objectMapper.readTree(expectedTimeSeriesMetadataJson), objectMapper.readTree(resultTimeSeriesMetadataJson));
+    }
+
+    @Test
     public void testGetDynamicSimulationStatus() throws Exception {
-        // setup StudyService mock
-        given(studyService.getDynamicSimulationStatus(NODE_UUID)).willReturn(DynamicSimulationStatus.DIVERGED);
+        // setup DynamicSimulationService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public DynamicSimulationStatus answer(InvocationOnMock invocation) {
+                return DynamicSimulationStatus.DIVERGED;
+            }
+        }).when(dynamicSimulationService).getStatus(NODE_UUID);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
@@ -435,8 +613,14 @@ public class StudyControllerDynamicSimulationTest {
 
     @Test
     public void testGetDynamicSimulationMappings() throws Exception {
-        // setup StudyService mock
-        given(studyService.getDynamicSimulationMappings(NODE_UUID)).willReturn(MAPPINGS);
+        // setup DynamicSimulationService mock
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public List<MappingInfos> answer(InvocationOnMock invocation) {
+                return MAPPINGS;
+            }
+        }).
+        when(dynamicSimulationService).getMappings(NODE_UUID);
 
         // --- call endpoint to be tested --- //
         // get all mapping infos
