@@ -79,7 +79,7 @@ public interface DynamicSimulationService {
         dynaWaltzParametersExtension.setSolvers(solvers);
 
         String networkJson = entity.getNetwork();
-        NetworkInfos network = NetworkInfos.parseJson(networkJson);
+        NetworkInfos network = networkJson != null ? NetworkInfos.parseJson(networkJson) : getDefaultNetwork();
         dynaWaltzParametersExtension.setNetwork(network);
 
         parametersInfos.setExtensions(List.of(dynaWaltzParametersExtension));
@@ -116,6 +116,13 @@ public interface DynamicSimulationService {
         simSolver.setLinearSolverName("KLU");
         simSolver.setRecalculateStep(false);
 
+        NetworkInfos network = getDefaultNetwork();
+
+        List<SolverInfos> solvers = List.of(idaSolver, simSolver);
+        return new DynamicSimulationParametersInfos(0, 500, "", List.of(new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers, network)));
+    }
+
+    static NetworkInfos getDefaultNetwork() {
         // these parameters are taken from network.par file in dynamic simulation server
         NetworkInfos network = new NetworkInfos();
         network.setCapacitorNoReclosingDelay(300);
@@ -139,8 +146,7 @@ public interface DynamicSimulationService {
         network.setTransformerTNextTHT(10);
         network.setTransformerTolV(0.015);
 
-        List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        return new DynamicSimulationParametersInfos(0, 500, "", List.of(new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers, network)));
+        return network;
     }
 
     /**
