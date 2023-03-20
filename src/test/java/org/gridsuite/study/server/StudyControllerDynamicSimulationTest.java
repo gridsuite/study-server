@@ -664,6 +664,11 @@ public class StudyControllerDynamicSimulationTest {
                     .andExpect(status().isOk()).andReturn();
 
         // --- check result --- //
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
         // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
         Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(studyUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
