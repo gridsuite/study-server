@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationExtensi
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParametersInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.network.NetworkInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SimSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverInfos;
@@ -74,6 +75,7 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         parameters.setStopTime(500);
         parameters.setMapping(MAPPING_NAME_01);
 
+        // solvers
         IdaSolverInfos idaSolver = new IdaSolverInfos();
         idaSolver.setId("1");
         idaSolver.setType(SolverTypeInfos.IDA);
@@ -98,7 +100,31 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         simSolver.setRecalculateStep(false);
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        DynaWaltzParametersInfos dynaWaltzParametersInfos = new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers);
+
+        // network
+        NetworkInfos network = new NetworkInfos();
+        network.setCapacitorNoReclosingDelay(300);
+        network.setDanglingLineCurrentLimitMaxTimeOperation(90);
+        network.setLineCurrentLimitMaxTimeOperation(90);
+        network.setLoadTp(90);
+        network.setLoadTq(90);
+        network.setLoadAlpha(1);
+        network.setLoadAlphaLong(0);
+        network.setLoadBeta(2);
+        network.setLoadBetaLong(0);
+        network.setLoadIsControllable(false);
+        network.setLoadIsRestorative(false);
+        network.setLoadZPMax(100);
+        network.setLoadZQMax(100);
+        network.setReactanceNoReclosingDelay(0);
+        network.setTransformerCurrentLimitMaxTimeOperation(90);
+        network.setTransformerT1StHT(60);
+        network.setTransformerT1StTHT(30);
+        network.setTransformerTNextHT(10);
+        network.setTransformerTNextTHT(10);
+        network.setTransformerTolV(0.015);
+
+        DynaWaltzParametersInfos dynaWaltzParametersInfos = new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers, network);
         List<DynamicSimulationExtension> extensions = List.of(dynaWaltzParametersInfos);
 
         parameters.setExtensions(extensions);

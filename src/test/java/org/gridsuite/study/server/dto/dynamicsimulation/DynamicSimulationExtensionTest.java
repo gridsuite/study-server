@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.dto.dynamicsimulation;
 
 import org.apache.logging.log4j.util.Strings;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.network.NetworkInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SimSolverInfos;
@@ -29,8 +30,12 @@ public class DynamicSimulationExtensionTest {
 
     static Logger LOGGER = LoggerFactory.getLogger(DynamicSimulationExtensionTest.class);
 
+    static double DOUBLE_ERROR = 0.000001;
+
     @Test
-    public void testToJson() {
+    public void testToJsonParseJson() {
+
+        // solvers
         IdaSolverInfos idaSolver = new IdaSolverInfos();
         idaSolver.setId("1");
         idaSolver.setType(SolverTypeInfos.IDA);
@@ -56,7 +61,30 @@ public class DynamicSimulationExtensionTest {
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
 
-        DynaWaltzParametersInfos dynaWaltzParametersInfos = new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers);
+        // network
+        NetworkInfos network = new NetworkInfos();
+        network.setCapacitorNoReclosingDelay(300);
+        network.setDanglingLineCurrentLimitMaxTimeOperation(90);
+        network.setLineCurrentLimitMaxTimeOperation(90);
+        network.setLoadTp(90);
+        network.setLoadTq(90);
+        network.setLoadAlpha(1);
+        network.setLoadAlphaLong(0);
+        network.setLoadBeta(2);
+        network.setLoadBetaLong(0);
+        network.setLoadIsControllable(false);
+        network.setLoadIsRestorative(false);
+        network.setLoadZPMax(100);
+        network.setLoadZQMax(100);
+        network.setReactanceNoReclosingDelay(0);
+        network.setTransformerCurrentLimitMaxTimeOperation(90);
+        network.setTransformerT1StHT(60);
+        network.setTransformerT1StTHT(30);
+        network.setTransformerTNextHT(10);
+        network.setTransformerTNextTHT(10);
+        network.setTransformerTolV(0.015);
+
+        DynaWaltzParametersInfos dynaWaltzParametersInfos = new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers, network);
 
         List<DynamicSimulationExtension> extensions = List.of(dynaWaltzParametersInfos);
 
@@ -65,39 +93,17 @@ public class DynamicSimulationExtensionTest {
         LOGGER.info("result json = " + resultJson);
         assertTrue(!Strings.isBlank(resultJson));
 
-    }
+        List<DynamicSimulationExtension> outputExtensions = DynamicSimulationExtension.parseJson(resultJson);
 
-    @Test
-    public void testParseJson() {
-        String json = "[ {\n" +
-                "  \"solverId\" : \"1\",\n" +
-                "  \"solvers\" : [ {\n" +
-                "    \"id\" : \"1\",\n" +
-                "    \"type\" : \"IDA\",\n" +
-                "    \"order\" : 1,\n" +
-                "    \"initStep\" : 1.0E-6,\n" +
-                "    \"minStep\" : 1.0E-6,\n" +
-                "    \"maxStep\" : 10.0,\n" +
-                "    \"absAccuracy\" : 1.0E-4,\n" +
-                "    \"relAccuracy\" : 1.0E-4\n" +
-                "  }, {\n" +
-                "    \"id\" : \"3\",\n" +
-                "    \"type\" : \"SIM\",\n" +
-                "    \"maxRootRestart\" : 3,\n" +
-                "    \"maxNewtonTry\" : 10,\n" +
-                "    \"linearSolverName\" : \"KLU\",\n" +
-                "    \"recalculateStep\" : false,\n" +
-                "    \"hMin\" : 1.0E-6,\n" +
-                "    \"hMax\" : 1.0,\n" +
-                "    \"kReduceStep\" : 0.5,\n" +
-                "    \"nEff\" : 10.0,\n" +
-                "    \"nDeadband\" : 2\n" +
-                "  } ],\n" +
-                "  \"name\" : \"DynaWaltzParameters\"\n" +
-                "} ]";
-
-        List<DynamicSimulationExtension> extensions = DynamicSimulationExtension.parseJson(json);
-
+        // must have a dynawaltz extension
         assertEquals(1, extensions.size());
+        DynaWaltzParametersInfos outputDynaWaltzParametersInfos = (DynaWaltzParametersInfos) outputExtensions.get(0);
+        assertEquals("1", outputDynaWaltzParametersInfos.getSolverId());
+        // sanity check ida solver init step
+        assertEquals(idaSolver.getInitStep(), ((IdaSolverInfos) outputDynaWaltzParametersInfos.getSolvers().get(0)).getInitStep(), DOUBLE_ERROR);
+
+        // sanity check network transformer to LV
+        assertEquals(network.getTransformerTolV(), outputDynaWaltzParametersInfos.getNetwork().getTransformerTolV(), DOUBLE_ERROR);
     }
+
 }

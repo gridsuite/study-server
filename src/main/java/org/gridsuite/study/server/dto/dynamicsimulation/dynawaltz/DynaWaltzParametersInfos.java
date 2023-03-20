@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.network.NetworkInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationExtension;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverInfos;
 
@@ -28,6 +29,7 @@ public class DynaWaltzParametersInfos implements DynamicSimulationExtension {
     private final String name;
     private String solverId;
     private List<SolverInfos> solvers;
+    private NetworkInfos network;
 
     public DynaWaltzParametersInfos() {
         name = EXTENSION_NAME;

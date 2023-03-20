@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationExtension;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParametersInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.network.NetworkInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SimSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverInfos;
@@ -49,6 +50,8 @@ public interface DynamicSimulationService {
                 DynaWaltzParametersInfos dynaWaltzExtension = (DynaWaltzParametersInfos) extension;
                 entity.setSolverId(dynaWaltzExtension.getSolverId());
                 entity.setSolvers(SolverInfos.toJson(dynaWaltzExtension.getSolvers()));
+
+                entity.setNetwork(NetworkInfos.toJson(dynaWaltzExtension.getNetwork()));
             } else {
                 throw new StudyException(DYNAMIC_SIMULATION_EXTENSION_NOT_SUPPORTED, String.format("Dynamic simulation extension %s is not supported", extension.getClass().getSimpleName()));
             }
@@ -74,6 +77,10 @@ public interface DynamicSimulationService {
         DynaWaltzParametersInfos dynaWaltzParametersExtension = new DynaWaltzParametersInfos();
         dynaWaltzParametersExtension.setSolverId(solverId);
         dynaWaltzParametersExtension.setSolvers(solvers);
+
+        String networkJson = entity.getNetwork();
+        NetworkInfos network = NetworkInfos.parseJson(networkJson);
+        dynaWaltzParametersExtension.setNetwork(network);
 
         parametersInfos.setExtensions(List.of(dynaWaltzParametersExtension));
 
@@ -109,8 +116,31 @@ public interface DynamicSimulationService {
         simSolver.setLinearSolverName("KLU");
         simSolver.setRecalculateStep(false);
 
+        // these parameters are taken from network.par file in dynamic simulation server
+        NetworkInfos network = new NetworkInfos();
+        network.setCapacitorNoReclosingDelay(300);
+        network.setDanglingLineCurrentLimitMaxTimeOperation(90);
+        network.setLineCurrentLimitMaxTimeOperation(90);
+        network.setLoadTp(90);
+        network.setLoadTq(90);
+        network.setLoadAlpha(1);
+        network.setLoadAlphaLong(0);
+        network.setLoadBeta(2);
+        network.setLoadBetaLong(0);
+        network.setLoadIsControllable(false);
+        network.setLoadIsRestorative(false);
+        network.setLoadZPMax(100);
+        network.setLoadZQMax(100);
+        network.setReactanceNoReclosingDelay(0);
+        network.setTransformerCurrentLimitMaxTimeOperation(90);
+        network.setTransformerT1StHT(60);
+        network.setTransformerT1StTHT(30);
+        network.setTransformerTNextHT(10);
+        network.setTransformerTNextTHT(10);
+        network.setTransformerTolV(0.015);
+
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        return new DynamicSimulationParametersInfos(0, 500, "", List.of(new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers)));
+        return new DynamicSimulationParametersInfos(0, 500, "", List.of(new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers, network)));
     }
 
     /**
@@ -151,7 +181,6 @@ public interface DynamicSimulationService {
     /**
      * invalidate status of the simulation results
      * @param resultUuids a given list of result UUIDs
-     * @return
      */
     void invalidateStatus(List<UUID> resultUuids);
 
