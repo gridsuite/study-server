@@ -1114,7 +1114,11 @@ public class StudyService {
 
     public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setDynamicSimulationParameters(dynamicSimulationParametersEntity));
+        studyEntity.ifPresent(studyEntity1 -> {
+            studyEntity1.setDynamicSimulationParameters(dynamicSimulationParametersEntity);
+            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        });
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
@@ -1656,7 +1660,6 @@ public class StudyService {
     public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
-        Objects.requireNonNull(parameters);
 
         // pre-condition check
         LoadFlowStatus lfStatus = getLoadFlowStatus(nodeUuid);
