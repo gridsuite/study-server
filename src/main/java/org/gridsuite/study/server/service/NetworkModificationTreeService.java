@@ -747,6 +747,7 @@ public class NetworkModificationTreeService {
         return parentNodeUuidOpt.get();
     }
 
+    @Transactional(readOnly = true)
     public Optional<UUID> getParentNodeUuid(UUID nodeUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         return (nodeEntity.getType() == NodeType.ROOT) ? Optional.empty() : Optional.of(nodeEntity.getParentNode().getIdNode());
