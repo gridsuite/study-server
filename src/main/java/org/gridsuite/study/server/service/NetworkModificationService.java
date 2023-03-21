@@ -188,13 +188,7 @@ public class NetworkModificationService {
 
     void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull BuildInfos buildInfos) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
+        String receiver = buildReceiver(nodeUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
         var path = uriComponentsBuilder
@@ -211,13 +205,7 @@ public class NetworkModificationService {
     }
 
     public void stopBuild(@NonNull UUID nodeUuid) {
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
+        String receiver = buildReceiver(nodeUuid);
         var path = UriComponentsBuilder.fromPath("build/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .build()
@@ -285,5 +273,16 @@ public class NetworkModificationService {
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
+    }
+
+    private String buildReceiver(UUID nodeUuid) {
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)),
+                    StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+        return receiver;
     }
 }
