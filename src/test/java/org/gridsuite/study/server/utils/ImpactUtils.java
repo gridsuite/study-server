@@ -25,13 +25,15 @@ public final class ImpactUtils {
 
     public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleImpactType impactType, IdentifiableType elementType, String elementId, Set<String> substationIds) {
         return Optional.of(NetworkModificationResult.builder()
-            .networkImpacts(List.of(createElementImpact(impactType, elementType, elementId, substationIds)))
-            .build());
+                .networkImpacts(List.of(createElementImpact(impactType, elementType, elementId, substationIds)))
+                .applicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
+                .build());
     }
 
     public static Optional<NetworkModificationResult> createModificationResultWithElementImpact(SimpleElementImpact impact) {
         return Optional.of(NetworkModificationResult.builder()
             .networkImpacts(List.of(impact))
+            .applicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
             .build());
     }
 

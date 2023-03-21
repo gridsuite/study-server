@@ -818,7 +818,7 @@ public class StudyService {
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid) {
         if (!(networkModificationTreeService.getStudyRootNodeUuid(studyUuid).equals(nodeUuid)
-                || networkModificationTreeService.getBuildStatus(nodeUuid) == BuildStatus.BUILT)) {
+                || networkModificationTreeService.getBuildStatus(nodeUuid).isBuilt())) {
             throw new StudyException(NODE_NOT_BUILT);
         }
     }
@@ -1492,6 +1492,9 @@ public class StudyService {
     }
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
+
+        networkModificationTreeService.updateBuildStatus(nodeUuid, networkModificationResult.getApplicationStatus());
+
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
                 networkModificationResult.getNetworkImpacts().stream()
                         .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
