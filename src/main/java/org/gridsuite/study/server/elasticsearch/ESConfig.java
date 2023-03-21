@@ -18,6 +18,7 @@ import org.springframework.data.elasticsearch.client.ClientConfiguration.Termina
 import org.springframework.data.elasticsearch.client.RestClients;
 import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
 import org.springframework.data.elasticsearch.core.convert.ElasticsearchCustomConversions;
+import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 import java.net.InetSocketAddress;
 import java.time.ZonedDateTime;
@@ -32,6 +33,7 @@ import java.util.Optional;
  */
 
 @Configuration
+@EnableElasticsearchRepositories
 public class ESConfig extends AbstractElasticsearchConfiguration {
 
     @Value("#{'${spring.data.elasticsearch.embedded:false}' ? 'localhost' : '${spring.data.elasticsearch.host}'}")
