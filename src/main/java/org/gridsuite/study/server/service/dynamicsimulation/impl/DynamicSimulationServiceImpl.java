@@ -13,6 +13,7 @@ import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
@@ -21,6 +22,7 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
 
@@ -54,7 +56,25 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid) {
+    public List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid) {
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
+
+        if (resultUuidOpt.isEmpty()) {
+            return null;
+        }
+        UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
+
+        // get timeseries metadata
+        List<TimeSeriesMetadataInfos> metadataList = timeSeriesClient.getTimeSeriesGroupMetadata(timeSeriesUuid)
+                .getMetadatas()
+                .stream()
+                .map(TimeSeriesMetadataInfos::fromRest).collect(Collectors.toUnmodifiableList());
+
+        return metadataList;
+    }
+
+    @Override
+    public List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames) {
         Optional<UUID> resultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
 
         if (resultUuidOpt.isEmpty()) {
@@ -63,7 +83,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         UUID timeSeriesUuid = dynamicSimulationClient.getTimeSeriesResult(resultUuidOpt.get()); // get timeseries uuid
 
         // get timeseries data
-        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid);
+        List<TimeSeries> timeSeries = timeSeriesClient.getTimeSeriesGroup(timeSeriesUuid, timeSeriesNames);
 
         // get first element to check type
         if (timeSeries != null &&
@@ -86,7 +106,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         UUID timeLineUuid = dynamicSimulationClient.getTimeLineResult(resultUuidOpt.get()); // get timeline uuid
 
         // get timeline data
-        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid);
+        List<TimeSeries> timeLines = timeSeriesClient.getTimeSeriesGroup(timeLineUuid, null);
 
         // get first element to check type
         if (timeLines != null &&
@@ -110,6 +130,16 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
+    public void invalidateStatus(List<UUID> resultUuids) {
+
+        if (resultUuids.isEmpty()) {
+            return;
+        }
+
+        dynamicSimulationClient.invalidateStatus(resultUuids);
+    }
+
+    @Override
     public void deleteResult(UUID resultUuid) {
         Objects.requireNonNull(resultUuid);
         dynamicSimulationClient.deleteResult(resultUuid);
@@ -127,4 +157,5 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     public List<MappingInfos> getMappings(UUID nodeUuid) {
         return dynamicMappingClient.getAllMappings();
     }
+
 }

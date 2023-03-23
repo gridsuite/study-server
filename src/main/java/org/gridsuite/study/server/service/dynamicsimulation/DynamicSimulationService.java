@@ -11,6 +11,7 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,9 +35,10 @@ public interface DynamicSimulationService {
      * Get a list of curves from a given node UUID
      *
      * @param nodeUuid a given node UUID
+     * @param timeSeriesNames a given list of time-series names
      * @return a list of curves
      */
-    List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid);
+    List<DoubleTimeSeries> getTimeSeriesResult(UUID nodeUuid, List<String> timeSeriesNames);
 
     /**
      * Get timeline from a given node UUID
@@ -52,6 +54,13 @@ public interface DynamicSimulationService {
      * @return the status of the dynamic simulation
      */
     DynamicSimulationStatus getStatus(UUID nodeUuid);
+
+    /**
+     * invalidate status of the simulation results
+     * @param resultUuids a given list of result UUIDs
+     * @return
+     */
+    void invalidateStatus(List<UUID> resultUuids);
 
     /**
      * Delete result uuid
@@ -71,4 +80,11 @@ public interface DynamicSimulationService {
      * @return a list of mapping names
      */
     List<MappingInfos> getMappings(UUID nodeUuid);
+
+    /**
+     * Get list of timeseries metadata
+     * @param nodeUuid a given node UUID
+     * @return a list of timeseries metadata
+     */
+    List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid);
 }

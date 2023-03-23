@@ -36,6 +36,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -273,7 +274,8 @@ public class StudyService {
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
-            insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid, clonedCaseUuid);
+            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid, clonedCaseUuid);
+            reindexStudy(duplicatedStudy);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -334,7 +336,7 @@ public class StudyService {
     private UUID getNodeUuidToSearchIn(UUID initialNodeUuid, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = initialNodeUuid;
         if (inUpstreamBuiltParentNode) {
-            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(initialNodeUuid);
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuiltUuid(initialNodeUuid);
         }
         return nodeUuidToSearchIn;
     }
@@ -527,7 +529,7 @@ public class StudyService {
     }
 
     @Transactional
-    public CreatedStudyBasicInfos insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
+    public StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
         Objects.requireNonNull(clonedNetworkUuid);
@@ -546,7 +548,7 @@ public class StudyService {
         studyInfosService.add(createdStudyBasicInfos);
         notificationService.emitStudiesChanged(studyInfos.getId(), userId);
 
-        return createdStudyBasicInfos;
+        return studyEntity;
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
@@ -840,6 +842,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
+        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
@@ -1019,6 +1022,10 @@ public class StudyService {
         sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(networkModificationTreeService.getStudySensitivityAnalysisResultUuids(studyUuid));
     }
 
+    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
+        dynamicSimulationService.invalidateStatus(networkModificationTreeService.getStudyDynamicSimulationResultUuids(studyUuid));
+    }
+
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
                                           UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters) {
@@ -1196,13 +1203,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateStudyNode(UUID studyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
-        checkStudyContainsNode(studyUuid, nodeToCopyUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+    public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
+        checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
-        updateStatuses(studyUuid, duplicatedNodeUuid, true, invalidateBuild);
-        notificationService.emitElementUpdated(studyUuid, userId);
+        updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, invalidateBuild);
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
     @Transactional
@@ -1356,28 +1363,22 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    public void reindexStudy(UUID studyUuid) {
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        if (studyEntity.isPresent()) {
-            StudyEntity study = studyEntity.get();
-
-            CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
-            UUID networkUuid = study.getNetworkUuid();
-
-            // reindex study in elasticsearch
-            studyInfosService.recreateStudyInfos(studyInfos);
-
-            try {
-                networkConversionService.reindexStudyNetworkEquipments(networkUuid);
-            } catch (HttpStatusCodeException e) {
-                LOGGER.error(e.toString(), e);
-                throw e;
-            }
-            invalidateBuild(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, false);
-            LOGGER.info("Study with id = '{}' has been reindexed", studyUuid);
-        } else {
-            throw new StudyException(STUDY_NOT_FOUND);
+    private void reindexStudy(StudyEntity study) {
+        CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
+        // reindex study in elasticsearch
+        studyInfosService.recreateStudyInfos(studyInfos);
+        try {
+            networkConversionService.reindexStudyNetworkEquipments(study.getNetworkUuid());
+        } catch (HttpStatusCodeException e) {
+            LOGGER.error(e.toString(), e);
+            throw e;
         }
+        invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), false, false);
+        LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
+    }
+
+    public void reindexStudy(UUID studyUuid) {
+        reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)));
     }
 
     @Transactional
@@ -1596,7 +1597,7 @@ public class StudyService {
     public String getMapSubstations(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
-            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuiltUuid(nodeUuid);
         }
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), substationsIds, "map-substations");
     }
@@ -1604,7 +1605,7 @@ public class StudyService {
     public String getMapLines(UUID studyUuid, UUID nodeUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = nodeUuid;
         if (inUpstreamBuiltParentNode) {
-            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuilt(nodeUuid);
+            nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuiltUuid(nodeUuid);
         }
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), substationsIds, "map-lines");
     }
@@ -1663,9 +1664,13 @@ public class StudyService {
         return resultUuid;
     }
 
-    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid) {
+    public List<TimeSeriesMetadataInfos> getDynamicSimulationTimeSeriesMetadata(UUID nodeUuid) {
+        return dynamicSimulationService.getTimeSeriesMetadataList(nodeUuid);
+    }
+
+    public List<DoubleTimeSeries> getDynamicSimulationTimeSeries(UUID nodeUuid, List<String> timeSeriesNames) {
         // get timeseries from node uuid
-        return dynamicSimulationService.getTimeSeriesResult(nodeUuid);
+        return dynamicSimulationService.getTimeSeriesResult(nodeUuid, timeSeriesNames);
     }
 
     public List<StringTimeSeries> getDynamicSimulationTimeLine(UUID nodeUuid) {
