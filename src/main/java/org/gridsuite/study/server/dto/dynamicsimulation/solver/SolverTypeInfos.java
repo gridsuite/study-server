@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver;
+package org.gridsuite.study.server.dto.dynamicsimulation.solver;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>

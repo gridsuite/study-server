@@ -5,16 +5,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.dto.dynamicsimulation;
+package org.gridsuite.study.server.dto.dynamicsimulation.solver;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParametersInfos;
 
 import java.io.UncheckedIOException;
+
 import java.util.List;
 
 /**
@@ -22,32 +23,34 @@ import java.util.List;
  */
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
-        property = "name",
+        property = "type",
         include = JsonTypeInfo.As.EXISTING_PROPERTY,
         visible = true
 )@JsonSubTypes({
-    @JsonSubTypes.Type(value = DynaWaltzParametersInfos.class, name = "DynaWaltzParameters")})
-public interface DynamicSimulationExtension {
-    String getName();
+    @JsonSubTypes.Type(value = IdaSolverInfos.class, name = "IDA"),
+    @JsonSubTypes.Type(value = SimSolverInfos.class, name = "SIM")})
+public interface SolverInfos {
+    String getId();
 
-    static List<DynamicSimulationExtension> parseJson(String json) {
+    SolverTypeInfos getType();
 
+    static List<SolverInfos> parseJson(String json) {
         ObjectMapper objectMapper = new ObjectMapper();
-        List<DynamicSimulationExtension> extensions;
+        List<SolverInfos> solvers;
         try {
-            extensions = objectMapper.readValue(json, new TypeReference<List<DynamicSimulationExtension>>() { });
+            solvers = objectMapper.readValue(json, new TypeReference<List<SolverInfos>>() { });
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        return extensions;
+
+        return solvers;
     }
 
-    static String toJson(List<DynamicSimulationExtension> extensions) {
-
+    static String toJson(List<SolverInfos> solvers) {
         ObjectMapper objectMapper = new ObjectMapper();
         String json;
         try {
-            json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(extensions);
+            json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(solvers);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

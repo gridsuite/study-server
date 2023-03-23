@@ -1294,7 +1294,9 @@ public class StudyTest {
         output.receive(TIMEOUT, studyUpdateDestination);
 
         StudyEntity duplicatedStudy = studyRepository.findById(UUID.fromString(DUPLICATED_STUDY_UUID)).orElse(null);
+        assertNotNull(duplicatedStudy);
         RootNode duplicatedRootNode = networkModificationTreeService.getStudyTree(UUID.fromString(DUPLICATED_STUDY_UUID));
+        assertNotNull(duplicatedRootNode);
 
         //Check tree node has been duplicated
         assertEquals(1, duplicatedRootNode.getChildren().size());
@@ -1312,10 +1314,10 @@ public class StudyTest {
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
 
         //Check requests to duplicate modification has been emitted
-        var requests = TestUtils.getRequestsWithBodyDone(4, server);
+        var requests = TestUtils.getRequestsWithBodyDone(5, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks/" + duplicatedStudy.getNetworkUuid() + "/reindex-all")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/groups\\?duplicateFrom=.*&groupUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")));
-
         return duplicatedStudy;
     }
 
