@@ -11,14 +11,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationExtension;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParametersInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.IdaSolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SimSolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverTypeInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
@@ -98,10 +96,9 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
         simSolver.setRecalculateStep(false);
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        DynaWaltzParametersInfos dynaWaltzParametersInfos = new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers);
-        List<DynamicSimulationExtension> extensions = List.of(dynaWaltzParametersInfos);
 
-        parameters.setExtensions(extensions);
+        parameters.setSolverId(idaSolver.getId());
+        parameters.setSolvers(solvers);
 
         // configure mock server response for test case run - networks/{networkUuid}/run?
         String runEndPointUrl = UrlUtil.buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);

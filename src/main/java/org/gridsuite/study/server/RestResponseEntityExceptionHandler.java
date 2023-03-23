@@ -45,7 +45,6 @@ public class RestResponseEntityExceptionHandler {
             case NOT_ALLOWED:
             case BAD_NODE_TYPE:
             case NODE_NAME_ALREADY_EXIST:
-            case DYNAMIC_SIMULATION_EXTENSION_NOT_SUPPORTED:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);

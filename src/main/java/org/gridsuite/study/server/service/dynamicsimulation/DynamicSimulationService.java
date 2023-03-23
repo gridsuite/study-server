@@ -9,24 +9,19 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationExtension;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.DynaWaltzParametersInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.IdaSolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SimSolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.dynawaltz.solver.SolverTypeInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_EXTENSION_NOT_SUPPORTED;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -42,17 +37,9 @@ public interface DynamicSimulationService {
         entity.setStopTime(parametersInfos.getStopTime());
         entity.setMapping(parametersInfos.getMapping());
 
-        // parameters of extensions
-        List<DynamicSimulationExtension> extensions = parametersInfos.getExtensions();
-        for (DynamicSimulationExtension extension : extensions) {
-            if (extension instanceof DynaWaltzParametersInfos) {
-                DynaWaltzParametersInfos dynaWaltzExtension = (DynaWaltzParametersInfos) extension;
-                entity.setSolverId(dynaWaltzExtension.getSolverId());
-                entity.setSolvers(SolverInfos.toJson(dynaWaltzExtension.getSolvers()));
-            } else {
-                throw new StudyException(DYNAMIC_SIMULATION_EXTENSION_NOT_SUPPORTED, String.format("Dynamic simulation extension %s is not supported", extension.getClass().getSimpleName()));
-            }
-        }
+        // solvers parameter
+        entity.setSolverId(parametersInfos.getSolverId());
+        entity.setSolvers(SolverInfos.toJson(parametersInfos.getSolvers()));
 
         return entity;
     }
@@ -66,16 +53,13 @@ public interface DynamicSimulationService {
         parametersInfos.setStopTime(entity.getStopTime());
         parametersInfos.setMapping(entity.getMapping());
 
-        // parameters of extensions
-        // DynaWaltz extension
+        // solvers parameter
         String solversJson = entity.getSolvers();
         List<SolverInfos> solvers = SolverInfos.parseJson(solversJson);
         String solverId = entity.getSolverId();
-        DynaWaltzParametersInfos dynaWaltzParametersExtension = new DynaWaltzParametersInfos();
-        dynaWaltzParametersExtension.setSolverId(solverId);
-        dynaWaltzParametersExtension.setSolvers(solvers);
 
-        parametersInfos.setExtensions(List.of(dynaWaltzParametersExtension));
+        parametersInfos.setSolverId(solverId);
+        parametersInfos.setSolvers(solvers);
 
         return parametersInfos;
     }
@@ -110,7 +94,7 @@ public interface DynamicSimulationService {
         simSolver.setRecalculateStep(false);
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        return new DynamicSimulationParametersInfos(0, 500, "", List.of(new DynaWaltzParametersInfos(DynaWaltzParametersInfos.EXTENSION_NAME, solvers.get(0).getId(), solvers)));
+        return new DynamicSimulationParametersInfos(0, 500, "", idaSolver.getId(), solvers);
     }
 
     /**
