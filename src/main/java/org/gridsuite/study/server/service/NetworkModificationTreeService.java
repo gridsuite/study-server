@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
@@ -366,8 +368,23 @@ public class NetworkModificationTreeService {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
         repositories.get(node.getType()).updateNode(node);
-        notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        if (isRenameNode(node)) {
+            notificationService.emitNodeRenamed(getStudyUuidForNodeId(node.getId()), node.getId());
+        } else {
+            notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        }
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private boolean isRenameNode(AbstractNode node) {
+        RenameNode renameNode = new RenameNode(node.getId(), node.getName(), node.getType());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        Map<String, Object> mappedAbstractNode = objectMapper.convertValue(node, Map.class);
+        Map<String, Object> mappedRenameNode = objectMapper.convertValue(renameNode, Map.class);
+
+        return mappedRenameNode.equals(mappedAbstractNode);
     }
 
     @Transactional
@@ -666,7 +683,7 @@ public class NetworkModificationTreeService {
             invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
         });
 
-        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     @Transactional
@@ -680,7 +697,7 @@ public class NetworkModificationTreeService {
             invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes)
         );
 
-        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos) {
@@ -715,7 +732,7 @@ public class NetworkModificationTreeService {
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes));
 
-        notificationService.emitNodesChanged(studyId, changedNodes);
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
     }
 
     @Transactional(readOnly = true)

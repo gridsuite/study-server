@@ -72,6 +72,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.NODE_RENAMED;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
@@ -690,19 +691,19 @@ public class NetworkModificationTreeTest {
         assertEquals(1, updated.size());
         updated.forEach(id -> assertEquals(node1.getId(), id));
 
-        var justeANameUpdate = NetworkModificationNode.builder()
+        var justANameUpdate = NetworkModificationNode.builder()
             .name("My taylor is rich!").id(node1.getId()).build();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(justeANameUpdate))
+                .content(objectWriter.writeValueAsString(justANameUpdate))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
-        output.receive(TIMEOUT, studyUpdateDestination).getHeaders();
+        assertEquals(NODE_RENAMED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         var newNode = getNode(root.getStudyId(), node1.getId());
-        node1.setName(justeANameUpdate.getName());
+        node1.setName(justANameUpdate.getName());
         assertNodeEquals(node1, newNode);
 
         node1.setId(UUID.randomUUID());
