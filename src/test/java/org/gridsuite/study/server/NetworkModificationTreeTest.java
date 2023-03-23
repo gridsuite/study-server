@@ -71,8 +71,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.NODE_RENAMED;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
@@ -571,7 +570,7 @@ public class NetworkModificationTreeTest {
         if (nodeWithModification) {
             var message = output.receive(TIMEOUT, studyUpdateDestination);
             while (message != null) {
-                Collection<UUID> updatedIds = NODE_UPDATED.equals(message.getHeaders().get(HEADER_UPDATE_TYPE)) ?
+                Collection<UUID> updatedIds = NODE_BUILD_STATUS_UPDATED.equals(message.getHeaders().get(HEADER_UPDATE_TYPE)) ?
                         (Collection<UUID>) message.getHeaders().get(NotificationService.HEADER_NODES) :
                         List.of((UUID) message.getHeaders().get(NotificationService.HEADER_NODE));
                 updatedIds.forEach(id -> assertTrue(children.contains(id)));
