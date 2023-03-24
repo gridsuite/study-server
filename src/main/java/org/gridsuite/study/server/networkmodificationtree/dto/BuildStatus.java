@@ -22,16 +22,17 @@ public enum BuildStatus {
     BUILT_WITH_ERROR;
 
     public static BuildStatus fromApplicationStatus(NetworkModificationResult.ApplicationStatus status) {
-        if (status.equals(NetworkModificationResult.ApplicationStatus.WITH_ERRORS)) {
-            return BuildStatus.BUILT_WITH_ERROR;
-        } else if (status.equals(NetworkModificationResult.ApplicationStatus.WITH_WARNINGS)) {
-            return BuildStatus.BUILT_WITH_WARNING;
-        } else {
-            return BuildStatus.BUILT;
+        switch (status) {
+            case WITH_ERRORS:
+                return BuildStatus.BUILT_WITH_ERROR;
+            case WITH_WARNINGS:
+                return BuildStatus.BUILT_WITH_WARNING;
+            default:
+                return BuildStatus.BUILT;
         }
     }
 
     public boolean isBuilt() {
-        return ordinal() >= 2;
+        return ordinal() >= BUILT.ordinal();
     }
 }
