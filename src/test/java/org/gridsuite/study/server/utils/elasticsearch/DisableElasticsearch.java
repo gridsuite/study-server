@@ -7,23 +7,24 @@
 
 package org.gridsuite.study.server.utils.elasticsearch;
 
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
-import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosRepository;
+import org.gridsuite.study.server.elasticsearch.StudyInfosRepository;
+import org.gridsuite.study.server.elasticsearch.TombstonedEquipmentInfosRepository;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.MockBeans;
-import org.springframework.test.context.TestPropertySource;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@TestPropertySource(properties = {"spring.data.elasticsearch.repositories.enabled=false"})
-@MockBeans({@MockBean(EmbeddedElasticsearch.class), @MockBean(StudyInfosService.class), @MockBean(EquipmentInfosService.class)})
+@MockBeans({@MockBean(EmbeddedElasticsearch.class), @MockBean(EquipmentInfosRepository.class),
+    @MockBean(StudyInfosRepository.class), @MockBean(TombstonedEquipmentInfosRepository.class)})
 public @interface DisableElasticsearch {
 }

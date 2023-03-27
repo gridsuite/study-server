@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.EquipmentInfos;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.lang.NonNull;
 
@@ -17,7 +16,6 @@ import java.util.UUID;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@ConditionalOnExpression("'${spring.data.elasticsearch.repositories.enabled:true}' == 'true'")
 public interface EquipmentInfosRepository extends ElasticsearchRepository<EquipmentInfos, String> {
     List<EquipmentInfos> findAllByNetworkUuid(@NonNull UUID networkUuid);
 

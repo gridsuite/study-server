@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 
 import java.util.UUID;
@@ -15,7 +14,6 @@ import java.util.UUID;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@ConditionalOnExpression("'${spring.data.elasticsearch.repositories.enabled:true}' == 'true'")
 public interface StudyInfosRepository extends ElasticsearchRepository<CreatedStudyBasicInfos, String> {
     void deleteById(UUID uuid);
 }
