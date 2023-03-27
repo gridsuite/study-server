@@ -68,7 +68,7 @@ public class StudyServiceSearchTests {
         when(networkService.getNetworkUuid(STUDY_UUID)).thenReturn(NETWORK_UUID);
         when(networkModificationTreeService.getVariantId(NODE_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(networkModificationTreeService.getVariantId(VARIANT_NODE_UUID)).thenReturn(VARIANT_ID);
-        when(networkModificationTreeService.doGetLastParentNodeBuilt(VARIANT_NODE_UUID)).thenReturn(VARIANT_NODE_UUID);
+        when(networkModificationTreeService.doGetLastParentNodeBuiltUuid(VARIANT_NODE_UUID)).thenReturn(VARIANT_NODE_UUID);
     }
 
     @After
