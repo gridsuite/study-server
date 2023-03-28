@@ -11,11 +11,13 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ComponentResultEmbeddable;
@@ -63,7 +65,7 @@ public class LoadflowService {
         this.networkModificationTreeService = networkModificationTreeService;
     }
 
-    public void runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParameters loadflowParameters, String provider) {
+    public void runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParametersInfos loadflowParameters, String provider) {
         try {
             LoadFlowResult result;
 
@@ -86,7 +88,7 @@ public class LoadflowService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<LoadFlowParameters> httpEntity = new HttpEntity<>(loadflowParameters, headers);
+            HttpEntity<LoadFlowParametersInfos> httpEntity = new HttpEntity<>(loadflowParameters, headers);
 
             setLoadFlowRunning(studyUuid, nodeUuid);
             ResponseEntity<LoadFlowResult> resp = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT,
@@ -178,7 +180,8 @@ public class LoadflowService {
                 parameters.isDcUseTransformerRatio(),
                 parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
                 parameters.getConnectedComponentMode(),
-                parameters.isHvdcAcEmulation());
+                parameters.isHvdcAcEmulation(),
+                List.of()); // TODO
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {

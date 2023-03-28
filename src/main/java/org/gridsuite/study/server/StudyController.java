@@ -808,6 +808,14 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/loadflow/specific-parameters")
+    @Operation(summary = "Get loadflow specific parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow specific parameters")})
+    public ResponseEntity<List<ParameterInfos>> getSpecificLoadflowParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSpecificLoadFlowParameters(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
     @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})

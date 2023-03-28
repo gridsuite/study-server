@@ -755,7 +755,14 @@ public class StudyService {
 
     public void runLoadFlow(UUID studyUuid, UUID nodeUuid) {
         String provider = getLoadFlowProvider(studyUuid);
-        LoadFlowParameters loadflowParameters = getLoadFlowParameters(studyUuid);
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        LoadFlowParameters commonParameters = getLoadFlowParameters(study);
+        List<ParameterInfos> specificParameters = getSpecificLoadFlowParameters(study);
+
+        LoadFlowParametersInfos loadflowParameters = LoadFlowParametersInfos.builder()
+                .commonParameters(commonParameters)
+                .specificParameters(specificParameters.stream().collect(Collectors.toMap(ParameterInfos::getName, ParameterInfos::getValue)))
+                .build();
 
         loadflowService.runLoadFlow(studyUuid, nodeUuid, loadflowParameters, provider);
     }
@@ -823,10 +830,28 @@ public class StudyService {
         }
     }
 
+    private LoadFlowParameters getLoadFlowParameters(StudyEntity studyEntity) {
+        return LoadflowService.fromEntity(studyEntity.getLoadFlowParameters());
+    }
+
     public LoadFlowParameters getLoadFlowParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(studyEntity -> LoadflowService.fromEntity(studyEntity.getLoadFlowParameters()))
+                .map(this::getLoadFlowParameters)
                 .orElse(null);
+    }
+
+    private List<ParameterInfos> getSpecificLoadFlowParameters(StudyEntity study) {
+        List<SpecificParameterEmbeddable> params = study.getLoadFlowParameters().getSpecificParameters();
+        return params.stream()
+                .filter(p -> p.getProvider().equalsIgnoreCase(study.getLoadFlowProvider()))
+                .map(p -> p.toParameterInfos())
+                .collect(Collectors.toList());
+    }
+
+    public List<ParameterInfos> getSpecificLoadFlowParameters(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(this::getSpecificLoadFlowParameters)
+                .orElse(List.of());
     }
 
     @Transactional
