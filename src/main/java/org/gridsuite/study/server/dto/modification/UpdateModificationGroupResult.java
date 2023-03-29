@@ -14,12 +14,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * This is the return value of network-modification-server when we want to copy or move a modification.
+ * TODO : remove this DTO when modificationFailures will not be needed anymore
+ * @author Florent MILLOT <florent.millot at rte-france.com>
+ */
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @Data
 @Schema(description = "Copy or move network modifications result")
-//TODO : remove this DTO when modificationFailures will not be needed anymore
 public class UpdateModificationGroupResult {
 
     @Builder.Default
