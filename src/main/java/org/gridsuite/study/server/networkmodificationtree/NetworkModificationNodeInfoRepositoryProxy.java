@@ -16,7 +16,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.service.LoadflowService;
 
 import java.util.HashSet;
@@ -207,8 +207,9 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
 
     @Override
     public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
-        ((NetworkModificationNode) node).setBuildStatus(buildStatus);
-        updateNode((NetworkModificationNode) node, changedNodes);
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setBuildStatus(buildStatus);
+        updateNode(modificationNode, changedNodes);
     }
 
     @Override
