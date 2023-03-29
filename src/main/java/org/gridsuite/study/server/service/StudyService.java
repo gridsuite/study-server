@@ -971,10 +971,12 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getSecurityAnalysisResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
+        List<ParameterInfos> specificParameters = null;
         SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
         if (StringUtils.isEmpty(parameters)) {
             LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
             securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
+            specificParameters = getSpecificLoadFlowParameters(studyUuid);
         } else {
             try {
                 securityAnalysisParameters = objectMapper.readValue(parameters, SecurityAnalysisParameters.class);
@@ -983,7 +985,13 @@ public class StudyService {
             }
         }
 
-        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, securityAnalysisParameters, receiver);
+        SecurityAnalysisParametersInfos params = SecurityAnalysisParametersInfos.builder()
+                .parameters(securityAnalysisParameters)
+                .loadFlowSpecificParameters(specificParameters == null ?
+                    Map.of() : specificParameters.stream().collect(Collectors.toMap(ParameterInfos::getName, ParameterInfos::getValue)))
+                .build();
+
+        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, reportUuid, nodeUuid, variantId, provider, contingencyListNames, params, receiver);
 
         updateSecurityAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -1575,8 +1583,11 @@ public class StudyService {
             if (sensitivityAnalysisInputData.getParameters() == null) {
                 SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
                 LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
+                List<ParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid);
                 sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
                 sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
+                sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
+                    Map.of() : specificParameters.stream().collect(Collectors.toMap(ParameterInfos::getName, ParameterInfos::getValue)));
             }
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
