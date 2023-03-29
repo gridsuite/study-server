@@ -46,7 +46,6 @@ public class ElementImpactTest {
         assertEquals("{\"impactType\":\"DELETION\",\"elementId\":\"generatorId\",\"elementType\":\"GENERATOR\",\"substationIds\":[\"s4\"]}", mapper.writeValueAsString(deletionImpact));
 
         NetworkModificationResult result = NetworkModificationResult.builder()
-            .applicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
             .networkImpacts((List<SimpleElementImpact>) impacts)
             .build();
         assertEquals(

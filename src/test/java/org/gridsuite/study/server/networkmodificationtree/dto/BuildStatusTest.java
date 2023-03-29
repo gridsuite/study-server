@@ -8,6 +8,9 @@ import java.util.List;
 import static org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * @author Florent MILLOT <florent.millot@rte-france.com>
+ */
 class BuildStatusTest {
 
     @Test
@@ -29,6 +32,6 @@ class BuildStatusTest {
     // If you change the values, then you will have to edit this test and be careful about the order of the enum as said in the BuildStatus class
     @Test
     void checkEnumValues() {
-        assertArrayEquals(values(), List.of(NOT_BUILT, BUILDING, BUILT, BUILT_WITH_WARNING, BUILT_WITH_ERROR).toArray());
+        assertArrayEquals(BuildStatus.values(), List.of(NOT_BUILT, BUILDING, BUILT, BUILT_WITH_WARNING, BUILT_WITH_ERROR).toArray());
     }
 }
