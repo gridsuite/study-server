@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
+ * Copyright (c) 2023, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -41,7 +41,7 @@ public class NetworkModificationResult {
 
     public Set<String> getImpactedSubstationsIds() {
         return networkImpacts.stream()
-            .filter(impact -> impact.getImpactType() != SimpleElementImpact.SimpleImpactType.DELETION || impact.getElementType() != IdentifiableType.SUBSTATION)
+            .filter(impact -> impact.getImpactType() != SimpleElementImpact.SimpleImpactType.DELETION && impact.getElementType() != IdentifiableType.SUBSTATION)
             .flatMap(impact -> impact.getSubstationIds().stream())
             .collect(Collectors.toCollection(TreeSet::new));
     }

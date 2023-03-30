@@ -2195,11 +2195,6 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, String headerUpdateTypeId,
-            NetworkImpactsInfos expectedPayload) throws Exception {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, List.of(nodeUuid), headerUpdateTypeId, expectedPayload);
-    }
-
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids, String headerUpdateTypeId,
                                                        NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
