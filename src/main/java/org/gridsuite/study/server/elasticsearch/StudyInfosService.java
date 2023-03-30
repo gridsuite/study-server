@@ -8,7 +8,6 @@ package org.gridsuite.study.server.elasticsearch;
 
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -32,7 +31,7 @@ public class StudyInfosService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    public StudyInfosService(@Lazy StudyInfosRepository studyInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+    public StudyInfosService(StudyInfosRepository studyInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.studyInfosRepository = studyInfosRepository;
         this.elasticsearchOperations = elasticsearchOperations;
     }
