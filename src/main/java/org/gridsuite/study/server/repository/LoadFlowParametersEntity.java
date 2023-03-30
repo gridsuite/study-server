@@ -36,7 +36,7 @@ public class LoadFlowParametersEntity {
                                     boolean shuntCompensatorVoltageControlOn, boolean readSlackBus, boolean writeSlackBus, boolean dc,
                                     boolean distributedSlack, LoadFlowParameters.BalanceType balanceType, boolean dcUseTransformerRatio,
                                     Set<String> countriesToBalance, LoadFlowParameters.ConnectedComponentMode connectedComponentMode,
-                                    boolean hvdcAcEmulation, List<SpecificParameterEmbeddable> specificParameters) {
+                                    boolean hvdcAcEmulation, List<LoadFlowSpecificParametersEntity> specificParameters) {
         this(null, voltageInitMode, transformerVoltageControlOn, useReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
                 shuntCompensatorVoltageControlOn, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType, dcUseTransformerRatio,
                 countriesToBalance, connectedComponentMode, hvdcAcEmulation, specificParameters);
@@ -99,10 +99,7 @@ public class LoadFlowParametersEntity {
     @Column(name = "hvdcAcEmulation", columnDefinition = "boolean default true")
     private boolean hvdcAcEmulation;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "loadFlowSpecificParameters",
-            joinColumns = @JoinColumn(name = "id", foreignKey = @ForeignKey(name = "specificParameters_fk_constraint"))
-    )
-    private List<SpecificParameterEmbeddable> specificParameters;
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "load_flow_parameters_id")
+    private List<LoadFlowSpecificParametersEntity> specificParameters;
 }

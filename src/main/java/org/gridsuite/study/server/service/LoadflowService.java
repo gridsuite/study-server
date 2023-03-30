@@ -24,7 +24,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ComponentResultEmbeddable;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
-import org.gridsuite.study.server.repository.SpecificParameterEmbeddable;
+import org.gridsuite.study.server.repository.LoadFlowSpecificParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -199,7 +199,7 @@ public class LoadflowService {
                 parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
                 parameters.getConnectedComponentMode(),
                 parameters.isHvdcAcEmulation(),
-                SpecificParameterEmbeddable.toSpecificParameterEmbeddable(allLoadFlowSpecificParameters));
+                LoadFlowSpecificParametersEntity.toLoadFlowSpecificParameters(allLoadFlowSpecificParameters));
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {

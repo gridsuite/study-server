@@ -841,7 +841,7 @@ public class StudyService {
     }
 
     private List<ParameterInfos> getSpecificLoadFlowParameters(StudyEntity study) {
-        List<SpecificParameterEmbeddable> params = study.getLoadFlowParameters().getSpecificParameters();
+        List<LoadFlowSpecificParametersEntity> params = study.getLoadFlowParameters().getSpecificParameters();
         return params.stream()
                 .filter(p -> p.getProvider().equalsIgnoreCase(study.getLoadFlowProvider()))
                 .map(p -> p.toParameterInfos())

@@ -14,8 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.study.server.dto.ParameterInfos;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import javax.persistence.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,8 +27,14 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @Getter
 @Setter
-@Embeddable
-public class SpecificParameterEmbeddable {
+@Entity
+@Table(name = "loadFlowSpecificParameters")
+public class LoadFlowSpecificParametersEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id", nullable = false)
+    private Long id;
+
     @Column(name = "provider")
     private String provider;
 
@@ -48,14 +53,14 @@ public class SpecificParameterEmbeddable {
     @Column(name = "possibleValues")
     private String possibleValues;
 
-    public static List<ParameterInfos> fromSpecificParameterEmbeddable(List<SpecificParameterEmbeddable> params) {
+    public static List<ParameterInfos> fromLoadFlowSpecificParameters(List<LoadFlowSpecificParametersEntity> params) {
         return params == null ? null :
             params.stream()
-                .map(SpecificParameterEmbeddable::toParameterInfos)
+                .map(LoadFlowSpecificParametersEntity::toParameterInfos)
                 .collect(Collectors.toList());
     }
 
-    public static List<SpecificParameterEmbeddable> toSpecificParameterEmbeddable(List<ParameterInfos> params) {
+    public static List<LoadFlowSpecificParametersEntity> toLoadFlowSpecificParameters(List<ParameterInfos> params) {
         return params == null ? null
             : params.stream()
             .map(p -> {
@@ -63,7 +68,7 @@ public class SpecificParameterEmbeddable {
                 if (p.getPossibleValues() != null) {
                     possibleValues = String.join(",", p.getPossibleValues());
                 }
-                return new SpecificParameterEmbeddable(p.getProvider(), p.getName(), p.getValue(),
+                return new LoadFlowSpecificParametersEntity(null, p.getProvider(), p.getName(), p.getValue(),
                         p.getType(), p.getDescription(), possibleValues);
             })
             .collect(Collectors.toList());
