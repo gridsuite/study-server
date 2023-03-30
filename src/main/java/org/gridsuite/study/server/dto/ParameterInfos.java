@@ -6,11 +6,8 @@
  */
 package org.gridsuite.study.server.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.powsybl.commons.parameters.ParameterType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 import java.util.List;
 
@@ -18,24 +15,23 @@ import java.util.List;
  * @author David Braquart <david.braquart@rte-france.com>
  */
 @Getter
+@Setter
 @AllArgsConstructor
 @Builder
+@NoArgsConstructor
 public class ParameterInfos {
 
-    private final String provider;
+    private String provider;
 
-    private final String name;
+    private String name;
 
-    private final String value;
+    private String value;
 
-    private final ParameterType type;
+    private ParameterType type;
 
-    private final String description;
+    private String description;
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private final List<String> possibleValues;
+    private String defaultValue;
+
+    private List<String> possibleValues;
 }
-
-
-
-

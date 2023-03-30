@@ -50,9 +50,23 @@ public class SpecificParameterEmbeddable {
 
     public static List<ParameterInfos> fromSpecificParameterEmbeddable(List<SpecificParameterEmbeddable> params) {
         return params == null ? null :
-                params.stream()
-                        .map(SpecificParameterEmbeddable::toParameterInfos)
-                        .collect(Collectors.toList());
+            params.stream()
+                .map(SpecificParameterEmbeddable::toParameterInfos)
+                .collect(Collectors.toList());
+    }
+
+    public static List<SpecificParameterEmbeddable> toSpecificParameterEmbeddable(List<ParameterInfos> params) {
+        return params == null ? null
+            : params.stream()
+            .map(p -> {
+                String possibleValues = null;
+                if (p.getPossibleValues() != null) {
+                    possibleValues = String.join(",", p.getPossibleValues());
+                }
+                return new SpecificParameterEmbeddable(p.getProvider(), p.getName(), p.getValue(),
+                        p.getType(), p.getDescription(), possibleValues);
+            })
+            .collect(Collectors.toList());
     }
 
     public ParameterInfos toParameterInfos() {
@@ -61,12 +75,12 @@ public class SpecificParameterEmbeddable {
             values = Arrays.stream(getPossibleValues().trim().split("\\s*,\\s*")).collect(Collectors.toList());
         }
         return ParameterInfos.builder()
-                .provider(getProvider())
-                .name(getName())
-                .value(getValue())
-                .type(getType())
-                .description(getDescription())
-                .possibleValues(values)
-                .build();
+            .provider(getProvider())
+            .name(getName())
+            .value(getValue())
+            .type(getType())
+            .description(getDescription())
+            .possibleValues(values)
+            .build();
     }
 }

@@ -19,12 +19,15 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
+import org.gridsuite.study.server.dto.ParameterInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.ComponentResultEmbeddable;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowResultEntity;
+import org.gridsuite.study.server.repository.SpecificParameterEmbeddable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -63,6 +66,21 @@ public class LoadflowService {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
         this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
+    }
+
+    public List<ParameterInfos> getLoadFlowSpecificParameters() {
+        // without rest param 'provider' => retrieve all specific params for all providers
+        var uriComponentsBuilder = UriComponentsBuilder
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/specific-parameters");
+        String path = uriComponentsBuilder.toUriString();
+        List<ParameterInfos> params = restTemplate.exchange(loadFlowServerBaseUri + path,
+                HttpMethod.GET, null, new ParameterizedTypeReference<List<ParameterInfos>>() {
+                }).getBody();
+        // init case: set values using default values
+        if (params != null) {
+            params.forEach(p -> p.setValue(p.getDefaultValue()));
+        }
+        return params;
     }
 
     public void runLoadFlow(UUID studyUuid, UUID nodeUuid, LoadFlowParametersInfos loadflowParameters, String provider) {
@@ -164,7 +182,7 @@ public class LoadflowService {
         return result;
     }
 
-    public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters) {
+    public static LoadFlowParametersEntity toEntity(LoadFlowParameters parameters, List<ParameterInfos> allLoadFlowSpecificParameters) {
         Objects.requireNonNull(parameters);
         return new LoadFlowParametersEntity(parameters.getVoltageInitMode(),
                 parameters.isTransformerVoltageControlOn(),
@@ -181,7 +199,7 @@ public class LoadflowService {
                 parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
                 parameters.getConnectedComponentMode(),
                 parameters.isHvdcAcEmulation(),
-                List.of()); // TODO
+                SpecificParameterEmbeddable.toSpecificParameterEmbeddable(allLoadFlowSpecificParameters));
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
