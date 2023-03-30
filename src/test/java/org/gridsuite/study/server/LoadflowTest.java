@@ -425,6 +425,7 @@ public class LoadflowTest {
                 .distributedSlack(true)
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
+                .useReactiveLimits(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
