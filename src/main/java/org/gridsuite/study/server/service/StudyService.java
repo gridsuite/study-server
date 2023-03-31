@@ -408,7 +408,12 @@ public class StudyService {
     }
 
     private BoolQueryBuilder buildSearchAllEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String initialVariantId, String variantId) {
-        WildcardQueryBuilder equipmentSearchQuery = QueryBuilders.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
+        WildcardQueryBuilder equipmentNameSearchQuery = QueryBuilders.wildcardQuery(EQUIPMENT_NAME, "*" + escapeLucene(userInput) + "*");
+
+        WildcardQueryBuilder equipmentIdSearchQuery = QueryBuilders.wildcardQuery(EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
+
+        BoolQueryBuilder nameOrIdQuery = QueryBuilders.boolQuery().must(QueryBuilders.boolQuery().should(equipmentNameSearchQuery).should(equipmentIdSearchQuery));
+
         TermsQueryBuilder networkUuidSearchQuery = termsQuery(NETWORK_UUID, networkUuid.toString());
         TermsQueryBuilder variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
                 termsQuery(VARIANT_ID, initialVariantId)
@@ -432,7 +437,7 @@ public class StudyService {
         FunctionScoreQueryBuilder functionScoreBoostQuery = QueryBuilders.functionScoreQuery(filterFunctionsForScoreQueries);
 
         BoolQueryBuilder esQuery = QueryBuilders.boolQuery();
-        esQuery.filter(equipmentSearchQuery).filter(networkUuidSearchQuery).filter(variantIdSearchQuery).must(functionScoreBoostQuery);
+        esQuery.filter(nameOrIdQuery).filter(networkUuidSearchQuery).filter(variantIdSearchQuery).must(functionScoreBoostQuery);
         return esQuery;
     }
 
