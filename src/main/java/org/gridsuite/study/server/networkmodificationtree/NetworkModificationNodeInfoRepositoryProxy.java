@@ -240,6 +240,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .reportUuid(networkModificationNode.getReportUuid())
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
+            .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())
+            .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .build();
     }
 }
