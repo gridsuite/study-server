@@ -7,7 +7,7 @@
 
 package org.gridsuite.study.server;
 
-/**
+/*
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.gridsuite.study.server.dto.LoadFlowInfos;
+import org.gridsuite.study.server.dto.LoadFlowParametersValues;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -100,8 +101,8 @@ public class LoadflowTest {
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
 
-    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.8\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
-    public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.8\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
+    public static final String LOAD_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.8\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true},\"specificParametersPerProvider\":{}}";
+    public static final String LOAD_PARAMETERS_JSON2 = "{\"commonParameters\":{\"version\":\"1.8\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true},\"specificParametersPerProvider\":{}}";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_3 = "variant_3";
@@ -137,7 +138,7 @@ public class LoadflowTest {
     private ObjectMapper objectMapper;
 
     //output destinations
-    private String studyUpdateDestination = "study.update";
+    private final String studyUpdateDestination = "study.update";
 
     @Before
     public void setup() throws IOException {
@@ -277,11 +278,14 @@ public class LoadflowTest {
                 content().string(LOAD_PARAMETERS_JSON));
 
         // setting loadFlow Parameters
-        LoadFlowParameters lfpBody = new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
-                true, true, false, true, false, true, true, true,
-                LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
-                EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true);
-        String lfpBodyJson = objectWriter.writeValueAsString(lfpBody);
+        LoadFlowParametersValues lfParamsValues = LoadFlowParametersValues.builder()
+                .commonParameters(new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
+                        true, true, false, true, false, true, true, true,
+                        LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                        EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true))
+                .specificParametersPerProvider(null)
+                .build();
+        String lfpBodyJson = objectWriter.writeValueAsString(lfParamsValues);
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
             .header("userId", "userId")

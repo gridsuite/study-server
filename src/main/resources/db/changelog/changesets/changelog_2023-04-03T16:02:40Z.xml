@@ -1,23 +1,21 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
-    <changeSet author="braquartdav (generated)" id="1680203348134-5">
+    <changeSet author="braquartdav (generated)" id="1680537789957-5">
         <createSequence incrementBy="1" sequenceName="hibernate_sequence" startValue="1"/>
     </changeSet>
-    <changeSet author="braquartdav (generated)" id="1680203348134-6">
+    <changeSet author="braquartdav (generated)" id="1680537789957-6">
         <createTable tableName="load_flow_specific_parameters">
             <column autoIncrement="true" name="id" type="BIGINT">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="load_flow_specific_parametersPK"/>
             </column>
-            <column name="description" type="VARCHAR(255)"/>
             <column name="name" type="VARCHAR(255)"/>
-            <column name="possible_values" type="VARCHAR(255)"/>
             <column name="provider" type="VARCHAR(255)"/>
             <column name="type" type="INT"/>
             <column name="value_" type="VARCHAR(255)"/>
             <column name="load_flow_parameters_id" type="UUID"/>
         </createTable>
     </changeSet>
-    <changeSet author="braquartdav (generated)" id="1680203348134-7">
+    <changeSet author="braquartdav (generated)" id="1680537789957-7">
         <addForeignKeyConstraint baseColumnNames="load_flow_parameters_id" baseTableName="load_flow_specific_parameters" constraintName="FKhv4sw663c5fkfkw42vsrlrbxo" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="load_flow_parameters" validate="true"/>
     </changeSet>
 </databaseChangeLog>

@@ -36,7 +36,7 @@ public class LoadFlowParametersEntity {
                                     boolean shuntCompensatorVoltageControlOn, boolean readSlackBus, boolean writeSlackBus, boolean dc,
                                     boolean distributedSlack, LoadFlowParameters.BalanceType balanceType, boolean dcUseTransformerRatio,
                                     Set<String> countriesToBalance, LoadFlowParameters.ConnectedComponentMode connectedComponentMode,
-                                    boolean hvdcAcEmulation, List<LoadFlowSpecificParametersEntity> specificParameters) {
+                                    boolean hvdcAcEmulation, List<LoadFlowSpecificParameterEntity> specificParameters) {
         this(null, voltageInitMode, transformerVoltageControlOn, useReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
                 shuntCompensatorVoltageControlOn, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType, dcUseTransformerRatio,
                 countriesToBalance, connectedComponentMode, hvdcAcEmulation, specificParameters);
@@ -101,5 +101,5 @@ public class LoadFlowParametersEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "load_flow_parameters_id")
-    private List<LoadFlowSpecificParametersEntity> specificParameters;
+    private List<LoadFlowSpecificParameterEntity> specificParameters;
 }

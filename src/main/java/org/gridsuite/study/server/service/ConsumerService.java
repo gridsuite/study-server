@@ -7,7 +7,7 @@
 
 package org.gridsuite.study.server.service;
 
-/**
+/*
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
@@ -19,7 +19,6 @@ import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ParameterInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.slf4j.Logger;
@@ -57,7 +56,6 @@ public class ConsumerService {
 
     NotificationService notificationService;
     StudyService studyService;
-    LoadflowService loadflowService;
     CaseService caseService;
     NetworkModificationTreeService networkModificationTreeService;
 
@@ -65,13 +63,11 @@ public class ConsumerService {
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
-                           LoadflowService loadflowService,
                            CaseService caseService,
                            NetworkModificationTreeService networkModificationTreeService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
-        this.loadflowService = loadflowService;
         this.caseService = caseService;
         this.networkModificationTreeService = networkModificationTreeService;
     }
@@ -328,9 +324,8 @@ public class ConsumerService {
 
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
-                    List<ParameterInfos> allLoadFlowSpecificParameters = loadflowService.getLoadFlowSpecificParameters();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters, allLoadFlowSpecificParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);

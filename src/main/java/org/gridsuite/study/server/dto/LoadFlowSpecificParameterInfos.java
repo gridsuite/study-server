@@ -9,8 +9,6 @@ package org.gridsuite.study.server.dto;
 import com.powsybl.commons.parameters.ParameterType;
 import lombok.*;
 
-import java.util.List;
-
 /**
  * @author David Braquart <david.braquart@rte-france.com>
  */
@@ -19,7 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
-public class ParameterInfos {
+public class LoadFlowSpecificParameterInfos {
 
     private String provider;
 
@@ -28,10 +26,4 @@ public class ParameterInfos {
     private String value;
 
     private ParameterType type;
-
-    private String description;
-
-    private String defaultValue;
-
-    private List<String> possibleValues;
 }
