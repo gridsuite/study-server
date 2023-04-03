@@ -1560,6 +1560,9 @@ public class StudyService {
     }
 
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, String userId) {
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
+        prevResultUuidOpt.ifPresent(shortCircuitService::deleteShortCircuitAnalysisResult);
+
         ShortCircuitParameters shortCircuitParameters = getShortCircuitParameters(studyUuid);
         UUID result = shortCircuitService.runShortCircuit(studyUuid, nodeUuid, shortCircuitParameters, userId);
 
