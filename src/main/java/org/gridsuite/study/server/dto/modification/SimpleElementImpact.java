@@ -12,6 +12,8 @@ import lombok.*;
 import java.util.Set;
 
 /**
+ * This class describes an element type network impact.
+ * This type of network impact only describes an individual impacted item and the list of associated substations.
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -30,9 +32,11 @@ public class SimpleElementImpact {
 
     private SimpleImpactType impactType;
 
+    /** The ID of the impacted element */
     private String elementId;
 
     private IdentifiableType elementType;
 
+    /** The IDs of the impacted substations */
     private Set<String> substationIds;
 }
