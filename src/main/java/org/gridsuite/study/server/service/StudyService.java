@@ -1488,27 +1488,27 @@ public class StudyService {
 
     private void emitNetworkModificationImpacts(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
-                networkModificationResult.getNetworkImpacts().stream()
-                        .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
-                        .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(impact.getElementId(), impact.getElementType().name()))
-                        .collect(Collectors.toSet());
+            networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
+                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(impact.getElementId(), impact.getElementType().name()))
+            .collect(Collectors.toSet());
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
-                NetworkImpactsInfos.builder()
-                        .deletedEquipments(deletionsInfos)
-                        .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
-                        .build()
+            NetworkImpactsInfos.builder()
+                .deletedEquipments(deletionsInfos)
+                .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                .build()
         );
 
         if (networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
-                .anyMatch(impact -> impact.getElementType() == IdentifiableType.SWITCH)) {
+            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
+            .anyMatch(impact -> impact.getElementType() == IdentifiableType.SWITCH)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
         }
 
         if (networkModificationResult.getNetworkImpacts().stream()
-                .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
-                .anyMatch(impact -> impact.getElementType() == IdentifiableType.LINE)) {
+            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
+            .anyMatch(impact -> impact.getElementType() == IdentifiableType.LINE)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
         }
     }
