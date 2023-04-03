@@ -35,8 +35,8 @@ public enum BuildStatus {
         }
     }
 
-    public static BuildStatus returnHigherSeverityStatus(BuildStatus buildStatus1, BuildStatus buildStatus2) {
-        return Collections.max(List.of(buildStatus1, buildStatus2));
+    public static BuildStatus returnHigherSeverityStatus(BuildStatus... buildStatuses) {
+        return Collections.max(List.of(buildStatuses));
     }
 
     public boolean isBuilt() {
