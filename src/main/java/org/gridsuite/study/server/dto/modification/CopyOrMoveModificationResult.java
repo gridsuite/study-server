@@ -22,7 +22,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-@Data
+@Getter
 @Schema(description = "Copy or move network modifications result")
 public class CopyOrMoveModificationResult {
 
