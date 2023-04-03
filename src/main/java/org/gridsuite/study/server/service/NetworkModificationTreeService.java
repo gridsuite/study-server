@@ -6,8 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
@@ -377,14 +375,12 @@ public class NetworkModificationTreeService {
     }
 
     private boolean isRenameNode(AbstractNode node) {
-        RenameNode renameNode = new RenameNode(node.getId(), node.getName(), node.getType());
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-        Map<String, Object> mappedAbstractNode = objectMapper.convertValue(node, Map.class);
-        Map<String, Object> mappedRenameNode = objectMapper.convertValue(renameNode, Map.class);
-
-        return mappedRenameNode.equals(mappedAbstractNode);
+        NetworkModificationNode renameNode = NetworkModificationNode.builder()
+                .id(node.getId())
+                .name(node.getName())
+                .type(node.getType())
+                .build();
+        return renameNode.equals(node);
     }
 
     @Transactional

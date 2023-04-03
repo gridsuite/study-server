@@ -712,6 +712,28 @@ public class NetworkModificationTreeTest {
             .andExpect(status().isNotFound());
     }
 
+    // This test is for a part of the code that is not used yet
+    // We update a node description (this is not used in the front) and we assume that it will emit a nodeUpdated notif
+    // If it's not the case or if this test causes problems feel free to update it / remove it as needed
+    @Test
+    public void testNodeDescriptionUpdate() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+
+        var nodeDescriptionUpdate = NetworkModificationNode.builder()
+                .description("My taylor is rich!").id(node1.getId()).build();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(nodeDescriptionUpdate))
+                .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        assertEquals(NODE_UPDATED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
+    }
+
     @SneakyThrows
     @Test
     public void testLightNode() {
