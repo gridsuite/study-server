@@ -719,7 +719,7 @@ public class NetworkModificationTreeService {
         if (buildStatus.isBuilt()) {
             NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
             BuildStatus previousBuiltNodeStatus = repositories.get(previousBuiltNode.getType()).getBuildStatus(previousBuiltNode.getIdNode());
-            newNodeStatus = BuildStatus.returnHigherSeverityStatus(buildStatus, previousBuiltNodeStatus);
+            newNodeStatus = buildStatus.max(previousBuiltNodeStatus);
         } else {
             newNodeStatus = buildStatus;
         }

@@ -18,11 +18,17 @@ import java.util.List;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 public enum BuildStatus {
-    NOT_BUILT,
-    BUILDING,
-    BUILT,
-    BUILT_WITH_WARNING,
-    BUILT_WITH_ERROR;
+    NOT_BUILT(-1),
+    BUILDING(-1),
+    BUILT(0),
+    BUILT_WITH_WARNING(1),
+    BUILT_WITH_ERROR(2);
+
+    private final int severityLevel;
+
+    BuildStatus(int severityLevel) {
+        this.severityLevel = severityLevel;
+    }
 
     public static BuildStatus fromApplicationStatus(NetworkModificationResult.ApplicationStatus status) {
         switch (status) {
@@ -35,11 +41,11 @@ public enum BuildStatus {
         }
     }
 
-    public static BuildStatus returnHigherSeverityStatus(BuildStatus... buildStatuses) {
-        return Collections.max(List.of(buildStatuses));
+    public BuildStatus max(BuildStatus other) {
+        return severityLevel >= other.severityLevel ? this : other;
     }
 
     public boolean isBuilt() {
-        return ordinal() >= BUILT.ordinal();
+        return this.severityLevel >= 0;
     }
 }

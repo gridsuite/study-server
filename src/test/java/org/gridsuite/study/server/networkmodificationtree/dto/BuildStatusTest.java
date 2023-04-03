@@ -29,9 +29,10 @@ class BuildStatusTest {
         assertFalse(NOT_BUILT.isBuilt());
     }
 
-    // If you change the values, then you will have to edit this test and be careful about the order of the enum as said in the BuildStatus class
     @Test
-    void checkEnumValues() {
-        assertArrayEquals(BuildStatus.values(), List.of(NOT_BUILT, BUILDING, BUILT, BUILT_WITH_WARNING, BUILT_WITH_ERROR).toArray());
+    void checkMax() {
+        assertEquals(BUILT_WITH_ERROR, BUILT_WITH_ERROR.max(BUILT_WITH_WARNING));
+        assertEquals(BUILT_WITH_ERROR, BUILT_WITH_ERROR.max(BUILT));
+        assertEquals(BUILT_WITH_WARNING, BUILT_WITH_WARNING.max(BUILT));
     }
 }
