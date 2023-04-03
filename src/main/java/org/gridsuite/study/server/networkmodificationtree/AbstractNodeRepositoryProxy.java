@@ -15,7 +15,7 @@ import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
 import org.gridsuite.study.server.utils.PropertyUtils;
 
 import java.util.Collection;

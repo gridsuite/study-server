@@ -10,7 +10,6 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -66,7 +65,7 @@ public class EquipmentInfosService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    public EquipmentInfosService(@Lazy EquipmentInfosRepository equipmentInfosRepository, @Lazy TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+    public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
         this.tombstonedEquipmentInfosRepository = tombstonedEquipmentInfosRepository;
         this.elasticsearchOperations = elasticsearchOperations;

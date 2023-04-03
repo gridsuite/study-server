@@ -21,9 +21,9 @@ import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeI
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
-import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;

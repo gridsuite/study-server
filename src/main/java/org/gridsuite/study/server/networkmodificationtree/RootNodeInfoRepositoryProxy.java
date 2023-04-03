@@ -11,7 +11,7 @@ import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com

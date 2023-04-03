@@ -12,11 +12,10 @@ import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.iidm.network.Identifiable;
 import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import nl.jqno.equalsverifier.EqualsVerifier;
-
-import com.powsybl.iidm.network.VariantManagerConstants;
 import org.gridsuite.study.server.dto.EquipmentInfos;
 import org.gridsuite.study.server.dto.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
@@ -33,7 +32,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.elasticsearch.NoSuchIndexException;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.HashSet;
@@ -51,7 +49,7 @@ import static org.mockito.Mockito.when;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, properties = {"test.elasticsearch.enabled=true"})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public class EquipmentInfosServiceTests {
 
     private static final String TEST_FILE = "testCase.xiidm";
@@ -80,11 +78,7 @@ public class EquipmentInfosServiceTests {
 
     @After
     public void tearDown() {
-        try {
-            equipmentInfosService.deleteAll(NETWORK_UUID);
-        } catch (NoSuchIndexException ex) {
-            // no need to worry that much
-        }
+        equipmentInfosService.deleteAll(NETWORK_UUID);
     }
 
     @Test
