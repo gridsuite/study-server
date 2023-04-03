@@ -16,7 +16,7 @@ import java.util.UUID;
 
 /**
  * This is the return value of network-modification-server when we want to copy or move a modification.
- * TODO : remove this DTO when modificationFailures will not be needed anymore
+ * TODO : remove this DTO and return only networkModificationResult when missingModifications will not be needed anymore
  * @author Florent MILLOT <florent.millot at rte-france.com>
  */
 @NoArgsConstructor
@@ -24,12 +24,12 @@ import java.util.UUID;
 @Builder
 @Data
 @Schema(description = "Copy or move network modifications result")
-public class UpdateModificationGroupResult {
+public class CopyOrMoveModificationResult {
 
     @Builder.Default
     Optional<NetworkModificationResult> networkModificationResult = Optional.empty();
 
     @Schema(description = "Network modification failures")
     @Builder.Default
-    private List<UUID> modificationFailures = List.of();
+    private List<UUID> missingModifications = List.of();
 }

@@ -36,7 +36,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
-import org.gridsuite.study.server.dto.modification.UpdateModificationGroupResult;
+import org.gridsuite.study.server.dto.modification.CopyOrMoveModificationResult;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -1387,8 +1387,8 @@ public class StudyService {
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(targetNodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            UpdateModificationGroupResult result = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
-            modificationsInError = objectMapper.writeValueAsString(result.getModificationFailures());
+            CopyOrMoveModificationResult result = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
+            modificationsInError = objectMapper.writeValueAsString(result.getMissingModifications());
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
                 result.getNetworkModificationResult().ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, modificationResult));
@@ -1420,8 +1420,8 @@ public class StudyService {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            UpdateModificationGroupResult result = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
-            response = objectMapper.writeValueAsString(result.getModificationFailures());
+            CopyOrMoveModificationResult result = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
+            response = objectMapper.writeValueAsString(result.getMissingModifications());
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
             result.getNetworkModificationResult().ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
             updateStatuses(studyUuid, nodeUuid, true, true);
