@@ -23,6 +23,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import lombok.SneakyThrows;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -732,6 +733,13 @@ public class NetworkModificationTreeTest {
                 .andExpect(status().isOk());
         assertEquals(NODE_UPDATED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
+    }
+
+    @Test
+    public void verifyEqualsNetworkModificationNode() {
+        var networkModif1 = NetworkModificationNode.builder().description("test1").build();
+        var networkModif2 = NetworkModificationNode.builder().description("test2").build();
+        EqualsVerifier.simple().forClass(NetworkModificationNode.class).withPrefabValues(AbstractNode.class, networkModif1, networkModif2).withIgnoredFields("type").verify();
     }
 
     @SneakyThrows
