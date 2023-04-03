@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
@@ -794,7 +793,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) LoadFlowParameters lfParameter,
+            @RequestBody(required = false) LoadFlowParametersValues lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
         return ResponseEntity.ok().build();
@@ -803,17 +802,9 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
-    public ResponseEntity<LoadFlowParameters> getLoadflowParameters(
+    public ResponseEntity<LoadFlowParametersValues> getLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/loadflow/specific-parameters")
-    @Operation(summary = "Get loadflow specific parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow specific parameters")})
-    public ResponseEntity<List<ParameterInfos>> getSpecificLoadflowParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSpecificLoadFlowParameters(studyUuid));
+        return ResponseEntity.ok().body(studyService.getLoadFlowParametersValues(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
