@@ -1096,7 +1096,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
 
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
-            networkModificationResult.ifPresent(modificationResult -> updateStatuses(studyUuid, nodeUuid, modificationResult));
+            networkModificationResult.ifPresent(modificationResult -> updateNode(studyUuid, nodeUuid, modificationResult));
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1383,13 +1383,15 @@ public class StudyService {
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(targetNodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
+                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, modificationResult));
                 updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true);
             }
             if (moveBetweenNodes) {
                 // invalidate the whole subtree including the source node
+                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, originNodeUuid, modificationResult));
                 updateStatuses(studyUuid, originNodeUuid, false, true);
             }
         } finally {
@@ -1409,8 +1411,9 @@ public class StudyService {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
+            networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
             updateStatuses(studyUuid, nodeUuid, true, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1467,7 +1470,12 @@ public class StudyService {
         reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
     }
 
-    private void updateStatuses(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
+    private void updateNode(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
+        emitNetworkModificationImpacts(studyUuid, nodeUuid, networkModificationResult);
+        updateStatuses(studyUuid, nodeUuid);
+    }
+
+    private void emitNetworkModificationImpacts(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
                 .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
@@ -1480,8 +1488,6 @@ public class StudyService {
                 .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
                 .build()
         );
-
-        updateStatuses(studyUuid, nodeUuid);
 
         if (networkModificationResult.getNetworkImpacts().stream()
             .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)

@@ -1733,6 +1733,13 @@ public class NetworkModificationTest {
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
         UUID studyNameUserIdUuid1 = UUID.randomUUID();
+
+        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+                .withQueryParam("action", WireMock.equalTo("MOVE"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
+                        .withHeader("Content-Type", "application/json"))).getId();
+
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
                 studyNameUserIdUuid, UUID.randomUUID(), modification1, modification2).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
@@ -1801,6 +1808,12 @@ public class NetworkModificationTest {
         UUID modification2 = UUID.randomUUID();
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
+        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+                .withQueryParam("action", WireMock.equalTo("COPY"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
+                        .withHeader("Content-Type", "application/json"))).getId();
+
         // Random/bad studyId error case
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
                 UUID.randomUUID(), rootNodeUuid)
@@ -1840,6 +1853,44 @@ public class NetworkModificationTest {
                         "reporterId", WireMock.equalTo(node1.getId().toString()),
                         "variantId", WireMock.equalTo(VARIANT_ID)),
                 expectedBody);
+
+        // now we do the same but on a built node
+        node1.setBuildStatus(BuildStatus.BUILT);  // mark node1 as built
+        networkModificationTreeService.updateNode(studyUuid, node1, userId);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+        output.receive(TIMEOUT, studyUpdateDestination);
+
+        groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+                .withQueryParam("action", WireMock.equalTo("COPY"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Optional.of(NetworkModificationResult.builder().build())))
+                        .withHeader("Content-Type", "application/json"))).getId();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().build();
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+        checkEquipmentMessagesReceived(studyUuid, List.of(nodeUuid1), expectedPayload);
+        checkNodesBuildStatusUpdatedMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        expectedList = List.of(modification1, modification2);
+        expectedBody = mapper.writeValueAsString(expectedList);
+        url = "/v1/groups/" + node1.getModificationGroupUuid();
+        wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                        "action", WireMock.equalTo("COPY"),
+                        "networkUuid", WireMock.equalTo(NETWORK_UUID_STRING),
+                        "reportUuid", WireMock.matching(".*"),
+                        "reporterId", WireMock.equalTo(node1.getId().toString()),
+                        "variantId", WireMock.equalTo(VARIANT_ID)),
+                expectedBody);
     }
 
     @Test
@@ -1857,6 +1908,12 @@ public class NetworkModificationTest {
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+
+        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+                .withQueryParam("action", WireMock.equalTo("MOVE"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
+                        .withHeader("Content-Type", "application/json"))).getId();
 
         // Random/bad studyId error case
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
@@ -2195,7 +2252,7 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
     }
 
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids, String headerUpdateTypeId,
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids,
                                                        NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
         Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
@@ -2206,8 +2263,6 @@ public class NetworkModificationTest {
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuids.get(0), headersStudyUpdate.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, nodeUuids);
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuids.get(0));
     }
 
     private void checkEquipmentDeletingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -2224,7 +2279,7 @@ public class NetworkModificationTest {
             NetworkImpactsInfos expectedPayload) throws Exception {
         assertFalse(nodeUuids.isEmpty());
 
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuids, NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, expectedPayload);
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, nodeUuids, expectedPayload);
 
         // assert that the broker message has been sent
         Message<byte[]> messageSwitch = output.receive(TIMEOUT, studyUpdateDestination);
@@ -2233,6 +2288,9 @@ public class NetworkModificationTest {
         assertEquals(studyNameUserIdUuid, headersSwitch.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuids.get(0), headersSwitch.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_SWITCH, headersSwitch.get(NotificationService.HEADER_UPDATE_TYPE));
+
+        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, nodeUuids);
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuids.get(0));
     }
 
     private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
