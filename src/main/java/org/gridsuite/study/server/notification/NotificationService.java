@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.notification;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
+import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +77,8 @@ public class NotificationService {
     public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
     public static final String NODE_MOVED = "nodeMoved";
+    public static final String NODE_RENAMED = "nodeRenamed";
+    public static final String NODE_BUILD_STATUS_UPDATED = "nodeBuildStatusUpdated";
     public static final String MESSAGE_LOG = "Sending message : {}";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
@@ -145,8 +147,8 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpcatsInfos networkImpcatsInfos) {
-        sendUpdateMessage(MessageBuilder.withPayload(networkImpcatsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
+    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, String updateType, NetworkImpactsInfos networkImpactsInfos) {
+        sendUpdateMessage(MessageBuilder.withPayload(networkImpactsInfos).setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_UPDATE_TYPE, updateType)
                 .build());
@@ -193,6 +195,26 @@ public class NotificationService {
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, NODE_UPDATED)
                 .setHeader(HEADER_NODES, nodes)
+                .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitNodeBuildStatusUpdated(UUID studyUuid, Collection<UUID> nodes) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, NODE_BUILD_STATUS_UPDATED)
+                .setHeader(HEADER_NODES, nodes)
+                .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitNodeRenamed(UUID studyUuid, UUID nodeUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, NODE_RENAMED)
+                .setHeader(HEADER_NODE, nodeUuid)
                 .build()
         );
     }
