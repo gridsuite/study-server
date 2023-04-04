@@ -343,6 +343,31 @@ public class LoadflowTest {
 
         assertThat(lfInfos, new MatcherLoadFlowInfos(
                         LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.CONVERGED).build()));
+
+        // setting loadFlow Parameters with specific params
+        lfParamsValues = LoadFlowParametersValues.builder()
+                .commonParameters(new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
+                        true, true, false, true, false, true, true, true,
+                        LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
+                        EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true))
+                .specificParametersPerProvider(Map.of("OpenLoadFlow", Map.of("transformerVoltageControlMode", "WITH_GENERATOR_VOLTAGE_CONTROL")))
+                .build();
+        lfpBodyJson = objectWriter.writeValueAsString(lfParamsValues);
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(lfpBodyJson)).andExpect(
+                status().isOk());
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, null);
+
+        // setting loadFlow Parameters with no data
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)).andExpect(
+                status().isOk());
+        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, null);
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {

@@ -13,10 +13,8 @@ import lombok.*;
  * @author David Braquart <david.braquart@rte-france.com>
  */
 @Getter
-@Setter
 @AllArgsConstructor
 @Builder
-@NoArgsConstructor
 public class LoadFlowSpecificParameterInfos {
 
     private String provider;

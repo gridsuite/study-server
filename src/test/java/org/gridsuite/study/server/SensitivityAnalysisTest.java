@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.commons.parameters.ParameterType;
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -23,6 +24,7 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisInputData;
@@ -31,10 +33,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -436,10 +435,10 @@ public class SensitivityAnalysisTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*?receiver=.*nodeUuid.*")));
 
-        /**
+        /*
          *  what follows is mostly for test coverage -> a failed message without receiver is sent -> will be ignored by consumer
          */
-        studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID);
+        studyEntity = insertDummyStudyWithSpecificParams(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID);
         UUID studyUuid2 = studyEntity.getId();
         UUID rootNodeUuid2 = getRootNodeUuid(studyUuid2);
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
@@ -467,6 +466,27 @@ public class SensitivityAnalysisTest {
             .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
+        var study = studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity, null);
+        return study;
+    }
+
+    private StudyEntity insertDummyStudyWithSpecificParams(UUID networkUuid, UUID caseUuid) {
+        List<LoadFlowSpecificParameterInfos> specificParams = List.of(LoadFlowSpecificParameterInfos.builder()
+                .provider("OpenLoadFlow")
+                        .type(ParameterType.STRING)
+                        .value("FULL_VOLTAGE")
+                        .name("voltageInitModeOverride")
+                .build()
+        );
+        LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()
+                .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
+                .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
+                .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                .specificParameters(LoadFlowSpecificParameterEntity.toLoadFlowSpecificParameters(specificParams))
+                .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
         var study = studyRepository.save(studyEntity);

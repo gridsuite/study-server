@@ -11,7 +11,6 @@ import com.powsybl.commons.parameters.ParameterType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
 
 import javax.persistence.*;
@@ -25,7 +24,6 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Setter
 @Entity
 @Table(name = "loadFlowSpecificParameters")
 public class LoadFlowSpecificParameterEntity {
