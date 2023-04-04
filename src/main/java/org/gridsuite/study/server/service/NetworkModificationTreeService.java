@@ -367,8 +367,21 @@ public class NetworkModificationTreeService {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
         repositories.get(node.getType()).updateNode(node);
-        notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        if (isRenameNode(node)) {
+            notificationService.emitNodeRenamed(getStudyUuidForNodeId(node.getId()), node.getId());
+        } else {
+            notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        }
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private boolean isRenameNode(AbstractNode node) {
+        NetworkModificationNode renameNode = NetworkModificationNode.builder()
+                .id(node.getId())
+                .name(node.getName())
+                .type(node.getType())
+                .build();
+        return renameNode.equals(node);
     }
 
     @Transactional
@@ -667,7 +680,7 @@ public class NetworkModificationTreeService {
             invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
         });
 
-        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     @Transactional
@@ -681,7 +694,7 @@ public class NetworkModificationTreeService {
             invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes)
         );
 
-        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos) {
@@ -731,7 +744,7 @@ public class NetworkModificationTreeService {
         }
 
         nodeRepositoryProxy.updateBuildStatus(nodeUuid, newNodeStatus, changedNodes);
-        notificationService.emitNodesChanged(studyId, changedNodes);
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
     }
 
     @Transactional
