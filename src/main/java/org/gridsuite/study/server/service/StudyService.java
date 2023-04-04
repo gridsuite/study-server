@@ -896,20 +896,19 @@ public class StudyService {
             allCommonValues = LoadFlowParameters.load();
         } else {
             allCommonValues = parameters.getCommonParameters();
-            if(parameters.getSpecificParametersPerProvider() != null) {
+            if (parameters.getSpecificParametersPerProvider() != null) {
                 parameters.getSpecificParametersPerProvider().forEach((provider, paramsMap) -> {
-                            if (paramsMap != null) {
-                                paramsMap.forEach((paramName, paramValue) ->
-                                        allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
-                                                .provider(provider)
-                                                .value(Objects.toString(paramValue))
-                                                .type(ParameterType.STRING) // TODO see if we need the type, but we should remove it from entity
-                                                .name(paramName)
-                                                .build())
-                                );
-                            }
-                        }
-                );
+                    if (paramsMap != null) {
+                        paramsMap.forEach((paramName, paramValue) ->
+                                allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
+                                        .provider(provider)
+                                        .value(Objects.toString(paramValue))
+                                        .type(ParameterType.STRING) // TODO see if we need the type, but we should remove it from entity
+                                        .name(paramName)
+                                        .build())
+                        );
+                    }
+                });
             }
         }
         return LoadflowService.toEntity(allCommonValues, allSpecificValues);
