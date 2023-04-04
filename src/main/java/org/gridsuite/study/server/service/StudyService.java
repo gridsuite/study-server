@@ -8,8 +8,8 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.powsybl.commons.reporter.ReporterModel;
+import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -33,9 +33,8 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.modification.EquipmentDeletionInfos;
-import org.gridsuite.study.server.dto.modification.ModificationInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -44,7 +43,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.notification.dto.NetworkImpcatsInfos;
+import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.slf4j.Logger;
@@ -1088,7 +1087,6 @@ public class StudyService {
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
-        ModificationType modificationType = getModificationType(createModificationAttributes);
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
@@ -1096,9 +1094,9 @@ public class StudyService {
             UUID groupUuid = nodeInfos.getModificationGroupUuid();
             String variantId = nodeInfos.getVariantId();
             UUID reportUuid = nodeInfos.getReportUuid();
-            List<ModificationInfos> modificationInfosList = networkModificationService
-                    .createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
-            updateStatuses(studyUuid, nodeUuid, modificationInfosList, modificationType);
+
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
+            networkModificationResult.ifPresent(modificationResult -> updateStatuses(studyUuid, nodeUuid, modificationResult));
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1469,51 +1467,32 @@ public class StudyService {
         reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
     }
 
-    private Set<String> getSubstationIds(List<ModificationInfos> modificationInfosList) {
-        return modificationInfosList.stream().flatMap(modification -> modification.getSubstationIds().stream())
-                .collect(Collectors.toSet());
-    }
+    private void updateStatuses(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
+        Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
+            networkModificationResult.getNetworkImpacts().stream()
+                .filter(impact -> impact.getImpactType() == SimpleImpactType.DELETION)
+                .map(impact -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(impact.getElementId(), impact.getElementType().name()))
+            .collect(Collectors.toSet());
 
-    private void updateStatuses(UUID studyUuid, UUID nodeUuid, List<ModificationInfos> modifications, ModificationType modificationType) {
-        switch (modificationType) {
-            case EQUIPMENT_ATTRIBUTE_MODIFICATION: {
-                // for now only one sub type (switch), but after need to extract the equipment type to select the right update type
-                Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsInfos.builder().impactedSubstationsIds(substationIds).build());
-                updateStatuses(studyUuid, nodeUuid);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
-                break;
-            }
-            case BRANCH_STATUS_MODIFICATION: {
-                Set<String> substationIds = getSubstationIds(modifications);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY, NetworkImpcatsInfos.builder().impactedSubstationsIds(substationIds).build());
-                updateStatuses(studyUuid, nodeUuid);
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
-                break;
-            }
-            default: {
-                Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos = modifications.stream()
-                        .filter(modif -> modif.getType() == ModificationType.EQUIPMENT_DELETION)
-                        .map(EquipmentDeletionInfos.class::cast)
-                        .map(d -> new org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos(d.getEquipmentId(), d.getEquipmentType()))
-                        .collect(Collectors.toSet());
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
+            NetworkImpactsInfos.builder()
+                .deletedEquipments(deletionsInfos)
+                .impactedSubstationsIds(networkModificationResult.getImpactedSubstationsIds())
+                .build()
+        );
 
-                // we need to filter out the substation ids that are deleted
-                Set<String> deletionsIds = deletionsInfos.stream().map(org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos::getEquipmentId)
-                        .collect(Collectors.toSet());
-                Set<String> impactedSubstationIds = getSubstationIds(modifications).stream()
-                        .filter(id -> !deletionsIds.contains(id))
-                        .collect(Collectors.toSet());
+        updateStatuses(studyUuid, nodeUuid);
 
-                notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STUDY,
-                        NetworkImpcatsInfos
-                                .builder()
-                                .impactedSubstationsIds(impactedSubstationIds)
-                                .deletedEquipments(deletionsInfos)
-                                .build());
-                updateStatuses(studyUuid, nodeUuid);
-                break;
-            }
+        if (networkModificationResult.getNetworkImpacts().stream()
+            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
+            .anyMatch(impact -> impact.getElementType() == IdentifiableType.SWITCH)) {
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SWITCH);
+        }
+
+        if (networkModificationResult.getNetworkImpacts().stream()
+            .filter(impact -> impact.getImpactType() == SimpleImpactType.MODIFICATION)
+            .anyMatch(impact -> impact.getElementType() == IdentifiableType.LINE)) {
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LINE);
         }
     }
 
@@ -1585,16 +1564,6 @@ public class StudyService {
             nodeUuidToSearchIn = networkModificationTreeService.doGetLastParentNodeBuiltUuid(nodeUuid);
         }
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), substationsIds, "map-lines");
-    }
-
-    private ModificationType getModificationType(String modificationAttributes) {
-        try {
-            return objectMapper.readValue(modificationAttributes, ModificationInfos.class).getType();
-        } catch (InvalidTypeIdException e) {
-            throw new StudyException(BAD_MODIFICATION_TYPE, e.getMessage());
-        } catch (JsonProcessingException e) {
-            throw new StudyException(BAD_JSON_FORMAT, e.getMessage());
-        }
     }
 
     public List<MappingInfos> getDynamicSimulationMappings(UUID nodeUuid) {

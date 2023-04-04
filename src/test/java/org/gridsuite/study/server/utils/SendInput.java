@@ -38,10 +38,10 @@ public class SendInput extends PostServeAction {
 
     @Override
     public void doAction(ServeEvent serveEvent, Admin admin, Parameters parameters) {
-        String payload = parameters.get("payload").toString();
+        Object payload = parameters.get("payload");
         String destination = parameters.get("destination").toString();
 
-        MessageBuilder<String> messageBuilder = MessageBuilder.withPayload(payload);
+        MessageBuilder<?> messageBuilder = MessageBuilder.withPayload(payload);
         QueryParameter receiverParam = serveEvent.getRequest().getQueryParams().get(QUERY_PARAM_RECEIVER);
         if (receiverParam != null) {
             messageBuilder.setHeader(HEADER_RECEIVER, receiverParam.firstValue());

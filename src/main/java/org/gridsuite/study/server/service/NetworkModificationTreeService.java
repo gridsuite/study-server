@@ -102,6 +102,9 @@ public class NetworkModificationTreeService {
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
         NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+        if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
 
         Optional<NodeEntity> nodeToCopyOpt = nodesRepository.findById(nodeToCopyUuid);
         NodeEntity nodeToCopyEntity = nodeToCopyOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
@@ -112,9 +115,6 @@ public class NetworkModificationTreeService {
         //First we create the modification group
         networkModificationService.createModifications(modificationGroupUuid, newGroupUuid);
 
-        if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
         NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
                 anchorNodeEntity.getParentNode() : anchorNodeEntity;
         //Then we create the node
