@@ -1838,7 +1838,7 @@ public class NetworkModificationTest {
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
-        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkNodesBuildStatusUpdatedMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -1877,7 +1877,7 @@ public class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
         checkEquipmentMessagesReceived(studyUuid, List.of(nodeUuid1), expectedPayload);
-        checkUpdateNodesMessageReceived(studyUuid, List.of(nodeUuid1));
+        checkNodesBuildStatusUpdatedMessageReceived(studyUuid, List.of(nodeUuid1));
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
@@ -2238,7 +2238,7 @@ public class NetworkModificationTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
-    private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
+    private void checkNodesBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
         Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
@@ -2289,7 +2289,7 @@ public class NetworkModificationTest {
         assertEquals(nodeUuids.get(0), headersSwitch.get(NotificationService.HEADER_NODE));
         assertEquals(NotificationService.UPDATE_TYPE_SWITCH, headersSwitch.get(NotificationService.HEADER_UPDATE_TYPE));
 
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, nodeUuids);
+        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, nodeUuids);
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuids.get(0));
     }
 
