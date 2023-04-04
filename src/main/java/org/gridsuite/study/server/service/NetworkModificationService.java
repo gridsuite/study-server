@@ -14,7 +14,6 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.CopyOrMoveModificationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -228,7 +227,7 @@ public class NetworkModificationService {
         return httpEntity;
     }
 
-    public CopyOrMoveModificationResult moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
+    public Optional<NetworkModificationResult> moveModifications(UUID originGroupUuid, List<UUID> modificationUuidList, UUID beforeUuid, UUID networkUuid, NodeModificationInfos nodeInfos, boolean buildTargetNode) {
         Objects.requireNonNull(networkUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "MOVE")
@@ -248,11 +247,11 @@ public class NetworkModificationService {
                 getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(),
                 HttpMethod.PUT,
                 httpEntity,
-                new ParameterizedTypeReference<CopyOrMoveModificationResult>() {
+                new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
                 }).getBody();
     }
 
-    public CopyOrMoveModificationResult duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
+    public Optional<NetworkModificationResult> duplicateModification(List<UUID> modificationUuidList, UUID networkUuid, NodeModificationInfos nodeInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam("action", "COPY")
             .queryParam("networkUuid", networkUuid)
@@ -265,7 +264,7 @@ public class NetworkModificationService {
                 getNetworkModificationServerURI(false) + path.buildAndExpand(nodeInfos.getModificationGroupUuid()).toUriString(),
                 HttpMethod.PUT,
                 httpEntity,
-                new ParameterizedTypeReference<CopyOrMoveModificationResult>() {
+                new ParameterizedTypeReference<Optional<NetworkModificationResult>>() {
                 }).getBody();
     }
 

@@ -36,7 +36,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.SimpleElementImpact.SimpleImpactType;
-import org.gridsuite.study.server.dto.modification.CopyOrMoveModificationResult;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
@@ -1361,8 +1360,7 @@ public class StudyService {
     }
 
     @Transactional
-    @SneakyThrows
-    public String moveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
+    public void moveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
         String modificationsInError;
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
@@ -1387,16 +1385,15 @@ public class StudyService {
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(targetNodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            CopyOrMoveModificationResult result = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
-            modificationsInError = objectMapper.writeValueAsString(result.getMissingModifications());
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.moveModifications(originGroupUuid, modificationUuidList, beforeUuid, networkUuid, nodeInfos, buildTargetNode);
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
-                result.getNetworkModificationResult().ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, modificationResult));
+                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, targetNodeUuid, modificationResult));
                 updateStatuses(studyUuid, targetNodeUuid, buildTargetNode, true);
             }
             if (moveBetweenNodes) {
                 // invalidate the whole subtree including the source node
-                result.getNetworkModificationResult().ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, originNodeUuid, modificationResult));
+                networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, originNodeUuid, modificationResult));
                 updateStatuses(studyUuid, originNodeUuid, false, true);
             }
         } finally {
@@ -1406,30 +1403,25 @@ public class StudyService {
             }
         }
         notificationService.emitElementUpdated(studyUuid, userId);
-
-        return modificationsInError;
     }
 
     @Transactional
     @SneakyThrows
-    public String duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId) {
+    public void duplicateModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationUuidList, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-        String response;
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
             NodeModificationInfos nodeInfos = networkModificationTreeService.getNodeModificationInfos(nodeUuid);
             UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-            CopyOrMoveModificationResult result = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
-            response = objectMapper.writeValueAsString(result.getMissingModifications());
+            Optional<NetworkModificationResult> networkModificationResult = networkModificationService.duplicateModification(modificationUuidList, networkUuid, nodeInfos);
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
-            result.getNetworkModificationResult().ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
+            networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
             updateStatuses(studyUuid, nodeUuid, true, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
-        return response;
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {

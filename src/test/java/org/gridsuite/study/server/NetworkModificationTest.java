@@ -1737,7 +1737,7 @@ public class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(CopyOrMoveModificationResult.builder().build()))
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
@@ -1811,7 +1811,7 @@ public class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(CopyOrMoveModificationResult.builder().build()))
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         // Random/bad studyId error case
@@ -1863,7 +1863,7 @@ public class NetworkModificationTest {
         groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(CopyOrMoveModificationResult.builder().networkModificationResult(Optional.of(NetworkModificationResult.builder().build())).build()))
+                        .withBody(mapper.writeValueAsString(Optional.of(NetworkModificationResult.builder().build())))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
@@ -1912,7 +1912,7 @@ public class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(CopyOrMoveModificationResult.builder().build()))
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         // Random/bad studyId error case

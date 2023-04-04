@@ -646,7 +646,7 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of network modifications passed in body, copy or cut, then append them to target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated. Modifications in failure are returned.")})
-    public ResponseEntity<String> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") UpdateModificationAction action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
@@ -656,18 +656,17 @@ public class StudyController {
         if (originNodeUuid != null) {
             studyService.assertCanModifyNode(studyUuid, originNodeUuid);
         }
-        String failureIds;
         switch (action) {
             case COPY:
-                failureIds = studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
+                studyService.duplicateModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
-                failureIds = studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
+                studyService.moveModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
                 break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(failureIds);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/loadflow/run")
