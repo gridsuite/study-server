@@ -44,6 +44,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.*;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
@@ -59,13 +60,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -89,7 +87,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
-@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+@DisableElasticsearch
+@ContextConfigurationWithTestChannel
 public class NetworkModificationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTest.class);
 
@@ -1738,7 +1737,7 @@ public class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(UpdateModificationGroupResult.builder().build()))
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
@@ -1812,7 +1811,7 @@ public class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(UpdateModificationGroupResult.builder().build()))
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         // Random/bad studyId error case
@@ -1864,7 +1863,7 @@ public class NetworkModificationTest {
         groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(UpdateModificationGroupResult.builder().networkModificationResult(Optional.of(NetworkModificationResult.builder().build())).build()))
+                        .withBody(mapper.writeValueAsString(Optional.of(NetworkModificationResult.builder().build())))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
@@ -1913,7 +1912,7 @@ public class NetworkModificationTest {
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(UpdateModificationGroupResult.builder().build()))
+                        .withBody(mapper.writeValueAsString(Optional.empty()))
                         .withHeader("Content-Type", "application/json"))).getId();
 
         // Random/bad studyId error case
@@ -2336,11 +2335,6 @@ public class NetworkModificationTest {
     private void checkUpdateEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
-    }
-
-    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
-            NetworkImpactsInfos expectedPayload) throws Exception {
-        checkEquipmentMessagesReceived(studyNameUserIdUuid, List.of(nodeUuid), expectedPayload);
     }
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids,

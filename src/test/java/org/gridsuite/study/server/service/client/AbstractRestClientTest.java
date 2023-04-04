@@ -10,16 +10,14 @@ package org.gridsuite.study.server.service.client;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockWebServer;
-import org.gridsuite.study.server.StudyApplication;
+import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
@@ -29,7 +27,8 @@ import java.io.IOException;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+@DisableElasticsearch
+@ContextConfigurationWithTestChannel
 public abstract class AbstractRestClientTest {
 
     protected MockWebServer server;
