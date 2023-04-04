@@ -23,6 +23,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import lombok.SneakyThrows;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -32,15 +33,16 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.networkmodificationtree.repositories.NodeRepository;
-import org.gridsuite.study.server.networkmodificationtree.repositories.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
@@ -57,12 +59,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -71,7 +70,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
@@ -84,7 +83,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureWebTestClient
 @AutoConfigureMockMvc
 @SpringBootTest
-@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+@DisableElasticsearch
+@ContextConfigurationWithTestChannel
 public class NetworkModificationTreeTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeTest.class);
@@ -570,7 +570,7 @@ public class NetworkModificationTreeTest {
         if (nodeWithModification) {
             var message = output.receive(TIMEOUT, studyUpdateDestination);
             while (message != null) {
-                Collection<UUID> updatedIds = NODE_UPDATED.equals(message.getHeaders().get(HEADER_UPDATE_TYPE)) ?
+                Collection<UUID> updatedIds = NODE_BUILD_STATUS_UPDATED.equals(message.getHeaders().get(HEADER_UPDATE_TYPE)) ?
                         (Collection<UUID>) message.getHeaders().get(NotificationService.HEADER_NODES) :
                         List.of((UUID) message.getHeaders().get(NotificationService.HEADER_NODE));
                 updatedIds.forEach(id -> assertTrue(children.contains(id)));
@@ -690,19 +690,19 @@ public class NetworkModificationTreeTest {
         assertEquals(1, updated.size());
         updated.forEach(id -> assertEquals(node1.getId(), id));
 
-        var justeANameUpdate = NetworkModificationNode.builder()
+        var justANameUpdate = NetworkModificationNode.builder()
             .name("My taylor is rich!").id(node1.getId()).build();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(justeANameUpdate))
+                .content(objectWriter.writeValueAsString(justANameUpdate))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
-        output.receive(TIMEOUT, studyUpdateDestination).getHeaders();
+        assertEquals(NODE_RENAMED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         var newNode = getNode(root.getStudyId(), node1.getId());
-        node1.setName(justeANameUpdate.getName());
+        node1.setName(justANameUpdate.getName());
         assertNodeEquals(node1, newNode);
 
         node1.setId(UUID.randomUUID());
@@ -711,6 +711,35 @@ public class NetworkModificationTreeTest {
                 .content(objectWriter.writeValueAsString(node1))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
+    }
+
+    // This test is for a part of the code that is not used yet
+    // We update a node description (this is not used in the front) and we assume that it will emit a nodeUpdated notif
+    // If it's not the case or if this test causes problems feel free to update it / remove it as needed
+    @Test
+    public void testNodeDescriptionUpdate() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+
+        var nodeDescriptionUpdate = NetworkModificationNode.builder()
+                .description("My taylor is rich!").id(node1.getId()).build();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(nodeDescriptionUpdate))
+                .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        assertEquals(NODE_UPDATED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
+    }
+
+    @Test
+    public void verifyEqualsNetworkModificationNode() {
+        var networkModif1 = NetworkModificationNode.builder().description("test1").build();
+        var networkModif2 = NetworkModificationNode.builder().description("test2").build();
+        EqualsVerifier.simple().forClass(NetworkModificationNode.class).withPrefabValues(AbstractNode.class, networkModif1, networkModif2).withIgnoredFields("type").verify();
     }
 
     @SneakyThrows
