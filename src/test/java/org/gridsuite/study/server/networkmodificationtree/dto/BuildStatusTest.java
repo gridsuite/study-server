@@ -3,8 +3,6 @@ package org.gridsuite.study.server.networkmodificationtree.dto;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 import static org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus.*;
 import static org.junit.jupiter.api.Assertions.*;
 
