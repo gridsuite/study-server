@@ -286,13 +286,13 @@ public class LoadflowTest {
                 .specificParametersPerProvider(null)
                 .build();
         String lfpBodyJson = objectWriter.writeValueAsString(lfParamsValues);
+
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
             .header("userId", "userId")
             .contentType(MediaType.APPLICATION_JSON)
                     .content(lfpBodyJson)).andExpect(
                             status().isOk());
-
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, null);
 
         // getting setted values
