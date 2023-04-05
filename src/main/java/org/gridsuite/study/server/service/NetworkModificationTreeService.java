@@ -737,7 +737,7 @@ public class NetworkModificationTreeService {
             newNodeStatus = buildStatus;
         }
 
-        AbstractNodeRepositoryProxy nodeRepositoryProxy = repositories.get(nodeEntity.getType());
+        AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
         BuildStatus currentNodeStatus = nodeRepositoryProxy.getBuildStatus(nodeEntity.getIdNode());
         if (newNodeStatus.equals(currentNodeStatus)) {
             return;
