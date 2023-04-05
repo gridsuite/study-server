@@ -1098,6 +1098,6 @@ public class NetworkModificationTreeTest {
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
-        assertEquals(NotificationService.NODE_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 }

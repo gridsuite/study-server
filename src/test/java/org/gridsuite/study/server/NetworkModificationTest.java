@@ -2148,7 +2148,7 @@ public class NetworkModificationTest {
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
+        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(modificationNodeUuid));
@@ -2163,9 +2163,9 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
+        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
+        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatus(modificationNodeUuid));
@@ -2180,9 +2180,9 @@ public class NetworkModificationTest {
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
+        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkEquipmentMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, expectedPayload);
-        checkUpdateNodesMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
+        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatus(modificationNodeUuid));
@@ -2335,6 +2335,11 @@ public class NetworkModificationTest {
     private void checkUpdateEquipmentModificationMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(nodeUuid));
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, nodeUuid);
+    }
+
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid,
+                                                NetworkImpactsInfos expectedPayload) throws Exception {
+        checkEquipmentMessagesReceived(studyNameUserIdUuid, List.of(nodeUuid), expectedPayload);
     }
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, List<UUID> nodeUuids,

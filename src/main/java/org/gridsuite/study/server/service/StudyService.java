@@ -1476,7 +1476,7 @@ public class StudyService {
     }
 
     private void emitNetworkModificationImpacts(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
-
+        //TODO move this / rename parent method when refactoring notifications
         networkModificationTreeService.updateBuildStatus(nodeUuid, networkModificationResult.getApplicationStatus());
         Set<org.gridsuite.study.server.notification.dto.EquipmentDeletionInfos> deletionsInfos =
             networkModificationResult.getNetworkImpacts().stream()
