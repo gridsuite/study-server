@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,6 +39,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @SuperBuilder
+@EqualsAndHashCode
 public abstract class AbstractNode {
     UUID id;
     String name;

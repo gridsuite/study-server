@@ -7,6 +7,9 @@
 
 package org.gridsuite.study.server.utils;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
@@ -17,14 +20,17 @@ import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.ShortCircuitService;
+import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 /**
@@ -130,5 +136,19 @@ public final class TestUtils {
         }
 
         assertNull("Should not be any http requests : ", httpRequest);
+    }
+
+    public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException, IOException {
+        try {
+            wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
+            assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size()); // requests no verified ?
+        } finally {
+            wireMockServer.shutdown();
+        }
+    }
+
+    public static String resourceToString(String resource) throws IOException {
+        String content = new String(ByteStreams.toByteArray(TestUtils.class.getResourceAsStream(resource)), StandardCharsets.UTF_8);
+        return StringUtils.replaceWhitespaceCharacters(content, "");
     }
 }
