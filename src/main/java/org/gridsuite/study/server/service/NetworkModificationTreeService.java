@@ -102,6 +102,9 @@ public class NetworkModificationTreeService {
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
         NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+        if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
 
         Optional<NodeEntity> nodeToCopyOpt = nodesRepository.findById(nodeToCopyUuid);
         NodeEntity nodeToCopyEntity = nodeToCopyOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
@@ -112,9 +115,6 @@ public class NetworkModificationTreeService {
         //First we create the modification group
         networkModificationService.createModifications(modificationGroupUuid, newGroupUuid);
 
-        if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
         NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
                 anchorNodeEntity.getParentNode() : anchorNodeEntity;
         //Then we create the node
@@ -366,8 +366,21 @@ public class NetworkModificationTreeService {
             assertNodeNameNotExist(studyUuid, node.getName());
         }
         repositories.get(node.getType()).updateNode(node);
-        notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        if (isRenameNode(node)) {
+            notificationService.emitNodeRenamed(getStudyUuidForNodeId(node.getId()), node.getId());
+        } else {
+            notificationService.emitNodesChanged(getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
+        }
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private boolean isRenameNode(AbstractNode node) {
+        NetworkModificationNode renameNode = NetworkModificationNode.builder()
+                .id(node.getId())
+                .name(node.getName())
+                .type(node.getType())
+                .build();
+        return renameNode.equals(node);
     }
 
     @Transactional
@@ -666,7 +679,7 @@ public class NetworkModificationTreeService {
             invalidateChildrenBuildStatus(n, changedNodes, invalidateNodeInfos);
         });
 
-        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     @Transactional
@@ -680,7 +693,7 @@ public class NetworkModificationTreeService {
             invalidateNodeProper(n, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes)
         );
 
-        notificationService.emitNodesChanged(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()));
     }
 
     private void invalidateChildrenBuildStatus(NodeEntity nodeEntity, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos) {
@@ -715,7 +728,7 @@ public class NetworkModificationTreeService {
 
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateBuildStatus(nodeUuid, buildStatus, changedNodes));
 
-        notificationService.emitNodesChanged(studyId, changedNodes);
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
     }
 
     @Transactional(readOnly = true)
