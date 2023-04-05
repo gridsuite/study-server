@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.repository;
 
-import com.powsybl.commons.parameters.ParameterType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -41,13 +40,10 @@ public class LoadFlowSpecificParameterEntity {
     @Column(name = "value_")
     private String value;
 
-    @Column(name = "type")
-    private ParameterType type;
-
     public static List<LoadFlowSpecificParameterEntity> toLoadFlowSpecificParameters(List<LoadFlowSpecificParameterInfos> params) {
         return params == null ? null
             : params.stream()
-            .map(p -> new LoadFlowSpecificParameterEntity(null, p.getProvider(), p.getName(), p.getValue(), p.getType()))
+            .map(p -> new LoadFlowSpecificParameterEntity(null, p.getProvider(), p.getName(), p.getValue()))
             .collect(Collectors.toList());
     }
 
@@ -56,7 +52,6 @@ public class LoadFlowSpecificParameterEntity {
             .provider(getProvider())
             .name(getName())
             .value(getValue())
-            .type(getType())
             .build();
     }
 }

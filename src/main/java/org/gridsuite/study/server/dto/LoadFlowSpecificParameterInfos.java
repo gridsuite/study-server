@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.dto;
 
-import com.powsybl.commons.parameters.ParameterType;
 import lombok.*;
 
 /**
@@ -22,6 +21,4 @@ public class LoadFlowSpecificParameterInfos {
     private String name;
 
     private String value;
-
-    private ParameterType type;
 }

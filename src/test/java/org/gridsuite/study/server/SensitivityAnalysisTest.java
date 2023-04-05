@@ -16,7 +16,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.commons.parameters.ParameterType;
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -476,9 +475,8 @@ public class SensitivityAnalysisTest {
     private StudyEntity insertDummyStudyWithSpecificParams(UUID networkUuid, UUID caseUuid) {
         List<LoadFlowSpecificParameterInfos> specificParams = List.of(LoadFlowSpecificParameterInfos.builder()
                 .provider("OpenLoadFlow")
-                        .type(ParameterType.STRING)
-                        .value("FULL_VOLTAGE")
-                        .name("voltageInitModeOverride")
+                .value("FULL_VOLTAGE")
+                .name("voltageInitModeOverride")
                 .build()
         );
         LoadFlowParametersEntity defaultLoadflowParametersEntity = LoadFlowParametersEntity.builder()

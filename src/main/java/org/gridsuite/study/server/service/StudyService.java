@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.commons.parameters.ParameterType;
 import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -842,26 +841,13 @@ public class StudyService {
                 .build();
     }
 
-    private static Object toBasicType(ParameterType type, String value) {
-        if (type == ParameterType.STRING) {
-            return value;
-        } else if (type == ParameterType.BOOLEAN) {
-            return Boolean.parseBoolean(value);
-        } else if (type == ParameterType.DOUBLE) {
-            return Double.parseDouble(value);
-        } else if (type == ParameterType.INTEGER) {
-            return Integer.parseInt(value);
-        } // else missing ParameterType.STRING_LIST
-        return value;
-    }
-
     public LoadFlowParametersValues getLoadFlowParametersValues(UUID studyUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters commonParameters = getLoadFlowParameters(study);
         List<LoadFlowSpecificParameterInfos> specificParameters = getAllSpecificLoadFlowParameters(study);
         Map<String, Map<String, Object>> specificParametersPerProvider = specificParameters.stream()
             .collect(Collectors.groupingBy(LoadFlowSpecificParameterInfos::getProvider,
-                Collectors.toMap(LoadFlowSpecificParameterInfos::getName, p -> toBasicType(p.getType(), p.getValue()))));
+                Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)));
         return LoadFlowParametersValues.builder()
                 .commonParameters(commonParameters)
                 .specificParametersPerProvider(specificParametersPerProvider)
@@ -903,7 +889,6 @@ public class StudyService {
                                 allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
                                         .provider(provider)
                                         .value(Objects.toString(paramValue))
-                                        .type(ParameterType.STRING) // TODO see if we need the type, but we should remove it from entity
                                         .name(paramName)
                                         .build())
                         );
