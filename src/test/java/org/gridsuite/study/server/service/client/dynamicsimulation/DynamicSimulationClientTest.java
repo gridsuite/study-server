@@ -69,8 +69,8 @@ public class DynamicSimulationClientTest extends AbstractWireMockRestClientTest 
 
         // prepare parameters
         DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
-        parameters.setStartTime(0);
-        parameters.setStopTime(500);
+        parameters.setStartTime(0.0);
+        parameters.setStopTime(500.0);
         parameters.setMapping(MAPPING_NAME_01);
 
         // solvers

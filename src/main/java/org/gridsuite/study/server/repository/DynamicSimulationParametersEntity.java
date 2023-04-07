@@ -26,13 +26,13 @@ public class DynamicSimulationParametersEntity {
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "startTime", columnDefinition = "numeric default 0")
-    private int startTime;
+    @Column(name = "startTime")
+    private double startTime;
 
-    @Column(name = "stopTime", columnDefinition = "numeric default 0")
-    private int stopTime;
+    @Column(name = "stopTime")
+    private double stopTime;
 
-    @Column(name = "solverId", columnDefinition = "varchar(2) default null")
+    @Column(name = "solverId", columnDefinition = "varchar(255) default null")
     private String solverId;
 
     @Column(name = "solvers", columnDefinition = "text default null")

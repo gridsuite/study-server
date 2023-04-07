@@ -56,9 +56,9 @@ public class StudyServiceDynamicSimulationTest {
 
     private static final String VARIANT_1_ID = "variant_1";
 
-    private static final int START_TIME = 0;
+    private static final double START_TIME = 0.0;
 
-    private static final int STOP_TIME = 500;
+    private static final double STOP_TIME = 500.0;
 
     private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
     private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
@@ -68,8 +68,6 @@ public class StudyServiceDynamicSimulationTest {
 
     private static final String NODE_UUID_STRING = "22222222-0000-0000-0000-000000000000";
     private static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-
-    private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
 
     private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
     private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
