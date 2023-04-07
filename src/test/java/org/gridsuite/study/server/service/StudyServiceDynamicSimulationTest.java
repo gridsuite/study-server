@@ -56,9 +56,9 @@ public class StudyServiceDynamicSimulationTest {
 
     private static final String VARIANT_1_ID = "variant_1";
 
-    private static final int START_TIME = 0;
+    private static final double START_TIME = 0.0;
 
-    private static final int STOP_TIME = 500;
+    private static final double STOP_TIME = 500.0;
 
     private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
     private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
@@ -68,8 +68,6 @@ public class StudyServiceDynamicSimulationTest {
 
     private static final String NODE_UUID_STRING = "22222222-0000-0000-0000-000000000000";
     private static final UUID NODE_UUID = UUID.fromString(NODE_UUID_STRING);
-
-    private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
 
     private static final String RESULT_UUID_STRING = "99999999-0000-0000-0000-000000000000";
     private static final UUID RESULT_UUID = UUID.fromString(RESULT_UUID_STRING);
@@ -114,16 +112,18 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(anyString(), eq(NETWORK_UUID), anyString(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01))).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(eq(""), anyString(), eq(NETWORK_UUID), anyString(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResult(any(UUID.class));
         given(networkModificationTreeService.getLoadFlowStatus(NODE_UUID)).willReturn(Optional.of(LoadFlowStatus.CONVERGED));
+
         // init parameters
         DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
         parameters.setStartTime(START_TIME);
         parameters.setStopTime(STOP_TIME);
+        parameters.setMapping(MAPPING_NAME_01);
 
         // call method to be tested
-        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters, MAPPING_NAME_01);
+        UUID resultUuid = studyService.runDynamicSimulation(STUDY_UUID, NODE_UUID, parameters);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());
@@ -191,10 +191,10 @@ public class StudyServiceDynamicSimulationTest {
     @Test
     public void testGetDynamicSimulationMappings() throws JsonProcessingException {
         // setup
-        given(dynamicSimulationService.getMappings(any(UUID.class))).willReturn(MAPPINGS);
+        given(dynamicSimulationService.getMappings(STUDY_UUID)).willReturn(MAPPINGS);
 
         // call method to be tested
-        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(NODE_UUID);
+        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(STUDY_UUID);
 
         // --- check result --- //
         // must return 2 mappings
