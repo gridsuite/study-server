@@ -94,7 +94,7 @@ public interface DynamicSimulationService {
         simSolver.setRecalculateStep(false);
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        return new DynamicSimulationParametersInfos(0, 500, "", idaSolver.getId(), solvers);
+        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers);
     }
 
     /**
