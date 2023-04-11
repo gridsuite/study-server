@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -187,6 +188,7 @@ public class NetworkModificationTreeTest {
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
         objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
