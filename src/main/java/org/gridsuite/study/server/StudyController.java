@@ -857,6 +857,23 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getSensitivityAnalysisProvider(studyUuid));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
+    @Operation(summary = "Set dynamic simulation provider for the specified study, no body means reset to default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is set")})
+    public ResponseEntity<Void> setDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @RequestBody(required = false) String provider,
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.updateDynamicSimulationProvider(studyUuid, provider, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
+    @Operation(summary = "Get dynamic simulation provider for a specified study, empty string means default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
+    public ResponseEntity<String> getDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters")
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set")})
@@ -1218,6 +1235,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDefaultSensitivityAnalysisProvider());
     }
 
+    @GetMapping(value = "/dynamic-simulation-default-provider")
+    @Operation(summary = "get dynamic simulation default provider")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "the dynamic simulation default provider has been found"))
+    public ResponseEntity<String> getDefaultDynamicSimulationProvider() {
+        return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/reindex-all")
     @Operation(summary = "reindex the study")
     @ApiResponse(responseCode = "200", description = "Study reindexed")
@@ -1307,16 +1331,34 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getMapLines(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/mappings")
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/mappings")
     @Operation(summary = "Get all mapping of dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All mappings of dynamic simulation"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation mappings"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation mappings has not been found")})
-    public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappings(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<MappingInfos> mappings = studyService.getDynamicSimulationMappings(nodeUuid);
+    public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappings(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid) {
+        List<MappingInfos> mappings = studyService.getDynamicSimulationMappings(studyUuid);
         return mappings != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(mappings) :
                 ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
+    @Operation(summary = "set dynamic simulation parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
+    public ResponseEntity<Void> setDynamicSimulationParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) DynamicSimulationParametersInfos dsParameter,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
+    @Operation(summary = "Get dynamic simulation parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
+    public ResponseEntity<DynamicSimulationParametersInfos> getDynamicSimulationParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
@@ -1324,11 +1366,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
     public ResponseEntity<UUID> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @Parameter(description = "mappingName") @RequestParam("mappingName") String mappingName,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters, mappingName));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.runDynamicSimulation(studyUuid, nodeUuid, parameters));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
