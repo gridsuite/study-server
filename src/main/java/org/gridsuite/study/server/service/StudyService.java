@@ -46,6 +46,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,6 +106,8 @@ public class StudyService {
 
     private final String defaultSensitivityAnalysisProvider;
 
+    private final String defaultDynamicSimulationProvider;
+
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
     private final NetworkService networkStoreService;
@@ -135,6 +138,7 @@ public class StudyService {
             @Value("${loadflow.default-provider}") String defaultLoadflowProvider,
             @Value("${security-analysis.default-provider}") String defaultSecurityAnalysisProvider,
             @Value("${sensitivity-analysis.default-provider}") String defaultSensitivityAnalysisProvider,
+            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
             StudyRepository studyRepository,
             StudyCreationRequestRepository studyCreationRequestRepository,
             NetworkService networkStoreService,
@@ -160,6 +164,7 @@ public class StudyService {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
+        this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -254,13 +259,14 @@ public class StudyService {
         }
         LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
         ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
+        DynamicSimulationParametersInfos copiedDynamicSimulationParameters = DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, copiedShortCircuitParameters, userId));
+        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, copiedShortCircuitParameters, copiedDynamicSimulationParameters, userId));
         return basicStudyInfos;
     }
 
-    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, ShortCircuitParameters copiedShortCircuitParameters, String userId) {
+    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, ShortCircuitParameters copiedShortCircuitParameters, DynamicSimulationParametersInfos copiedDynamicSimulationParameters, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         try {
             startTime.set(System.nanoTime());
@@ -273,7 +279,8 @@ public class StudyService {
 
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
-            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), userId, clonedNetworkUuid, clonedCaseUuid);
+            DynamicSimulationParametersInfos dynamicSimulationParameters = copiedDynamicSimulationParameters != null ? copiedDynamicSimulationParameters : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters), userId, clonedNetworkUuid, clonedCaseUuid);
             reindexStudy(duplicatedStudy);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -517,9 +524,9 @@ public class StudyService {
 
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, String caseFormat,
                                               UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                              ShortCircuitParametersEntity shortCircuitParametersEntity, UUID importReportUuid) {
+                                              ShortCircuitParametersEntity shortCircuitParametersEntity, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, UUID importReportUuid) {
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertStudyEntity(
-                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity));
+                studyUuid, userId, networkInfos.getNetworkUuid(), networkInfos.getNetworkId(), caseFormat, caseUuid, caseName, loadFlowParameters, importReportUuid, shortCircuitParametersEntity, dynamicSimulationParametersEntity));
         studyInfosService.add(createdStudyBasicInfos);
 
         notificationService.emitStudiesChanged(studyUuid, userId);
@@ -528,7 +535,7 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
+    public StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, DynamicSimulationParametersEntity newDynamicSimulationParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
         Objects.requireNonNull(clonedNetworkUuid);
@@ -541,7 +548,7 @@ public class StudyService {
         UUID reportUuid = UUID.randomUUID();
         StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(),
                 clonedCaseUuid, sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),
-                sourceStudy.getSensitivityAnalysisProvider(), newLoadFlowParameters, newShortCircuitParameters);
+                sourceStudy.getSensitivityAnalysisProvider(), sourceStudy.getDynamicSimulationProvider(), newLoadFlowParameters, newShortCircuitParameters, newDynamicSimulationParameters);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -910,6 +917,25 @@ public class StudyService {
         });
     }
 
+    public String getDefaultDynamicSimulationProvider() {
+        return defaultDynamicSimulationProvider;
+    }
+
+    public String getDynamicSimulationProvider(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(StudyEntity::getDynamicSimulationProvider)
+                .orElse("");
+    }
+
+    @Transactional
+    public void updateDynamicSimulationProvider(UUID studyUuid, String provider, String userId) {
+        updateProvider(studyUuid, userId, studyEntity -> {
+            studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
+            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        });
+    }
+
     public ShortCircuitParameters getShortCircuitParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> ShortCircuitService.fromEntity(studyEntity.getShortCircuitParameters()))
@@ -1021,7 +1047,7 @@ public class StudyService {
 
     private StudyEntity insertStudyEntity(UUID uuid, String userId, UUID networkUuid, String networkId,
                                           String caseFormat, UUID caseUuid, String caseName, LoadFlowParametersEntity loadFlowParameters,
-                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters) {
+                                          UUID importReportUuid, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters) {
         Objects.requireNonNull(uuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkUuid);
@@ -1032,7 +1058,7 @@ public class StudyService {
         Objects.requireNonNull(shortCircuitParameters);
 
         StudyEntity studyEntity = new StudyEntity(uuid, networkUuid, networkId, caseFormat, caseUuid, caseName, defaultLoadflowProvider,
-                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, loadFlowParameters, shortCircuitParameters);
+                defaultSecurityAnalysisProvider, defaultSensitivityAnalysisProvider, defaultDynamicSimulationProvider, loadFlowParameters, shortCircuitParameters, dynamicSimulationParameters);
         return self.insertStudy(studyEntity, importReportUuid);
     }
 
@@ -1084,6 +1110,15 @@ public class StudyService {
     public void updateShortCircuitParameters(UUID studyUuid, ShortCircuitParametersEntity shortCircuitParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> studyEntity1.setShortCircuitParameters(shortCircuitParametersEntity));
+    }
+
+    public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> {
+            studyEntity1.setDynamicSimulationParameters(dynamicSimulationParametersEntity);
+            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        });
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
@@ -1574,17 +1609,27 @@ public class StudyService {
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn), substationsIds, "map-lines");
     }
 
-    public List<MappingInfos> getDynamicSimulationMappings(UUID nodeUuid) {
-        // get mapping from node uuid
-        return dynamicSimulationService.getMappings(nodeUuid);
+    public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
+        // get mapping from study uuid
+        return dynamicSimulationService.getMappings(studyUuid);
     }
 
     @Transactional
-    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters, String mappingName) {
+    public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
+        updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters()));
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters()) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
+                .orElse(null);
+    }
+
+    @Transactional
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, DynamicSimulationParametersInfos parameters) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
-        Objects.requireNonNull(parameters);
-        Objects.requireNonNull(mappingName);
 
         // pre-condition check
         LoadFlowStatus lfStatus = getLoadFlowStatus(nodeUuid);
@@ -1608,8 +1653,19 @@ public class StudyService {
         Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getDynamicSimulationResultUuid(nodeUuid);
         prevResultUuidOpt.ifPresent(dynamicSimulationService::deleteResult);
 
+        // load configured parameters persisted in the study server DB
+        DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
+        // override configured parameters by provided parameters (only provided fields)
+        DynamicSimulationParametersInfos mergeParameters = new DynamicSimulationParametersInfos();
+        if (configuredParameters != null) {
+            PropertyUtils.copyNonNullProperties(configuredParameters, mergeParameters);
+        }
+        if (parameters != null) {
+            PropertyUtils.copyNonNullProperties(parameters, mergeParameters);
+        }
+
         // launch dynamic simulation
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(receiver, networkUuid, "", parameters.getStartTime(), parameters.getStopTime(), mappingName);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyUuid), receiver, networkUuid, "", mergeParameters);
 
         // update result uuid and notification
         updateDynamicSimulationResultUuid(nodeUuid, resultUuid);

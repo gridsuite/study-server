@@ -8,18 +8,29 @@
 package org.gridsuite.study.server.dto.dynamicsimulation;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
+
+import java.util.List;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DynamicSimulationParametersInfos {
-    private int startTime;
-    private int stopTime;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Double startTime;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Double stopTime;
+    private String mapping;
+    private String solverId;
+    private List<SolverInfos> solvers;
 }
