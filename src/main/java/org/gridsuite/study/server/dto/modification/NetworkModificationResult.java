@@ -33,7 +33,8 @@ public class NetworkModificationResult {
     }
 
     @Schema(description = "Application status")
-    ApplicationStatus applicationStatus;
+    @Builder.Default
+    ApplicationStatus applicationStatus = ApplicationStatus.ALL_OK;
 
     @Schema(description = "Network modification impacts")
     @Builder.Default
