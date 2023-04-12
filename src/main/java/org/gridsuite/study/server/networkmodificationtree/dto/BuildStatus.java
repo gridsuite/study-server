@@ -7,11 +7,40 @@
 
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 public enum BuildStatus {
-    NOT_BUILT,
-    BUILT,
-    BUILDING;
+    NOT_BUILT(-1),
+    BUILDING(-1),
+    BUILT(0),
+    BUILT_WITH_WARNING(1),
+    BUILT_WITH_ERROR(2);
+
+    private final int severityLevel;
+
+    BuildStatus(int severityLevel) {
+        this.severityLevel = severityLevel;
+    }
+
+    public static BuildStatus fromApplicationStatus(NetworkModificationResult.ApplicationStatus status) {
+        switch (status) {
+            case WITH_ERRORS:
+                return BuildStatus.BUILT_WITH_ERROR;
+            case WITH_WARNINGS:
+                return BuildStatus.BUILT_WITH_WARNING;
+            default:
+                return BuildStatus.BUILT;
+        }
+    }
+
+    public BuildStatus max(BuildStatus other) {
+        return severityLevel >= other.severityLevel ? this : other;
+    }
+
+    public boolean isBuilt() {
+        return this.severityLevel >= 0;
+    }
 }
