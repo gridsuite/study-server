@@ -1,0 +1,28 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="homereti (generated)" id="1681305832567-5">
+        <addColumn tableName="short_circuit_parameters">
+            <column defaultValueBoolean="true" name="with_fortescue_result" type="boolean"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1681305832567-6">
+        <addColumn tableName="short_circuit_parameters">
+            <column defaultValueBoolean="true" name="with_voltage_result" type="boolean"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1681305832567-7">
+        <dropColumn columnName="WITH_VOLTAGE_MAP" tableName="SHORT_CIRCUIT_PARAMETERS"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1681305832567-1">
+        <addNotNullConstraint columnDataType="varchar(255)" columnName="case_name" tableName="study" validate="true"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1681305832567-2">
+        <dropDefaultValue columnDataType="varchar(255)" columnName="connected_component_mode" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1681305832567-3">
+        <dropNotNullConstraint columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
+    </changeSet>
+    <changeSet author="homereti (generated)" id="1681305832567-4">
+        <dropDefaultValue columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
+    </changeSet>
+</databaseChangeLog>
