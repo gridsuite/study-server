@@ -5,20 +5,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.dto.dynamicmapping.rest;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+package org.gridsuite.study.server.dto.dynamicmapping;
 
 /**
+ * This enum is taken from dynamic-mapping-server
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@NoArgsConstructor
-@AllArgsConstructor
-@Getter
-@Setter
-public class ModelRest {
-    private String modelName;
+public enum SetGroupType {
+    FIXED,
+    PREFIX,
+    SUFFIX
 }

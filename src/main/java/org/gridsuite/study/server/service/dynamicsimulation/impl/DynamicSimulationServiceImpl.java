@@ -13,7 +13,6 @@ import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.rest.ModelRest;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
@@ -163,9 +162,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<ModelInfos> getModels(String mapping) {
-        List<ModelRest> modelRests = dynamicMappingClient.getModels(mapping);
-        // transformation to Dto
-        return modelRests.stream().map(modelRest -> new ModelInfos(modelRest.getModelName())).collect(Collectors.toList());
+       return dynamicMappingClient.getModels(mapping);
     }
-
 }

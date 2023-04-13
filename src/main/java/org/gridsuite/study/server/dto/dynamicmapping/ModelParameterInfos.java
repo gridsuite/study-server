@@ -7,12 +7,7 @@
 
 package org.gridsuite.study.server.dto.dynamicmapping;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-import java.util.List;
+import lombok.*;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -21,8 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
-public class ModelInfos {
-    private String modelName;
-    private String equipmentType;
-    List<ParametersSetsGroupInfos> setsGroups;
+public class ModelParameterInfos {
+    private String name;
+    private String value;
 }
