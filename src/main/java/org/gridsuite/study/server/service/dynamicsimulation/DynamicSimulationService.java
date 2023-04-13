@@ -10,26 +10,103 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
+import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 public interface DynamicSimulationService {
+
+    static DynamicSimulationParametersEntity toEntity(DynamicSimulationParametersInfos parametersInfos) {
+        Objects.requireNonNull(parametersInfos);
+        DynamicSimulationParametersEntity entity = new DynamicSimulationParametersEntity();
+
+        // basic parameters independent to extensions
+        entity.setStartTime(parametersInfos.getStartTime());
+        entity.setStopTime(parametersInfos.getStopTime());
+        entity.setMapping(parametersInfos.getMapping());
+
+        // solvers parameter
+        entity.setSolverId(parametersInfos.getSolverId());
+        entity.setSolvers(SolverInfos.toJson(parametersInfos.getSolvers()));
+
+        return entity;
+    }
+
+    static DynamicSimulationParametersInfos fromEntity(DynamicSimulationParametersEntity entity) {
+        Objects.requireNonNull(entity);
+        DynamicSimulationParametersInfos parametersInfos = new DynamicSimulationParametersInfos();
+
+        // basic parameters independent to extensions
+        parametersInfos.setStartTime(entity.getStartTime());
+        parametersInfos.setStopTime(entity.getStopTime());
+        parametersInfos.setMapping(entity.getMapping());
+
+        // solvers parameter
+        String solversJson = entity.getSolvers();
+        List<SolverInfos> solvers = SolverInfos.parseJson(solversJson);
+        String solverId = entity.getSolverId();
+
+        parametersInfos.setSolverId(solverId);
+        parametersInfos.setSolvers(solvers);
+
+        return parametersInfos;
+    }
+
+    /**
+     * get default dynamic simulation parameters
+     * @return a default dynamic simulation parameters
+     */
+    static DynamicSimulationParametersInfos getDefaultDynamicSimulationParameters() {
+        // these parameters are taken from solver.par file in dynamic simulation server
+        IdaSolverInfos idaSolver = new IdaSolverInfos();
+        idaSolver.setId("1");
+        idaSolver.setType(SolverTypeInfos.IDA);
+        idaSolver.setOrder(1);
+        idaSolver.setInitStep(0.000001);
+        idaSolver.setMinStep(0.000001);
+        idaSolver.setMaxStep(10);
+        idaSolver.setAbsAccuracy(0.0001);
+        idaSolver.setRelAccuracy(0.0001);
+
+        SimSolverInfos simSolver = new SimSolverInfos();
+        simSolver.setId("3");
+        simSolver.setType(SolverTypeInfos.SIM);
+        simSolver.setHMin(0.000001);
+        simSolver.setHMax(1);
+        simSolver.setKReduceStep(0.5);
+        simSolver.setNEff(10);
+        simSolver.setNDeadband(2);
+        simSolver.setMaxRootRestart(3);
+        simSolver.setMaxNewtonTry(10);
+        simSolver.setLinearSolverName("KLU");
+        simSolver.setRecalculateStep(false);
+
+        List<SolverInfos> solvers = List.of(idaSolver, simSolver);
+        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers);
+    }
+
     /**
      * Run a dynamic simulation from a given network UUID and some configured parameters
+     * @param provider
+     * @param receiver
      * @param networkUuid
      * @param variantId
-     * @param startTime
-     * @param stopTime
-     * @param mappingName
+     * @param parameters
      * @return the UUID of the dynamic simulation
      */
-    UUID runDynamicSimulation(String receiver, UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName);
+    UUID runDynamicSimulation(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters);
 
     /**
      * Get a list of curves from a given node UUID
@@ -76,10 +153,10 @@ public interface DynamicSimulationService {
 
     /**
      * Get mapping names
-     * @param nodeUuid a given node UUID
+     * @param studyUuid a given study UUID
      * @return a list of mapping names
      */
-    List<MappingInfos> getMappings(UUID nodeUuid);
+    List<MappingInfos> getMappings(UUID studyUuid);
 
     /**
      * Get list of timeseries metadata

@@ -19,9 +19,11 @@ import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -236,7 +238,7 @@ public class ConsumerService {
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
-                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
+                    updateBuildStatus(receiverObj.getNodeUuid(), networkModificationResult.getApplicationStatus());
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
@@ -322,7 +324,8 @@ public class ConsumerService {
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
+                    DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters), importReportUuid);
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
@@ -444,6 +447,10 @@ public class ConsumerService {
 
     private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
+    }
+
+    private void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus applicationStatus) {
+        networkModificationTreeService.updateBuildStatus(nodeUuid, applicationStatus);
     }
 
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {
