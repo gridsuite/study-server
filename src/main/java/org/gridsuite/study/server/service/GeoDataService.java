@@ -61,25 +61,6 @@ public class GeoDataService {
         return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
     }
 
-    public String getHvdcLinesGraphics(UUID networkUuid, String variantId, List<String> hvdcLinesIds) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/hvdc-lines")
-                .queryParam(NETWORK_UUID, networkUuid);
-
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        if (hvdcLinesIds != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_LINE_ID, hvdcLinesIds);
-        }
-
-        var path = uriComponentsBuilder
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(geoDataServerBaseUri + path, String.class);
-    }
-
     public String getSubstationsGraphics(UUID networkUuid, String variantId, List<String> substationsIds) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + GEO_DATA_API_VERSION + "/substations")
                 .queryParam(NETWORK_UUID, networkUuid);
