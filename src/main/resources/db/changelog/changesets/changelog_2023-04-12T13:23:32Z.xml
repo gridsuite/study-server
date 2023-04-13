@@ -13,16 +13,4 @@
     <changeSet author="homereti (generated)" id="1681305832567-7">
         <dropColumn columnName="WITH_VOLTAGE_MAP" tableName="SHORT_CIRCUIT_PARAMETERS"/>
     </changeSet>
-    <changeSet author="homereti (generated)" id="1681305832567-1">
-        <addNotNullConstraint columnDataType="varchar(255)" columnName="case_name" tableName="study" validate="true"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1681305832567-2">
-        <dropDefaultValue columnDataType="varchar(255)" columnName="connected_component_mode" tableName="load_flow_parameters"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1681305832567-3">
-        <dropNotNullConstraint columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1681305832567-4">
-        <dropDefaultValue columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
-    </changeSet>
 </databaseChangeLog>
