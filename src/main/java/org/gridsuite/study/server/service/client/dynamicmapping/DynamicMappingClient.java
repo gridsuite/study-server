@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.client.dynamicmapping;
 
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.rest.ModelRest;
 import org.gridsuite.study.server.service.client.RestClient;
 
 import java.util.List;
@@ -23,4 +24,6 @@ public interface DynamicMappingClient extends RestClient {
     String DYNAMIC_MAPPING_END_POINT_MAPPING = "mappings";
 
     List<MappingInfos> getAllMappings();
+
+    List<ModelRest> getModels(String mapping);
 }

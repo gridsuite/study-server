@@ -10,6 +10,7 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
@@ -164,4 +165,11 @@ public interface DynamicSimulationService {
      * @return a list of timeseries metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid);
+
+    /**
+     * Get models used in the given mapping
+     * @param mapping
+     * @return a list of rich models (i.e. including parameter set with parameters)
+     */
+    List<ModelInfos> getModels(String mapping);
 }

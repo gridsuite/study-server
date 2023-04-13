@@ -31,6 +31,7 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
@@ -1612,6 +1613,15 @@ public class StudyService {
     public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
         // get mapping from study uuid
         return dynamicSimulationService.getMappings(studyUuid);
+    }
+
+    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid, UUID nodeUuid) {
+        // load configured parameters persisted in the study server DB
+        DynamicSimulationParametersInfos configuredParameters = getDynamicSimulationParameters(studyUuid);
+        String mapping = configuredParameters.getMapping();
+
+        // get model from mapping
+        return dynamicSimulationService.getModels(mapping);
     }
 
     @Transactional
