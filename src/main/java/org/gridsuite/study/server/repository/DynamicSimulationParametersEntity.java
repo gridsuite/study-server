@@ -40,4 +40,7 @@ public class DynamicSimulationParametersEntity {
 
     @Column(name = "mapping", columnDefinition = "varchar(255) default null")
     private String mapping;
+
+    @Column(name = "curves", columnDefinition = "text default null")
+    private String curves;
 }

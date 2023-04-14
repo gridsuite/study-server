@@ -162,6 +162,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<ModelInfos> getModels(String mapping) {
-       return dynamicMappingClient.getModels(mapping);
+        return dynamicMappingClient.getModels(mapping);
     }
 }

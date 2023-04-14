@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.curve.CurveInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
@@ -20,6 +21,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -42,6 +44,9 @@ public interface DynamicSimulationService {
         entity.setSolverId(parametersInfos.getSolverId());
         entity.setSolvers(SolverInfos.toJson(parametersInfos.getSolvers()));
 
+        // curves parameter
+        entity.setCurves(CurveInfos.toJson(parametersInfos.getCurves()));
+
         return entity;
     }
 
@@ -61,6 +66,11 @@ public interface DynamicSimulationService {
 
         parametersInfos.setSolverId(solverId);
         parametersInfos.setSolvers(solvers);
+
+        // curves parameter
+        String curvesJson = entity.getCurves();
+        List<CurveInfos> curves = curvesJson != null ? CurveInfos.parseJson(curvesJson) : Collections.emptyList();
+        parametersInfos.setCurves(curves);
 
         return parametersInfos;
     }
@@ -95,7 +105,7 @@ public interface DynamicSimulationService {
         simSolver.setRecalculateStep(false);
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers);
+        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, null);
     }
 
     /**

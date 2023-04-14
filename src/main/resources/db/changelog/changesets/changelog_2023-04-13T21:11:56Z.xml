@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="? (generated)" id="1681420354182-8">
+        <addColumn tableName="dynamic_simulation_parameters">
+            <column name="curves" type="text"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="? (generated)" id="1681420354182-1">
+        <addNotNullConstraint columnDataType="varchar(255)" columnName="case_name" tableName="study" validate="true"/>
+    </changeSet>
+    <changeSet author="? (generated)" id="1681420354182-2">
+        <dropDefaultValue columnDataType="varchar(255)" columnName="connected_component_mode" tableName="load_flow_parameters"/>
+    </changeSet>
+    <changeSet author="? (generated)" id="1681420354182-3">
+        <dropNotNullConstraint columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
+    </changeSet>
+    <changeSet author="? (generated)" id="1681420354182-4">
+        <dropDefaultValue columnDataType="float8" columnName="distributed_active_power" tableName="load_flow_result_entity_component_results"/>
+    </changeSet>
+    <changeSet author="? (generated)" id="1681420354182-5">
+        <addDefaultValue columnDataType="varchar(255)" columnName="mapping" defaultValue="null" tableName="dynamic_simulation_parameters"/>
+    </changeSet>
+    <changeSet author="? (generated)" id="1681420354182-6">
+        <addDefaultValue columnDataType="varchar(255)" columnName="solver_id" defaultValue="null" tableName="dynamic_simulation_parameters"/>
+    </changeSet>
+    <changeSet author="? (generated)" id="1681420354182-7">
+        <addDefaultValue columnDataType="clob" columnName="solvers" defaultValue="null" tableName="dynamic_simulation_parameters"/>
+    </changeSet>
+</databaseChangeLog>
