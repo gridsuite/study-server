@@ -32,15 +32,15 @@ public class DynamicSimulationParametersEntity {
     @Column(name = "stopTime")
     private double stopTime;
 
-    @Column(name = "solverId", columnDefinition = "varchar(255) default null")
+    @Column(name = "solverId", columnDefinition = "varchar(255)")
     private String solverId;
 
-    @Column(name = "solvers", columnDefinition = "text default null")
+    @Column(name = "solvers", columnDefinition = "CLOB")
     private String solvers;
 
-    @Column(name = "mapping", columnDefinition = "varchar(255) default null")
+    @Column(name = "mapping", columnDefinition = "varchar(255)")
     private String mapping;
 
-    @Column(name = "curves", columnDefinition = "text default null")
+    @Column(name = "curves", columnDefinition = "CLOB")
     private String curves;
 }
