@@ -7,10 +7,6 @@
 
 package org.gridsuite.study.server.service;
 
-/*
- * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
- */
-
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -43,6 +39,9 @@ import com.powsybl.loadflow.LoadFlowResultImpl;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @Service
 public class LoadflowService {
     private String loadFlowServerBaseUri;

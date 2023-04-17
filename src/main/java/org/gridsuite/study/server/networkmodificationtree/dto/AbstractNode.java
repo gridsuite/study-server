@@ -10,10 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
@@ -43,9 +40,15 @@ import java.util.UUID;
 public abstract class AbstractNode {
     UUID id;
     String name;
+
+    @Builder.Default
     List<AbstractNode> children = new ArrayList<>();
+
+    @Builder.Default
     List<UUID> childrenIds = new ArrayList<>();
+
     String description;
+
     Boolean readOnly;
 
     @JsonIgnore

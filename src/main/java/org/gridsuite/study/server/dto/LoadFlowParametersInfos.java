@@ -24,7 +24,3 @@ public class LoadFlowParametersInfos {
 
     private final Map<String, String> specificParameters;
 }
-
-
-
-
