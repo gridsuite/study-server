@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.LoadFlowSpecificParameterInfos;
 
 import javax.persistence.*;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -29,7 +30,7 @@ public class LoadFlowSpecificParameterEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id", nullable = false)
-    private Long id;
+    private UUID id;
 
     @Column(name = "provider")
     private String provider;
