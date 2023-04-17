@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.service;
 
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.loadflow.LoadFlowParameters;
