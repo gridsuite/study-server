@@ -127,8 +127,11 @@ public class StudyService {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ActionsService actionsService;
     private final CaseService caseService;
-
     private final ObjectMapper objectMapper;
+
+    enum ComputationUsingLoadFlow {
+        LOAD_FLOW, SECURITY_ANALYSIS, SENSITIVITY_ANALYSIS
+    }
 
     @Autowired
     StudyService self;
@@ -841,7 +844,7 @@ public class StudyService {
 
     public LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity study) {
         LoadFlowParameters commonParameters = getLoadFlowParameters(study);
-        List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(study);
+        List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(study, ComputationUsingLoadFlow.LOAD_FLOW);
         return LoadFlowParametersInfos.builder()
                 .commonParameters(commonParameters)
                 .specificParameters(specificParameters.stream().collect(Collectors.toMap(LoadFlowSpecificParameterInfos::getName, LoadFlowSpecificParameterInfos::getValue)))
@@ -861,10 +864,18 @@ public class StudyService {
                 .build();
     }
 
-    private List<LoadFlowSpecificParameterInfos> getSpecificLoadFlowParameters(StudyEntity study) {
+    private List<LoadFlowSpecificParameterInfos> getSpecificLoadFlowParameters(StudyEntity study, ComputationUsingLoadFlow computation) {
         List<LoadFlowSpecificParameterEntity> params = study.getLoadFlowParameters().getSpecificParameters();
+        String lfProvider;
+        if (computation == ComputationUsingLoadFlow.SECURITY_ANALYSIS) {
+            lfProvider = study.getSecurityAnalysisProvider();
+        } else if (computation == ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS) {
+            lfProvider = study.getSensitivityAnalysisProvider();
+        } else {
+            lfProvider = study.getLoadFlowProvider();
+        }
         return params.stream()
-                .filter(p -> p.getProvider().equalsIgnoreCase(study.getLoadFlowProvider()))
+                .filter(p -> p.getProvider().equalsIgnoreCase(lfProvider))
                 .map(LoadFlowSpecificParameterEntity::toLoadFlowSpecificParameterInfos)
                 .collect(Collectors.toList());
     }
@@ -876,9 +887,9 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public List<LoadFlowSpecificParameterInfos> getSpecificLoadFlowParameters(UUID studyUuid) {
+    private List<LoadFlowSpecificParameterInfos> getSpecificLoadFlowParameters(UUID studyUuid, ComputationUsingLoadFlow computation) {
         return studyRepository.findById(studyUuid)
-                .map(this::getSpecificLoadFlowParameters)
+                .map(study -> getSpecificLoadFlowParameters(study, computation))
                 .orElse(List.of());
     }
 
@@ -1047,7 +1058,7 @@ public class StudyService {
         if (StringUtils.isEmpty(parameters)) {
             LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
             securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
-            specificParameters = getSpecificLoadFlowParameters(studyUuid);
+            specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
         } else {
             try {
                 securityAnalysisParameters = objectMapper.readValue(parameters, SecurityAnalysisParameters.class);
@@ -1646,7 +1657,7 @@ public class StudyService {
             if (sensitivityAnalysisInputData.getParameters() == null) {
                 SensitivityAnalysisParameters sensitivityAnalysisParameters = SensitivityAnalysisParameters.load();
                 LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
-                List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid);
+                List<LoadFlowSpecificParameterInfos> specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SENSITIVITY_ANALYSIS);
                 sensitivityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
                 sensitivityAnalysisInputData.setParameters(sensitivityAnalysisParameters);
                 sensitivityAnalysisInputData.setLoadFlowSpecificParameters(specificParameters == null ?
