@@ -19,8 +19,11 @@ import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,12 +33,9 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
@@ -226,23 +226,23 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeBuildResult() {
+    public Consumer<Message<NetworkModificationResult>> consumeBuildResult() {
         return message -> {
-            Set<String> substationsIds = Stream.of(message.getPayload().trim().split(",")).collect(Collectors.toSet());
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 NodeReceiver receiverObj;
                 try {
+                    NetworkModificationResult networkModificationResult = message.getPayload();
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
                             NodeReceiver.class);
 
                     LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
 
-                    updateBuildStatus(receiverObj.getNodeUuid(), BuildStatus.BUILT);
+                    updateBuildStatus(receiverObj.getNodeUuid(), networkModificationResult.getApplicationStatus());
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, substationsIds);
-                } catch (JsonProcessingException e) {
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+                } catch (Exception e) {
                     LOGGER.error(e.toString());
                 }
             }
@@ -324,7 +324,8 @@ public class ConsumerService {
                 try {
                     LoadFlowParameters loadFlowParameters = LoadFlowParameters.load();
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), importReportUuid);
+                    DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters), importReportUuid);
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
@@ -446,6 +447,10 @@ public class ConsumerService {
 
     private void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
         networkModificationTreeService.updateBuildStatus(nodeUuid, buildStatus);
+    }
+
+    private void updateBuildStatus(UUID nodeUuid, NetworkModificationResult.ApplicationStatus applicationStatus) {
+        networkModificationTreeService.updateBuildStatus(nodeUuid, applicationStatus);
     }
 
     void updateSensitivityAnalysisResultUuid(UUID nodeUuid, UUID sensitivityAnalysisResultUuid) {

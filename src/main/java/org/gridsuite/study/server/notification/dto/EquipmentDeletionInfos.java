@@ -7,12 +7,7 @@
 
 package org.gridsuite.study.server.notification.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Builder
 @AllArgsConstructor
@@ -20,6 +15,7 @@ import lombok.Setter;
 @Setter
 @Getter
 @EqualsAndHashCode
+@ToString
 public class EquipmentDeletionInfos {
     String equipmentId;
     String equipmentType;

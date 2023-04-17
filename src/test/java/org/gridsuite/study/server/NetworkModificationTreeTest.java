@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +24,7 @@ import com.powsybl.loadflow.LoadFlowResult;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
 import lombok.SneakyThrows;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -30,6 +32,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
@@ -58,9 +61,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -69,7 +74,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.isA;
@@ -186,6 +191,7 @@ public class NetworkModificationTreeTest {
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
         objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
@@ -569,7 +575,7 @@ public class NetworkModificationTreeTest {
         if (nodeWithModification) {
             var message = output.receive(TIMEOUT, studyUpdateDestination);
             while (message != null) {
-                Collection<UUID> updatedIds = NODE_UPDATED.equals(message.getHeaders().get(HEADER_UPDATE_TYPE)) ?
+                Collection<UUID> updatedIds = NODE_BUILD_STATUS_UPDATED.equals(message.getHeaders().get(HEADER_UPDATE_TYPE)) ?
                         (Collection<UUID>) message.getHeaders().get(NotificationService.HEADER_NODES) :
                         List.of((UUID) message.getHeaders().get(NotificationService.HEADER_NODE));
                 updatedIds.forEach(id -> assertTrue(children.contains(id)));
@@ -689,19 +695,19 @@ public class NetworkModificationTreeTest {
         assertEquals(1, updated.size());
         updated.forEach(id -> assertEquals(node1.getId(), id));
 
-        var justeANameUpdate = NetworkModificationNode.builder()
+        var justANameUpdate = NetworkModificationNode.builder()
             .name("My taylor is rich!").id(node1.getId()).build();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectWriter.writeValueAsString(justeANameUpdate))
+                .content(objectWriter.writeValueAsString(justANameUpdate))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
-        output.receive(TIMEOUT, studyUpdateDestination).getHeaders();
+        assertEquals(NODE_RENAMED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         var newNode = getNode(root.getStudyId(), node1.getId());
-        node1.setName(justeANameUpdate.getName());
+        node1.setName(justANameUpdate.getName());
         assertNodeEquals(node1, newNode);
 
         node1.setId(UUID.randomUUID());
@@ -710,6 +716,35 @@ public class NetworkModificationTreeTest {
                 .content(objectWriter.writeValueAsString(node1))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
+    }
+
+    // This test is for a part of the code that is not used yet
+    // We update a node description (this is not used in the front) and we assume that it will emit a nodeUpdated notif
+    // If it's not the case or if this test causes problems feel free to update it / remove it as needed
+    @Test
+    public void testNodeDescriptionUpdate() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        final NetworkModificationNode node1 = buildNetworkModification("hypo", "potamus", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.RUNNING, loadFlowResult2, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+
+        var nodeDescriptionUpdate = NetworkModificationNode.builder()
+                .description("My taylor is rich!").id(node1.getId()).build();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/tree/nodes", root.getStudyId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectWriter.writeValueAsString(nodeDescriptionUpdate))
+                .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        assertEquals(NODE_UPDATED, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(HEADER_UPDATE_TYPE));
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
+    }
+
+    @Test
+    public void verifyEqualsNetworkModificationNode() {
+        var networkModif1 = NetworkModificationNode.builder().description("test1").build();
+        var networkModif2 = NetworkModificationNode.builder().description("test2").build();
+        EqualsVerifier.simple().forClass(NetworkModificationNode.class).withPrefabValues(AbstractNode.class, networkModif1, networkModif2).withIgnoredFields("type").verify();
     }
 
     @SneakyThrows
@@ -976,9 +1011,95 @@ public class NetworkModificationTreeTest {
             .andReturn().getResponse().getContentAsString();
     }
 
+    @Test
+    public void testUpdateBuildStatus() {
+        Pair<UUID, UUID> result = createTreeForBuildStatus();
+        UUID leafNodeId = result.getSecond();
+        UUID studyUuid = result.getFirst();
+
+        networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILT_WITH_WARNING);
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatus(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+
+        networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILT_WITH_ERROR);
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatus(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+
+        // keep the previous status (BUILT_WITH_ERROR) because it has higher severity
+        networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILT_WITH_WARNING);
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatus(leafNodeId));
+        // no update because the status didn't change
+
+        networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILDING);
+        assertEquals(BuildStatus.BUILDING, networkModificationTreeService.getBuildStatus(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+
+        networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.NOT_BUILT);
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+
+        // take the closest built parent severity
+        networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILT);
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatus(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+    }
+
+    @Test
+    public void testUpdateApplicationStatus() {
+        Pair<UUID, UUID> result = createTreeForBuildStatus();
+        UUID leafNodeId = result.getSecond();
+        UUID studyUuid = result.getFirst();
+
+        // take the closest built parent severity
+        networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.ALL_OK);
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatus(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+
+        networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.WITH_WARNINGS);
+        assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatus(leafNodeId));
+        // no update because the status didn't change
+
+        networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.WITH_ERRORS);
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatus(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
+
+        // keep the previous status (BUILT_WITH_ERROR) because it has higher severity
+        networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.ALL_OK);
+        assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatus(leafNodeId));
+        // no update because the status didn't change
+    }
+
+    /**
+     * Create a network modification tree to test the build status.
+     * @return a pair with the ID of the study and the ID of the leaf node of the tree
+     */
+    @SneakyThrows
+    private Pair<UUID, UUID> createTreeForBuildStatus() {
+        String userId = "userId";
+        RootNode root = createRoot();
+        final NetworkModificationNode node1 = buildNetworkModification("built_with_error", "not built node", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT_WITH_ERROR);
+        final NetworkModificationNode node2 = buildNetworkModification("built_with_warning", "not built node", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT_WITH_WARNING);
+        final NetworkModificationNode node3 = buildNetworkModification("not_built", "not built node", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        final NetworkModificationNode node4 = buildNetworkModification("building", "not built node", UUID.randomUUID(), VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILDING);
+        createNode(root.getStudyId(), root, node1, userId);
+        createNode(root.getStudyId(), node1, node2, userId);
+        createNode(root.getStudyId(), node2, node3, userId);
+        createNode(root.getStudyId(), node3, node4, userId);
+        return Pair.of(root.getStudyId(), node4.getId());
+    }
+
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
         Message<byte[]> message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+    }
+
+    private void checkUpdateNodesMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals("", new String(messageStatus.getPayload()));
+        MessageHeaders headersStatus = messageStatus.getHeaders();
+        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
+        assertEquals(NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 }
