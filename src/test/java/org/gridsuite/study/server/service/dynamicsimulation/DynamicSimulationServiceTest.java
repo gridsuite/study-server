@@ -10,7 +10,7 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.*;
-import org.gridsuite.study.server.StudyApplication;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -27,9 +27,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
@@ -37,6 +34,8 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 /**
@@ -44,7 +43,7 @@ import static org.mockito.BDDMockito.given;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
-@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+@DisableElasticsearch
 public class DynamicSimulationServiceTest {
 
     private static final String MAPPING_NAME_01 = "_01";
@@ -58,9 +57,8 @@ public class DynamicSimulationServiceTest {
 
     private static final String VARIANT_1_ID = "variant_1";
 
-    private static final int START_TIME = 0;
-
-    private static final int STOP_TIME = 500;
+    private static final String STUDY_UUID_STRING = "00000000-0000-0000-0000-000000000000";
+    private static final UUID STUDY_UUID = UUID.fromString(STUDY_UUID_STRING);
 
     // converged node
     private static final String NETWORK_UUID_STRING = "11111111-0000-0000-0000-000000000000";
@@ -116,10 +114,10 @@ public class DynamicSimulationServiceTest {
     @Test
     public void testRunDynamicSimulation() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run("", NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01)).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), eq(""), eq(NETWORK_UUID), eq(VARIANT_1_ID), any())).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", NETWORK_UUID, VARIANT_1_ID, START_TIME, STOP_TIME, MAPPING_NAME_01);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", "", NETWORK_UUID, VARIANT_1_ID, null);
 
         // check result
         assertEquals(RESULT_UUID_STRING, resultUuid.toString());
@@ -278,7 +276,7 @@ public class DynamicSimulationServiceTest {
         given(dynamicMappingClient.getAllMappings()).willReturn(MAPPINGS);
 
         // call method to be tested
-        List<MappingInfos> mappingInfos = dynamicSimulationService.getMappings(NODE_UUID);
+        List<MappingInfos> mappingInfos = dynamicSimulationService.getMappings(STUDY_UUID);
 
         // check result
         // must return 2 mappings

@@ -14,21 +14,23 @@ import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
@@ -39,19 +41,16 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.ContextHierarchy;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -61,7 +60,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.junit.Assert.*;
-import static org.mockito.BDDMockito.*;
+import static org.mockito.BDDMockito.any;
+import static org.mockito.BDDMockito.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -72,7 +72,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
-@ContextHierarchy({@ContextConfiguration(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})})
+@DisableElasticsearch
+@ContextConfigurationWithTestChannel
 public class StudyControllerDynamicSimulationTest {
 
     private static final String API_VERSION = StudyApi.API_VERSION;
@@ -81,9 +82,10 @@ public class StudyControllerDynamicSimulationTest {
 
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RUN = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS = "{studyUuid}/dynamic-simulation/parameters";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/mappings";
+    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";
 
     private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
@@ -163,6 +165,7 @@ public class StudyControllerDynamicSimulationTest {
     private InputDestination input;
 
     //output destinations
+    private final String elementUpdateDestination = "element.update";
     private final String studyUpdateDestination = "study.update";
     private final String dsResultDestination = "ds.result";
     private final String dsStoppedDestination = "ds.stopped";
@@ -249,13 +252,13 @@ public class StudyControllerDynamicSimulationTest {
             public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), any(), eq(NETWORK_UUID), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
-        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                        studyUuid, modificationNode1Uuid, MAPPING_NAME_01)
+        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
+                        studyUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -326,13 +329,13 @@ public class StudyControllerDynamicSimulationTest {
             public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), any(), eq(NETWORK_UUID), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
-        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                        studyUuid, modificationNode1Uuid, MAPPING_NAME_01)
+        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
+                        studyUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -391,13 +394,13 @@ public class StudyControllerDynamicSimulationTest {
             public UUID answer(InvocationOnMock invocation) {
                 return RESULT_UUID;
             }
-        }).when(dynamicSimulationService).runDynamicSimulation(any(), eq(NETWORK_UUID), any(), eq(START_TIME), eq(STOP_TIME), eq(MAPPING_NAME_01));
+        }).when(dynamicSimulationService).runDynamicSimulation(any(), any(), eq(NETWORK_UUID), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
-        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
-                        studyUuid, modificationNode1Uuid, MAPPING_NAME_01)
+        result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
+                        studyUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -620,11 +623,11 @@ public class StudyControllerDynamicSimulationTest {
                 return MAPPINGS;
             }
         }).
-        when(dynamicSimulationService).getMappings(NODE_UUID);
+        when(dynamicSimulationService).getMappings(STUDY_UUID);
 
         // --- call endpoint to be tested --- //
         // get all mapping infos
-        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS, STUDY_UUID, NODE_UUID)
+        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS, STUDY_UUID)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
         String content = result.getResponse().getContentAsString();
@@ -637,6 +640,53 @@ public class StudyControllerDynamicSimulationTest {
         getLogger().info("Mapping infos expected in Json = " + objectMapper.writeValueAsString(MAPPINGS));
         getLogger().info("Mapping infos result in Json = " + objectMapper.writeValueAsString(mappingInfos));
         assertEquals(MAPPINGS.size(), mappingInfos.size());
+
+    }
+
+    @Test
+    public void testSetAndGetDynamicSimulationParameters() throws Exception {
+
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+
+        // prepare request body
+        DynamicSimulationParametersInfos defaultDynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+
+        MvcResult result;
+
+        // --- call endpoint to be tested --- //
+        // set parameters
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(defaultDynamicSimulationParameters)))
+                    .andExpect(status().isOk()).andReturn();
+
+        // --- check result --- //
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
+        assertEquals(studyUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        assertEquals(HEADER_USER_ID_VALUE, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+
+        // get parameters
+        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk()).andReturn();
+
+        String resultJson = result.getResponse().getContentAsString();
+        String expectedJson = objectMapper.writeValueAsString(defaultDynamicSimulationParameters);
+
+        // result parameters must be identical to persisted parameters
+        getLogger().info("Parameters expected in Json = " + expectedJson);
+        getLogger().info("Parameters result in Json = " + resultJson);
+        assertEquals(objectMapper.readTree(expectedJson), objectMapper.readTree(resultJson));
 
     }
 }
