@@ -27,7 +27,3 @@ public class LoadFlowParametersValues {
 
     private Map<String, Map<String, Object>> specificParametersPerProvider;
 }
-
-
-
-

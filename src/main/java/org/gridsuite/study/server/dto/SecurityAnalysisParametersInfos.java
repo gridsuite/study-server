@@ -25,10 +25,3 @@ public class SecurityAnalysisParametersInfos {
 
     private Map<String, String> loadFlowSpecificParameters;
 }
-
-
-
-
-
-
-

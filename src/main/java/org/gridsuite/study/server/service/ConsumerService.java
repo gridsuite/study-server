@@ -7,9 +7,6 @@
 
 package org.gridsuite.study.server.service;
 
-/*
- * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
- */
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +37,9 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @Service
 public class ConsumerService {
 
