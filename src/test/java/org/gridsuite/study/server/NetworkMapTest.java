@@ -498,7 +498,7 @@ public class NetworkMapTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         // Get the line / 2WT / 3WT map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/branch-or-3wt/{equipmentId}", studyNameUserIdUuid,
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}", studyNameUserIdUuid,
                         rootNodeUuid, LINE_ID_1))
                 .andExpectAll(
                         status().isOk(),

@@ -590,7 +590,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/branch-or-3wt/{equipmentId}")
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}")
     @Operation(summary = "Get specific line or 2WT or 3WT description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line or 2WT or 3WT data")})
     public ResponseEntity<String> getBranchOrThreeWindingsTransformer(
