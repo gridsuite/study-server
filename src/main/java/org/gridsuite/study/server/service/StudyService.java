@@ -903,12 +903,15 @@ public class StudyService {
             if (parameters.getSpecificParametersPerProvider() != null) {
                 parameters.getSpecificParametersPerProvider().forEach((provider, paramsMap) -> {
                     if (paramsMap != null) {
-                        paramsMap.forEach((paramName, paramValue) ->
-                                allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
-                                        .provider(provider)
-                                        .value(Objects.toString(paramValue))
-                                        .name(paramName)
-                                        .build())
+                        paramsMap.forEach((paramName, paramValue) -> {
+                                if (paramValue != null) {
+                                    allSpecificValues.add(LoadFlowSpecificParameterInfos.builder()
+                                            .provider(provider)
+                                            .value(Objects.toString(paramValue))
+                                            .name(paramName)
+                                            .build());
+                                }
+                            }
                         );
                     }
                 });
