@@ -24,5 +24,6 @@ import java.util.List;
 public class ModelInfos {
     private String modelName;
     private String equipmentType;
-    List<ModelVariableDefinitionInfos> variableDefinitions;
+    private List<ModelVariableDefinitionInfos> variableDefinitions;
+    private List<VariablesSetInfos> variablesSets;
 }
