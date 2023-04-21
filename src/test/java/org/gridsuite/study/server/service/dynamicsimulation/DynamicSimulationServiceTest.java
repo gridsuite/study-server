@@ -10,6 +10,9 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.*;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -54,6 +57,24 @@ public class DynamicSimulationServiceTest {
 
     private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
             new MappingInfos(MAPPING_NAMES[1]));
+
+    private static final List<ModelInfos> MODELS = List.of(
+            // take from resources/data/loadAlphaBeta.json
+            new ModelInfos("LoadAlphaBeta", "LOAD", List.of(
+                    new ModelVariableDefinitionInfos("load_PPu", "MW"),
+                    new ModelVariableDefinitionInfos("load_QPu", "MW")
+            ), null),
+            // take from resources/data/generatorSynchronousThreeWindingsProportionalRegulations.json
+            new ModelInfos("GeneratorSynchronousThreeWindingsProportionalRegulations", "GENERATOR", null, List.of(
+                    new VariablesSetInfos("Generator", List.of(
+                            new ModelVariableDefinitionInfos("generator_omegaPu", "pu"),
+                            new ModelVariableDefinitionInfos("generator_PGen", "MW")
+                    )),
+                    new VariablesSetInfos("VoltageRegulator", List.of(
+                            new ModelVariableDefinitionInfos("voltageRegulator_EfdPu", "pu")
+                    ))
+            ))
+    );
 
     private static final String VARIANT_1_ID = "variant_1";
 
@@ -281,5 +302,18 @@ public class DynamicSimulationServiceTest {
         // check result
         // must return 2 mappings
         assertEquals(MAPPINGS.size(), mappingInfos.size());
+    }
+
+    @Test
+    public void testGetModels() {
+        // setup DynamicSimulationClient mock
+        given(dynamicMappingClient.getModels(MAPPING_NAMES[0])).willReturn(MODELS);
+
+        // call method to be tested
+        List<ModelInfos> modelInfosList = dynamicSimulationService.getModels(MAPPING_NAMES[0]);
+
+        // check result
+        // must return 2 models
+        assertEquals(MODELS.size(), modelInfosList.size());
     }
 }
