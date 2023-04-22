@@ -14,7 +14,6 @@ package org.gridsuite.study.server.service;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.VoltageLevelMapData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -51,8 +50,8 @@ public class NetworkMapService {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentType, String infoType) {
-        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements_infos";
+    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, String infoType) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds);
@@ -60,9 +59,21 @@ public class NetworkMapService {
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        builder = builder.queryParam(QUERY_PARAM_EQUIPMENT_TYPE, equipmentType);
+        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
         String url = builder.buildAndExpand(networkUuid).toUriString();
+        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
+    }
+
+    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType, String elementId) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
+        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        String url = builder.buildAndExpand(networkUuid, elementId).toUriString();
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
@@ -117,19 +128,6 @@ public class NetworkMapService {
             }
         }
         return equipmentMapData;
-    }
-
-    public List<VoltageLevelMapData> getVoltageLevelMapData(UUID networkUuid, String variantId) {
-        UriComponentsBuilder builder = UriComponentsBuilder
-                .fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/voltage-levels");
-        if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        String path = builder.buildAndExpand(networkUuid).toUriString();
-
-        return restTemplate.exchange(networkMapServerBaseUri + path,
-                HttpMethod.GET, null, new ParameterizedTypeReference<List<VoltageLevelMapData>>() {
-                }).getBody();
     }
 
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID networkUuid, String variantId,
