@@ -645,8 +645,7 @@ public class StudyControllerDynamicSimulationTest {
             public List<MappingInfos> answer(InvocationOnMock invocation) {
                 return MAPPINGS;
             }
-        }).
-        when(dynamicSimulationService).getMappings(STUDY_UUID);
+        }).when(dynamicSimulationService).getMappings(STUDY_UUID);
 
         // --- call endpoint to be tested --- //
         // get all mapping infos
@@ -725,12 +724,11 @@ public class StudyControllerDynamicSimulationTest {
 
         // setup DynamicSimulationService mock with a given mapping
         Mockito.doAnswer(new Answer() {
-                    @Override
-                    public List<ModelInfos> answer(InvocationOnMock invocation) {
-                        return MODELS;
-                    }
-                }).
-                when(dynamicSimulationService).getModels(MAPPING_NAME_01);
+            @Override
+            public List<ModelInfos> answer(InvocationOnMock invocation) {
+                return MODELS;
+            }
+        }).when(dynamicSimulationService).getModels(MAPPING_NAME_01);
 
         // prepare request body with a mapping
         DynamicSimulationParametersInfos defaultDynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
