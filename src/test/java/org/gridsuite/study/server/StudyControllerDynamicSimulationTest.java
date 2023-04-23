@@ -686,15 +686,8 @@ public class StudyControllerDynamicSimulationTest {
                     .andExpect(status().isOk()).andReturn();
 
         // --- check result --- //
-        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyUuid, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
-        // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
-        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
-        assertEquals(studyUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
-        assertEquals(HEADER_USER_ID_VALUE, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+        // check notifications
+        checkNotificationsAfterInjectingDynamicSimulationParameters(studyUuid);
 
         // get parameters
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
@@ -741,15 +734,8 @@ public class StudyControllerDynamicSimulationTest {
                         .content(objectMapper.writeValueAsString(defaultDynamicSimulationParameters)))
                 .andExpect(status().isOk()).andReturn();
 
-        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(studyUuid, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
-        // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
-        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
-        assertEquals(studyUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
-        assertEquals(HEADER_USER_ID_VALUE, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+        // check notifications
+        checkNotificationsAfterInjectingDynamicSimulationParameters(studyUuid);
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -765,5 +751,56 @@ public class StudyControllerDynamicSimulationTest {
         getLogger().info("Models expect in Json = " + expectedJson);
         getLogger().info("Models result in Json = " + resultJson);
         assertEquals(objectMapper.readTree(expectedJson), objectMapper.readTree(resultJson));
+    }
+
+    @Test
+    public void testGetDynamicSimulationModelsGivenEmptyMapping() throws Exception {
+        // create a node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        // setup DynamicSimulationService mock with a given mapping
+        Mockito.doAnswer(new Answer() {
+            @Override
+            public List<ModelInfos> answer(InvocationOnMock invocation) {
+                return null;
+            }
+        }).when(dynamicSimulationService).getModels("");
+
+        // prepare request body without configure a mapping
+        DynamicSimulationParametersInfos defaultDynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
+
+        // set parameters
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PARAMETERS, studyUuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(defaultDynamicSimulationParameters)))
+                .andExpect(status().isOk()).andReturn();
+
+        // check notifications
+        checkNotificationsAfterInjectingDynamicSimulationParameters(studyUuid);
+
+        // --- call endpoint to be tested --- //
+        // must be no content status
+        studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid, modificationNode1Uuid)
+                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent()).andReturn();
+
+    }
+
+    private void checkNotificationsAfterInjectingDynamicSimulationParameters(UUID studyUuid) {
+        // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyUuid, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
+        Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
+        assertEquals(studyUuid, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        assertEquals(HEADER_USER_ID_VALUE, elementUpdateMessage.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 }
