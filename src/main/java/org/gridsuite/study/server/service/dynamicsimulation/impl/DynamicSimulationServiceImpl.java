@@ -163,10 +163,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public List<ModelInfos> getModels(String mapping) {
-        if (StringUtils.isBlank(mapping)) {
-            return null;
-        }
-
         return dynamicMappingClient.getModels(mapping);
     }
 }

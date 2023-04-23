@@ -147,6 +147,16 @@ public class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
 
     }
 
+    @Test
+    public void testGetModelsGiveBlankMapping() {
+        // call method to be tested
+        List<ModelInfos> modelInfosList = dynamicMappingClient.getModels("");
+
+        // --- check result --- //
+        // must be null
+        assertEquals(null, modelInfosList);
+    }
+
     @Test(expected = StudyException.class)
     public void testGetModelsGivenNotFound() {
         // configure mock server response for test case getModels - mappings/{mappingName}/models

@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.service.client.dynamicmapping.impl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
@@ -61,6 +62,10 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
 
     @Override
     public List<ModelInfos> getModels(String mapping) {
+        if (StringUtils.isBlank(mapping)) {
+            return null;
+        }
+
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{mappingName}/models");
