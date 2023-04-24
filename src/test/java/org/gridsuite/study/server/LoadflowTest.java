@@ -263,22 +263,22 @@ public class LoadflowTest {
                 content().string(LOAD_PARAMETERS_JSON));
 
         // setting loadFlow Parameters
-        LoadFlowParameters lfpBody = new LoadFlowParameters();
-        lfpBody.setVoltageInitMode(LoadFlowParameters.VoltageInitMode.DC_VALUES);
-        lfpBody.setTransformerVoltageControlOn(true);
-        lfpBody.setUseReactiveLimits(true);
-        lfpBody.setPhaseShifterRegulationOn(true);
-        lfpBody.setTwtSplitShuntAdmittance(false);
-        lfpBody.setShuntCompensatorVoltageControlOn(true);
-        lfpBody.setReadSlackBus(false);
-        lfpBody.setWriteSlackBus(true);
-        lfpBody.setDc(true);
-        lfpBody.setDistributedSlack(true);
-        lfpBody.setBalanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD);
-        lfpBody.setDcUseTransformerRatio(true);
-        lfpBody.setCountriesToBalance(EnumSet.noneOf(Country.class));
-        lfpBody.setConnectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN);
-        lfpBody.setHvdcAcEmulation(true);
+        LoadFlowParameters lfpBody = new LoadFlowParameters()
+                .setVoltageInitMode(LoadFlowParameters.VoltageInitMode.DC_VALUES)
+                .setTransformerVoltageControlOn(true)
+                .setUseReactiveLimits(true)
+                .setPhaseShifterRegulationOn(true)
+                .setTwtSplitShuntAdmittance(false)
+                .setShuntCompensatorVoltageControlOn(true)
+                .setReadSlackBus(false)
+                .setWriteSlackBus(true)
+                .setDc(true)
+                .setDistributedSlack(true)
+                .setBalanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD)
+                .setDcUseTransformerRatio(true)
+                .setCountriesToBalance(EnumSet.noneOf(Country.class))
+                .setConnectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                .setHvdcAcEmulation(true);
         String lfpBodyJson = objectWriter.writeValueAsString(lfpBody);
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
