@@ -5,7 +5,7 @@
             <column defaultValueBoolean="true" name="with_fortescue_result" type="boolean"/>
         </addColumn>
     </changeSet>
-    <changeSet author="homereti" id="1657972680498-4">
+    <changeSet author="homereti" id="1657972680498-6">
         <renameColumn
                 columnDataType="boolean"
                 newColumnName="with_voltage_result"
