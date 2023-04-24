@@ -183,22 +183,22 @@ public class LoadflowService {
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
-        LoadFlowParameters parameters = new LoadFlowParameters();
-        parameters.setVoltageInitMode(entity.getVoltageInitMode());
-        parameters.setTransformerVoltageControlOn(entity.isTransformerVoltageControlOn());
-        parameters.setUseReactiveLimits(entity.isUseReactiveLimits());
-        parameters.setPhaseShifterRegulationOn(entity.isPhaseShifterRegulationOn());
-        parameters.setTwtSplitShuntAdmittance(entity.isTwtSplitShuntAdmittance());
-        parameters.setShuntCompensatorVoltageControlOn(entity.isShuntCompensatorVoltageControlOn());
-        parameters.setReadSlackBus(entity.isReadSlackBus());
-        parameters.setWriteSlackBus(entity.isWriteSlackBus());
-        parameters.setDc(entity.isDc());
-        parameters.setDistributedSlack(entity.isDistributedSlack());
-        parameters.setBalanceType(entity.getBalanceType());
-        parameters.setDcUseTransformerRatio(entity.isDcUseTransformerRatio());
-        parameters.setCountriesToBalance(entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()));
-        parameters.setConnectedComponentMode(entity.getConnectedComponentMode());
-        parameters.setHvdcAcEmulation(entity.isHvdcAcEmulation());
+        LoadFlowParameters parameters = LoadFlowParameters.load()
+                .setVoltageInitMode(entity.getVoltageInitMode())
+                .setTransformerVoltageControlOn(entity.isTransformerVoltageControlOn())
+                .setUseReactiveLimits(entity.isUseReactiveLimits())
+                .setPhaseShifterRegulationOn(entity.isPhaseShifterRegulationOn())
+                .setTwtSplitShuntAdmittance(entity.isTwtSplitShuntAdmittance())
+                .setShuntCompensatorVoltageControlOn(entity.isShuntCompensatorVoltageControlOn())
+                .setReadSlackBus(entity.isReadSlackBus())
+                .setWriteSlackBus(entity.isWriteSlackBus())
+                .setDc(entity.isDc())
+                .setDistributedSlack(entity.isDistributedSlack())
+                .setBalanceType(entity.getBalanceType())
+                .setDcUseTransformerRatio(entity.isDcUseTransformerRatio())
+                .setCountriesToBalance(entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()))
+                .setConnectedComponentMode(entity.getConnectedComponentMode())
+                .setHvdcAcEmulation(entity.isHvdcAcEmulation());
         return parameters;
     }
 

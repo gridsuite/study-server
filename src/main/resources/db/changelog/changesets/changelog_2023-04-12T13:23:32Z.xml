@@ -5,12 +5,12 @@
             <column defaultValueBoolean="true" name="with_fortescue_result" type="boolean"/>
         </addColumn>
     </changeSet>
-    <changeSet author="homereti (generated)" id="1681305832567-6">
-        <addColumn tableName="short_circuit_parameters">
-            <column defaultValueBoolean="true" name="with_voltage_result" type="boolean"/>
-        </addColumn>
-    </changeSet>
-    <changeSet author="homereti (generated)" id="1681305832567-7">
-        <dropColumn columnName="WITH_VOLTAGE_MAP" tableName="SHORT_CIRCUIT_PARAMETERS"/>
+    <changeSet author="homereti" id="1657972680498-4">
+        <renameColumn
+                columnDataType="boolean"
+                newColumnName="with_voltage_result"
+                oldColumnName="with_voltage_map"
+                tableName="short_circuit_parameters"
+        />
     </changeSet>
 </databaseChangeLog>
