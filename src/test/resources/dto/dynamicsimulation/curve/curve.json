@@ -1,0 +1,14 @@
+[
+  {
+    "equipmentId": "_GEN____1_SM",
+    "variableId": "generator_omegaPu"
+  },
+  {
+    "equipmentId": "_GEN____2_SM",
+    "variableId": "generator_PGen"
+  },
+  {
+    "equipmentId": "_LOAD___2_EC",
+    "variableId": "load_alpha"
+  }
+]

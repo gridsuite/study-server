@@ -29,9 +29,7 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CurveInfos {
     private String equipmentId;
-    private String equipmentName;
     private String variableId;
-    private String variableName;
 
     public static List<CurveInfos> parseJson(String json) {
         ObjectMapper objectMapper = new ObjectMapper();
