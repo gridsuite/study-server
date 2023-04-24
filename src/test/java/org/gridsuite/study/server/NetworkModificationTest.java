@@ -1436,7 +1436,7 @@ public class NetworkModificationTest {
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        wireMockUtils.verifyNetworkModificationPost(stubPostId, lineSplitWoVLasJSON,  NETWORK_UUID_STRING);
+        wireMockUtils.verifyNetworkModificationPost(stubPostId, lineSplitWoVLasJSON, NETWORK_UUID_STRING);
 
         UUID stubPutId = wireMockUtils.stubNetworkModificationPutWithBody(MODIFICATION_UUID, lineSplitWoVLasJSON);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
@@ -1468,7 +1468,7 @@ public class NetworkModificationTest {
                         content().string("400 BAD_REQUEST"));
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        wireMockUtils.verifyNetworkModificationPost(stubPostId, badBody,  NETWORK_UUID_STRING);
+        wireMockUtils.verifyNetworkModificationPost(stubPostId, badBody, NETWORK_UUID_STRING);
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, badBody);
     }
 
@@ -2169,7 +2169,7 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatus(modificationNodeUuid));
-        wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos,  NETWORK_UUID_STRING);
+        wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Built with errors
         networkModificationResult.get().setApplicationStatus(NetworkModificationResult.ApplicationStatus.WITH_ERRORS);
@@ -2523,7 +2523,7 @@ public class NetworkModificationTest {
             .andExpectAll(status().isBadRequest(), content().string(errorMessage));
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
-        wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos,  NETWORK_UUID_STRING);
+        wireMockUtils.verifyNetworkModificationPost(stubId, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         // Json message error
         stubId = wireMockUtils.stubNetworkModificationPostWithError(jsonCreateLoadInfos, String.format("{\"message\" : \"%s\"}", errorMessage));

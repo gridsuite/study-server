@@ -131,7 +131,7 @@ public class NetworkModificationService {
                                                                   UUID groupUuid,
                                                                   String variantId, UUID reportUuid,
                                                                   String reporterId) {
-        Optional<NetworkModificationResult>  result;
+        Optional<NetworkModificationResult> result;
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(createModificationAttributes);
 
