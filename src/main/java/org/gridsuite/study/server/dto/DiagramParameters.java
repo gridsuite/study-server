@@ -22,7 +22,7 @@ public class DiagramParameters {
     private boolean labelCentered;
     private boolean diagonalLabel;
     private boolean topologicalColoring;
-    private String  componentLibrary;
+    private String componentLibrary;
     private StudyConstants.SldDisplayMode sldDisplayMode;
     private String language;
 }
