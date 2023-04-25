@@ -88,7 +88,7 @@ public class SensitivityAnalysisTest {
     private static final String SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_SENSITIVITY_ANALYSIS_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
 
-    private static final String FAKE_RESULT_JSON                 = "fake result json";
+    private static final String FAKE_RESULT_JSON = "fake result json";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -146,10 +146,10 @@ public class SensitivityAnalysisTest {
     private ObjectMapper objectMapper;
 
     //output destinations
-    private final String studyUpdateDestination                = "study.update";
-    private final String sensitivityAnalysisResultDestination  = "sensitivityanalysis.result";
+    private final String studyUpdateDestination = "study.update";
+    private final String sensitivityAnalysisResultDestination = "sensitivityanalysis.result";
     private final String sensitivityAnalysisStoppedDestination = "sensitivityanalysis.stopped";
-    private final String sensitivityAnalysisFailedDestination  = "sensitivityanalysis.failed";
+    private final String sensitivityAnalysisFailedDestination = "sensitivityanalysis.failed";
 
     @Before
     public void setup() throws IOException {

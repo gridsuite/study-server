@@ -84,7 +84,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false, List.of());
-        ShortCircuitParametersEntity shortCircuitParametersEntity = new ShortCircuitParametersEntity(false, false, false, StudyType.TRANSIENT, 1);
+        ShortCircuitParametersEntity shortCircuitParametersEntity = new ShortCircuitParametersEntity(false, false, false, false, StudyType.TRANSIENT, 1);
 
         countriesTemp.add("IT");
         LoadFlowParametersEntity loadFlowParametersEntity2 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -92,7 +92,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false, List.of());
-        ShortCircuitParametersEntity shortCircuitParametersEntity2 = new ShortCircuitParametersEntity(true, true, true, StudyType.STEADY_STATE, 0);
+        ShortCircuitParametersEntity shortCircuitParametersEntity2 = new ShortCircuitParametersEntity(true, true, false, true, StudyType.STEADY_STATE, 0);
 
         countriesTemp.add("DE");
         LoadFlowParametersEntity loadFlowParametersEntity3 = new LoadFlowParametersEntity(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES,
@@ -100,7 +100,7 @@ public class RepositoriesTest {
                 false, true, false,
                 true, LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
                 countriesTemp, LoadFlowParameters.ConnectedComponentMode.MAIN, false, List.of());
-        ShortCircuitParametersEntity shortCircuitParametersEntity3 = new ShortCircuitParametersEntity(true, false, true, StudyType.SUB_TRANSIENT, 10);
+        ShortCircuitParametersEntity shortCircuitParametersEntity3 = new ShortCircuitParametersEntity(true, false, false, true, StudyType.SUB_TRANSIENT, 10);
 
         StudyEntity studyEntity1 = StudyEntity.builder()
                 .id(UUID.randomUUID())

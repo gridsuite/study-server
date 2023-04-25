@@ -24,20 +24,23 @@ import java.util.UUID;
 @Table(name = "shortCircuitParameters")
 public class ShortCircuitParametersEntity {
 
-    public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageMap, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold) {
-        this(null, withLimitViolations, withVoltageMap, withFeederResult, studyType, minVoltageDropProportionalThreshold);
+    public ShortCircuitParametersEntity(boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult, boolean withFeederResult, StudyType studyType, double minVoltageDropProportionalThreshold) {
+        this(null, withLimitViolations, withVoltageResult, withFortescueResult, withFeederResult, studyType, minVoltageDropProportionalThreshold);
     }
 
     @Id
-    @GeneratedValue(strategy  =  GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 
     @Column(name = "withLimitViolations", columnDefinition = "boolean default true")
     private boolean withLimitViolations;
 
-    @Column(name = "withVoltageMap", columnDefinition = "boolean default true")
-    private boolean withVoltageMap;
+    @Column(name = "withVoltageResult", columnDefinition = "boolean default true")
+    private boolean withVoltageResult;
+
+    @Column(name = "withFortescueResult", columnDefinition = "boolean default true")
+    private boolean withFortescueResult;
 
     @Column(name = "withFeederResult", columnDefinition = "boolean default true")
     private boolean withFeederResult;

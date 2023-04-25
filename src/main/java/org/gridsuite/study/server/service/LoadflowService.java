@@ -187,21 +187,23 @@ public class LoadflowService {
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
-        return new LoadFlowParameters(entity.getVoltageInitMode(),
-                entity.isTransformerVoltageControlOn(),
-                entity.isUseReactiveLimits(),
-                entity.isPhaseShifterRegulationOn(),
-                entity.isTwtSplitShuntAdmittance(),
-                entity.isShuntCompensatorVoltageControlOn(),
-                entity.isReadSlackBus(),
-                entity.isWriteSlackBus(),
-                entity.isDc(),
-                entity.isDistributedSlack(),
-                entity.getBalanceType(),
-                entity.isDcUseTransformerRatio(),
-                entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()),
-                entity.getConnectedComponentMode(),
-                entity.isHvdcAcEmulation());
+        LoadFlowParameters parameters = LoadFlowParameters.load()
+                .setVoltageInitMode(entity.getVoltageInitMode())
+                .setTransformerVoltageControlOn(entity.isTransformerVoltageControlOn())
+                .setUseReactiveLimits(entity.isUseReactiveLimits())
+                .setPhaseShifterRegulationOn(entity.isPhaseShifterRegulationOn())
+                .setTwtSplitShuntAdmittance(entity.isTwtSplitShuntAdmittance())
+                .setShuntCompensatorVoltageControlOn(entity.isShuntCompensatorVoltageControlOn())
+                .setReadSlackBus(entity.isReadSlackBus())
+                .setWriteSlackBus(entity.isWriteSlackBus())
+                .setDc(entity.isDc())
+                .setDistributedSlack(entity.isDistributedSlack())
+                .setBalanceType(entity.getBalanceType())
+                .setDcUseTransformerRatio(entity.isDcUseTransformerRatio())
+                .setCountriesToBalance(entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()))
+                .setConnectedComponentMode(entity.getConnectedComponentMode())
+                .setHvdcAcEmulation(entity.isHvdcAcEmulation());
+        return parameters;
     }
 
     public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {

@@ -87,8 +87,8 @@ public class LoadflowTest {
     private static final String NETWORK_LOADFLOW_ERROR_UUID_STRING = "7845000f-5af0-14be-bc3e-10b96e4ef00d";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
 
-    public static final String LOAD_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.8\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true},\"specificParametersPerProvider\":{}}";
-    public static final String LOAD_PARAMETERS_JSON2 = "{\"commonParameters\":{\"version\":\"1.8\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true},\"specificParametersPerProvider\":{}}";
+    public static final String LOAD_PARAMETERS_JSON = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
+    public static final String LOAD_PARAMETERS_JSON2 = "{\"commonParameters\":{\"version\":\"1.9\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0},\"specificParametersPerProvider\":{}}";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_3 = "variant_3";
@@ -265,10 +265,22 @@ public class LoadflowTest {
 
         // setting loadFlow Parameters
         LoadFlowParametersValues lfParamsValues = LoadFlowParametersValues.builder()
-                .commonParameters(new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
-                        true, true, false, true, false, true, true, true,
-                        LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
-                        EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true))
+                .commonParameters(new LoadFlowParameters()
+                        .setVoltageInitMode(LoadFlowParameters.VoltageInitMode.DC_VALUES)
+                        .setTransformerVoltageControlOn(true)
+                        .setUseReactiveLimits(true)
+                        .setPhaseShifterRegulationOn(true)
+                        .setTwtSplitShuntAdmittance(false)
+                        .setShuntCompensatorVoltageControlOn(true)
+                        .setReadSlackBus(false)
+                        .setWriteSlackBus(true)
+                        .setDc(true)
+                        .setDistributedSlack(true)
+                        .setBalanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD)
+                        .setDcUseTransformerRatio(true)
+                        .setCountriesToBalance(EnumSet.noneOf(Country.class))
+                        .setConnectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                        .setHvdcAcEmulation(true))
                 .specificParametersPerProvider(null)
                 .build();
         String lfpBodyJson = objectWriter.writeValueAsString(lfParamsValues);
