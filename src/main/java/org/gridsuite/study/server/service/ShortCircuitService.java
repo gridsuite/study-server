@@ -161,7 +161,8 @@ public class ShortCircuitService {
     public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
         Objects.requireNonNull(parameters);
         return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
-                parameters.isWithVoltageMap(),
+                parameters.isWithVoltageResult(),
+                parameters.isWithFortescueResult(),
                 parameters.isWithFeederResult(),
                 parameters.getStudyType(),
                 parameters.getMinVoltageDropProportionalThreshold());
@@ -169,25 +170,26 @@ public class ShortCircuitService {
 
     public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
         Objects.requireNonNull(entity);
-        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageMap());
+        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult());
     }
 
     public static ShortCircuitParameters copy(ShortCircuitParameters shortCircuitParameters) {
-        return newShortCircuitParameters(shortCircuitParameters.getStudyType(), shortCircuitParameters.getMinVoltageDropProportionalThreshold(), shortCircuitParameters.isWithFeederResult(), shortCircuitParameters.isWithLimitViolations(), shortCircuitParameters.isWithVoltageMap());
+        return newShortCircuitParameters(shortCircuitParameters.getStudyType(), shortCircuitParameters.getMinVoltageDropProportionalThreshold(), shortCircuitParameters.isWithFeederResult(), shortCircuitParameters.isWithLimitViolations(), shortCircuitParameters.isWithVoltageResult(), shortCircuitParameters.isWithFortescueResult());
     }
 
-    private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageMap) {
-        ShortCircuitParameters shortCircuitParametersCopy = new ShortCircuitParameters();
-        shortCircuitParametersCopy.setStudyType(studyType);
-        shortCircuitParametersCopy.setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold);
-        shortCircuitParametersCopy.setWithFeederResult(withFeederResult);
-        shortCircuitParametersCopy.setWithLimitViolations(withLimitViolations);
-        shortCircuitParametersCopy.setWithVoltageMap(withVoltageMap);
+    private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult) {
+        ShortCircuitParameters shortCircuitParametersCopy = new ShortCircuitParameters()
+                .setStudyType(studyType)
+                .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
+                .setWithFeederResult(withFeederResult)
+                .setWithLimitViolations(withLimitViolations)
+                .setWithVoltageResult(withVoltageResult)
+                .setWithFortescueResult(withFortescueResult);
         return shortCircuitParametersCopy;
     }
 
     public static ShortCircuitParameters getDefaultShortCircuitParameters() {
-        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false);
+        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false);
     }
 
     public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
