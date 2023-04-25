@@ -358,10 +358,22 @@ public class LoadflowTest {
 
         // setting loadFlow Parameters with specific params
         lfParamsValues = LoadFlowParametersValues.builder()
-                .commonParameters(new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
-                        true, true, false, true, false, true, true, true,
-                        LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
-                        EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true))
+                .commonParameters(new LoadFlowParameters()
+                .setVoltageInitMode(LoadFlowParameters.VoltageInitMode.DC_VALUES)
+                .setTransformerVoltageControlOn(true)
+                .setUseReactiveLimits(true)
+                .setPhaseShifterRegulationOn(true)
+                .setTwtSplitShuntAdmittance(false)
+                .setShuntCompensatorVoltageControlOn(true)
+                .setReadSlackBus(false)
+                .setWriteSlackBus(true)
+                .setDc(true)
+                .setDistributedSlack(true)
+                .setBalanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD)
+                .setDcUseTransformerRatio(true)
+                .setCountriesToBalance(EnumSet.noneOf(Country.class))
+                .setConnectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                .setHvdcAcEmulation(true))
                 .specificParametersPerProvider(Map.of("OpenLoadFlow", Map.of("transformerVoltageControlMode", "WITH_GENERATOR_VOLTAGE_CONTROL")))
                 .build();
         lfpBodyJson = objectWriter.writeValueAsString(lfParamsValues);
