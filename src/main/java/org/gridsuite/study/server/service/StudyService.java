@@ -1168,21 +1168,6 @@ public class StudyService {
                 : null;
     }
 
-    public List<Double> getNominalVoltages(UUID studyUuid, UUID nodeUuid) {
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
-
-        List<VoltageLevelMapData> voltageLevelsMapData = networkMapService.getVoltageLevelMapData(networkUuid, variantId);
-
-        return voltageLevelsMapData != null ?
-                voltageLevelsMapData.stream()
-                        .map(VoltageLevelMapData::getNominalVoltage)
-                        .distinct()
-                        .sorted()
-                        .collect(Collectors.toList())
-                : Collections.emptyList();
-    }
-
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID studyUuid, UUID nodeUuid, String voltageLevelId,
                                                                         String busPath) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);

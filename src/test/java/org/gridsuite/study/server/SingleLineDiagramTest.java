@@ -413,16 +413,6 @@ public class SingleLineDiagramTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
 
-        // get nominal voltages
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/nominal-voltages", studyNameUserIdUuid,
-                        rootNodeUuid)).andExpect(status().isOk())
-                .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<Double> nvList = mapper.readValue(resultAsString,  new TypeReference<>() { });
-
-        assertEquals(List.of(370.0, 380.0, 390.0), nvList);
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
-
         //get the lines-graphics of a network
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
                 status().isOk(),
