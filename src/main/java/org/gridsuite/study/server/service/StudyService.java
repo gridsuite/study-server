@@ -754,6 +754,12 @@ public class StudyService {
                 substationsIds, equipmentPath);
     }
 
+    public String getBranchOrThreeWindingsTransformer(UUID studyUuid, UUID nodeUuid, String equipmentId) {
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid);
+        return networkMapService.getEquipmentMapData(networkUuid, variantId, "branch-or-3wt", equipmentId);
+    }
+
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, List<String> substationsIds) {
         return networkMapService.getEquipmentsMapData(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuid),
                 substationsIds, "all");

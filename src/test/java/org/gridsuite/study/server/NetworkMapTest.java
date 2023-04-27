@@ -173,6 +173,7 @@ public class NetworkMapTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/" + LINE_ID_1:
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/branch-or-3wt/" + LINE_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -487,6 +488,23 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/map-lines", NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testGetBranchOr3WTMapServer() throws Exception {
+        // Create study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        // Get the line / 2WT / 3WT map data info of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}", studyNameUserIdUuid,
+                        rootNodeUuid, LINE_ID_1))
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON));
+        assertTrue(
+                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/branch-or-3wt/%s", NETWORK_UUID_STRING, LINE_ID_1)));
     }
 
     @Test

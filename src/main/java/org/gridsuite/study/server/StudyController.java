@@ -581,6 +581,17 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelsMapData(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}")
+    @Operation(summary = "Get specific line or 2WT or 3WT description")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The line or 2WT or 3WT data")})
+    public ResponseEntity<String> getBranchOrThreeWindingsTransformer(
+            @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "equipment id") @PathVariable("equipmentId") String equipmentId) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getBranchOrThreeWindingsTransformer(studyUuid, nodeUuid, equipmentId));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels-topology")
     @Operation(summary = "Get network voltage level description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage levels data")})
