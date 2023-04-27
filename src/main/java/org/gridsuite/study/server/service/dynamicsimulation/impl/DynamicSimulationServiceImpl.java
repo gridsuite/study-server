@@ -12,6 +12,7 @@ import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -51,8 +52,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String receiver, UUID networkUuid, String variantId, int startTime, int stopTime, String mappingName) {
-        return dynamicSimulationClient.run(receiver, networkUuid, variantId, startTime, stopTime, mappingName);
+    public UUID runDynamicSimulation(String provider, String receiver, UUID networkUuid, String variantId, DynamicSimulationParametersInfos parameters) {
+        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, parameters);
     }
 
     @Override
@@ -154,7 +155,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public List<MappingInfos> getMappings(UUID nodeUuid) {
+    public List<MappingInfos> getMappings(UUID studyUuid) {
         return dynamicMappingClient.getAllMappings();
     }
 

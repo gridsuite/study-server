@@ -98,8 +98,8 @@ public class LoadflowTest {
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID_ID = UUID.fromString(NETWORK_UUID_STRING);
 
-    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.8\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
-    public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.8\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true}";
+    public static final String LOAD_PARAMETERS_JSON = "{\"version\":\"1.9\",\"voltageInitMode\":\"UNIFORM_VALUES\",\"transformerVoltageControlOn\":false,\"phaseShifterRegulationOn\":false,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":false,\"readSlackBus\":true,\"writeSlackBus\":false,\"dc\":false,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_GENERATION_P_MAX\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0}";
+    public static final String LOAD_PARAMETERS_JSON2 = "{\"version\":\"1.9\",\"voltageInitMode\":\"DC_VALUES\",\"transformerVoltageControlOn\":true,\"phaseShifterRegulationOn\":true,\"useReactiveLimits\":true,\"twtSplitShuntAdmittance\":false,\"shuntCompensatorVoltageControlOn\":true,\"readSlackBus\":false,\"writeSlackBus\":true,\"dc\":true,\"distributedSlack\":true,\"balanceType\":\"PROPORTIONAL_TO_CONFORM_LOAD\",\"dcUseTransformerRatio\":true,\"countriesToBalance\":[],\"connectedComponentMode\":\"MAIN\",\"hvdcAcEmulation\":true,\"dcPowerFactor\":1.0}";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_3 = "variant_3";
@@ -285,10 +285,22 @@ public class LoadflowTest {
                 content().string(LOAD_PARAMETERS_JSON));
 
         // setting loadFlow Parameters
-        LoadFlowParameters lfpBody = new LoadFlowParameters(LoadFlowParameters.VoltageInitMode.DC_VALUES, true,
-                true, true, false, true, false, true, true, true,
-                LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD, true,
-                EnumSet.noneOf(Country.class), LoadFlowParameters.ConnectedComponentMode.MAIN, true);
+        LoadFlowParameters lfpBody = new LoadFlowParameters()
+                .setVoltageInitMode(LoadFlowParameters.VoltageInitMode.DC_VALUES)
+                .setTransformerVoltageControlOn(true)
+                .setUseReactiveLimits(true)
+                .setPhaseShifterRegulationOn(true)
+                .setTwtSplitShuntAdmittance(false)
+                .setShuntCompensatorVoltageControlOn(true)
+                .setReadSlackBus(false)
+                .setWriteSlackBus(true)
+                .setDc(true)
+                .setDistributedSlack(true)
+                .setBalanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_CONFORM_LOAD)
+                .setDcUseTransformerRatio(true)
+                .setCountriesToBalance(EnumSet.noneOf(Country.class))
+                .setConnectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                .setHvdcAcEmulation(true);
         String lfpBodyJson = objectWriter.writeValueAsString(lfpBody);
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)

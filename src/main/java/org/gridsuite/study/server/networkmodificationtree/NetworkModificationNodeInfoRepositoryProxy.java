@@ -220,7 +220,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        if (modificationNode.getBuildStatus() != BuildStatus.BUILT) {
+        if (!modificationNode.getBuildStatus().isBuilt()) {
             return;
         }
 
@@ -240,6 +240,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .reportUuid(networkModificationNode.getReportUuid())
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
+            .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())
+            .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .build();
     }
 }
