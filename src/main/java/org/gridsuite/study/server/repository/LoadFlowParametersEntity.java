@@ -11,6 +11,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -35,9 +36,10 @@ public class LoadFlowParametersEntity {
                                     boolean shuntCompensatorVoltageControlOn, boolean readSlackBus, boolean writeSlackBus, boolean dc,
                                     boolean distributedSlack, LoadFlowParameters.BalanceType balanceType, boolean dcUseTransformerRatio,
                                     Set<String> countriesToBalance, LoadFlowParameters.ConnectedComponentMode connectedComponentMode,
-                                    boolean hvdcAcEmulation) {
+                                    boolean hvdcAcEmulation, List<LoadFlowSpecificParameterEntity> specificParameters) {
         this(null, voltageInitMode, transformerVoltageControlOn, useReactiveLimits, phaseShifterRegulationOn, twtSplitShuntAdmittance,
-                shuntCompensatorVoltageControlOn, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType, dcUseTransformerRatio, countriesToBalance, connectedComponentMode, hvdcAcEmulation);
+                shuntCompensatorVoltageControlOn, readSlackBus, writeSlackBus, dc, distributedSlack, balanceType, dcUseTransformerRatio,
+                countriesToBalance, connectedComponentMode, hvdcAcEmulation, specificParameters);
     }
 
     @Id
@@ -96,4 +98,8 @@ public class LoadFlowParametersEntity {
 
     @Column(name = "hvdcAcEmulation", columnDefinition = "boolean default true")
     private boolean hvdcAcEmulation;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "load_flow_parameters_id")
+    private List<LoadFlowSpecificParameterEntity> specificParameters;
 }
