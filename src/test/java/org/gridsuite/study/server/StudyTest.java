@@ -1575,6 +1575,47 @@ public class StudyTest {
     }
 
     @Test
+    public void testCutAndPasteSubtree() throws Exception {
+        String userId = "userId";
+        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
+
+        NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", BuildStatus.BUILT, userId);
+        NetworkModificationNode emptyNodeChild = createNetworkModificationNode(study1Uuid, emptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "emptyNodeChild", BuildStatus.BUILT, userId);
+        
+        mockMvc.perform(post(STUDIES_URL +
+                                "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
+                        study1Uuid, emptyNode.getId(), node1.getId())
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+
+        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
+
+        //loadflow_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //securityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //sensitivityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //shortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicSimulation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+
+        checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+
+        var request = TestUtils.getRequestsDone(2, server);
+        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports/.*")));
+
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node1.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(emptyNode.getId()));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(emptyNodeChild.getId()));
+    }
+
+    @Test
     public void testDuplicateNode() throws Exception {
         String userId = "userId";
         UUID study1Uuid = createStudy(userId, CASE_UUID);
@@ -1680,6 +1721,128 @@ public class StudyTest {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
         duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
+    }
+
+    @Test
+    public void testDuplicateSubtree() throws Exception {
+        String userId = "userId";
+        UUID study1Uuid = createStudy(userId, CASE_UUID);
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
+        NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, node1.getId(), VARIANT_ID_2, "node2", userId);
+        NetworkModificationNode node3 = createNetworkModificationNode(study1Uuid, node2.getId(), UUID.randomUUID(), VARIANT_ID, "node3", BuildStatus.BUILT, userId);
+        NetworkModificationNode node4 = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
+
+        /*tree state
+            root
+            ├── root children
+            │   └── node 1
+            │       └── node 2
+            │           └── node 3
+            └── node 4
+         */
+
+        // add modification on node "node1"
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        UUID stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createTwoWindingsTransformerAttributes)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createTwoWindingsTransformerAttributes, NETWORK_UUID_STRING, VARIANT_ID);
+
+        // add modification on node "node2"
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        stubUuid = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(Optional.empty()));
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createLoadAttributes)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubUuid, createLoadAttributes, NETWORK_UUID_STRING, VARIANT_ID_2);
+
+        node2.setLoadFlowStatus(LoadFlowStatus.CONVERGED);
+        node2.setLoadFlowResult(new LoadFlowResultImpl(true, Map.of("key_1", "metric_1", "key_2", "metric_2"), "logs"));
+        node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
+        networkModificationTreeService.updateNode(study1Uuid, node2, userId);
+        output.receive(TIMEOUT, studyUpdateDestination);
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+
+        //node 4 should not have any children
+        List<NodeEntity> allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(node4.getId())).count());
+
+        // duplicate the node1 after node4
+        List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(study1Uuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
+        UUID stubDuplicateUuid = wireMockUtils.stubDuplicateModificationGroup();
+
+        mockMvc.perform(post(STUDIES_URL +
+                                "/{study1Uuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}",
+                        study1Uuid, node1.getId(), node4.getId())
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        List<UUID> nodesAfterDuplication = networkModificationTreeService.getAllNodes(study1Uuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
+        nodesAfterDuplication.removeAll(allNodesBeforeDuplication);
+        assertEquals(3, nodesAfterDuplication.size());
+
+        checkSubtreeCreatedMessageSent(study1Uuid, nodesAfterDuplication.get(0), node4.getId());
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+        wireMockUtils.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
+
+        /*tree state
+            root
+            ├── root children
+            │   └── node 1
+            │       └── node 2
+            │           └── node 3
+            └── node 4
+                └── node 1 duplicated
+                    └── node 2 duplicated
+                        └── node 3 duplicated
+         */
+
+        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        //first root children should still have a children
+        assertEquals(1, allNodes.stream()
+                .filter(nodeEntity -> nodeEntity.getParentNode() != null
+                        && nodeEntity.getIdNode().equals(node1.getId())
+                        && nodeEntity.getParentNode().getIdNode().equals(modificationNodeUuid))
+                .count());
+
+        //node4 should now have 1 child
+        assertEquals(1, allNodes.stream()
+                .filter(nodeEntity -> nodeEntity.getParentNode() != null
+                        && nodeEntity.getIdNode().equals(nodesAfterDuplication.get(0))
+                        && nodeEntity.getParentNode().getIdNode().equals(node4.getId()))
+                .count());
+
+        //node3 should be built
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node3.getId()));
+        //duplicated node3 should now be not built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(nodesAfterDuplication.get(2)));
+
+        //try copy non existing node and expect not found
+        mockMvc.perform(post(STUDIES_URL +
+                                "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}",
+                        study1Uuid, UUID.randomUUID(), node1.getId())
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
+
+        //try to copy to a non existing position and expect not found
+        mockMvc.perform(post(STUDIES_URL +
+                                "/{targetStudyUuid}/tree/subtrees?subtreeToCopyParentNodeUuid={parentNodeToCopy}&referenceNodeUuid={referenceNodeUuid}",
+                        study1Uuid, node1.getId(), UUID.randomUUID())
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -1861,6 +2024,24 @@ public class StudyTest {
         mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
                 status().isOk(),
                 content().string(defaultSensitivityAnalysisProvider));
+    }
+
+    private void checkSubtreeMovedMessageSent(UUID studyUuid, UUID movedNodeUuid, UUID referenceNodeUuid) {
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(NotificationService.SUBTREE_MOVED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(movedNodeUuid, message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
+        assertEquals(referenceNodeUuid, message.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
+
+    }
+
+    private void checkSubtreeCreatedMessageSent(UUID studyUuid, UUID newNodeUuid, UUID referenceNodeUuid) {
+        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(NotificationService.SUBTREE_CREATED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(newNodeUuid, message.getHeaders().get(NotificationService.HEADER_NEW_NODE));
+        assertEquals(referenceNodeUuid, message.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
+
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {

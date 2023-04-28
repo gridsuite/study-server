@@ -1232,6 +1232,7 @@ public class StudyService {
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
+        notificationService.emitNodeInserted(targetStudyUuid, referenceNodeUuid, duplicatedNodeUuid, insertMode);
         updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, invalidateBuild);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -1257,6 +1258,40 @@ public class StudyService {
         } else {
             invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void duplicateStudySubtree(UUID studyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+        checkStudyContainsNode(studyUuid, parentNodeToCopyUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
+        notificationService.emitSubtreeInserted(studyUuid, duplicatedNodeUuid, referenceNodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
+        checkStudyContainsNode(studyUuid, parentNodeToMoveUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+
+        List<UUID> allChildren = networkModificationTreeService.getChildren(parentNodeToMoveUuid);
+        if (allChildren.contains(referenceNodeUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
+
+        if (networkModificationTreeService.getBuildStatus(parentNodeToMoveUuid) == BuildStatus.BUILT) {
+            updateStatuses(studyUuid, parentNodeToMoveUuid, false, true);
+        }
+        allChildren.forEach(childUuid -> {
+            if (networkModificationTreeService.getBuildStatus(childUuid) == BuildStatus.BUILT) {
+                updateStatuses(studyUuid, childUuid, false, true);
+            }
+        });
+
+        notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
