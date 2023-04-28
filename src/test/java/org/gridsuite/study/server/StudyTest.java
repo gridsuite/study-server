@@ -1587,6 +1587,13 @@ public class StudyTest {
 
         mockMvc.perform(post(STUDIES_URL +
                                 "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
+                        study1Uuid, emptyNode.getId(), emptyNodeChild.getId())
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+
+        mockMvc.perform(post(STUDIES_URL +
+                                "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
                         study1Uuid, emptyNode.getId(), node1.getId())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
