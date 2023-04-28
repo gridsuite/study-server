@@ -75,6 +75,7 @@ public class NetworkMapTest {
 
     private static final String LOAD_ID_1 = "LOAD_ID_1";
     private static final String LINE_ID_1 = "LINE_ID_1";
+    private static final String HVDC_LINE_ID_1 = "HVDC_LINE_ID_1";
     private static final String GENERATOR_ID_1 = "GENERATOR_ID_1";
     private static final String SHUNT_COMPENSATOR_ID_1 = "SHUNT_COMPENSATOR_ID_1";
     private static final String TWO_WINDINGS_TRANSFORMER_ID_1 = "2WT_ID_1";
@@ -130,16 +131,14 @@ public class NetworkMapTest {
 
         String loadDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
-        String loadsIdsAsString = List.of("loads1", "loads2", "loads3").toString();
         String lineDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
-        String linesIdsAsString = List.of("line1", "line2", "line3").toString();
+        String hvdcLineDataAsString = mapper.writeValueAsString(
+                IdentifiableInfos.builder().id(HVDC_LINE_ID_1).name("HVDC_LINE_NAME_1").build());
         String generatorDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(GENERATOR_ID_1).name("GENERATOR_NAME_1").build());
-        String generatorIdsAsString = List.of("generator1", "generator2", "generator3").toString();
         String shuntCompensatorDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(SHUNT_COMPENSATOR_ID_1).name("SHUNT_COMPENSATOR_NAME_1").build());
-        String shuntCompensatorIdsAsString = List.of("shuntCompensator1", "shuntCompensator2", "shuntCompensator3").toString();
         String twoWindingsTransformerDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
         String twtIdsAsString = List.of("twt1", "twt2", "twt3").toString();
@@ -173,7 +172,12 @@ public class NetworkMapTest {
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/" + LINE_ID_1:
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/branch-or-3wt/" + LINE_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines/" + HVDC_LINE_ID_1:
+                        return new MockResponse().setResponseCode(200).setBody(hvdcLineDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/" + GENERATOR_ID_1:
@@ -231,6 +235,10 @@ public class NetworkMapTest {
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/map-lines":
                         return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
+
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-hvdc-lines":
+                        return new MockResponse().setResponseCode(200).setBody(hvdcLineDataAsString)
+                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                         return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -273,6 +281,23 @@ public class NetworkMapTest {
                     content().contentType(MediaType.APPLICATION_JSON));
         assertTrue(
                 TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/lines/%s", NETWORK_UUID_STRING, LINE_ID_1)));
+    }
+
+    @Test
+    public void testGetHvdcLineMapServer() throws Exception {
+        //create study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        //get the hvdc line map data info of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcLineId}", studyNameUserIdUuid,
+                        rootNodeUuid, HVDC_LINE_ID_1))
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON));
+        assertTrue(
+                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/hvdc-lines/%s", NETWORK_UUID_STRING, HVDC_LINE_ID_1)));
     }
 
     @Test
@@ -487,6 +512,40 @@ public class NetworkMapTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                 .contains(String.format("/v1/networks/%s/map-lines", NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testGetMapHvdcLines() throws Exception {
+        //create study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        //get the lines
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-hvdc-lines",
+                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server)
+                .contains(String.format("/v1/networks/%s/map-hvdc-lines", NETWORK_UUID_STRING)));
+    }
+
+    @Test
+    public void testGetBranchOr3WTMapServer() throws Exception {
+        // Create study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        // Get the line / 2WT / 3WT map data info of a network
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}", studyNameUserIdUuid,
+                        rootNodeUuid, LINE_ID_1))
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON));
+        assertTrue(
+                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/branch-or-3wt/%s", NETWORK_UUID_STRING, LINE_ID_1)));
     }
 
     @Test
