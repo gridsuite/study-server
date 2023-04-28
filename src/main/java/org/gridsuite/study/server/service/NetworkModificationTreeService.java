@@ -141,6 +141,7 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
+                null,
                 BuildStatus.NOT_BUILT
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();

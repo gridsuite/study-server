@@ -9,15 +9,11 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
-import com.powsybl.shortcircuit.StudyType;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -126,75 +122,41 @@ public class VoltageInitService {
         }
         return result;
     }
-//
-//    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid) {
-//        Objects.requireNonNull(studyUuid);
-//        Objects.requireNonNull(nodeUuid);
-//
-//        Optional<UUID> resultUuidOpt = networkModificationTreeService.getShortCircuitAnalysisResultUuid(nodeUuid);
-//        if (resultUuidOpt.isEmpty()) {
-//            return;
-//        }
-//
-//        String receiver;
-//        try {
-//            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
-//        } catch (JsonProcessingException e) {
-//            throw new UncheckedIOException(e);
-//        }
-//        String path = UriComponentsBuilder
-//                .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/stop")
-//                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
-//
-//        restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
-//    }
-//
+
+    public void stopVoltageInit(UUID studyUuid, UUID nodeUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+
+        Optional<UUID> resultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        if (resultUuidOpt.isEmpty()) {
+            return;
+        }
+
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid)), StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/stop")
+                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
+
+        restTemplate.put(voltageInitServerBaseUri + path, Void.class);
+    }
+
     private String getVariantId(UUID nodeUuid) {
         return networkModificationTreeService.getVariantId(nodeUuid);
     }
-//
+
     private UUID getReportUuid(UUID nodeUuid) {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
-//
-//    public static ShortCircuitParametersEntity toEntity(ShortCircuitParameters parameters) {
-//        Objects.requireNonNull(parameters);
-//        return new ShortCircuitParametersEntity(parameters.isWithLimitViolations(),
-//                parameters.isWithVoltageResult(),
-//                parameters.isWithFortescueResult(),
-//                parameters.isWithFeederResult(),
-//                parameters.getStudyType(),
-//                parameters.getMinVoltageDropProportionalThreshold());
-//    }
-//
-//    public static ShortCircuitParameters fromEntity(ShortCircuitParametersEntity entity) {
-//        Objects.requireNonNull(entity);
-//        return newShortCircuitParameters(entity.getStudyType(), entity.getMinVoltageDropProportionalThreshold(), entity.isWithFeederResult(), entity.isWithLimitViolations(), entity.isWithVoltageResult(), entity.isWithFortescueResult());
-//    }
-//
-//    public static ShortCircuitParameters copy(ShortCircuitParameters shortCircuitParameters) {
-//        return newShortCircuitParameters(shortCircuitParameters.getStudyType(), shortCircuitParameters.getMinVoltageDropProportionalThreshold(), shortCircuitParameters.isWithFeederResult(), shortCircuitParameters.isWithLimitViolations(), shortCircuitParameters.isWithVoltageResult(), shortCircuitParameters.isWithFortescueResult());
-//    }
-//
-//    private static ShortCircuitParameters newShortCircuitParameters(StudyType studyType, double minVoltageDropProportionalThreshold, boolean withFeederResult, boolean withLimitViolations, boolean withVoltageResult, boolean withFortescueResult) {
-//        ShortCircuitParameters shortCircuitParametersCopy = new ShortCircuitParameters()
-//                .setStudyType(studyType)
-//                .setMinVoltageDropProportionalThreshold(minVoltageDropProportionalThreshold)
-//                .setWithFeederResult(withFeederResult)
-//                .setWithLimitViolations(withLimitViolations)
-//                .setWithVoltageResult(withVoltageResult)
-//                .setWithFortescueResult(withFortescueResult);
-//        return shortCircuitParametersCopy;
-//    }
-//
-//    public static ShortCircuitParameters getDefaultShortCircuitParameters() {
-//        return newShortCircuitParameters(StudyType.TRANSIENT, 20, true, true, false, false);
-//    }
-//
-//    public void setShortCircuitServerBaseUri(String shortCircuitServerBaseUri) {
-//        this.shortCircuitServerBaseUri = shortCircuitServerBaseUri;
-//    }
-//
+
+    public void setVoltageInitServerBaseUri(String voltageInitServerBaseUri) {
+        this.voltageInitServerBaseUri = voltageInitServerBaseUri;
+    }
+
     public void deleteVoltageInitResult(UUID uuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}")
                 .buildAndExpand(uuid)
@@ -202,7 +164,7 @@ public class VoltageInitService {
 
         restTemplate.delete(voltageInitServerBaseUri + path);
     }
-//
+
     public void assertVoltageInitNotRunning(UUID nodeUuid) {
         String scs = getVoltageInitStatus(nodeUuid);
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {

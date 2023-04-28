@@ -58,6 +58,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getLoadFlowStatus(),
             LoadflowService.toEntity(modificationNode.getLoadFlowResult()),
             modificationNode.getShortCircuitAnalysisResultUuid(),
+            modificationNode.getVoltageInitResultUuid(),
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
@@ -75,6 +76,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getLoadFlowStatus(),
             LoadflowService.fromEntity(node.getLoadFlowResult()),
             node.getShortCircuitAnalysisResultUuid(),
+            node.getVoltageInitResultUuid(),
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
@@ -241,6 +243,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             .securityAnalysisUuid(networkModificationNode.getSecurityAnalysisResultUuid())
             .sensitivityAnalysisUuid(networkModificationNode.getSensitivityAnalysisResultUuid())
             .shortCircuitAnalysisUuid(networkModificationNode.getShortCircuitAnalysisResultUuid())
+            .voltageInitUuid(networkModificationNode.getVoltageInitResultUuid())
             .dynamicSimulationUuid(networkModificationNode.getDynamicSimulationResultUuid())
             .build();
     }
