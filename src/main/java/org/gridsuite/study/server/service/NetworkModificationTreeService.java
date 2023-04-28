@@ -508,6 +508,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
+        nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid));
+    }
+
+    @Transactional
     public void updateLoadFlowStatus(UUID nodeUuid, LoadFlowStatus loadFlowStatus) {
         nodesRepository.findById(nodeUuid).ifPresent(n -> repositories.get(n.getType()).updateLoadFlowStatus(nodeUuid, loadFlowStatus));
     }
@@ -546,6 +551,11 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public Optional<UUID> getShortCircuitAnalysisResultUuid(UUID nodeUuid) {
         return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getShortCircuitAnalysisResultUuid(nodeUuid));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UUID> getVoltageInitResultUuid(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getVoltageInitResultUuid(nodeUuid));
     }
 
     @Transactional(readOnly = true)

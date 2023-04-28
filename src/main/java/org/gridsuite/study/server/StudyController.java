@@ -61,6 +61,7 @@ public class StudyController {
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
+    private final VoltageInitService voltageInitService;
     private final CaseService caseService;
 
     public StudyController(StudyService studyService,
@@ -71,6 +72,7 @@ public class StudyController {
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
             ShortCircuitService shortCircuitService,
+            VoltageInitService voltageInitService,
             CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -80,6 +82,7 @@ public class StudyController {
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
+        this.voltageInitService = voltageInitService;
         this.caseService = caseService;
     }
 
@@ -746,6 +749,17 @@ public class StudyController {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
+    @Operation(summary = "run voltage init on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started")})
+    public ResponseEntity<UUID> runVoltageInit(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runVoltageInit(studyUuid, nodeUuid, userId));
     }
 
     @GetMapping(value = "/export-network-formats")

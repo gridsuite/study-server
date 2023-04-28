@@ -54,3 +54,5 @@ gridsuite:
       base-uri: http://localhost:5037
     dynamic-mapping-server:
       base-uri: http://localhost:5036
+    voltage-init-server:
+      base-uri: http://localhost:5038

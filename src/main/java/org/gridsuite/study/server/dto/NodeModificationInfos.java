@@ -31,5 +31,7 @@ public class NodeModificationInfos {
 
     private UUID shortCircuitAnalysisUuid;
 
+    private UUID voltageInitUuid;
+
     private UUID dynamicSimulationUuid;
 }

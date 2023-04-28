@@ -34,6 +34,7 @@ public class InvalidateNodeInfos {
 
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> voltageInitResultUuids = new ArrayList<>();
     private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
 
     public void addReportUuid(UUID reportUuid) {
