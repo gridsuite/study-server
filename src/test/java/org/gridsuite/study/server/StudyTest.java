@@ -1619,6 +1619,16 @@ public class StudyTest {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatus(node1.getId()));
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(emptyNode.getId()));
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(emptyNodeChild.getId()));
+
+        mockMvc.perform(get(STUDIES_URL +
+                        "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
+                study1Uuid, emptyNode.getId())
+                .header(USER_ID_HEADER, "userId")).andExpect(status().isOk());
+
+        mockMvc.perform(get(STUDIES_URL +
+                        "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
+                study1Uuid, UUID.randomUUID())
+                .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -1816,12 +1826,10 @@ public class StudyTest {
                         └── node 3 duplicated
          */
 
-        MvcResult mvcResult;
-
-        mvcResult = mockMvc.perform(get(STUDIES_URL +
+        mockMvc.perform(get(STUDIES_URL +
                                 "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
                         study1Uuid, nodesAfterDuplication.get(0))
-                        .header(USER_ID_HEADER, "userId")).andReturn();
+                        .header(USER_ID_HEADER, "userId")).andExpect(status().isOk());
 
         mockMvc.perform(get(STUDIES_URL +
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
