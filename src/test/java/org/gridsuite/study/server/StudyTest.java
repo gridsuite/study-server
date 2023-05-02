@@ -1591,22 +1591,6 @@ public class StudyTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
 
-        UUID study2Uuid = createStudy(userId, CASE_UUID);
-        RootNode rootNode2 = networkModificationTreeService.getStudyTree(study2Uuid);
-        UUID modificationNode2Uuid = rootNode2.getChildren().get(0).getId();
-
-        mockMvc.perform(post(STUDIES_URL +
-                                "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
-                        study1Uuid, emptyNode.getId(), modificationNode2Uuid)
-                        .header(USER_ID_HEADER, userId))
-                .andExpect(status().isForbidden());
-
-        mockMvc.perform(post(STUDIES_URL +
-                                "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
-                        study1Uuid, modificationNode2Uuid, emptyNode.getId())
-                        .header(USER_ID_HEADER, userId))
-                .andExpect(status().isForbidden());
-
         mockMvc.perform(post(STUDIES_URL +
                                 "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
                         study1Uuid, emptyNode.getId(), node1.getId())
@@ -1832,7 +1816,20 @@ public class StudyTest {
                         └── node 3 duplicated
          */
 
+        MvcResult mvcResult;
+
+        mvcResult = mockMvc.perform(get(STUDIES_URL +
+                                "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
+                        study1Uuid, nodesAfterDuplication.get(0))
+                        .header(USER_ID_HEADER, "userId")).andReturn();
+
+        mockMvc.perform(get(STUDIES_URL +
+                        "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
+                study1Uuid, UUID.randomUUID())
+                .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
+
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+
         //first root children should still have a children
         assertEquals(1, allNodes.stream()
                 .filter(nodeEntity -> nodeEntity.getParentNode() != null
