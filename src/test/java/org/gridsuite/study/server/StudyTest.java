@@ -1591,6 +1591,22 @@ public class StudyTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
 
+        UUID study2Uuid = createStudy(userId, CASE_UUID);
+        RootNode rootNode2 = networkModificationTreeService.getStudyTree(study2Uuid);
+        UUID modificationNode2Uuid = rootNode2.getChildren().get(0).getId();
+
+        mockMvc.perform(post(STUDIES_URL +
+                                "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
+                        study1Uuid, emptyNode.getId(), modificationNode2Uuid)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post(STUDIES_URL +
+                                "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
+                        study1Uuid, modificationNode2Uuid, emptyNode.getId())
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
         mockMvc.perform(post(STUDIES_URL +
                                 "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
                         study1Uuid, emptyNode.getId(), node1.getId())
