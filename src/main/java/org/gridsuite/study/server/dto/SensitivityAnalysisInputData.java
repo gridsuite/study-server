@@ -15,6 +15,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -126,4 +127,7 @@ public class SensitivityAnalysisInputData {
 
     @Schema(description = "Sensitivity parameters")
     private SensitivityAnalysisParameters parameters;
+
+    @Schema(description = "Loadflow model-specific parameters")
+    private Map<String, String> loadFlowSpecificParameters;
 }
