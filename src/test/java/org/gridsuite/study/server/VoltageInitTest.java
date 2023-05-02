@@ -95,7 +95,7 @@ public class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
 
-    private static final String VOLTAGE_INIT_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]";
+    private static final String VOLTAGE_INIT_RESULT_JSON = "{\"version\":\"1.0\"}";
 
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final String VARIANT_ID = "variant_1";
@@ -133,9 +133,9 @@ public class VoltageInitTest {
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
-    private final String voltageInitResultDestination = "voltageInit.result";
-    private final String voltageInitStoppedDestination = "voltageInit.stopped";
-    private final String voltageInitFailedDestination = "voltageInit.failed";
+    private final String voltageInitResultDestination = "voltageinit.result";
+    private final String voltageInitStoppedDestination = "voltageinit.stopped";
+    private final String voltageInitFailedDestination = "voltageinit.failed";
 
     @Before
     public void setup() throws IOException {

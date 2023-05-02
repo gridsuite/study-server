@@ -538,4 +538,86 @@ public class ConsumerService {
             }
         };
     }
+
+    void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
+        networkModificationTreeService.updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeVoltageInitResult() {
+        return message -> {
+            UUID resultUuid = UUID.fromString(message.getHeaders().get(RESULT_UUID, String.class));
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Voltage init result '{}' available for node '{}'", resultUuid, receiverObj.getNodeUuid());
+
+                    // update DB
+                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), resultUuid);
+
+                    // send notifications
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeVoltageInitStopped() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Voltage init stopped for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete Voltage Init analysis result in database
+                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for stopped computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeVoltageInitFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            String errorMessage = message.getHeaders().get(HEADER_MESSAGE, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+            if (receiver != null) {
+                NodeReceiver receiverObj;
+                try {
+                    receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
+
+                    LOGGER.info("Voltage init failed for node '{}'", receiverObj.getNodeUuid());
+
+                    // delete Voltage init  analysis result in database
+                    updateVoltageInitResultUuid(receiverObj.getNodeUuid(), null);
+
+                    // send notification for failed computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED, errorMessage, userId);
+                } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
 }

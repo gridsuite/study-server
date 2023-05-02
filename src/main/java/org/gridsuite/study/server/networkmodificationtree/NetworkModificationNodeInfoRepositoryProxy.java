@@ -161,6 +161,18 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
+    public void updateVoltageInitResultUuid(AbstractNode node, UUID voltageInitUuid) {
+        NetworkModificationNode modificationNode = (NetworkModificationNode) node;
+        modificationNode.setVoltageInitResultUuid(voltageInitUuid);
+        updateNode(modificationNode, "voltageInitResultUuid");
+    }
+
+    @Override
+    public UUID getVoltageInitResultUuid(AbstractNode node) {
+        return ((NetworkModificationNode) node).getVoltageInitResultUuid();
+    }
+
+    @Override
     public LoadFlowInfos getLoadFlowInfos(AbstractNode node) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
         return LoadFlowInfos.builder().loadFlowStatus(modificationNode.getLoadFlowStatus()).loadFlowResult(modificationNode.getLoadFlowResult()).build();

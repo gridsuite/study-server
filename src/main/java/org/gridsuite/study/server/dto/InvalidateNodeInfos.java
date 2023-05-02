@@ -57,6 +57,10 @@ public class InvalidateNodeInfos {
         shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
     }
 
+    public void addVoltageInitResultUuid(UUID voltageInitResultUuid) {
+        voltageInitResultUuids.add(voltageInitResultUuid);
+    }
+
     public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
         dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
     }

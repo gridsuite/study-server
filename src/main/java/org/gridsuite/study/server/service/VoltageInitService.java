@@ -53,7 +53,7 @@ public class VoltageInitService {
 
     @Autowired
     public VoltageInitService(
-            @Value("${gridsuite.services.shortcircuit-server.base-uri:http://voltage-init-server/}") String voltageInitServerBaseUri,
+            @Value("${gridsuite.services.voltage-init-server.base-uri:http://voltage-init-server/}") String voltageInitServerBaseUri,
             NetworkModificationTreeService networkModificationTreeService,
             NetworkService networkStoreService, ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = voltageInitServerBaseUri;

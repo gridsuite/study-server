@@ -244,6 +244,11 @@ public class NetworkModificationTreeService {
                 deleteNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
             }
 
+            UUID voltageInitResultUuid = repositories.get(nodeToDelete.getType()).getVoltageInitResultUuid(id);
+            if (voltageInitResultUuid != null) {
+                deleteNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
+            }
+
             UUID dynamicSimulationResultUuid = repositories.get(nodeToDelete.getType()).getDynamicSimulationResultUuid(id);
             if (dynamicSimulationResultUuid != null) {
                 deleteNodeInfos.addDynamicSimulationResultUuid(dynamicSimulationResultUuid);
@@ -337,6 +342,7 @@ public class NetworkModificationTreeService {
                 model.setSecurityAnalysisResultUuid(null);
                 model.setSensitivityAnalysisResultUuid(null);
                 model.setShortCircuitAnalysisResultUuid(null);
+                model.setVoltageInitResultUuid(null);
 
                 nextParentId = createNode(study.getId(), referenceParentNodeId, model, InsertMode.CHILD, null).getId();
                 networkModificationService.createModifications(modificationGroupToDuplicateId, newModificationGroupId);
@@ -678,6 +684,11 @@ public class NetworkModificationTreeService {
         if (shortCircuitAnalysisResultUuid != null) {
             invalidateNodeInfos.addShortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid);
         }
+
+        UUID voltageInitResultUuid = repositories.get(node.getType()).getVoltageInitResultUuid(node.getIdNode());
+        if (voltageInitResultUuid != null) {
+            invalidateNodeInfos.addVoltageInitResultUuid(voltageInitResultUuid);
+        }
     }
 
     @Transactional
@@ -730,6 +741,7 @@ public class NetworkModificationTreeService {
             nodeRepository.updateSecurityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateSensitivityAnalysisResultUuid(childUuid, null);
             nodeRepository.updateShortCircuitAnalysisResultUuid(childUuid, null);
+            nodeRepository.updateVoltageInitResultUuid(childUuid, null);
         }
     }
 

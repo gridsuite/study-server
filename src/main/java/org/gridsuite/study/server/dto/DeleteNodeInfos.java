@@ -66,4 +66,8 @@ public class DeleteNodeInfos {
     public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
         shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
     }
+
+    public void addVoltageInitResultUuid(UUID voltageInitResultUuid) {
+        voltageInitResultUuids.add(voltageInitResultUuid);
+    }
 }
