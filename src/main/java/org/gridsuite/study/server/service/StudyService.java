@@ -1124,7 +1124,7 @@ public class StudyService {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.ALL_COLLECTIONS_NEEDED_FOR_BUS_VIEW, networkModificationTreeService.getVariantId(nodeUuid));
+        Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
         List<LimitViolation> violations = Security.checkLimits(network, limitReduction);
         return violations.stream()
             .filter(v -> v.getLimitType() == LimitViolationType.CURRENT && network.getLine(v.getSubjectId()) != null)

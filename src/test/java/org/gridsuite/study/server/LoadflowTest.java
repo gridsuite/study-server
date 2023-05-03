@@ -149,7 +149,7 @@ public class LoadflowTest {
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
-        when(networkStoreService.getNetwork(NETWORK_UUID_ID, PreloadingStrategy.ALL_COLLECTIONS_NEEDED_FOR_BUS_VIEW)).then((Answer<Network>) invocation -> {
+        when(networkStoreService.getNetwork(NETWORK_UUID_ID, PreloadingStrategy.COLLECTION)).then((Answer<Network>) invocation -> {
             network = EurostagTutorialExample1Factory.createWithFixedCurrentLimits();
             return network;
         });
