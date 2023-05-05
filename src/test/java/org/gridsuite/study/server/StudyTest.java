@@ -23,6 +23,7 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowResultImpl;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
@@ -185,6 +186,9 @@ public class StudyTest {
 
     @Autowired
     private CaseService caseService;
+
+    @Autowired
+    private NetworkService networkService;
 
     @Autowired
     private NetworkConversionService networkConversionService;
@@ -971,6 +975,12 @@ public class StudyTest {
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
+    }
+
+    @Test
+    public void testGetNullNetwork() {
+        // just for test coverage
+        assertNull(networkService.getNetwork(UUID.randomUUID(), PreloadingStrategy.COLLECTION, null));
     }
 
     @Test

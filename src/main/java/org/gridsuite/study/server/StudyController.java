@@ -839,6 +839,15 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/overloaded-lines")
+    @Operation(summary = "Get lines in the network having a current overflow")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The overloaded lines")})
+    public ResponseEntity<List<LimitViolationInfos>> getOverloadedLines(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getOverloadedLines(studyUuid, nodeUuid, limitReduction));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
