@@ -1403,11 +1403,9 @@ public class StudyService {
         if (networkModificationTreeService.getBuildStatus(parentNodeToMoveUuid) == BuildStatus.BUILT) {
             updateStatuses(studyUuid, parentNodeToMoveUuid, false, true);
         }
-        allChildren.forEach(childUuid -> {
-            if (networkModificationTreeService.getBuildStatus(childUuid) == BuildStatus.BUILT) {
-                updateStatuses(studyUuid, childUuid, false, true);
-            }
-        });
+        allChildren.stream()
+                .filter(childUuid -> networkModificationTreeService.getBuildStatus(childUuid) == BuildStatus.BUILT)
+                .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true));
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
