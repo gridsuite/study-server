@@ -315,7 +315,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "true") boolean inUpstreamBuiltParentNode,
-            @Parameter(description = "equipment type") @RequestParam(name = "equipmentType", required = true) String equipmentType) {
+            @Parameter(description = "equipment type") @RequestParam(name = "equipmentType") String equipmentType) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getEquipmentsIds(studyUuid, nodeUuid, substationsIds, inUpstreamBuiltParentNode, equipmentType));
     }

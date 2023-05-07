@@ -18,7 +18,6 @@ import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.commons.reporter.ReporterModelJsonModule;
 import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.TopologyKind;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.xml.XMLImporter;
 import com.powsybl.loadflow.LoadFlowResultImpl;
@@ -322,18 +321,6 @@ public class StudyTest {
         String networkInfos3AsString = mapper.writeValueAsString(NETWORK_INFOS_3);
         String clonedCaseUuidAsString = mapper.writeValueAsString(CLONED_CASE_UUID);
 
-        String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
-            VoltageLevelMapData.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-            VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build()));
-
         ROOT_REPORT_TEST.addSubReporter(REPORT_TEST);
 
         final Dispatcher dispatcher = new Dispatcher() {
@@ -429,9 +416,6 @@ public class StudyTest {
 
                 switch (path) {
                     case "/v1/networks/" + NETWORK_UUID_STRING:
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels":
-                        return new MockResponse().setResponseCode(200).setBody(voltageLevelsMapDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/studies/cases/{caseUuid}":
                         return new MockResponse().setResponseCode(200).setBody("CGMES")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
