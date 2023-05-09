@@ -10,9 +10,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.reporter.ReporterModel;
 import com.powsybl.iidm.network.IdentifiableType;
-import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.*;
+import com.powsybl.security.LimitViolation;
+import com.powsybl.security.LimitViolationType;
+import com.powsybl.security.Security;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
@@ -1106,6 +1110,27 @@ public class StudyService {
         return actionsService.getContingencyCount(networkuuid, variantId, contingencyListNames);
     }
 
+    public static LimitViolationInfos toLimitViolationInfos(LimitViolation violation) {
+        return LimitViolationInfos.builder()
+                .subjectId(violation.getSubjectId())
+                .acceptableDuration(violation.getAcceptableDuration())
+                .limit(violation.getLimit())
+                .limitName(violation.getLimitName())
+                .value(violation.getValue())
+                .side(violation.getSide() != null ? violation.getSide().name() : "").build();
+    }
+
+    public List<LimitViolationInfos> getOverloadedLines(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
+        Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
+        List<LimitViolation> violations = Security.checkLimits(network, limitReduction);
+        return violations.stream()
+            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT && network.getLine(v.getSubjectId()) != null)
+            .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
+    }
+
     public byte[] getSubstationSvg(UUID studyUuid, String substationId, DiagramParameters diagramParameters,
                                    String substationLayout, UUID nodeUuid) {
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
@@ -1325,6 +1350,7 @@ public class StudyService {
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = !EMPTY_ARRAY.equals(networkModificationTreeService.getNetworkModifications(nodeToCopyUuid));
+        notificationService.emitNodeInserted(targetStudyUuid, referenceNodeUuid, duplicatedNodeUuid, insertMode);
         updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, invalidateBuild);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -1350,6 +1376,38 @@ public class StudyService {
         } else {
             invalidateBuild(studyUuid, nodeToMoveUuid, false, true);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void duplicateStudySubtree(UUID studyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+        checkStudyContainsNode(studyUuid, parentNodeToCopyUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudySubtree(parentNodeToCopyUuid, referenceNodeUuid, new HashSet<>());
+        notificationService.emitSubtreeInserted(studyUuid, duplicatedNodeUuid, referenceNodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
+        checkStudyContainsNode(studyUuid, parentNodeToMoveUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+
+        List<UUID> allChildren = networkModificationTreeService.getChildren(parentNodeToMoveUuid);
+        if (allChildren.contains(referenceNodeUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
+
+        if (networkModificationTreeService.getBuildStatus(parentNodeToMoveUuid) == BuildStatus.BUILT) {
+            updateStatuses(studyUuid, parentNodeToMoveUuid, false, true);
+        }
+        allChildren.stream()
+                .filter(childUuid -> networkModificationTreeService.getBuildStatus(childUuid) == BuildStatus.BUILT)
+                .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true));
+
+        notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
