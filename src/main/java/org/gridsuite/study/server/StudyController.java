@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
@@ -27,6 +26,7 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.service.*;
 import org.springframework.http.ContentDisposition;
@@ -195,6 +195,34 @@ public class StudyController {
                                               @Parameter(description = "the position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
+    @Operation(summary = "cut and paste a subtree")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
+            @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
+            @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
+    public ResponseEntity<Void> cutAndPasteNodeSubtree(@PathVariable("studyUuid") UUID studyUuid,
+                                                @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
+                                                @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
+                                                @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCopyParentNodeUuid", "referenceNodeUuid"})
+    @Operation(summary = "duplicate a subtree")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
+            @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
+            @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
+    public ResponseEntity<Void> duplicateSubtree(@PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
+                                                       @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
+                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.duplicateStudySubtree(studyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -811,12 +839,21 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/overloaded-lines")
+    @Operation(summary = "Get lines in the network having a current overflow")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The overloaded lines")})
+    public ResponseEntity<List<LimitViolationInfos>> getOverloadedLines(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                       @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getOverloadedLines(studyUuid, nodeUuid, limitReduction));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set")})
     public ResponseEntity<Void> setLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) LoadFlowParameters lfParameter,
+            @RequestBody(required = false) LoadFlowParametersValues lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setLoadFlowParameters(studyUuid, lfParameter, userId);
         return ResponseEntity.ok().build();
@@ -825,9 +862,9 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "Get loadflow parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
-    public ResponseEntity<LoadFlowParameters> getLoadflowParameters(
+    public ResponseEntity<LoadFlowParametersValues> getLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowParameters(studyUuid));
+        return ResponseEntity.ok().body(studyService.getLoadFlowParametersValues(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
@@ -1144,6 +1181,19 @@ public class StudyController {
         return rootNode != null ?
             ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNode)
             : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/subtree")
+    @Operation(summary = "Get network modification subtree for the given study")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "network modification subtree"),
+            @ApiResponse(responseCode = "404", description = "The study or the parent node not found")})
+    public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                 @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid) {
+        NetworkModificationNode parentNode = networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid);
+        return parentNode != null ?
+                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(parentNode)
+                : ResponseEntity.notFound().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/tree/nodes")
