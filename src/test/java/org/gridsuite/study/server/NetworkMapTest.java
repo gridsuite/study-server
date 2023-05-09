@@ -259,7 +259,7 @@ public class NetworkMapTest {
 
         //get the hvdc lines ids of a network
         String hvdcLineIdsAsString = List.of("hvdc-line1", "hvdc-line2", "hvdc-line3").toString();
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "equipments-ids", "HVDC_LINE", hvdcLineIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", hvdcLineIdsAsString);
     }
 
     @Test
@@ -277,7 +277,7 @@ public class NetworkMapTest {
 
         //get the 2wt ids of a network
         String twtIdsAsString = List.of("twt1", "twt2", "twt3").toString();
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "equipments-ids", "TWO_WINDINGS_TRANSFORMER", twtIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", twtIdsAsString);
     }
 
     @Test
@@ -312,7 +312,7 @@ public class NetworkMapTest {
 
         //get the substation ids of a network
         String substationIdsAsString = List.of("substation1", "substation2", "substation3").toString();
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "equipments-ids", "SUBSTATION", substationIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", substationIdsAsString);
     }
 
     @Test
@@ -495,6 +495,19 @@ public class NetworkMapTest {
     }
 
     @SneakyThrows
+    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNodeUuid, String elementType, String responseBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementsIdsGet(NETWORK_UUID_STRING, elementType, responseBody);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid, rootNodeUuid)
+                        .queryParam(QUERY_PARAM_EQUIPMENT_TYPE, elementType)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkElementsIdsGet(stubUuid, NETWORK_UUID_STRING, elementType);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
     private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String responseBody) {
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
@@ -518,20 +531,6 @@ public class NetworkMapTest {
                 .andExpect(status().isOk())
                 .andReturn();
         wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
-
-        return mvcResult;
-    }
-
-    @SneakyThrows
-    private MvcResult getNetworkEquipmentsInfos(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentType, String responseBody) {
-        wireMockUtils.stubNetworkEquipmentsInfosGet(NETWORK_UUID_STRING, equipmentType, responseBody);
-        UUID stubUuid = wireMockUtils.stubNetworkEquipmentsInfosGet(NETWORK_UUID_STRING, infoTypePath, equipmentType, responseBody);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}", studyUuid, rootNodeUuid, infoTypePath)
-                        .queryParam(QUERY_PARAM_EQUIPMENT_TYPE, equipmentType)
-                )
-                .andExpect(status().isOk())
-                .andReturn();
-        wireMockUtils.verifyNetworkEquipmentsInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentType);
 
         return mvcResult;
     }

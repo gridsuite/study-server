@@ -92,19 +92,18 @@ public class NetworkMapService {
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
 
-    public String getEquipmentsIds(UUID networkUuid, String variantId, List<String> substationsIds,
-                                   String equipmentType) {
-        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/equipments-ids";
+    public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements-ids";
 
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromPath(path);
         if (substationsIds != null) {
-            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
+            builder = builder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds);
         }
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        builder = builder.queryParam(QUERY_PARAM_EQUIPMENT_TYPE, equipmentType);
+        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         String url = builder.buildAndExpand(networkUuid).toUriString();
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
     }
