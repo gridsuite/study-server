@@ -101,6 +101,11 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public UUID duplicateStudyNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
+        return duplicateNode(nodeToCopyUuid, anchorNodeUuid, insertMode);
+    }
+
+    @Transactional
+    public UUID duplicateNode(UUID nodeToCopyUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         Optional<NodeEntity> anchorNodeOpt = nodesRepository.findById(anchorNodeUuid);
         NodeEntity anchorNodeEntity = anchorNodeOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
@@ -151,8 +156,21 @@ public class NetworkModificationTreeService {
         newNetworkModificationNodeInfoEntity.setReportUuid(newReportUuid);
         networkModificationNodeInfoRepository.save(newNetworkModificationNodeInfoEntity);
 
-        notificationService.emitNodeInserted(studyUuid, parent.getIdNode(), node.getIdNode(), insertMode);
         return node.getIdNode();
+    }
+
+    @Transactional
+    public UUID duplicateStudySubtree(UUID parentNodeToCopyUuid, UUID anchorNodeUuid, Set<UUID> newlyCreatedNodes) {
+        List<NodeEntity> children = getChildrenByParentUuid(parentNodeToCopyUuid);
+        UUID newParentUuid = duplicateNode(parentNodeToCopyUuid, anchorNodeUuid, InsertMode.CHILD);
+        newlyCreatedNodes.add(newParentUuid);
+
+        children.forEach(child -> {
+            if (!newlyCreatedNodes.contains(child.getIdNode())) {
+                duplicateStudySubtree(child.getIdNode(), newParentUuid, newlyCreatedNodes);
+            }
+        });
+        return newParentUuid;
     }
 
     @Transactional
@@ -160,7 +178,12 @@ public class NetworkModificationTreeService {
         if (nodeToMoveUuid.equals(anchorNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
+        notificationService.emitNodeMoved(studyUuid, anchorNodeUuid, nodeToMoveUuid, insertMode);
+    }
 
+    @Transactional
+    public UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         Optional<NodeEntity> nodeToMoveOpt = nodesRepository.findById(nodeToMoveUuid);
         NodeEntity nodeToMoveEntity = nodeToMoveOpt.orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
 
@@ -186,10 +209,16 @@ public class NetworkModificationTreeService {
         }
 
         nodeToMoveEntity.setParentNode(parent);
+        return anchorNodeEntity.getStudy().getId();
+    }
 
-        UUID studyUuid = anchorNodeEntity.getStudy().getId();
-
-        notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveEntity.getIdNode(), insertMode);
+    @Transactional
+    public void moveStudySubtree(UUID parentNodeToMoveUuid, UUID anchorNodeUuid) {
+        List<NodeEntity> children = getChildrenByParentUuid(parentNodeToMoveUuid);
+        moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD);
+        children.forEach(child -> {
+            moveStudySubtree(child.getIdNode(), parentNodeToMoveUuid);
+        });
     }
 
     @Transactional
@@ -316,6 +345,20 @@ public class NetworkModificationTreeService {
             root.setStudyId(studyId);
         }
         return root;
+    }
+
+    @Transactional
+    public NetworkModificationNode getStudySubtree(UUID studyId, UUID parentNodeUuid) {
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+        Map<UUID, AbstractNode> fullMap = new HashMap<>();
+        repositories.forEach((key, repository) ->
+                fullMap.putAll(repository.getAll(nodes.stream().filter(n -> n.getType().equals(key)).map(NodeEntity::getIdNode).collect(Collectors.toSet()))));
+
+        nodes.stream()
+                .filter(n -> n.getParentNode() != null)
+                .forEach(node -> fullMap.get(node.getParentNode().getIdNode()).getChildren().add(fullMap.get(node.getIdNode())));
+        var parentNetworkModificationNode = (NetworkModificationNode) fullMap.get(parentNodeUuid);
+        return parentNetworkModificationNode;
     }
 
     @Transactional
