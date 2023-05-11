@@ -1621,6 +1621,8 @@ public class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //dynamicSimulation_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //voltageInit_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
