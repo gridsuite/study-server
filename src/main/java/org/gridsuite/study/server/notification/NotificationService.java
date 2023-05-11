@@ -79,6 +79,8 @@ public class NotificationService {
     public static final String NODE_MOVED = "nodeMoved";
     public static final String NODE_RENAMED = "nodeRenamed";
     public static final String NODE_BUILD_STATUS_UPDATED = "nodeBuildStatusUpdated";
+    public static final String SUBTREE_MOVED = "subtreeMoved";
+    public static final String SUBTREE_CREATED = "subtreeCreated";
     public static final String MESSAGE_LOG = "Sending message : {}";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
@@ -195,6 +197,28 @@ public class NotificationService {
                 .setHeader(HEADER_STUDY_UUID, studyUuid)
                 .setHeader(HEADER_UPDATE_TYPE, NODE_UPDATED)
                 .setHeader(HEADER_NODES, nodes)
+                .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitSubtreeMoved(UUID studyUuid, UUID parentNodeSubtreeMoved, UUID referenceNodeUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, SUBTREE_MOVED)
+                .setHeader(HEADER_MOVED_NODE, parentNodeSubtreeMoved)
+                .setHeader(HEADER_PARENT_NODE, referenceNodeUuid)
+                .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitSubtreeInserted(UUID studyUuid, UUID parentNodeSubtreeInserted, UUID referenceNodeUuid) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_STUDY_UUID, studyUuid)
+                .setHeader(HEADER_UPDATE_TYPE, SUBTREE_CREATED)
+                .setHeader(HEADER_NEW_NODE, parentNodeSubtreeInserted)
+                .setHeader(HEADER_PARENT_NODE, referenceNodeUuid)
                 .build()
         );
     }
