@@ -781,7 +781,8 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
     @Operation(summary = "run voltage init on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
+        @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<UUID> runVoltageInit(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
