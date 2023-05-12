@@ -1127,7 +1127,7 @@ public class StudyService {
         Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
         List<LimitViolation> violations = Security.checkLimits(network, limitReduction);
         return violations.stream()
-            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT && network.getLine(v.getSubjectId()) != null)
+            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT)
             .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
     }
 
