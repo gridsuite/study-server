@@ -427,7 +427,7 @@ public class LoadflowTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         // retrieve overloaded lines data on node 1
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/overloaded-lines?limitReduction=1.0",
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations?limitReduction=1.0",
                 studyNameUserIdUuid,
                 modificationNode1Uuid)).andExpectAll(
                         status().isOk(),

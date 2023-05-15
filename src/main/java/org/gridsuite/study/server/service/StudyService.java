@@ -1120,7 +1120,7 @@ public class StudyService {
                 .side(violation.getSide() != null ? violation.getSide().name() : "").build();
     }
 
-    public List<LimitViolationInfos> getOverloadedLines(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+    public List<LimitViolationInfos> getCurrentLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
