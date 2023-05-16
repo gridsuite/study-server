@@ -417,7 +417,7 @@ public class LoadflowTest {
     }
 
     @Test
-    public void testOverloadedLines() throws Exception {
+    public void testCurrentLimitViolations() throws Exception {
         // create a study and a node
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
