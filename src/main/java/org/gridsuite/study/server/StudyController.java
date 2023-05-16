@@ -61,6 +61,7 @@ public class StudyController {
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
+    private final VoltageInitService voltageInitService;
     private final CaseService caseService;
 
     public StudyController(StudyService studyService,
@@ -71,6 +72,7 @@ public class StudyController {
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
             ShortCircuitService shortCircuitService,
+            VoltageInitService voltageInitService,
             CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -80,6 +82,7 @@ public class StudyController {
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
+        this.voltageInitService = voltageInitService;
         this.caseService = caseService;
     }
 
@@ -745,7 +748,7 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
     @Operation(summary = "stop security analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has been stopped")})
     public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid);
@@ -772,6 +775,51 @@ public class StudyController {
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
+    @Operation(summary = "run voltage init on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
+        @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
+    public ResponseEntity<UUID> runVoltageInit(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runVoltageInit(studyUuid, nodeUuid, userId));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop")
+    @Operation(summary = "stop security analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has been stopped")})
+    public ResponseEntity<Void> stopVoltageInit(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        voltageInitService.stopVoltageInit(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result")
+    @Operation(summary = "Get a voltage init result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init result"),
+            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
+    public ResponseEntity<String> getVoltageInitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = voltageInitService.getVoltageInitResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status")
+    @Operation(summary = "Get the voltage init status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init status"),
+            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
+    public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = voltageInitService.getVoltageInitStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }

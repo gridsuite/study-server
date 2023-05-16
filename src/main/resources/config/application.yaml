@@ -6,7 +6,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed
+      definition: consumeSaResult;consumeSaStopped;consumeSaFailed;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeBuildResult;consumeBuildStopped;consumeBuildFailed;consumeCaseImportSucceeded;consumeCaseImportFailed;consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -58,6 +58,15 @@ spring:
         consumeShortCircuitAnalysisFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.failed
           group: studyShortCircuitAnalysisFailedGroup
+        consumeVoltageInitResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.result
+          group: studyVoltageInitResultGroup
+        consumeVoltageInitStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.stopped
+          group: studyVoltageInitStoppedGroup
+        consumeVoltageInitFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.failed
+          group: studyVoltageInitFailedGroup
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded
           group: studyCaseImportSucceededGroup
