@@ -233,18 +233,6 @@ public class SingleLineDiagramTest {
                     case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&lineId=LINEID1&lineId=LINEID2":
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&substationId=BBE1AA&substationId=BBE2AA":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/3-windings-transformers":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/generators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/batteries":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/dangling-lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lcc-converter-stations":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/vsc-converter-stations":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads-modification":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/static-var-compensators":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/all":
                         return new MockResponse().setBody(" ").setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
@@ -427,38 +415,8 @@ public class SingleLineDiagramTest {
         //get the substation map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", "[]");
 
-        //get the 2 windings transformers map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "[]");
-
-        //get the 3 windings transformers map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", "[]");
-
-        //get the generators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", "[]");
-
-        //get the batteries map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", "[]");
-
-        //get the dangling lines map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", "[]");
-
         //get the hvdc lines map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", "[]");
-
-        //get the lcc converter stations map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", "[]");
-
-        //get the vsc converter stations map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", "[]");
-
-        //get the loads map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "MAP", "[]");
-
-        //get the shunt compensators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", "[]");
-
-        //get the static var compensators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", "[]");
 
         //get the voltage levels map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", "[]");
