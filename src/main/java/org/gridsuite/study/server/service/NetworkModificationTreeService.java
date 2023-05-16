@@ -395,7 +395,7 @@ public class NetworkModificationTreeService {
         NodeEntity rootNodeEntity = createRoot(studyEntity, importReportUuid);
         NetworkModificationNode modificationNode = NetworkModificationNode
                 .builder()
-                .name("modification node 0")
+                .name("N1")
                 .variantId(FIRST_VARIANT_ID)
                 .loadFlowStatus(LoadFlowStatus.NOT_DONE)
                 .buildStatus(BuildStatus.BUILT)
@@ -462,13 +462,13 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public String getUniqueNodeName(UUID studyUuid) {
-        int counter = 1;
+        int counter = 2;
         List<String> studyNodeNames = networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid)
                 .stream()
                 .map(AbstractNodeInfoEntity::getName)
                 .collect(Collectors.toList());
 
-        String namePrefix = "New node ";
+        String namePrefix = "N";
         String uniqueName = StringUtils.EMPTY;
         while (StringUtils.EMPTY.equals(uniqueName) || studyNodeNames.contains(uniqueName)) {
             uniqueName = namePrefix + counter;
