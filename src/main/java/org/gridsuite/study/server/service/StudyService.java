@@ -1125,14 +1125,14 @@ public class StudyService {
                 .side(violation.getSide() != null ? violation.getSide().name() : "").build();
     }
 
-    public List<LimitViolationInfos> getOverloadedLines(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+    public List<LimitViolationInfos> getCurrentLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
         List<LimitViolation> violations = Security.checkLimits(network, limitReduction);
         return violations.stream()
-            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT && network.getLine(v.getSubjectId()) != null)
+            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT)
             .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
     }
 
