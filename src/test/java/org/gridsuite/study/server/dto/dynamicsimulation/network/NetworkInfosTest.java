@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.dto.dynamicsimulation.network;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfosTest;
 import org.junit.Test;
@@ -52,12 +53,12 @@ public class NetworkInfosTest {
         network.setTransformerTNextTHT(10);
         network.setTransformerTolV(0.015);
 
-        String resultJson = NetworkInfos.toJson(network);
+        String resultJson = NetworkInfos.toJson(network, new ObjectMapper());
         LOGGER.info("result json = " + resultJson);
 
         assertTrue(!Strings.isBlank(resultJson));
 
-        NetworkInfos outputNetwork = NetworkInfos.parseJson(resultJson);
+        NetworkInfos outputNetwork = NetworkInfos.parseJson(resultJson, new ObjectMapper());
 
         assertEquals(network.getCapacitorNoReclosingDelay(), outputNetwork.getCapacitorNoReclosingDelay(), DOUBLE_ERROR);
         assertEquals(network.getTransformerTolV(), outputNetwork.getTransformerTolV(), DOUBLE_ERROR);

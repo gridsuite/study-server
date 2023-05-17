@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -29,7 +30,7 @@ import java.util.UUID;
  */
 public interface DynamicSimulationService {
 
-    static DynamicSimulationParametersEntity toEntity(DynamicSimulationParametersInfos parametersInfos) {
+    static DynamicSimulationParametersEntity toEntity(DynamicSimulationParametersInfos parametersInfos, ObjectMapper objectMapper) {
         Objects.requireNonNull(parametersInfos);
         DynamicSimulationParametersEntity entity = new DynamicSimulationParametersEntity();
 
@@ -40,15 +41,15 @@ public interface DynamicSimulationService {
 
         // solvers parameter
         entity.setSolverId(parametersInfos.getSolverId());
-        entity.setSolvers(SolverInfos.toJson(parametersInfos.getSolvers()));
+        entity.setSolvers(SolverInfos.toJson(parametersInfos.getSolvers(), objectMapper));
 
         // network parameter
-        entity.setNetwork(NetworkInfos.toJson(parametersInfos.getNetwork()));
+        entity.setNetwork(NetworkInfos.toJson(parametersInfos.getNetwork(), objectMapper));
 
         return entity;
     }
 
-    static DynamicSimulationParametersInfos fromEntity(DynamicSimulationParametersEntity entity) {
+    static DynamicSimulationParametersInfos fromEntity(DynamicSimulationParametersEntity entity, ObjectMapper objectMapper) {
         Objects.requireNonNull(entity);
         DynamicSimulationParametersInfos parametersInfos = new DynamicSimulationParametersInfos();
 
@@ -59,7 +60,7 @@ public interface DynamicSimulationService {
 
         // solvers parameter
         String solversJson = entity.getSolvers();
-        List<SolverInfos> solvers = SolverInfos.parseJson(solversJson);
+        List<SolverInfos> solvers = SolverInfos.parseJson(solversJson, objectMapper);
         String solverId = entity.getSolverId();
 
         parametersInfos.setSolverId(solverId);
@@ -67,7 +68,7 @@ public interface DynamicSimulationService {
 
         // network parameter
         String networkJson = entity.getNetwork();
-        NetworkInfos network = networkJson != null ? NetworkInfos.parseJson(networkJson) : getDefaultNetwork();
+        NetworkInfos network = networkJson != null ? NetworkInfos.parseJson(networkJson, objectMapper) : getDefaultNetwork();
         parametersInfos.setNetwork(network);
 
         return parametersInfos;

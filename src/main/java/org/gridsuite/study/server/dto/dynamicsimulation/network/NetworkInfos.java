@@ -66,8 +66,7 @@ public class NetworkInfos {
 
     private double transformerTolV;
 
-    public static NetworkInfos parseJson(String json) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    public static NetworkInfos parseJson(String json, ObjectMapper objectMapper) {
         NetworkInfos network;
         try {
             network = objectMapper.readValue(json, NetworkInfos.class);
@@ -78,8 +77,7 @@ public class NetworkInfos {
         return network;
     }
 
-    public static String toJson(NetworkInfos network) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    public static String toJson(NetworkInfos network, ObjectMapper objectMapper) {
         String json;
         try {
             json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(network);

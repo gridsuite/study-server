@@ -269,7 +269,7 @@ public class StudyService {
         LoadFlowParameters sourceLoadFlowParameters = LoadflowService.fromEntity(sourceStudy.getLoadFlowParameters());
         List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters = getAllSpecificLoadFlowParameters(sourceStudy);
         ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
-        DynamicSimulationParametersInfos copiedDynamicSimulationParameters = DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters());
+        DynamicSimulationParametersInfos copiedDynamicSimulationParameters = DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper);
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, sourceSpecificLoadFlowParameters, copiedShortCircuitParameters, copiedDynamicSimulationParameters, userId));
@@ -290,7 +290,7 @@ public class StudyService {
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
             DynamicSimulationParametersInfos dynamicSimulationParameters = copiedDynamicSimulationParameters != null ? copiedDynamicSimulationParameters : DynamicSimulationService.getDefaultDynamicSimulationParameters();
-            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters), userId, clonedNetworkUuid, clonedCaseUuid);
+            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), userId, clonedNetworkUuid, clonedCaseUuid);
             reindexStudy(duplicatedStudy);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -1814,13 +1814,13 @@ public class StudyService {
 
     @Transactional
     public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
-        updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters()));
+        updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters()) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
+                .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
                 .orElse(null);
     }
 
