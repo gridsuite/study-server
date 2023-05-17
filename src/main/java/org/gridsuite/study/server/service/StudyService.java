@@ -121,7 +121,7 @@ public class StudyService {
     private final EquipmentInfosService equipmentInfosService;
     private final LoadflowService loadflowService;
     private final ShortCircuitService shortCircuitService;
-
+    private final VoltageInitService voltageInitService;
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
@@ -167,7 +167,8 @@ public class StudyService {
             ActionsService actionsService,
             CaseService caseService,
             SensitivityAnalysisService sensitivityAnalysisService,
-            DynamicSimulationService dynamicSimulationService) {
+            DynamicSimulationService dynamicSimulationService,
+            VoltageInitService voltageInitService) {
         this.defaultLoadflowProvider = defaultLoadflowProvider;
         this.defaultSecurityAnalysisProvider = defaultSecurityAnalysisProvider;
         this.defaultSensitivityAnalysisProvider = defaultSensitivityAnalysisProvider;
@@ -194,6 +195,7 @@ public class StudyService {
         this.actionsService = actionsService;
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
+        this.voltageInitService = voltageInitService;
     }
 
     private static StudyInfos toStudyInfos(StudyEntity entity) {
@@ -499,6 +501,8 @@ public class StudyService {
                                 .map(NodeModificationInfos::getSensitivityAnalysisUuid).filter(Objects::nonNull).forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getShortCircuitAnalysisUuid).filter(Objects::nonNull).forEach(shortCircuitService::deleteShortCircuitAnalysisResult)), // TODO delete all with one request only
+                        studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
+                                .map(NodeModificationInfos::getVoltageInitUuid).filter(Objects::nonNull).forEach(voltageInitService::deleteVoltageInitResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream()
                                 .map(NodeModificationInfos::getDynamicSimulationUuid).filter(Objects::nonNull).forEach(dynamicSimulationService::deleteResult)), // TODO delete all with one request only
                         studyServerExecutionService.runAsync(() -> deleteStudyInfos.getNodesModificationInfos().stream().map(NodeModificationInfos::getModificationGroupUuid).filter(Objects::nonNull).forEach(networkModificationService::deleteModifications)), // TODO delete all with one request only
@@ -814,6 +818,7 @@ public class StudyService {
         dynamicSimulationService.assertDynamicSimulationNotRunning(nodeUuid);
         sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(nodeUuid);
         shortCircuitService.assertShortCircuitAnalysisNotRunning(nodeUuid);
+        voltageInitService.assertVoltageInitNotRunning(nodeUuid);
     }
 
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
@@ -1120,14 +1125,14 @@ public class StudyService {
                 .side(violation.getSide() != null ? violation.getSide().name() : "").build();
     }
 
-    public List<LimitViolationInfos> getOverloadedLines(UUID studyUuid, UUID nodeUuid, float limitReduction) {
+    public List<LimitViolationInfos> getCurrentLimitViolations(UUID studyUuid, UUID nodeUuid, float limitReduction) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
         List<LimitViolation> violations = Security.checkLimits(network, limitReduction);
         return violations.stream()
-            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT && network.getLine(v.getSubjectId()) != null)
+            .filter(v -> v.getLimitType() == LimitViolationType.CURRENT)
             .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
     }
 
@@ -1224,6 +1229,10 @@ public class StudyService {
 
     void updateShortCircuitAnalysisResultUuid(UUID nodeUuid, UUID shortCircuitAnalysisResultUuid) {
         networkModificationTreeService.updateShortCircuitAnalysisResultUuid(nodeUuid, shortCircuitAnalysisResultUuid);
+    }
+
+    void updateVoltageInitResultUuid(UUID nodeUuid, UUID voltageInitResultUuid) {
+        networkModificationTreeService.updateVoltageInitResultUuid(nodeUuid, voltageInitResultUuid);
     }
 
     private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
@@ -1428,6 +1437,7 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
                 studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
                 studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
@@ -1464,6 +1474,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
@@ -1512,6 +1523,7 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
+                studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
                 studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
                 studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(deleteNodeInfos.getNetworkUuid(), deleteNodeInfos.getVariantIds()))
         );
@@ -1756,6 +1768,17 @@ public class StudyService {
 
         updateShortCircuitAnalysisResultUuid(nodeUuid, result);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
+        return result;
+    }
+
+    public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
+        Optional<UUID> prevResultUuidOpt = networkModificationTreeService.getVoltageInitResultUuid(nodeUuid);
+        prevResultUuidOpt.ifPresent(voltageInitService::deleteVoltageInitResult);
+
+        UUID result = voltageInitService.runVoltageInit(studyUuid, nodeUuid, userId);
+
+        updateVoltageInitResultUuid(nodeUuid, result);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         return result;
     }
 
