@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.gridsuite.study.server.dto.dynamicsimulation.curve.CurveInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.network.NetworkInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
 
@@ -35,4 +36,5 @@ public class DynamicSimulationParametersInfos {
     private String solverId;
     private List<SolverInfos> solvers;
     private NetworkInfos network;
+    private List<CurveInfos> curves;
 }

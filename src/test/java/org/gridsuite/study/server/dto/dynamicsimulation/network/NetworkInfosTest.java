@@ -29,6 +29,8 @@ public class NetworkInfosTest {
 
     static double DOUBLE_ERROR = 0.000001;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Test
     public void testToJsonParseJson() {
         NetworkInfos network = new NetworkInfos();
@@ -53,12 +55,12 @@ public class NetworkInfosTest {
         network.setTransformerTNextTHT(10);
         network.setTransformerTolV(0.015);
 
-        String resultJson = NetworkInfos.toJson(network, new ObjectMapper());
+        String resultJson = NetworkInfos.toJson(network, objectMapper);
         LOGGER.info("result json = " + resultJson);
 
         assertTrue(!Strings.isBlank(resultJson));
 
-        NetworkInfos outputNetwork = NetworkInfos.parseJson(resultJson, new ObjectMapper());
+        NetworkInfos outputNetwork = NetworkInfos.parseJson(resultJson, objectMapper);
 
         assertEquals(network.getCapacitorNoReclosingDelay(), outputNetwork.getCapacitorNoReclosingDelay(), DOUBLE_ERROR);
         assertEquals(network.getTransformerTolV(), outputNetwork.getTransformerTolV(), DOUBLE_ERROR);

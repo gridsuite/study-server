@@ -11,8 +11,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.curve.CurveInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.network.NetworkInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
@@ -21,6 +23,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -46,6 +49,9 @@ public interface DynamicSimulationService {
         // network parameter
         entity.setNetwork(NetworkInfos.toJson(parametersInfos.getNetwork(), objectMapper));
 
+        // curves parameter
+        entity.setCurves(CurveInfos.toJson(parametersInfos.getCurves(), objectMapper));
+
         return entity;
     }
 
@@ -70,6 +76,11 @@ public interface DynamicSimulationService {
         String networkJson = entity.getNetwork();
         NetworkInfos network = networkJson != null ? NetworkInfos.parseJson(networkJson, objectMapper) : getDefaultNetwork();
         parametersInfos.setNetwork(network);
+
+        // curves parameter
+        String curvesJson = entity.getCurves();
+        List<CurveInfos> curves = curvesJson != null ? CurveInfos.parseJson(curvesJson, objectMapper) : Collections.emptyList();
+        parametersInfos.setCurves(curves);
 
         return parametersInfos;
     }
@@ -106,7 +117,7 @@ public interface DynamicSimulationService {
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
 
         NetworkInfos network = getDefaultNetwork();
-        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network);
+        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null);
     }
 
     static NetworkInfos getDefaultNetwork() {
@@ -202,4 +213,11 @@ public interface DynamicSimulationService {
      * @return a list of timeseries metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID nodeUuid);
+
+    /**
+     * Get models used in the given mapping
+     * @param mapping
+     * @return a list of rich models (i.e. including parameter set with parameters)
+     */
+    List<ModelInfos> getModels(String mapping);
 }
