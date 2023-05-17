@@ -41,6 +41,9 @@ public class DynamicSimulationParametersEntity {
     @Column(name = "mapping", columnDefinition = "varchar(255)")
     private String mapping;
 
+    @Column(name = "network", columnDefinition = "CLOB")
+    private String network;
+
     @Column(name = "curves", columnDefinition = "CLOB")
     private String curves;
 }

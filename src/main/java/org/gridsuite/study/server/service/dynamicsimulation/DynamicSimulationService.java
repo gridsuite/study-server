@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.service.dynamicsimulation;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -14,6 +15,7 @@ import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.curve.CurveInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.network.NetworkInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.IdaSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SimSolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
@@ -31,7 +33,7 @@ import java.util.UUID;
  */
 public interface DynamicSimulationService {
 
-    static DynamicSimulationParametersEntity toEntity(DynamicSimulationParametersInfos parametersInfos) {
+    static DynamicSimulationParametersEntity toEntity(DynamicSimulationParametersInfos parametersInfos, ObjectMapper objectMapper) {
         Objects.requireNonNull(parametersInfos);
         DynamicSimulationParametersEntity entity = new DynamicSimulationParametersEntity();
 
@@ -42,7 +44,10 @@ public interface DynamicSimulationService {
 
         // solvers parameter
         entity.setSolverId(parametersInfos.getSolverId());
-        entity.setSolvers(SolverInfos.toJson(parametersInfos.getSolvers()));
+        entity.setSolvers(SolverInfos.toJson(parametersInfos.getSolvers(), objectMapper));
+
+        // network parameter
+        entity.setNetwork(NetworkInfos.toJson(parametersInfos.getNetwork(), objectMapper));
 
         // curves parameter
         entity.setCurves(CurveInfos.toJson(parametersInfos.getCurves()));
@@ -50,7 +55,7 @@ public interface DynamicSimulationService {
         return entity;
     }
 
-    static DynamicSimulationParametersInfos fromEntity(DynamicSimulationParametersEntity entity) {
+    static DynamicSimulationParametersInfos fromEntity(DynamicSimulationParametersEntity entity, ObjectMapper objectMapper) {
         Objects.requireNonNull(entity);
         DynamicSimulationParametersInfos parametersInfos = new DynamicSimulationParametersInfos();
 
@@ -61,11 +66,16 @@ public interface DynamicSimulationService {
 
         // solvers parameter
         String solversJson = entity.getSolvers();
-        List<SolverInfos> solvers = SolverInfos.parseJson(solversJson);
+        List<SolverInfos> solvers = SolverInfos.parseJson(solversJson, objectMapper);
         String solverId = entity.getSolverId();
 
         parametersInfos.setSolverId(solverId);
         parametersInfos.setSolvers(solvers);
+
+        // network parameter
+        String networkJson = entity.getNetwork();
+        NetworkInfos network = networkJson != null ? NetworkInfos.parseJson(networkJson, objectMapper) : getDefaultNetwork();
+        parametersInfos.setNetwork(network);
 
         // curves parameter
         String curvesJson = entity.getCurves();
@@ -105,7 +115,36 @@ public interface DynamicSimulationService {
         simSolver.setRecalculateStep(false);
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
-        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, null);
+
+        NetworkInfos network = getDefaultNetwork();
+        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null);
+    }
+
+    static NetworkInfos getDefaultNetwork() {
+        // these parameters are taken from network.par file in dynamic simulation server
+        NetworkInfos network = new NetworkInfos();
+        network.setCapacitorNoReclosingDelay(300);
+        network.setDanglingLineCurrentLimitMaxTimeOperation(90);
+        network.setLineCurrentLimitMaxTimeOperation(90);
+        network.setLoadTp(90);
+        network.setLoadTq(90);
+        network.setLoadAlpha(1);
+        network.setLoadAlphaLong(0);
+        network.setLoadBeta(2);
+        network.setLoadBetaLong(0);
+        network.setLoadIsControllable(false);
+        network.setLoadIsRestorative(false);
+        network.setLoadZPMax(100);
+        network.setLoadZQMax(100);
+        network.setReactanceNoReclosingDelay(0);
+        network.setTransformerCurrentLimitMaxTimeOperation(90);
+        network.setTransformerT1StHT(60);
+        network.setTransformerT1StTHT(30);
+        network.setTransformerTNextHT(10);
+        network.setTransformerTNextTHT(10);
+        network.setTransformerTolV(0.015);
+
+        return network;
     }
 
     /**
@@ -146,7 +185,6 @@ public interface DynamicSimulationService {
     /**
      * invalidate status of the simulation results
      * @param resultUuids a given list of result UUIDs
-     * @return
      */
     void invalidateStatus(List<UUID> resultUuids);
 
