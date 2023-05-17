@@ -43,6 +43,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID shortCircuitAnalysisResultUuid;
 
+    UUID voltageInitResultUuid;
+
     UUID securityAnalysisResultUuid;
 
     UUID sensitivityAnalysisResultUuid;

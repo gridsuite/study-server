@@ -34,8 +34,7 @@ public interface SolverInfos {
 
     SolverTypeInfos getType();
 
-    static List<SolverInfos> parseJson(String json) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    static List<SolverInfos> parseJson(String json, ObjectMapper objectMapper) {
         List<SolverInfos> solvers;
         try {
             solvers = objectMapper.readValue(json, new TypeReference<List<SolverInfos>>() { });
@@ -46,8 +45,7 @@ public interface SolverInfos {
         return solvers;
     }
 
-    static String toJson(List<SolverInfos> solvers) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    static String toJson(List<SolverInfos> solvers, ObjectMapper objectMapper) {
         String json;
         try {
             json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(solvers);

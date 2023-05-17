@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -61,6 +62,7 @@ public class StudyController {
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
+    private final VoltageInitService voltageInitService;
     private final CaseService caseService;
 
     public StudyController(StudyService studyService,
@@ -71,6 +73,7 @@ public class StudyController {
             SecurityAnalysisService securityAnalysisService,
             SensitivityAnalysisService sensitivityAnalysisService,
             ShortCircuitService shortCircuitService,
+            VoltageInitService voltageInitService,
             CaseService caseService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -80,6 +83,7 @@ public class StudyController {
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
+        this.voltageInitService = voltageInitService;
         this.caseService = caseService;
     }
 
@@ -201,9 +205,9 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCutParentNodeUuid", "referenceNodeUuid"})
     @Operation(summary = "cut and paste a subtree")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
-            @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
-            @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
+        @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
+        @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
+        @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
     public ResponseEntity<Void> cutAndPasteNodeSubtree(@PathVariable("studyUuid") UUID studyUuid,
                                                 @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
@@ -215,9 +219,9 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/tree/subtrees", params = {"subtreeToCopyParentNodeUuid", "referenceNodeUuid"})
     @Operation(summary = "duplicate a subtree")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
-            @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
-            @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
+        @ApiResponse(responseCode = "200", description = "The subtree was successfully created"),
+        @ApiResponse(responseCode = "403", description = "The subtree can't be copied above the root node nor around itself"),
+        @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
     public ResponseEntity<Void> duplicateSubtree(@PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
                                                        @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
@@ -745,7 +749,7 @@ public class StudyController {
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/shortcircuit/stop")
     @Operation(summary = "stop security analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has been stopped")})
     public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         shortCircuitService.stopShortCircuitAnalysis(studyUuid, nodeUuid);
@@ -772,6 +776,51 @@ public class StudyController {
     public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = shortCircuitService.getShortCircuitAnalysisStatus(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run")
+    @Operation(summary = "run voltage init on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
+        @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
+    public ResponseEntity<UUID> runVoltageInit(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        return ResponseEntity.ok().body(studyService.runVoltageInit(studyUuid, nodeUuid, userId));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/stop")
+    @Operation(summary = "stop security analysis on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has been stopped")})
+    public ResponseEntity<Void> stopVoltageInit(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        voltageInitService.stopVoltageInit(studyUuid, nodeUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result")
+    @Operation(summary = "Get a voltage init result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init result"),
+            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
+    public ResponseEntity<String> getVoltageInitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = voltageInitService.getVoltageInitResult(nodeUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status")
+    @Operation(summary = "Get the voltage init status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init status"),
+            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+            @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
+    public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = voltageInitService.getVoltageInitStatus(nodeUuid);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -839,13 +888,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getContingencyCount(studyUuid, nonNullContingencyListNames, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/overloaded-lines")
-    @Operation(summary = "Get lines in the network having a current overflow")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The overloaded lines")})
-    public ResponseEntity<List<LimitViolationInfos>> getOverloadedLines(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations")
+    @Operation(summary = "Get current limit violations.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The current limit violations")})
+    public ResponseEntity<List<LimitViolationInfos>> getCurrentLimitViolations(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @Parameter(description = "The limit reduction") @RequestParam("limitReduction") float limitReduction) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getOverloadedLines(studyUuid, nodeUuid, limitReduction));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getCurrentLimitViolations(studyUuid, nodeUuid, limitReduction));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
@@ -1186,8 +1235,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/subtree")
     @Operation(summary = "Get network modification subtree for the given study")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "network modification subtree"),
-            @ApiResponse(responseCode = "404", description = "The study or the parent node not found")})
+        @ApiResponse(responseCode = "200", description = "network modification subtree"),
+        @ApiResponse(responseCode = "404", description = "The study or the parent node not found")})
     public ResponseEntity<NetworkModificationNode> getNetworkModificationSubtree(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                  @Parameter(description = "parent node uuid") @RequestParam(value = "parentNodeUuid") UUID parentNodeUuid) {
         NetworkModificationNode parentNode = networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid);
@@ -1425,6 +1474,18 @@ public class StudyController {
     public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappings(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid) {
         List<MappingInfos> mappings = studyService.getDynamicSimulationMappings(studyUuid);
         return mappings != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(mappings) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models")
+    @Operation(summary = "Get models of dynamic simulation on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
+            @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
+            @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
+    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, nodeUuid);
+        return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
                 ResponseEntity.noContent().build();
     }
 
