@@ -50,7 +50,7 @@ public interface DynamicSimulationService {
         entity.setNetwork(NetworkInfos.toJson(parametersInfos.getNetwork(), objectMapper));
 
         // curves parameter
-        entity.setCurves(CurveInfos.toJson(parametersInfos.getCurves()));
+        entity.setCurves(CurveInfos.toJson(parametersInfos.getCurves(), objectMapper));
 
         return entity;
     }
@@ -79,7 +79,7 @@ public interface DynamicSimulationService {
 
         // curves parameter
         String curvesJson = entity.getCurves();
-        List<CurveInfos> curves = curvesJson != null ? CurveInfos.parseJson(curvesJson) : Collections.emptyList();
+        List<CurveInfos> curves = curvesJson != null ? CurveInfos.parseJson(curvesJson, objectMapper) : Collections.emptyList();
         parametersInfos.setCurves(curves);
 
         return parametersInfos;

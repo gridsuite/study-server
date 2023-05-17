@@ -31,8 +31,7 @@ public class CurveInfos {
     private String equipmentId;
     private String variableId;
 
-    public static List<CurveInfos> parseJson(String json) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    public static List<CurveInfos> parseJson(String json, ObjectMapper objectMapper) {
         List<CurveInfos> curves;
         try {
             curves = objectMapper.readValue(json, new TypeReference<List<CurveInfos>>() { });
@@ -43,8 +42,7 @@ public class CurveInfos {
         return curves;
     }
 
-    public static String toJson(List<CurveInfos> curves) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    public static String toJson(List<CurveInfos> curves, ObjectMapper objectMapper) {
         String json;
         try {
             json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(curves);

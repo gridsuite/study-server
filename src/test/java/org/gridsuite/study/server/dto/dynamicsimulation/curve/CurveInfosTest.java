@@ -28,7 +28,7 @@ public class CurveInfosTest {
     public static final String CURVE_JSON_FILE_RESOURCE = "/dto/dynamicsimulation/curve/curve.json";
     static Logger LOGGER = LoggerFactory.getLogger(CurveInfosTest.class);
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     public void testParseAndToJson() throws IOException {
@@ -36,8 +36,8 @@ public class CurveInfosTest {
         String jsonToParse = new String(getClass().getResourceAsStream(CURVE_JSON_FILE_RESOURCE).readAllBytes());
 
         // call method to be tested
-        List<CurveInfos> curves = CurveInfos.parseJson(jsonToParse);
-        String resultCurvesJson = CurveInfos.toJson(curves);
+        List<CurveInfos> curves = CurveInfos.parseJson(jsonToParse, objectMapper);
+        String resultCurvesJson = CurveInfos.toJson(curves, objectMapper);
 
         // check results
         LOGGER.info("Expect curve json = " + jsonToParse);
