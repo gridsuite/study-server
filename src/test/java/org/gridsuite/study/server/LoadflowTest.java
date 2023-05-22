@@ -466,6 +466,7 @@ public class LoadflowTest {
                 .distributedSlack(true)
                 .dcUseTransformerRatio(true)
                 .hvdcAcEmulation(true)
+                .dcPowerFactor(1.0)
                 .useReactiveLimits(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
