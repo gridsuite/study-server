@@ -357,7 +357,7 @@ public class NetworkModificationTreeTest {
         String userId = "userId";
         RootNode root = createRoot();
         // Check build status initialized to NOT_BUILT if null
-        final NetworkModificationNode node1 = buildNetworkModification("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null);
+        final NetworkModificationNode node1 = buildNetworkModification("not_built", "not built node", MODIFICATION_GROUP_UUID_2, VARIANT_ID, LoadFlowStatus.NOT_DONE, loadFlowResult, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
         createNode(root.getStudyId(), root, node1, userId);
         root = getRootNode(root.getStudyId());
         List<AbstractNode> children = root.getChildren();
@@ -1042,6 +1042,8 @@ public class NetworkModificationTreeTest {
         // take the closest built parent severity
         networkModificationTreeService.updateBuildStatus(leafNodeId, BuildStatus.BUILT);
         assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusComputed(leafNodeId));
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusLocal(leafNodeId));
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
         checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
     }
 
@@ -1058,7 +1060,8 @@ public class NetworkModificationTreeTest {
 
         networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.WITH_WARNINGS);
         assertEquals(BuildStatus.BUILT_WITH_WARNING, networkModificationTreeService.getBuildStatusComputed(leafNodeId));
-        // no update because the status didn't change
+        // local build status has been updated
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
 
         networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.WITH_ERRORS);
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusComputed(leafNodeId));
@@ -1067,7 +1070,8 @@ public class NetworkModificationTreeTest {
         // keep the previous status (BUILT_WITH_ERROR) because it has higher severity
         networkModificationTreeService.updateBuildStatus(leafNodeId, NetworkModificationResult.ApplicationStatus.ALL_OK);
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getBuildStatusComputed(leafNodeId));
-        // no update because the status didn't change
+        // local build status has been updated
+        checkUpdateNodesMessageReceived(studyUuid, List.of(leafNodeId));
     }
 
     /**

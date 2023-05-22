@@ -560,10 +560,12 @@ public class NetworkModificationTest {
 
         // test build status on switch modification
         modificationNode1.setBuildStatusComputed(BuildStatus.BUILT);  // mark modificationNode1 as built
+        modificationNode1.setBuildStatusLocal(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         modificationNode2.setBuildStatusComputed(BuildStatus.BUILT);  // mark modificationNode2 as built
+        modificationNode2.setBuildStatusLocal(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode2, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -1949,6 +1951,7 @@ public class NetworkModificationTest {
 
         // now we do the same but on a built node
         node1.setBuildStatusComputed(BuildStatus.BUILT);  // mark node1 as built
+        node1.setBuildStatusLocal(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyUuid, node1, userId);
         checkElementUpdatedMessageSent(studyUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -2227,6 +2230,7 @@ public class NetworkModificationTest {
 
         // Mark the node status as built
         modificationNode.setBuildStatusComputed(BuildStatus.BUILT);
+        modificationNode.setBuildStatusLocal(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
