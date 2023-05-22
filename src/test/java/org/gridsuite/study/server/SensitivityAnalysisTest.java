@@ -502,7 +502,7 @@ public class SensitivityAnalysisTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatusComputed(buildStatus)
+                .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatusComputed(buildStatus).buildStatusLocal(buildStatus)
                 .children(Collections.emptyList()).build();
 
         // Only for tests

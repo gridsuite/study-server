@@ -868,7 +868,7 @@ public class StudyTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatusComputed(buildStatus)
+                .loadFlowStatus(LoadFlowStatus.NOT_DONE).buildStatusComputed(buildStatus).buildStatusLocal(buildStatus)
                 .children(Collections.emptyList()).build();
 
         // Only for tests

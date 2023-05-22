@@ -902,6 +902,7 @@ public class NetworkModificationTreeTest {
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
             .buildStatusComputed(buildStatus)
+            .buildStatusLocal(buildStatus)
             .children(Collections.emptyList()).build();
     }
 

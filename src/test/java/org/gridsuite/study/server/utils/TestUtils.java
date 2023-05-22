@@ -111,6 +111,7 @@ public final class TestUtils {
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
             .buildStatusComputed(BuildStatus.NOT_BUILT)
+            .buildStatusLocal(BuildStatus.NOT_BUILT)
             .children(Collections.emptyList()).build();
     }
 
