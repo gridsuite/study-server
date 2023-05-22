@@ -37,8 +37,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public void createNodeInfo(AbstractNode nodeInfo) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
-        if (Objects.isNull(networkModificationNode.getBuildStatus())) {
-            networkModificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        if (Objects.isNull(networkModificationNode.getBuildStatusComputed())) {
+            networkModificationNode.setBuildStatusComputed(BuildStatus.NOT_BUILT);
         }
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
@@ -62,7 +62,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getBuildStatus());
+            modificationNode.getBuildStatusComputed(),
+            modificationNode.getBuildStatusLocal());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
 
@@ -80,7 +81,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
-            node.getBuildStatus()));
+            node.getBuildStatusComputed(),
+            node.getBuildStatusLocal()));
     }
 
     @Override
@@ -220,25 +222,32 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatus, List<UUID> changedNodes) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatusComputed, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setBuildStatus(buildStatus);
+        modificationNode.setBuildStatusComputed(buildStatusComputed);
+        modificationNode.setBuildStatusLocal(buildStatusLocal);
         updateNode(modificationNode, changedNodes);
     }
 
     @Override
-    public BuildStatus getBuildStatus(AbstractNode node) {
-        return ((NetworkModificationNode) node).getBuildStatus();
+    public BuildStatus getBuildStatusComputed(AbstractNode node) {
+        return ((NetworkModificationNode) node).getBuildStatusComputed();
+    }
+
+    @Override
+    public BuildStatus getBuildStatusLocal(AbstractNode node) {
+        return ((NetworkModificationNode) node).getBuildStatusLocal();
     }
 
     @Override
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        if (!modificationNode.getBuildStatus().isBuilt()) {
+        if (!modificationNode.getBuildStatusComputed().isBuilt() && !modificationNode.getBuildStatusComputed().isBuilt()) {
             return;
         }
 
-        modificationNode.setBuildStatus(BuildStatus.NOT_BUILT);
+        modificationNode.setBuildStatusComputed(BuildStatus.NOT_BUILT);
+        modificationNode.setBuildStatusLocal(BuildStatus.NOT_BUILT);
         modificationNode.setVariantId(UUID.randomUUID().toString());
         modificationNode.setReportUuid(UUID.randomUUID());
         updateNode(modificationNode, changedNodes);

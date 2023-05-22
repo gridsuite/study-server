@@ -147,6 +147,7 @@ public class NetworkModificationTreeService {
                 null,
                 null,
                 null,
+                BuildStatus.NOT_BUILT,
                 BuildStatus.NOT_BUILT
         );
         UUID studyUuid = anchorNodeEntity.getStudy().getId();
@@ -378,7 +379,8 @@ public class NetworkModificationTreeService {
                 NetworkModificationNode model = (NetworkModificationNode) sourceNode;
                 UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
                 model.setModificationGroupUuid(newModificationGroupId);
-                model.setBuildStatus(BuildStatus.NOT_BUILT);
+                model.setBuildStatusComputed(BuildStatus.NOT_BUILT);
+                model.setBuildStatusLocal(BuildStatus.NOT_BUILT);
                 model.setReportUuid(newReportUuid);
                 model.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
                 model.setLoadFlowResult(null);
@@ -405,7 +407,8 @@ public class NetworkModificationTreeService {
                 .name("N1")
                 .variantId(FIRST_VARIANT_ID)
                 .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                .buildStatus(BuildStatus.BUILT)
+                .buildStatusComputed(BuildStatus.BUILT)
+                .buildStatusLocal(BuildStatus.BUILT)
                 .build();
         createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
     }
@@ -677,7 +680,7 @@ public class NetworkModificationTreeService {
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
-            if (!modificationNode.getBuildStatus().isBuilt()) {
+            if (!modificationNode.getBuildStatusComputed().isBuilt()) {
                 buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), modificationNode.getId().toString());
                 getBuildInfos(nodeEntity.getParentNode(), buildInfos);
             } else {
@@ -775,7 +778,7 @@ public class NetworkModificationTreeService {
         UUID childUuid = child.getIdNode();
         // No need to invalidate a node with a status different of "BUILT"
         AbstractNodeRepositoryProxy<?, ?, ?> nodeRepository = repositories.get(child.getType());
-        if (nodeRepository.getBuildStatus(child.getIdNode()).isBuilt()) {
+        if (nodeRepository.getBuildStatusComputed(child.getIdNode()).isBuilt()) {
             fillInvalidateNodeInfos(child, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
             if (!invalidateOnlyChildrenBuildStatus) {
                 nodeRepository.invalidateBuildStatus(childUuid, changedNodes);
@@ -794,22 +797,23 @@ public class NetworkModificationTreeService {
         UUID studyId = getStudyUuidForNodeId(nodeUuid);
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
-        BuildStatus newNodeStatus;
+        BuildStatus buildStatusComputed;
         if (buildStatus.isBuilt()) {
             NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity);
-            BuildStatus previousBuiltNodeStatus = repositories.get(previousBuiltNode.getType()).getBuildStatus(previousBuiltNode.getIdNode());
-            newNodeStatus = buildStatus.max(previousBuiltNodeStatus);
+            BuildStatus previousBuiltNodeStatus = repositories.get(previousBuiltNode.getType()).getBuildStatusComputed(previousBuiltNode.getIdNode());
+            buildStatusComputed = buildStatus.max(previousBuiltNodeStatus);
         } else {
-            newNodeStatus = buildStatus;
+            buildStatusComputed = buildStatus;
         }
 
         AbstractNodeRepositoryProxy<?, ?, ?> nodeRepositoryProxy = repositories.get(nodeEntity.getType());
-        BuildStatus currentNodeStatus = nodeRepositoryProxy.getBuildStatus(nodeEntity.getIdNode());
-        if (newNodeStatus.equals(currentNodeStatus)) {
+        BuildStatus currentNodeStatusComputed = nodeRepositoryProxy.getBuildStatusComputed(nodeEntity.getIdNode());
+        BuildStatus currentNodeStatusLocal = nodeRepositoryProxy.getBuildStatusLocal(nodeEntity.getIdNode());
+        if (buildStatusComputed.equals(currentNodeStatusComputed) && buildStatus.equals(currentNodeStatusLocal)) {
             return;
         }
 
-        nodeRepositoryProxy.updateBuildStatus(nodeUuid, newNodeStatus, changedNodes);
+        nodeRepositoryProxy.updateBuildStatus(nodeUuid, buildStatusComputed, buildStatus, changedNodes);
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes);
     }
 
@@ -820,8 +824,13 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public BuildStatus getBuildStatus(UUID nodeUuid) {
-        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatus(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
+    public BuildStatus getBuildStatusComputed(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatusComputed(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
+    }
+
+    @Transactional(readOnly = true)
+    public BuildStatus getBuildStatusLocal(UUID nodeUuid) {
+        return nodesRepository.findById(nodeUuid).map(n -> repositories.get(n.getType()).getBuildStatusLocal(nodeUuid)).orElse(BuildStatus.NOT_BUILT);
     }
 
     @Transactional(readOnly = true)
@@ -864,7 +873,7 @@ public class NetworkModificationTreeService {
     public NodeEntity doGetLastParentNodeBuilt(NodeEntity nodeEntity) {
         if (nodeEntity.getType() == NodeType.ROOT) {
             return nodeEntity;
-        } else if (getBuildStatus(nodeEntity.getIdNode()).isBuilt()) {
+        } else if (getBuildStatusComputed(nodeEntity.getIdNode()).isBuilt()) {
             return nodeEntity;
         } else {
             return doGetLastParentNodeBuilt(nodeEntity.getParentNode());

@@ -80,7 +80,11 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "dynamicSimulationResultUuid")
     private UUID dynamicSimulationResultUuid;
 
-    @Column(name = "buildStatus", nullable = false)
+    @Column(name = "buildStatusComputed", nullable = false)
     @Enumerated(EnumType.STRING)
-    private BuildStatus buildStatus;
+    private BuildStatus buildStatusComputed;
+
+    @Column(name = "buildStatusLocal", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private BuildStatus buildStatusLocal;
 }
