@@ -242,7 +242,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        if (!modificationNode.getBuildStatusComputed().isBuilt() && !modificationNode.getBuildStatusComputed().isBuilt()) {
+        if (!modificationNode.getBuildStatusComputed().isBuilt() && !modificationNode.getBuildStatusLocal().isBuilt()) {
             return;
         }
 
