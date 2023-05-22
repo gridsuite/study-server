@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.dto.dynamicsimulation.solver;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.util.Strings;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,6 +27,8 @@ import static org.junit.Assert.assertTrue;
 public class SolverInfosTest {
 
     static Logger LOGGER = LoggerFactory.getLogger(SolverInfosTest.class);
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     public void testToJson() {
@@ -54,7 +57,7 @@ public class SolverInfosTest {
 
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
 
-        String resultJson = SolverInfos.toJson(solvers);
+        String resultJson = SolverInfos.toJson(solvers, objectMapper);
         LOGGER.info("result json = " + resultJson);
 
         assertTrue(!Strings.isBlank(resultJson));
@@ -85,7 +88,7 @@ public class SolverInfosTest {
                 "  \"nDeadband\" : 2\n" +
                 "} ]";
 
-        List<SolverInfos> solvers = SolverInfos.parseJson(json);
+        List<SolverInfos> solvers = SolverInfos.parseJson(json, objectMapper);
 
         assertEquals(2, solvers.size());
     }

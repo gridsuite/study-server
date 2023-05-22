@@ -12,6 +12,7 @@ import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
@@ -159,4 +160,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         return dynamicMappingClient.getAllMappings();
     }
 
+    @Override
+    public List<ModelInfos> getModels(String mapping) {
+        return dynamicMappingClient.getModels(mapping);
+    }
 }

@@ -7,8 +7,10 @@
 
 package org.gridsuite.study.server.service.client.dynamicmapping.impl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +51,31 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
         try {
             var responseEntity = getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<MappingInfos>>() { });
             logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriBuilder.toUriString()));
+            return responseEntity.getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_MAPPING_NOT_FOUND);
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public List<ModelInfos> getModels(String mapping) {
+        if (StringUtils.isBlank(mapping)) {
+            return null;
+        }
+
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "{mappingName}/models");
+
+        var uriComponent = uriComponentsBuilder.buildAndExpand(mapping);
+
+        // call dynamic-mapping REST API
+        try {
+            var responseEntity = getRestTemplate().exchange(uriComponent.toUriString(), HttpMethod.GET, null, new ParameterizedTypeReference<List<ModelInfos>>() { });
+            logger.debug(MessageFormat.format("dynamic-mapping REST API called succesfully {0}", uriComponent.toUriString()));
             return responseEntity.getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
