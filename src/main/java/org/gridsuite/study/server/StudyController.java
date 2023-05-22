@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
+import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -1473,6 +1474,18 @@ public class StudyController {
     public ResponseEntity<List<MappingInfos>> getDynamicSimulationMappings(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid) {
         List<MappingInfos> mappings = studyService.getDynamicSimulationMappings(studyUuid);
         return mappings != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(mappings) :
+                ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models")
+    @Operation(summary = "Get models of dynamic simulation on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
+            @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
+            @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
+    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, nodeUuid);
+        return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
                 ResponseEntity.noContent().build();
     }
 
