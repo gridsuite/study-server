@@ -110,7 +110,7 @@ public final class TestUtils {
             .loadFlowResult(null)
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
-            .buildStatusComputed(BuildStatus.NOT_BUILT)
+            .buildStatusGlobal(BuildStatus.NOT_BUILT)
             .buildStatusLocal(BuildStatus.NOT_BUILT)
             .children(Collections.emptyList()).build();
     }

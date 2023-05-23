@@ -57,7 +57,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return LoadFlowInfos.builder().loadFlowStatus(LoadFlowStatus.NOT_DONE).build();
     }
 
-    public BuildStatus getBuildStatusComputed(AbstractNode node) {
+    public BuildStatus getBuildStatusGlobal(AbstractNode node) {
         return BuildStatus.NOT_BUILT;
     }
 
@@ -112,7 +112,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
     public void removeModificationsToExclude(AbstractNode node, List<UUID> modificationUuid) {
     }
 
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatusComputed, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
     }
 
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
@@ -236,12 +236,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         return getVoltageInitResultUuid(getNode(nodeUuid));
     }
 
-    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatusComputed, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
-        updateBuildStatus(getNode(nodeUuid), buildStatusComputed, buildStatusLocal, changedNodes);
+    public void updateBuildStatus(UUID nodeUuid, BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
+        updateBuildStatus(getNode(nodeUuid), buildStatusGlobal, buildStatusLocal, changedNodes);
     }
 
-    public BuildStatus getBuildStatusComputed(UUID nodeUuid) {
-        return getBuildStatusComputed(getNode(nodeUuid));
+    public BuildStatus getBuildStatusGlobal(UUID nodeUuid) {
+        return getBuildStatusGlobal(getNode(nodeUuid));
     }
 
     public BuildStatus getBuildStatusLocal(UUID nodeUuid) {

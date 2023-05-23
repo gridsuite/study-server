@@ -80,10 +80,16 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column(name = "dynamicSimulationResultUuid")
     private UUID dynamicSimulationResultUuid;
 
-    @Column(name = "buildStatusComputed", nullable = false)
+    /**
+     * The global build status represents the state of all modifications from the root node to the current node on the network
+     */
+    @Column(name = "buildStatusGlobal", nullable = false)
     @Enumerated(EnumType.STRING)
-    private BuildStatus buildStatusComputed;
+    private BuildStatus buildStatusGlobal;
 
+    /**
+     * The local build status represents the state of this node own modifications on the network
+     */
     @Column(name = "buildStatusLocal", nullable = false)
     @Enumerated(EnumType.STRING)
     private BuildStatus buildStatusLocal;

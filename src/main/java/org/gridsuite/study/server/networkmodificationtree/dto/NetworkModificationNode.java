@@ -51,8 +51,14 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID dynamicSimulationResultUuid;
 
-    BuildStatus buildStatusComputed;
+    /**
+     * The global build status represents the state of all modifications from the root node to the current node on the network
+     */
+    BuildStatus buildStatusGlobal;
 
+    /**
+     * The local build status represents the state of this node own modifications on the network
+     */
     BuildStatus buildStatusLocal;
 
     @Override

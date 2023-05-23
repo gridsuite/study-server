@@ -37,8 +37,8 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public void createNodeInfo(AbstractNode nodeInfo) {
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) nodeInfo;
-        if (Objects.isNull(networkModificationNode.getBuildStatusComputed())) {
-            networkModificationNode.setBuildStatusComputed(BuildStatus.NOT_BUILT);
+        if (Objects.isNull(networkModificationNode.getBuildStatusGlobal())) {
+            networkModificationNode.setBuildStatusGlobal(BuildStatus.NOT_BUILT);
         }
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
@@ -62,7 +62,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             modificationNode.getSecurityAnalysisResultUuid(),
             modificationNode.getSensitivityAnalysisResultUuid(),
             modificationNode.getDynamicSimulationResultUuid(),
-            modificationNode.getBuildStatusComputed(),
+            modificationNode.getBuildStatusGlobal(),
             modificationNode.getBuildStatusLocal());
         return completeEntityNodeInfo(node, networkModificationNodeInfoEntity);
     }
@@ -81,7 +81,7 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
             node.getSecurityAnalysisResultUuid(),
             node.getSensitivityAnalysisResultUuid(),
             node.getDynamicSimulationResultUuid(),
-            node.getBuildStatusComputed(),
+            node.getBuildStatusGlobal(),
             node.getBuildStatusLocal()));
     }
 
@@ -222,16 +222,16 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     }
 
     @Override
-    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatusComputed, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
+    public void updateBuildStatus(AbstractNode node, BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        modificationNode.setBuildStatusComputed(buildStatusComputed);
+        modificationNode.setBuildStatusGlobal(buildStatusGlobal);
         modificationNode.setBuildStatusLocal(buildStatusLocal);
         updateNode(modificationNode, changedNodes);
     }
 
     @Override
-    public BuildStatus getBuildStatusComputed(AbstractNode node) {
-        return ((NetworkModificationNode) node).getBuildStatusComputed();
+    public BuildStatus getBuildStatusGlobal(AbstractNode node) {
+        return ((NetworkModificationNode) node).getBuildStatusGlobal();
     }
 
     @Override
@@ -242,11 +242,11 @@ public class NetworkModificationNodeInfoRepositoryProxy extends AbstractNodeRepo
     @Override
     public void invalidateBuildStatus(AbstractNode node, List<UUID> changedNodes) {
         NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-        if (!modificationNode.getBuildStatusComputed().isBuilt() && !modificationNode.getBuildStatusLocal().isBuilt()) {
+        if (!modificationNode.getBuildStatusGlobal().isBuilt() && !modificationNode.getBuildStatusLocal().isBuilt()) {
             return;
         }
 
-        modificationNode.setBuildStatusComputed(BuildStatus.NOT_BUILT);
+        modificationNode.setBuildStatusGlobal(BuildStatus.NOT_BUILT);
         modificationNode.setBuildStatusLocal(BuildStatus.NOT_BUILT);
         modificationNode.setVariantId(UUID.randomUUID().toString());
         modificationNode.setReportUuid(UUID.randomUUID());
