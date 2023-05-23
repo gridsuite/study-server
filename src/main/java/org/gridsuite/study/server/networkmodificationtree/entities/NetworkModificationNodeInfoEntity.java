@@ -81,7 +81,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     private UUID dynamicSimulationResultUuid;
 
     /**
-     * The global build status represents the state of all modifications from the root node to the current node on the network
+     * The global build status represents the state of all modifications from the root node to the current node (included) on the network
      */
     @Column(name = "buildStatusGlobal", nullable = false)
     @Enumerated(EnumType.STRING)
