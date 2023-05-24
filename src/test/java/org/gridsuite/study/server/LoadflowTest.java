@@ -417,7 +417,7 @@ public class LoadflowTest {
     }
 
     @Test
-    public void testOverloadedLines() throws Exception {
+    public void testCurrentLimitViolations() throws Exception {
         // create a study and a node
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_ERROR_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -427,7 +427,7 @@ public class LoadflowTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         // retrieve overloaded lines data on node 1
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/overloaded-lines?limitReduction=1.0",
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/current-limit-violations?limitReduction=1.0",
                 studyNameUserIdUuid,
                 modificationNode1Uuid)).andExpectAll(
                         status().isOk(),
@@ -529,7 +529,6 @@ public class LoadflowTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 
