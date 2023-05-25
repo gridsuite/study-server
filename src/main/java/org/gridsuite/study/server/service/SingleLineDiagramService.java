@@ -165,7 +165,7 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String getNeworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/{networkUuid}")
                 .queryParam(QUERY_PARAM_DEPTH, depth)
@@ -176,8 +176,17 @@ public class SingleLineDiagramService {
         var path = uriComponentsBuilder
                 .buildAndExpand(networkUuid)
                 .toUriString();
-
-        return restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        String result;
+        try {
+            result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, voltageLevelsIds).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelsIds + NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+        return result;
     }
 
     public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
