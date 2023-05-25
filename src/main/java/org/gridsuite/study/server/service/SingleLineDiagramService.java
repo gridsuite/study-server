@@ -46,6 +46,7 @@ public class SingleLineDiagramService {
     static final String NOT_FOUND = " not found";
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
     static final String LANGUAGE = "language";
+    static final String VOLTAGE_LEVEL = "Voltage level ";
 
     @Autowired
     private RestTemplate restTemplate;
@@ -84,7 +85,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, byte[].class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelId + NOT_FOUND);
             } else {
                 throw e;
             }
@@ -109,7 +110,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForObject(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, voltageLevelId);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelId + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelId + NOT_FOUND);
             } else {
                 throw e;
             }
@@ -178,10 +179,10 @@ public class SingleLineDiagramService {
                 .toUriString();
         String result;
         try {
-            result = restTemplate.getForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), String.class, networkUuid, voltageLevelsIds).getBody();
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Voltage level " + voltageLevelsIds + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelsIds + NOT_FOUND);
             } else {
                 throw e;
             }
