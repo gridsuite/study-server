@@ -1131,11 +1131,15 @@ public class StudyService {
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
         Network network = networkStoreService.getNetwork(networkUuid, PreloadingStrategy.COLLECTION, networkModificationTreeService.getVariantId(nodeUuid));
-        List<LimitViolation> violations = Security.checkLimits(network, limitReduction);
-        // TODO use following lines when checkLimitsDc available in PowSybl
-        // StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        List<LimitViolation> violations;
+        // TODO when checkLimitsDc() is available in com.powsybl.security.Security, uncommented lines below
+        //StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         //LoadFlowParameters lfCommonParams = getLoadFlowParameters(studyEntity);
-        // List<LimitViolation> violations = Security.checkLimitsDc(network, limitReduction, lfCommonParams.getDcPowerFactor());
+        //if (lfCommonParams.isDc()) {
+        //    violations = Security.checkLimitsDc(network, limitReduction, lfCommonParams.getDcPowerFactor());
+        //} else {
+        violations = Security.checkLimits(network, limitReduction);
+        //}
         return violations.stream()
             .filter(v -> v.getLimitType() == LimitViolationType.CURRENT)
             .map(StudyService::toLimitViolationInfos).collect(Collectors.toList());
