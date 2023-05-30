@@ -942,6 +942,18 @@ public class StudyService {
         return LoadflowService.toEntity(allCommonValues, allSpecificValues);
     }
 
+    public SecurityAnalysisParametersValues getSecurityAnalysisParametersValues(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(studyEntity -> studyEntity.getSecurityAnalysisParameters() != null ? SecurityAnalysisService.fromEntity(studyEntity.getSecurityAnalysisParameters()) : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues())
+                .orElse(null);
+    }
+
+    @Transactional
+    public void setSecurityAnalysisParametersValues(UUID studyUuid, SecurityAnalysisParametersValues parameters, String userId) {
+        updateSecurityAnalysisParameters(studyUuid, SecurityAnalysisService.toEntity(parameters != null ? parameters : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()));
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
     @Transactional
     public void setLoadFlowParameters(UUID studyUuid, LoadFlowParametersValues parameters, String userId) {
         updateLoadFlowParameters(studyUuid, createParametersEntity(parameters));
@@ -1258,6 +1270,11 @@ public class StudyService {
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         });
+    }
+
+    public void updateSecurityAnalysisParameters(UUID studyUuid, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
+        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setSecurityAnalysisParameters(securityAnalysisParametersEntity));
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
