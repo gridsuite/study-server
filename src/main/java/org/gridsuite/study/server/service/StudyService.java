@@ -24,7 +24,6 @@ import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import lombok.NonNull;
-import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermsQueryBuilder;
@@ -1067,10 +1066,9 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, String parameters, UUID nodeUuid) {
+    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListNames);
-        Objects.requireNonNull(parameters);
         Objects.requireNonNull(nodeUuid);
 
         UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
@@ -1090,8 +1088,19 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
         List<LoadFlowSpecificParameterInfos> specificParameters = null;
-        SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
-        if (StringUtils.isEmpty(parameters)) {
+        //SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
+        SecurityAnalysisParameters securityAnalysisParameters = getSecurityAnalysisParameters(studyUuid);
+        if (securityAnalysisParameters == null) {
+            securityAnalysisParameters = SecurityAnalysisParameters.load();
+        }
+        // check data base for SA data
+        // if empty then get default data
+        //get loadflow params
+        specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
+        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
+        securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
+
+      /*  if (StringUtils.isEmpty(parameters)) {
             LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
             securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
             specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
@@ -1102,6 +1111,7 @@ public class StudyService {
                 throw new UncheckedIOException(e);
             }
         }
+        */
 
         SecurityAnalysisParametersInfos params = SecurityAnalysisParametersInfos.builder()
                 .parameters(securityAnalysisParameters)
@@ -1920,6 +1930,12 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, inUpstreamBuiltParentNode);
         return networkMapService.getEquipmentsIds(networkStoreService.getNetworkUuid(studyUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn),
                 substationsIds, equipmentType);
+    }
+
+    public SecurityAnalysisParameters getSecurityAnalysisParameters(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(studyEntity -> SecurityAnalysisService.toSecurityAnalysisParameters(studyEntity.getSecurityAnalysisParameters()))
+                .orElse(null);
     }
 
 }

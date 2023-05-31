@@ -7,7 +7,6 @@
 package org.gridsuite.study.server;
 
 import com.powsybl.commons.reporter.ReporterModel;
-import com.powsybl.security.SecurityAnalysisParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
@@ -858,7 +857,7 @@ public class StudyController {
         String nonNullParameters = Objects.toString(parameters, "");
         studyService.assertIsNodeNotReadOnly(nodeUuid);
 
-        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nonNullParameters, nodeUuid));
+        return ResponseEntity.ok().body(studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/security-analysis/result")

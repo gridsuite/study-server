@@ -218,4 +218,19 @@ public class SecurityAnalysisService {
                 .build();
     }
 
+    public static SecurityAnalysisParameters toSecurityAnalysisParameters(SecurityAnalysisParametersEntity entity) {
+        Objects.requireNonNull(entity);
+
+        SecurityAnalysisParameters.IncreasedViolationsParameters increasedViolationsParameters = new SecurityAnalysisParameters.IncreasedViolationsParameters();
+        increasedViolationsParameters.setFlowProportionalThreshold(entity.getFlowProportionalThreshold());
+        increasedViolationsParameters.setLowVoltageAbsoluteThreshold(entity.getLowVoltageAbsoluteThreshold());
+        increasedViolationsParameters.setLowVoltageProportionalThreshold(entity.getLowVoltageProportionalThreshold());
+        increasedViolationsParameters.setHighVoltageAbsoluteThreshold(entity.getHighVoltageAbsoluteThreshold());
+        increasedViolationsParameters.setHighVoltageProportionalThreshold(entity.getHighVoltageProportionalThreshold());
+        SecurityAnalysisParameters securityAnalysisParameters = new SecurityAnalysisParameters();
+        securityAnalysisParameters.setIncreasedViolationsParameters(increasedViolationsParameters);
+
+        return securityAnalysisParameters;
+    }
+
 }
