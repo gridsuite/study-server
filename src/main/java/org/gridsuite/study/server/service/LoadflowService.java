@@ -182,12 +182,13 @@ public class LoadflowService {
                 parameters.getCountriesToBalance().stream().map(Country::toString).collect(Collectors.toSet()),
                 parameters.getConnectedComponentMode(),
                 parameters.isHvdcAcEmulation(),
+                parameters.getDcPowerFactor(),
                 LoadFlowSpecificParameterEntity.toLoadFlowSpecificParameters(allLoadFlowSpecificParameters));
     }
 
     public static LoadFlowParameters fromEntity(LoadFlowParametersEntity entity) {
         Objects.requireNonNull(entity);
-        LoadFlowParameters parameters = LoadFlowParameters.load()
+        return LoadFlowParameters.load()
                 .setVoltageInitMode(entity.getVoltageInitMode())
                 .setTransformerVoltageControlOn(entity.isTransformerVoltageControlOn())
                 .setUseReactiveLimits(entity.isUseReactiveLimits())
@@ -202,8 +203,8 @@ public class LoadflowService {
                 .setDcUseTransformerRatio(entity.isDcUseTransformerRatio())
                 .setCountriesToBalance(entity.getCountriesToBalance().stream().map(Country::valueOf).collect(Collectors.toSet()))
                 .setConnectedComponentMode(entity.getConnectedComponentMode())
-                .setHvdcAcEmulation(entity.isHvdcAcEmulation());
-        return parameters;
+                .setHvdcAcEmulation(entity.isHvdcAcEmulation())
+                .setDcPowerFactor(entity.getDcPowerFactor());
     }
 
     public static ComponentResultEmbeddable toEntity(LoadFlowResult.ComponentResult componentResult) {
