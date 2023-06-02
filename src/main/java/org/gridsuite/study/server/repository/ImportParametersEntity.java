@@ -15,6 +15,7 @@ import java.util.UUID;
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
+@NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Entity
