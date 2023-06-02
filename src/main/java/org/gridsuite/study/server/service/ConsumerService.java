@@ -306,11 +306,9 @@ public class ConsumerService {
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, Object> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
             Map<String, String> importParametersAsStrings = new HashMap<>();
-
             if (importParameters != null) {
                 importParametersAsStrings = importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString()));
             }
-
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
             if (receiverString != null) {
