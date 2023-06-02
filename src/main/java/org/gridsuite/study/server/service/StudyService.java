@@ -270,13 +270,13 @@ public class StudyService {
         List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters = getAllSpecificLoadFlowParameters(sourceStudy);
         ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
         DynamicSimulationParametersInfos copiedDynamicSimulationParameters = DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper);
-
+        SecurityAnalysisParametersEntity copiedSecurityAnalysisParametersEntity = sourceStudy.getSecurityAnalysisParameters() == null ? SecurityAnalysisService.toEntity(SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()) : sourceStudy.getSecurityAnalysisParameters();
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
-        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, sourceSpecificLoadFlowParameters, copiedShortCircuitParameters, copiedDynamicSimulationParameters, userId));
+        studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, sourceSpecificLoadFlowParameters, copiedShortCircuitParameters, copiedDynamicSimulationParameters, userId, copiedSecurityAnalysisParametersEntity));
         return basicStudyInfos;
     }
 
-    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters, ShortCircuitParameters copiedShortCircuitParameters, DynamicSimulationParametersInfos copiedDynamicSimulationParameters, String userId) {
+    private void duplicateStudyAsync(BasicStudyInfos basicStudyInfos, StudyEntity sourceStudy, LoadFlowParameters sourceLoadFlowParameters, List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters, ShortCircuitParameters copiedShortCircuitParameters, DynamicSimulationParametersInfos copiedDynamicSimulationParameters, String userId, SecurityAnalysisParametersEntity copiedSecurityAnalysisParametersEntity) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         try {
             startTime.set(System.nanoTime());
@@ -290,7 +290,7 @@ public class StudyService {
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
             DynamicSimulationParametersInfos dynamicSimulationParameters = copiedDynamicSimulationParameters != null ? copiedDynamicSimulationParameters : DynamicSimulationService.getDefaultDynamicSimulationParameters();
-            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), userId, clonedNetworkUuid, clonedCaseUuid);
+            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), userId, clonedNetworkUuid, clonedCaseUuid, copiedSecurityAnalysisParametersEntity);
             reindexStudy(duplicatedStudy);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -547,7 +547,7 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, DynamicSimulationParametersEntity newDynamicSimulationParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid) {
+    public StudyEntity insertDuplicatedStudy(BasicStudyInfos studyInfos, StudyEntity sourceStudy, LoadFlowParametersEntity newLoadFlowParameters, ShortCircuitParametersEntity newShortCircuitParameters, DynamicSimulationParametersEntity newDynamicSimulationParameters, String userId, UUID clonedNetworkUuid, UUID clonedCaseUuid, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
         Objects.requireNonNull(clonedNetworkUuid);
@@ -556,11 +556,12 @@ public class StudyService {
         Objects.requireNonNull(sourceStudy.getCaseFormat());
         Objects.requireNonNull(sourceStudy.getCaseUuid());
         Objects.requireNonNull(newLoadFlowParameters);
+        Objects.requireNonNull(securityAnalysisParametersEntity);
 
         UUID reportUuid = UUID.randomUUID();
         StudyEntity studyEntity = new StudyEntity(studyInfos.getId(), clonedNetworkUuid, sourceStudy.getNetworkId(), sourceStudy.getCaseFormat(),
                 clonedCaseUuid, sourceStudy.getCaseName(), sourceStudy.getLoadFlowProvider(), sourceStudy.getSecurityAnalysisProvider(),
-                sourceStudy.getSensitivityAnalysisProvider(), sourceStudy.getDynamicSimulationProvider(), newLoadFlowParameters, newShortCircuitParameters, newDynamicSimulationParameters);
+                sourceStudy.getSensitivityAnalysisProvider(), sourceStudy.getDynamicSimulationProvider(), newLoadFlowParameters, newShortCircuitParameters, newDynamicSimulationParameters, securityAnalysisParametersEntity);
         CreatedStudyBasicInfos createdStudyBasicInfos = StudyService.toCreatedStudyBasicInfos(insertDuplicatedStudy(studyEntity, sourceStudy.getId(), reportUuid));
 
         studyInfosService.add(createdStudyBasicInfos);
@@ -1088,30 +1089,13 @@ public class StudyService {
         prevResultUuidOpt.ifPresent(securityAnalysisService::deleteSaResult);
 
         List<LoadFlowSpecificParameterInfos> specificParameters = null;
-        //SecurityAnalysisParameters securityAnalysisParameters = SecurityAnalysisParameters.load();
         SecurityAnalysisParameters securityAnalysisParameters = getSecurityAnalysisParameters(studyUuid);
         if (securityAnalysisParameters == null) {
             securityAnalysisParameters = SecurityAnalysisParameters.load();
         }
-        // check data base for SA data
-        // if empty then get default data
-        //get loadflow params
         specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
         securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
-
-      /*  if (StringUtils.isEmpty(parameters)) {
-            LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
-            securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
-            specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
-        } else {
-            try {
-                securityAnalysisParameters = objectMapper.readValue(parameters, SecurityAnalysisParameters.class);
-            } catch (JsonProcessingException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-        */
 
         SecurityAnalysisParametersInfos params = SecurityAnalysisParametersInfos.builder()
                 .parameters(securityAnalysisParameters)

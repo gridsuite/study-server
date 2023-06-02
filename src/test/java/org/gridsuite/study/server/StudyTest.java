@@ -1268,6 +1268,7 @@ public class StudyTest {
         node2.setShortCircuitAnalysisResultUuid(UUID.randomUUID());
         node2.setDynamicSimulationResultUuid(UUID.randomUUID());
         node2.setVoltageInitResultUuid(UUID.randomUUID());
+        node2.setSecurityAnalysisResultUuid(UUID.randomUUID());
         networkModificationTreeService.updateNode(study1Uuid, node2, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
         checkElementUpdatedMessageSent(study1Uuid, userId);

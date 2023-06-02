@@ -27,7 +27,6 @@ import javax.persistence.*;
 @Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
-    //TODO : to delete after
     public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters) {
         this.id = id;
         this.networkUuid = networkUuid;
