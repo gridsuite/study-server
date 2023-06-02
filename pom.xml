@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>10</version>
+        <version>11</version>
         <relativePath/>
     </parent>
 
@@ -44,8 +44,8 @@
     </developers>
 
     <properties>
-        <java.version>11</java.version>
-        <gridsuite-dependencies.version>23</gridsuite-dependencies.version>
+        <java.version>17</java.version>
+        <gridsuite-dependencies.version>25</gridsuite-dependencies.version>
         <commons-lang3.version>3.9</commons-lang3.version>
         <log4j2-mock-version>0.0.2</log4j2-mock-version>
         <equalsverifier-version>3.7.1</equalsverifier-version>
@@ -77,8 +77,8 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>pl.project13.maven</groupId>
-                <artifactId>git-commit-id-plugin</artifactId>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

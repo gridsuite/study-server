@@ -22,8 +22,8 @@ public class MatcherLoadFlowInfos extends TypeSafeMatcher<LoadFlowInfos> {
 
     @Override
     public boolean matchesSafely(LoadFlowInfos infos) {
-        return (reference.getLoadFlowStatus() == null && infos.getLoadFlowStatus() == null) ||
-                (reference.getLoadFlowStatus() != null && reference.getLoadFlowStatus().equals(infos.getLoadFlowStatus()));
+        return reference.getLoadFlowStatus() == null && infos.getLoadFlowStatus() == null ||
+                reference.getLoadFlowStatus() != null && reference.getLoadFlowStatus().equals(infos.getLoadFlowStatus());
     }
 
     @Override

@@ -921,13 +921,13 @@ public class NetworkModificationTreeTest {
         assertEquals(expectedModificationNode.getLoadFlowStatus(), currentModificationNode.getLoadFlowStatus());
         LoadFlowResult expectedLoadFlowResult = expectedModificationNode.getLoadFlowResult();
         LoadFlowResult currentLoadFlowResult = currentModificationNode.getLoadFlowResult();
-        assertFalse((expectedLoadFlowResult != null && currentLoadFlowResult == null) || (expectedLoadFlowResult == null && currentLoadFlowResult != null));
+        assertFalse(expectedLoadFlowResult != null && currentLoadFlowResult == null || expectedLoadFlowResult == null && currentLoadFlowResult != null);
         if (expectedLoadFlowResult != null && currentLoadFlowResult != null) {
             assertEquals(expectedLoadFlowResult.isOk(), currentLoadFlowResult.isOk());
             assertEquals(expectedLoadFlowResult.getMetrics(), currentLoadFlowResult.getMetrics());
             List<LoadFlowResult.ComponentResult> expectedComponentResults = expectedLoadFlowResult.getComponentResults();
             List<LoadFlowResult.ComponentResult> currentComponentResults = currentLoadFlowResult.getComponentResults();
-            assertFalse((expectedComponentResults != null && currentComponentResults == null) || (expectedComponentResults == null && currentComponentResults != null));
+            assertFalse(expectedComponentResults != null && currentComponentResults == null || expectedComponentResults == null && currentComponentResults != null);
             if (expectedComponentResults != null && currentComponentResults != null) {
                 for (int i = 0; i < expectedComponentResults.size(); ++i) {
                     LoadFlowResult.ComponentResult expectedComponentResult = expectedComponentResults.get(i);

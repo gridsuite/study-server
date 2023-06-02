@@ -804,8 +804,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/result")
     @Operation(summary = "Get a voltage init result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init result"),
-            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
+        @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
     public ResponseEntity<String> getVoltageInitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = voltageInitService.getVoltageInitResult(nodeUuid);
@@ -816,8 +816,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/status")
     @Operation(summary = "Get the voltage init status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init status"),
-            @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
+        @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
     public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String result = voltageInitService.getVoltageInitStatus(nodeUuid);
@@ -1480,8 +1480,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/models")
     @Operation(summary = "Get models of dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
-            @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
-            @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
+        @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
+        @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
     public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, nodeUuid);
