@@ -14,12 +14,13 @@ import java.util.UUID;
 /**
  * @author AJELLAL Ali <ali.ajellal@rte-france.com>
  */
-@Builder
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
 @Entity
+@Builder
 @Table(name = "securityAnalysisParameters")
 public class SecurityAnalysisParametersEntity {
     public SecurityAnalysisParametersEntity(double lowVoltageAbsoluteThreshold, double lowVoltageProportionalThreshold, double highVoltageAbsoluteThreshold, double highVoltageProportionalThreshold, double flowProportionalThreshold) {
