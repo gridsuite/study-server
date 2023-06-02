@@ -99,6 +99,7 @@ public final class TestUtils {
             .distributedSlack(true)
             .dcUseTransformerRatio(true)
             .hvdcAcEmulation(true)
+            .dcPowerFactor(0.9)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
