@@ -15,11 +15,8 @@ import java.util.UUID;
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Setter
 @Entity
 @Table(name = "importParameters")
 public class ImportParametersEntity {
