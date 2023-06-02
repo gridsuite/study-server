@@ -51,6 +51,7 @@
         <equalsverifier-version>3.7.1</equalsverifier-version>
         <testcontainers.version>1.16.2</testcontainers.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
+        <powsybl-open-reac.version>0.1.0</powsybl-open-reac.version>
     </properties>
 
     <build>
@@ -146,6 +147,11 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-open-reac</artifactId>
+            <version>${powsybl-open-reac.version}</version>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
