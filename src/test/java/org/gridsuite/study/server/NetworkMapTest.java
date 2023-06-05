@@ -356,7 +356,7 @@ public class NetworkMapTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the voltage levels and its equipments
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "LIST", "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":0.0,\"topologyKind\":\"NODE_BREAKER\"}]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "LIST", List.of(), "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":0.0,\"topologyKind\":\"NODE_BREAKER\"}]");
     }
 
     @Test
@@ -387,7 +387,7 @@ public class NetworkMapTest {
 
         //get the substations with it's voltage levels
         String substationDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", substationDataAsString);
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", List.of(), substationDataAsString);
     }
 
     @Test
@@ -400,8 +400,9 @@ public class NetworkMapTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the lines
-        String lineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", lineDataAsString);
+        String lineDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build()));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", List.of(), lineDataAsString);
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", List.of("S1"), lineDataAsString);
     }
 
     @Test
@@ -415,7 +416,7 @@ public class NetworkMapTest {
 
         //get the lines
         String hvdcLineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(HVDC_LINE_ID_1).name("HVDC_LINE_NAME_1").build());
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", hvdcLineDataAsString);
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", List.of(), hvdcLineDataAsString);
     }
 
     @Test
@@ -508,7 +509,7 @@ public class NetworkMapTest {
     }
 
     @SneakyThrows
-    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String responseBody) {
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, List<String> substationsIds, String responseBody) {
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
                         .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
