@@ -220,13 +220,12 @@ public class VoltageInitTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
 
-        //get default
+        //get initial voltage init parameters
         mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(VOLTAGE_INIT_PARAMETERS_JSON));
 
-        //setting short-circuit analysis Parameters
-        //passing self made json because shortCircuitParameter serializer removes the parameters with default value
+        //setting voltage init parameters
         String voltageInitParameterBodyJson = "{\n" +
                 "  \"voltageLimits\" : [ {\n" +
                 "    \"priority\" : 0,\n" +
@@ -245,7 +244,7 @@ public class VoltageInitTest {
                         .content(voltageInitParameterBodyJson)).andExpect(
                 status().isOk());
 
-        //getting set values
+        //checking update is registered
         mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
                 status().isOk(),
                 content().string(VOLTAGE_INIT_PARAMETERS_JSON2));
