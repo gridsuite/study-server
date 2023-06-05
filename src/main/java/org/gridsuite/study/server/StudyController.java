@@ -488,8 +488,8 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
-    @Operation(summary = "Get network elements infos")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network elements infos")})
+    @Operation(summary = "Get network element infos")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Network element infos")})
     public ResponseEntity<String> getNetworkElementInfos(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
