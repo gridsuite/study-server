@@ -1806,7 +1806,7 @@ public class StudyService {
         OpenReacParameters parameters = new OpenReacParameters();
         Map<String, VoltageLimitOverride> specificVoltageLimits = new HashMap<>();
         studyEntity.ifPresent(study -> {
-            if (study.getVoltageInitParameters() != null) {
+            if (study.getVoltageInitParameters() != null && study.getVoltageInitParameters().getVoltageLimits() != null) {
                 study.getVoltageInitParameters().getVoltageLimits().forEach(voltageLimit -> {
                     var filterEquipments = filterService.exportFilters(voltageLimit.getFilters().stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
                     filterEquipments.forEach(filterEquipment -> {
