@@ -89,6 +89,9 @@ public class SecurityAnalysisTest {
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
 
+    public static final String SECURITY_ANALYSIS_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
+    public static final String SECURITY_ANALYSIS_PARAMETERS_JSON2 = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.2}";
+
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
@@ -468,6 +471,38 @@ public class SecurityAnalysisTest {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
         return modificationNode;
+    }
+
+    @Test
+    public void testSecurityAnalysisParameters() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID());
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        //get security analysis parameters
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SECURITY_ANALYSIS_PARAMETERS_JSON));
+
+        //create security analysis Parameters
+        SecurityAnalysisParametersValues securityAnalysisParametersValues = SecurityAnalysisParametersValues.builder()
+                .lowVoltageAbsoluteThreshold(0.0)
+                .lowVoltageProportionalThreshold(0.0)
+                .highVoltageProportionalThreshold(0.0)
+                .highVoltageAbsoluteThreshold(0.0)
+                .flowProportionalThreshold(0.2)
+                .build();
+        String mnBodyJson = objectWriter.writeValueAsString(securityAnalysisParametersValues);
+
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mnBodyJson)).andExpect(
+                status().isOk());
+
+        //getting set values
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(SECURITY_ANALYSIS_PARAMETERS_JSON2));
     }
 
     private void cleanDB() {
