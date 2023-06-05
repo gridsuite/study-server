@@ -827,7 +827,7 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
-    @Operation(summary = "set voltage init analysis parameters on study, reset to default ones if empty body")
+    @Operation(summary = "Set voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init analysis parameters are set")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
@@ -838,7 +838,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
-    @Operation(summary = "Get voltage init analysis parameters on study")
+    @Operation(summary = "Get voltage init parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init analysis parameters")})
     public ResponseEntity<VoltageInitParametersInfos> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
