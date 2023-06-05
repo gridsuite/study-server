@@ -46,8 +46,6 @@ public class VoltageInitService {
     @Autowired
     NotificationService notificationService;
 
-    private final NetworkService networkStoreService;
-
     NetworkModificationTreeService networkModificationTreeService;
 
     private final ObjectMapper objectMapper;
@@ -58,10 +56,8 @@ public class VoltageInitService {
     @Autowired
     public VoltageInitService(
             @Value("${gridsuite.services.voltage-init-server.base-uri:http://voltage-init-server/}") String voltageInitServerBaseUri,
-            NetworkModificationTreeService networkModificationTreeService,
-            NetworkService networkStoreService, ObjectMapper objectMapper) {
+            NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = voltageInitServerBaseUri;
-        this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }
@@ -144,10 +140,6 @@ public class VoltageInitService {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuidOpt.get()).toUriString();
 
         restTemplate.put(voltageInitServerBaseUri + path, Void.class);
-    }
-
-    private String getVariantId(UUID nodeUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid);
     }
 
     private UUID getReportUuid(UUID nodeUuid) {

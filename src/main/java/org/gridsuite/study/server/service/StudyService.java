@@ -1278,9 +1278,7 @@ public class StudyService {
 
     public void updateVoltageInitParameters(UUID studyUuid, VoltageInitParametersEntity voltageInitParametersEntity) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        studyEntity.ifPresent(studyEntity1 -> {
-            studyEntity1.setVoltageInitParameters(voltageInitParametersEntity);
-        });
+        studyEntity.ifPresent(studyEntity1 -> studyEntity1.setVoltageInitParameters(voltageInitParametersEntity));
     }
 
     public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
@@ -1809,11 +1807,11 @@ public class StudyService {
             if (study.getVoltageInitParameters() != null && study.getVoltageInitParameters().getVoltageLimits() != null) {
                 study.getVoltageInitParameters().getVoltageLimits().forEach(voltageLimit -> {
                     var filterEquipments = filterService.exportFilters(voltageLimit.getFilters().stream().map(filter -> filter.getFilterId()).collect(Collectors.toList()), networkUuid, variantId);
-                    filterEquipments.forEach(filterEquipment -> {
-                        filterEquipment.getIdentifiableAttributes().forEach(itenfiableAttribute -> {
-                            specificVoltageLimits.put(itenfiableAttribute.getId(), new VoltageLimitOverride(voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit()));
-                        });
-                    });
+                    filterEquipments.forEach(filterEquipment ->
+                        filterEquipment.getIdentifiableAttributes().forEach(idenfiableAttribute ->
+                            specificVoltageLimits.put(idenfiableAttribute.getId(), new VoltageLimitOverride(voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit()))
+                        )
+                    );
                 });
             }
         });
