@@ -828,7 +828,7 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Set voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init analysis parameters are set")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set")})
     public ResponseEntity<Void> setVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) VoltageInitParametersInfos voltageInitParameters,
@@ -839,7 +839,7 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
     @Operation(summary = "Get voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init analysis parameters")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
     public ResponseEntity<VoltageInitParametersInfos> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
