@@ -176,9 +176,11 @@ public class VoltageInitService {
     public static VoltageInitParametersEntity toEntity(VoltageInitParametersInfos parameters) {
         Objects.requireNonNull(parameters);
         List<VoltageInitParametersVoltageLimitsEntity> voltageLimits = new ArrayList<>();
-        parameters.getVoltageLimits().stream().forEach(voltageLimit ->
-                voltageLimits.add(new VoltageInitParametersVoltageLimitsEntity(null, voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit(), voltageLimit.getPriority(), FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(voltageLimit.getFilters())))
-        );
+        if (parameters.getVoltageLimits() != null) {
+            parameters.getVoltageLimits().stream().forEach(voltageLimit ->
+                    voltageLimits.add(new VoltageInitParametersVoltageLimitsEntity(null, voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit(), voltageLimit.getPriority(), FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(voltageLimit.getFilters())))
+            );
+        }
         return new VoltageInitParametersEntity(null, voltageLimits);
     }
 
@@ -192,5 +194,9 @@ public class VoltageInitService {
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageLimit.getFilters())))
         );
         return new VoltageInitParametersInfos(voltageLimits);
+    }
+
+    public static VoltageInitParametersInfos getDefaultVoltageInitParameters() {
+        return new VoltageInitParametersInfos();
     }
 }
