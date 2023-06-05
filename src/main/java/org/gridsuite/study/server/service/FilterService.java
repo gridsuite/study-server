@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,7 +28,7 @@ import java.util.stream.Collectors;
 import static org.gridsuite.study.server.StudyException.Type.FILTERS_NOT_FOUND;
 
 /**
- * @author bendaamerahm <ahmed.bendaamer at rte-france.com>
+ * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
  */
 @Service
 public class FilterService {
