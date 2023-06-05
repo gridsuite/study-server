@@ -20,15 +20,13 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
-import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
-import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.ShortCircuitService;
 import org.gridsuite.study.server.service.StudyService;
@@ -57,10 +55,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
@@ -201,6 +196,46 @@ public class VoltageInitTest {
         };
 
         server.setDispatcher(dispatcher);
+    }
+
+    public static final String VOLTAGE_INIT_PARAMETERS_JSON = "{\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":15.0,\"highVoltageLimit\":123.0,\"filters\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da329\",\"filterName\":\"identifiable\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
+    public static final String VOLTAGE_INIT_PARAMETERS_JSON2 = "{\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":15.0,\"highVoltageLimit\":126.0,\"filters\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da329\",\"filterName\":\"identifiable\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
+
+    @Test
+    public void testVoltageInitParameters() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+
+        //get default
+        mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(VOLTAGE_INIT_PARAMETERS_JSON));
+
+        //setting short-circuit analysis Parameters
+        //passing self made json because shortCircuitParameter serializer removes the parameters with default value
+        String voltageInitParameterBodyJson = "{\n" +
+                "  \"voltageLimits\" : [ {\n" +
+                "    \"priority\" : 0,\n" +
+                "    \"lowVoltageLimit\" : 15.0,\n" +
+                "    \"highVoltageLimit\" : 126.0,\n" +
+                "    \"filters\" : [ {\n" +
+                "      \"filterId\" : \"cf399ef3-7f14-4884-8c82-1c90300da329\",\n" +
+                "      \"filterName\" : \"identifiable\"\n" +
+                "    } ]\n" +
+                "  } ]\n" +
+                "}";
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(voltageInitParameterBodyJson)).andExpect(
+                status().isOk());
+
+        //getting set values
+        mockMvc.perform(get("/v1/studies/{studyUuid}/voltage-init/parameters", studyNameUserIdUuid)).andExpectAll(
+                status().isOk(),
+                content().string(VOLTAGE_INIT_PARAMETERS_JSON2));
     }
 
     @Test
@@ -365,7 +400,17 @@ public class VoltageInitTest {
                 .hvdcAcEmulation(true)
                 .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider", defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
+
+        VoltageInitParametersEntity defaultVoltageInitParametersEntity = VoltageInitParametersEntity.builder()
+                .voltageLimits(List.of(VoltageInitParametersVoltageLimitsEntity.builder()
+                        .priority(0)
+                        .lowVoltageLimit(15.0)
+                        .highVoltageLimit(123.0)
+                        .filters(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(List.of(FilterEquipments.builder().filterId(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da329")).filterName("identifiable").build())))
+                        .build()))
+                .build();
+
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", "defaultLoadflowProvider", defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, defaultVoltageInitParametersEntity);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
