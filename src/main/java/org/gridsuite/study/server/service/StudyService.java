@@ -1291,7 +1291,7 @@ public class StudyService {
             UUID reportUuid = nodeInfos.getReportUuid();
 
             Optional<NetworkModificationResult> networkModificationResult = networkModificationService.createModification(studyUuid, createModificationAttributes, groupUuid, variantId, reportUuid, nodeInfos.getId().toString());
-            networkModificationResult.ifPresent(modificationResult -> updateNode(studyUuid, nodeUuid, modificationResult));
+            updateNode(studyUuid, nodeUuid, networkModificationResult);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1701,8 +1701,8 @@ public class StudyService {
         reportService.deleteReport(networkModificationTreeService.getReportUuid(nodeUuid));
     }
 
-    private void updateNode(UUID studyUuid, UUID nodeUuid, NetworkModificationResult networkModificationResult) {
-        emitNetworkModificationImpacts(studyUuid, nodeUuid, networkModificationResult);
+    private void updateNode(UUID studyUuid, UUID nodeUuid, Optional<NetworkModificationResult> networkModificationResult) {
+        networkModificationResult.ifPresent(modificationResult -> emitNetworkModificationImpacts(studyUuid, nodeUuid, modificationResult));
         updateStatuses(studyUuid, nodeUuid);
     }
 
