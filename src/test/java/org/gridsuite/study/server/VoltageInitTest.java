@@ -91,6 +91,7 @@ public class VoltageInitTest {
     private static final String VOLTAGE_INIT_PARAMETERS_JSON2 = "{\"voltageLimits\":[{\"priority\":0,\"lowVoltageLimit\":15.0,\"highVoltageLimit\":126.0,\"filters\":[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da329\",\"filterName\":\"identifiable\",\"identifiableAttributes\":null,\"notFoundEquipments\":null}]}]}";
 
     private static final String FILTER_EQUIPMENT_JSON = "[{\"filterId\":\"cf399ef3-7f14-4884-8c82-1c90300da329\",\"identifiableAttributes\":[{\"id\":\"VL1\",\"type\":\"VOLTAGE_LEVEL\"}],\"notFoundEquipments\":[]}]";
+    private static final String FILTER_UUID = "cf399ef3-7f14-4884-8c82-1c90300da329";
 
     private static final String VOLTAGE_INIT_RESULT_JSON = "{\"version\":\"1.0\"}";
 
@@ -193,10 +194,16 @@ public class VoltageInitTest {
                             .build(), voltageInitStoppedDestination);
                     return new MockResponse().setResponseCode(200)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                } else if (path.matches("/v1/filters/export.*")) {
+                } else if (path.matches("/v1/filters/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID_2 + "&ids=" + FILTER_UUID)) {
                     return new MockResponse().setResponseCode(200).setBody(FILTER_EQUIPMENT_JSON)
                             .addHeader("Content-Type", "application/json; charset=utf-8");
-                }else {
+                } else if (path.matches("/v1/filters/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&ids=" + FILTER_UUID)) {
+                    return new MockResponse().setResponseCode(200).setBody(FILTER_EQUIPMENT_JSON)
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else if (path.matches("/v1/filters/export\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID_3 + "&ids=" + FILTER_UUID)) {
+                    return new MockResponse().setResponseCode(500).setBody("Filter not found")
+                            .addHeader("Content-Type", "application/json; charset=utf-8");
+                } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                 }
@@ -327,6 +334,13 @@ public class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
         assertTrue(TestUtils.getRequestsDone(2, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
+
+        mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, modificationNode4Uuid)
+                        .header("userId", "userId"))
+                .andExpect(status().is5xxServerError()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/filters/export.*")));
+
     }
 
     @Test
@@ -413,7 +427,7 @@ public class VoltageInitTest {
                         .priority(0)
                         .lowVoltageLimit(15.0)
                         .highVoltageLimit(123.0)
-                        .filters(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(List.of(FilterEquipments.builder().filterId(UUID.fromString("cf399ef3-7f14-4884-8c82-1c90300da329")).filterName("identifiable").build())))
+                        .filters(FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(List.of(FilterEquipments.builder().filterId(UUID.fromString(FILTER_UUID)).filterName("identifiable").build())))
                         .build()))
                 .build();
 
