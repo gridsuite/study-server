@@ -1579,7 +1579,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-
     enum UpdateModificationAction {
         MOVE, COPY
     }

@@ -197,7 +197,6 @@ public class SecurityAnalysisService {
 
     public static SecurityAnalysisParametersValues fromEntity(SecurityAnalysisParametersEntity entity) {
         Objects.requireNonNull(entity);
-
         return SecurityAnalysisParametersValues.builder()
                 .lowVoltageAbsoluteThreshold(entity.getLowVoltageAbsoluteThreshold())
                 .lowVoltageProportionalThreshold(entity.getLowVoltageProportionalThreshold())
@@ -220,7 +219,6 @@ public class SecurityAnalysisService {
 
     public static SecurityAnalysisParameters toSecurityAnalysisParameters(SecurityAnalysisParametersEntity entity) {
         Objects.requireNonNull(entity);
-
         SecurityAnalysisParameters.IncreasedViolationsParameters increasedViolationsParameters = new SecurityAnalysisParameters.IncreasedViolationsParameters();
         increasedViolationsParameters.setFlowProportionalThreshold(entity.getFlowProportionalThreshold());
         increasedViolationsParameters.setLowVoltageAbsoluteThreshold(entity.getLowVoltageAbsoluteThreshold());

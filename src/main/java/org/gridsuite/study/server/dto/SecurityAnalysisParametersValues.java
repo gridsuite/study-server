@@ -11,7 +11,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-
 /**
  * @author AJELLAL Ali <ali.ajellal@rte-france.com>
  */
