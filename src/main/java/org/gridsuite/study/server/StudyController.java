@@ -477,8 +477,8 @@ public class StudyController {
     @Operation(summary = "Get network elements infos")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network elements infos")})
     public ResponseEntity<String> getNetworkElementsInfos(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationsIds", required = false) List<String> substationsIds,
             @Parameter(description = "Element type") @RequestParam(name = "elementType") String elementType,
             @Parameter(description = "Info type") @RequestParam(name = "infoType") String infoType,
