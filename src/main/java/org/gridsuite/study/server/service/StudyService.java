@@ -1090,9 +1090,6 @@ public class StudyService {
 
         List<LoadFlowSpecificParameterInfos> specificParameters = null;
         SecurityAnalysisParameters securityAnalysisParameters = getSecurityAnalysisParameters(studyUuid);
-        if (securityAnalysisParameters == null) {
-            securityAnalysisParameters = SecurityAnalysisParameters.load();
-        }
         specificParameters = getSpecificLoadFlowParameters(studyUuid, ComputationUsingLoadFlow.SECURITY_ANALYSIS);
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyUuid);
         securityAnalysisParameters.setLoadFlowParameters(loadFlowParameters);
