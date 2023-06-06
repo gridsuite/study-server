@@ -1,0 +1,10 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd" logicalFilePath="db/changelog/changesets/changelog_2022-08-25T13:42:46Z.xml">
+    <changeSet author="amarsli (generated)" id="1661434976647-1">
+        <dropForeignKeyConstraint baseTableName="report_usage" constraintName="build_node_fk_constraint"/>
+        <dropForeignKeyConstraint baseTableName="report_usage" constraintName="def_node_fk_constraint"/>
+        <dropIndex indexName="ReportUsage_user_idx" tableName="report_usage"/>
+        <dropTable tableName="report_usage" cascadeConstraints="true"/>
+    </changeSet>
+</databaseChangeLog>
+
