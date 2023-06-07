@@ -14,14 +14,13 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.iidm.network.TopologyKind;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.SneakyThrows;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -29,7 +28,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
-import org.gridsuite.study.server.dto.VoltageLevelMapData;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -40,9 +38,10 @@ import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.After;
@@ -64,11 +63,10 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.util.NestedServletException;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.when;
@@ -102,6 +100,11 @@ public class SingleLineDiagramTest {
     private MockMvc mockMvc;
 
     private MockWebServer server;
+
+    // new mock server (use this one to mock API calls)
+    private WireMockServer wireMockServer;
+
+    private WireMockUtils wireMockUtils;
 
     @Autowired
     private OutputDestination output;
@@ -140,18 +143,22 @@ public class SingleLineDiagramTest {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         server = new MockWebServer();
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
+        wireMockUtils = new WireMockUtils(wireMockServer);
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
         // Start the server.
         server.start();
+        wireMockServer.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
-        networkMapService.setNetworkMapServerBaseUri(baseUrl);
         geoDataService.setGeoDataServerBaseUri(baseUrl);
+
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
 
         when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_STRING)))
             .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0),
@@ -159,19 +166,6 @@ public class SingleLineDiagramTest {
 
         when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING)))
             .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
-
-        // Values used in dispatcher
-        String voltageLevelsMapDataAsString = mapper.writeValueAsString(List.of(
-                VoltageLevelMapData.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("DDE1AA1").name("DDE1AA1").substationId("DDE1AA").nominalVoltage(370).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("DDE2AA1").name("DDE2AA1").substationId("DDE2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("DDE3AA1").name("DDE3AA1").substationId("DDE3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("FFR1AA1").name("FFR1AA1").substationId("FFR1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").nominalVoltage(380).topologyKind(TopologyKind.BUS_BREAKER).build(),
-                VoltageLevelMapData.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").nominalVoltage(390).topologyKind(TopologyKind.BUS_BREAKER).build()));
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -233,17 +227,12 @@ public class SingleLineDiagramTest {
                         return new MockResponse().setResponseCode(200).setBody("[\"GridSuiteAndConvergence\",\"Convergence\"]")
                             .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/networks/" + NETWORK_UUID_STRING:
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels":
-                        return new MockResponse().setResponseCode(200).setBody(voltageLevelsMapDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING:
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING:
                     case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/lines?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&lineId=LINEID1&lineId=LINEID2":
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID:
                     case "/v1/substations?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID + "&substationId=BBE1AA&substationId=BBE2AA":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines":
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/substations":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/3-windings-transformers":
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/generators":
@@ -391,14 +380,9 @@ public class SingleLineDiagramTest {
             .andExpect(status().isNotFound());
 
         //get voltage levels
-        EqualsVerifier.simple().forClass(VoltageLevelMapData.class).verify();
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/voltage-levels", studyNameUserIdUuid,
-                        rootNodeUuid)).andExpect(status().isOk())
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<VoltageLevelInfos> vliListResponse = mapper.readValue(resultAsString, new TypeReference<List<VoltageLevelInfos>>() {
+        mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", TestUtils.resourceToString("/network-voltage-levels-infos.json"));
+        List<VoltageLevelInfos> vliListResponse = mapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<List<VoltageLevelInfos>>() {
         });
-
         assertThat(vliListResponse, new MatcherJson<>(mapper, List.of(
                 VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
                 VoltageLevelInfos.builder().id("BBE2AA1").name("BBE2AA1").substationId("BBE2AA").build(),
@@ -409,9 +393,7 @@ public class SingleLineDiagramTest {
                 VoltageLevelInfos.builder().id("FFR3AA1").name("FFR3AA1").substationId("FFR3AA").build(),
                 VoltageLevelInfos.builder().id("NNL1AA1").name("NNL1AA1").substationId("NNL1AA").build(),
                 VoltageLevelInfos.builder().id("NNL2AA1").name("NNL2AA1").substationId("NNL2AA").build(),
-                        VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build())));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
+                VoltageLevelInfos.builder().id("NNL3AA1").name("NNL3AA1").substationId("NNL3AA").build())));
 
         //get the lines-graphics of a network
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/geo-data/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
@@ -440,128 +422,49 @@ public class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substations?networkUuid=%s&variantId=%s&substationId=BBE1AA&substationId=BBE2AA", NETWORK_UUID_STRING, VARIANT_ID)));
 
         //get the lines map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/lines", NETWORK_UUID_STRING)));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", "[]");
 
         //get the substation map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/", studyNameUserIdUuid,
-                        rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/substations", NETWORK_UUID_STRING)));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", "[]");
 
         //get the 2 windings transformers map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/",
-                        studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/2-windings-transformers", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "[]");
 
         //get the 3 windings transformers map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/3-windings-transformers/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/3-windings-transformers", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", "[]");
 
         //get the generators map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/generators/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/generators", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", "[]");
 
         //get the batteries map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/batteries/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/batteries", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", "[]");
 
         //get the dangling lines map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/dangling-lines/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/dangling-lines", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", "[]");
 
         //get the hvdc lines map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/hvdc-lines", NETWORK_UUID_STRING)));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", "[]");
 
         //get the lcc converter stations map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lcc-converter-stations/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/lcc-converter-stations", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", "[]");
 
         //get the vsc converter stations map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/vsc-converter-stations/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/vsc-converter-stations", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", "[]");
 
         //get the loads map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/loads", NETWORK_UUID_STRING)));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "MAP", "[]");
 
         //get the shunt compensators map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/shunt-compensators/", studyNameUserIdUuid,
-                rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(
-                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/shunt-compensators", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", "[]");
 
         //get the static var compensators map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/static-var-compensators/",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/static-var-compensators", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", "[]");
 
         //get the voltage levels map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/voltage-levels", NETWORK_UUID_STRING)));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", "[]");
 
         //get all map data of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/all/", studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/all", NETWORK_UUID_STRING)));
+        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "all", "[]");
 
         // get the svg component libraries
         mockMvc.perform(get("/v1/svg-component-libraries")).andExpectAll(
@@ -684,6 +587,31 @@ public class SingleLineDiagramTest {
         return modificationNode;
     }
 
+    @SneakyThrows
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String responseBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
+                        .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                        .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkElementsInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkEquipmentsInfos(UUID studyUuid, UUID rootNodeUuid, String equipmentPath, String responseBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkEquipmentsInfosGet(NETWORK_UUID_STRING, equipmentPath, responseBody);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{elementPath}", studyUuid, rootNodeUuid, equipmentPath))
+                .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkEquipmentsInfosGet(stubUuid, NETWORK_UUID_STRING, equipmentPath);
+
+        return mvcResult;
+    }
+
     private void cleanDB() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
@@ -699,6 +627,7 @@ public class SingleLineDiagramTest {
 
         try {
             TestUtils.assertServerRequestsEmptyThenShutdown(server);
+            TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         } catch (IOException e) {
