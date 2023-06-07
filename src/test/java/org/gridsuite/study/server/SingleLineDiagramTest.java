@@ -416,37 +416,37 @@ public class SingleLineDiagramTest {
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", "[]");
 
         //get the 2 windings transformers map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "MAP", "[]");
 
         //get the 3 windings transformers map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", "MAP", "[]");
 
         //get the generators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", "MAP", "[]");
 
         //get the batteries map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", "MAP", "[]");
 
         //get the dangling lines map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", "MAP", "[]");
 
         //get the hvdc lines map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", "[]");
 
         //get the lcc converter stations map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", "MAP", "[]");
 
         //get the vsc converter stations map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", "MAP", "[]");
 
         //get the loads map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "MAP", "[]");
 
         //get the shunt compensators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", "MAP", "[]");
 
         //get the static var compensators map data of a network
-        getNetworkEquipmentsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", "MAP", "[]");
 
         //get the voltage levels map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", "[]");
