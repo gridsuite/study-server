@@ -50,6 +50,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.io.IOException;
 import java.util.List;
@@ -201,6 +202,9 @@ public class NetworkMapTest {
         //get the load map data info of a network
         String loadDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
         getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "LIST", LOAD_ID_1, loadDataAsString);
+
+        //get data info of an unknown load
+        getNetworkElementInfosNotFound(studyNameUserIdUuid, rootNodeUuid, "LOAD", "LIST", "UnknownLoadId");
     }
 
     @Test
@@ -511,10 +515,13 @@ public class NetworkMapTest {
     @SneakyThrows
     private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, List<String> substationsIds, String responseBody) {
         UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
-                        .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
-                        .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
-                )
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
+                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                .queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        if (!substationsIds.isEmpty()) {
+            mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
+        }
+        MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
         wireMockUtils.verifyNetworkElementsInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType);
@@ -530,6 +537,20 @@ public class NetworkMapTest {
                         .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 )
                 .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkElementInfosNotFound(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementInfosGetNotFound(NETWORK_UUID_STRING, elementType, infoType, elementId);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
+                        .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                        .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                )
+                .andExpect(status().isNotFound())
                 .andReturn();
         wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
 
