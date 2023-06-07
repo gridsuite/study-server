@@ -1508,6 +1508,14 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/import/parameters")
+    @Operation(summary = "Get import parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The import parameters")})
+    public ResponseEntity<ImportParametersInfos> getImportParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getImportParameters(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
     @Operation(summary = "run dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})

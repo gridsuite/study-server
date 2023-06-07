@@ -9,15 +9,18 @@ package org.gridsuite.study.server.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ImportParametersInfos {
-    private Map<String, String> parameters;
+    private Map<String, String> parameters = new HashMap<>();
 }

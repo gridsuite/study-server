@@ -16,6 +16,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.repository.ImportParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -76,6 +77,29 @@ public final class TestUtils {
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .build();
+    }
+
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, ImportParametersEntity importParametersEntity) {
+        LoadFlowParametersEntity loadFlowParametersEntity = LoadFlowParametersEntity.builder()
+                .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
+                .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
+                .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
+                .readSlackBus(true)
+                .distributedSlack(true)
+                .dcUseTransformerRatio(true)
+                .hvdcAcEmulation(true)
+                .dcPowerFactor(0.9)
+                .build();
+        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
+        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("xiidm").caseUuid(caseUuid)
+                .caseName("caseName")
+                .networkId("netId")
+                .networkUuid(networkUuid)
+                .loadFlowProvider("defaultProvider")
+                .loadFlowParameters(loadFlowParametersEntity)
+                .shortCircuitParameters(defaultShortCircuitParametersEntity)
+                .importParameters(importParametersEntity)
+                .build();
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadFlowProvider) {

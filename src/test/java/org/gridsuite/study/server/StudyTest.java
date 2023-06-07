@@ -91,14 +91,14 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -572,10 +572,17 @@ public class StudyTest {
         Matcher matcher = receiverPattern.matcher(requestPath);
         if (matcher.find()) {
             String receiverUrlString = matcher.group(1);
+            Map<String, Object> importParameters = new HashMap<String, Object>();
+            ArrayList<String> randomListParam = new ArrayList<String>();
+            randomListParam.add("paramValue1");
+            randomListParam.add("paramValue2");
+            importParameters.put("randomListParam", randomListParam);
+            importParameters.put("randomParam2", "randomParamValue");
             input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
                     .setHeader("networkUuid", networkInfos.getNetworkUuid().toString())
                     .setHeader("networkId", networkInfos.getNetworkId())
                     .setHeader("caseFormat", format)
+                    .setHeader("importParameters", importParameters)
                     .build(), "case.import.succeeded");
         }
     }
@@ -766,9 +773,15 @@ public class StudyTest {
         randomListParam.add("paramValue1");
         randomListParam.add("paramValue2");
         importParameters.put("randomListParam", randomListParam);
-        importParameters.put("randomParam2", "randomParamValue");
 
-        createStudyWithImportParameters("userId", CASE_UUID, importParameters);
+        UUID studyUuid = createStudyWithImportParameters("userId", CASE_UUID, importParameters);
+
+        Map<String, String> importParametersResult = new HashMap<>();
+        importParametersResult.put("randomListParam", "[paramValue1, paramValue2]");
+        importParametersResult.put("randomParam2", "randomParamValue");
+        mockMvc.perform(get("/v1/studies/{studyUuid}/import/parameters", studyUuid)).andExpectAll(
+                status().isOk(),
+                content().string(mapper.writeValueAsString(new ImportParametersInfos(importParametersResult))));
     }
 
     @Test

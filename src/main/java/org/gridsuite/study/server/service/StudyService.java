@@ -271,7 +271,7 @@ public class StudyService {
         List<LoadFlowSpecificParameterInfos> sourceSpecificLoadFlowParameters = getAllSpecificLoadFlowParameters(sourceStudy);
         ShortCircuitParameters copiedShortCircuitParameters = ShortCircuitService.fromEntity(sourceStudy.getShortCircuitParameters());
         DynamicSimulationParametersInfos copiedDynamicSimulationParameters = DynamicSimulationService.fromEntity(sourceStudy.getDynamicSimulationParameters(), objectMapper);
-        ImportParametersInfos copiedImportParametersInfos = new ImportParametersInfos(sourceStudy.getImportParameters().getParameters());
+        ImportParametersInfos copiedImportParametersInfos = StudyService.fromEntity(sourceStudy.getImportParameters());
 
         BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
         studyServerExecutionService.runAsync(() -> duplicateStudyAsync(basicStudyInfos, sourceStudy, sourceLoadFlowParameters, sourceSpecificLoadFlowParameters, copiedShortCircuitParameters, copiedDynamicSimulationParameters, copiedImportParametersInfos, userId));
@@ -292,7 +292,7 @@ public class StudyService {
             LoadFlowParameters newLoadFlowParameters = sourceLoadFlowParameters != null ? sourceLoadFlowParameters.copy() : new LoadFlowParameters();
             ShortCircuitParameters shortCircuitParameters = copiedShortCircuitParameters != null ? copiedShortCircuitParameters : ShortCircuitService.getDefaultShortCircuitParameters();
             DynamicSimulationParametersInfos dynamicSimulationParameters = copiedDynamicSimulationParameters != null ? copiedDynamicSimulationParameters : DynamicSimulationService.getDefaultDynamicSimulationParameters();
-            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), new ImportParametersEntity(null, copiedImportParameters.getParameters()), userId, clonedNetworkUuid, clonedCaseUuid);
+            StudyEntity duplicatedStudy = insertDuplicatedStudy(basicStudyInfos, sourceStudy, LoadflowService.toEntity(newLoadFlowParameters, sourceSpecificLoadFlowParameters), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), StudyService.toEntity(copiedImportParameters), userId, clonedNetworkUuid, clonedCaseUuid);
             reindexStudy(duplicatedStudy);
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -301,6 +301,14 @@ public class StudyService {
             LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudy.getId(),
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
+    }
+
+    public static ImportParametersEntity toEntity(ImportParametersInfos importParametersInfos) {
+        return new ImportParametersEntity(null, importParametersInfos.getParameters());
+    }
+
+    public static ImportParametersInfos fromEntity(ImportParametersEntity importParametersEntity) {
+        return new ImportParametersInfos(importParametersEntity.getParameters());
     }
 
     @Transactional(readOnly = true)
@@ -1842,6 +1850,12 @@ public class StudyService {
     public DynamicSimulationParametersInfos getDynamicSimulationParameters(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
                 .map(studyEntity -> studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters())
+                .orElse(null);
+    }
+
+    public ImportParametersInfos getImportParameters(UUID studyUuid) {
+        return studyRepository.findById(studyUuid)
+                .map(studyEntity -> studyEntity.getImportParameters() != null ? StudyService.fromEntity(studyEntity.getImportParameters()) : new ImportParametersInfos())
                 .orElse(null);
     }
 
