@@ -83,6 +83,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private DynamicSimulationParametersEntity dynamicSimulationParameters;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "voltageInitParametersEntity_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(
+                    name = "voltageInitParameters_id_fk"
+            ))
+    private VoltageInitParametersEntity voltageInitParameters;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "importParametersEntity_id",
             referencedColumnName = "id",
             foreignKey = @ForeignKey(

@@ -20,6 +20,7 @@ import org.gridsuite.study.server.repository.ImportParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.VoltageInitParametersEntity;
 import org.gridsuite.study.server.service.ShortCircuitService;
 import org.junit.platform.commons.util.StringUtils;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -69,13 +70,14 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity) {
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
             .networkUuid(networkUuid)
             .loadFlowProvider(loadflowProvider)
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(shortCircuitParametersEntity)
+            .voltageInitParameters(voltageInitParametersEntity)
             .build();
     }
 

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "BBE1AA1",
+    "name": "BBE1AA1",
+    "substationId": "BBE1AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "BBE2AA1",
+    "name": "BBE2AA1",
+    "substationId": "BBE2AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "DDE1AA1",
+    "name": "DDE1AA1",
+    "substationId": "DDE1AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "DDE2AA1",
+    "name": "DDE2AA1",
+    "substationId": "DDE2AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "DDE3AA1",
+    "name": "DDE3AA1",
+    "substationId": "DDE3AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "FFR1AA1",
+    "name": "FFR1AA1",
+    "substationId": "FFR1AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "FFR3AA1",
+    "name": "FFR3AA1",
+    "substationId": "FFR3AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "NNL1AA1",
+    "name": "NNL1AA1",
+    "substationId": "NNL1AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "NNL2AA1",
+    "name": "NNL2AA1",
+    "substationId": "NNL2AA",
+    "nominalVoltage": 380
+  },
+  {
+    "id": "NNL3AA1",
+    "name": "NNL3AA1",
+    "substationId": "NNL3AA",
+    "nominalVoltage": 380
+  }
+]
