@@ -56,7 +56,9 @@ public class NetworkMapService {
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds);
         }
-        builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
         String url = builder.buildAndExpand(networkUuid).toUriString();
