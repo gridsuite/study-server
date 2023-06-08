@@ -9,11 +9,17 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.openreac.parameters.input.OpenReacParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
+import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
+import org.gridsuite.study.server.dto.voltageinit.VoltageInitVoltageLimitsParameterInfos;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.FilterEquipmentsEmbeddable;
+import org.gridsuite.study.server.repository.VoltageInitParametersEntity;
+import org.gridsuite.study.server.repository.VoltageInitParametersVoltageLimitsEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -25,9 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -42,8 +46,6 @@ public class VoltageInitService {
     @Autowired
     NotificationService notificationService;
 
-    private final NetworkService networkStoreService;
-
     NetworkModificationTreeService networkModificationTreeService;
 
     private final ObjectMapper objectMapper;
@@ -54,17 +56,13 @@ public class VoltageInitService {
     @Autowired
     public VoltageInitService(
             @Value("${gridsuite.services.voltage-init-server.base-uri:http://voltage-init-server/}") String voltageInitServerBaseUri,
-            NetworkModificationTreeService networkModificationTreeService,
-            NetworkService networkStoreService, ObjectMapper objectMapper) {
+            NetworkModificationTreeService networkModificationTreeService, ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = voltageInitServerBaseUri;
-        this.networkStoreService = networkStoreService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, String userId) {
-        UUID networkUuid = networkStoreService.getNetworkUuid(studyUuid);
-        String variantId = getVariantId(nodeUuid);
+    public UUID runVoltageInit(UUID networkUuid, String variantId, OpenReacParameters openReacParameters, UUID nodeUuid, String userId) {
         UUID reportUuid = getReportUuid(nodeUuid);
 
         String receiver;
@@ -89,8 +87,7 @@ public class VoltageInitService {
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
-
+        HttpEntity<OpenReacParameters> httpEntity = new HttpEntity<>(openReacParameters, headers);
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
@@ -145,10 +142,6 @@ public class VoltageInitService {
         restTemplate.put(voltageInitServerBaseUri + path, Void.class);
     }
 
-    private String getVariantId(UUID nodeUuid) {
-        return networkModificationTreeService.getVariantId(nodeUuid);
-    }
-
     private UUID getReportUuid(UUID nodeUuid) {
         return networkModificationTreeService.getReportUuid(nodeUuid);
     }
@@ -170,5 +163,32 @@ public class VoltageInitService {
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {
             throw new StudyException(VOLTAGE_INIT_RUNNING);
         }
+    }
+
+    public static VoltageInitParametersEntity toEntity(VoltageInitParametersInfos parameters) {
+        Objects.requireNonNull(parameters);
+        List<VoltageInitParametersVoltageLimitsEntity> voltageLimits = new ArrayList<>();
+        if (parameters.getVoltageLimits() != null) {
+            parameters.getVoltageLimits().stream().forEach(voltageLimit ->
+                    voltageLimits.add(new VoltageInitParametersVoltageLimitsEntity(null, voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit(), voltageLimit.getPriority(), FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(voltageLimit.getFilters())))
+            );
+        }
+        return new VoltageInitParametersEntity(null, voltageLimits);
+    }
+
+    public static VoltageInitParametersInfos fromEntity(VoltageInitParametersEntity voltageInitParameters) {
+        Objects.requireNonNull(voltageInitParameters);
+        List<VoltageInitVoltageLimitsParameterInfos> voltageLimits = new ArrayList<>();
+        voltageInitParameters.getVoltageLimits().stream().forEach(voltageLimit ->
+                voltageLimits.add(new VoltageInitVoltageLimitsParameterInfos(voltageLimit.getPriority(),
+                        voltageLimit.getLowVoltageLimit(),
+                        voltageLimit.getHighVoltageLimit(),
+                        FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageLimit.getFilters())))
+        );
+        return new VoltageInitParametersInfos(voltageLimits);
+    }
+
+    public static VoltageInitParametersInfos getDefaultVoltageInitParameters() {
+        return new VoltageInitParametersInfos();
     }
 }
