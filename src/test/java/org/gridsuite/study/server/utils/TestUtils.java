@@ -70,7 +70,8 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity) {
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, SecurityAnalysisParametersEntity securityAnalysisParametersEntity
+    ) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
             .networkUuid(networkUuid)
@@ -78,6 +79,7 @@ public final class TestUtils {
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParameters(voltageInitParametersEntity)
+                .securityAnalysisParameters(securityAnalysisParametersEntity)
             .build();
     }
 

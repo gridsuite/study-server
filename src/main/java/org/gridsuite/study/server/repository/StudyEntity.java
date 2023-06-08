@@ -27,7 +27,7 @@ import javax.persistence.*;
 @Table(name = "study")
 public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> implements BasicStudyEntity {
 
-    public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters) {
+    public StudyEntity(UUID id, UUID networkUuid, String networkId, String caseFormat, UUID caseUuid, String caseName, String loadFlowProvider, String securityAnalysisProvider, String sensitivityAnalysisProvider, String dynamicSimulationProvider, LoadFlowParametersEntity loadFlowParameters, ShortCircuitParametersEntity shortCircuitParameters, DynamicSimulationParametersEntity dynamicSimulationParameters, VoltageInitParametersEntity voltageInitParameters) {
         this.id = id;
         this.networkUuid = networkUuid;
         this.networkId = networkId;
@@ -41,6 +41,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         this.loadFlowParameters = loadFlowParameters;
         this.shortCircuitParameters = shortCircuitParameters;
         this.dynamicSimulationParameters = dynamicSimulationParameters;
+        this.voltageInitParameters = voltageInitParameters;
     }
 
     @Id
