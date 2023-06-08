@@ -1,0 +1,44 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet author="marcelinhug (generated)" id="1685718153381-5">
+        <createTable tableName="voltage_init_parameters">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="voltage_init_parametersPK"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="marcelinhug (generated)" id="1685718153381-6">
+        <createTable tableName="voltage_init_parameters_voltage_limits">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="voltage_init_parameters_voltage_limitsPK"/>
+            </column>
+            <column name="high_voltage_limit" type="FLOAT8"/>
+            <column name="low_voltage_limit" type="FLOAT8"/>
+            <column name="priority" type="INT"/>
+            <column name="voltage_init_parameters_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="marcelinhug (generated)" id="1685718153381-7">
+        <createTable tableName="voltage_init_parameters_voltage_limits_entity_filters">
+            <column name="voltage_limit_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="filter_id" type="UUID"/>
+            <column name="filter_name" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="marcelinhug (generated)" id="1685718153381-8">
+        <addColumn tableName="study">
+            <column name="voltage_init_parameters_entity_id" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="marcelinhug (generated)" id="1685718153381-9">
+        <addForeignKeyConstraint baseColumnNames="voltage_init_parameters_id" baseTableName="voltage_init_parameters_voltage_limits" constraintName="FKhp898n3yyweyjpx3j9wko9ajg" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="voltage_init_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="marcelinhug (generated)" id="1685718153381-10">
+        <addForeignKeyConstraint baseColumnNames="voltage_init_parameters_entity_id" baseTableName="study" constraintName="voltageInitParameters_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="voltage_init_parameters" validate="true"/>
+    </changeSet>
+    <changeSet author="marcelinhug (generated)" id="1685718153381-11">
+        <addForeignKeyConstraint baseColumnNames="voltage_limit_id" baseTableName="voltage_init_parameters_voltage_limits_entity_filters" constraintName="voltageInitVoltageLimitsEntity_filters_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="voltage_init_parameters_voltage_limits" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
