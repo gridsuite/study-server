@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
+import org.gridsuite.study.server.dto.voltageinit.FilterEquipments;
 import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.voltageinit.VoltageInitVoltageLimitsParameterInfos;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -173,7 +174,11 @@ public class VoltageInitService {
                     voltageLimits.add(new VoltageInitParametersVoltageLimitsEntity(null, voltageLimit.getLowVoltageLimit(), voltageLimit.getHighVoltageLimit(), voltageLimit.getPriority(), FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(voltageLimit.getFilters())))
             );
         }
-        return new VoltageInitParametersEntity(null, voltageLimits);
+        List<FilterEquipmentsEmbeddable> constantQGenerators = FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(parameters.getConstantQGenerators());
+        List<FilterEquipmentsEmbeddable> variableTwoWindingsTransformers = FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(parameters.getVariableTwoWindingsTransformers());
+        List<FilterEquipmentsEmbeddable> variableShuntCompensators = FilterEquipmentsEmbeddable.toEmbeddableFilterEquipments(parameters.getVariableShuntCompensators());
+
+        return new VoltageInitParametersEntity(null, voltageLimits, constantQGenerators, variableTwoWindingsTransformers, variableShuntCompensators);
     }
 
     public static VoltageInitParametersInfos fromEntity(VoltageInitParametersEntity voltageInitParameters) {
@@ -185,7 +190,10 @@ public class VoltageInitService {
                         voltageLimit.getHighVoltageLimit(),
                         FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageLimit.getFilters())))
         );
-        return new VoltageInitParametersInfos(voltageLimits);
+        List<FilterEquipments> constantQGenerators = FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageInitParameters.getConstantQGenerators());
+        List<FilterEquipments> variableTwoWindingsTransformers = FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageInitParameters.getVariableTwoWindingsTransformers());
+        List<FilterEquipments> variableShuntCompensators = FilterEquipmentsEmbeddable.fromEmbeddableFilterEquipments(voltageInitParameters.getVariableShuntCompensators());
+        return new VoltageInitParametersInfos(voltageLimits, constantQGenerators, variableTwoWindingsTransformers, variableShuntCompensators);
     }
 
     public static VoltageInitParametersInfos getDefaultVoltageInitParameters() {

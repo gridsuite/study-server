@@ -28,14 +28,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.EQUIPMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class NetworkMapService {
-
-    static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
-
-    static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
 
     static final String QUERY_PARAM_LINE_ID = "lineId";
 
@@ -56,7 +53,9 @@ public class NetworkMapService {
         if (substationsIds != null) {
             builder = builder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds);
         }
-        builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
         String url = builder.buildAndExpand(networkUuid).toUriString();
@@ -71,8 +70,15 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
-        String url = builder.buildAndExpand(networkUuid, elementId).toUriString();
-        return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
+        try {
+            return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(EQUIPMENT_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
+            }
+        }
     }
 
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
@@ -121,7 +127,7 @@ public class NetworkMapService {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(EQUIPMENT_NOT_FOUND);
             } else {
-                throw e;
+                throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
             }
         }
         return equipmentMapData;

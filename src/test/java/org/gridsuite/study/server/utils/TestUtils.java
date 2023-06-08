@@ -13,10 +13,11 @@ import com.google.common.io.ByteStreams;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import okhttp3.mockwebserver.MockWebServer;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
+import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.VoltageInitParametersEntity;
@@ -69,7 +70,8 @@ public final class TestUtils {
         }).collect(Collectors.toSet());
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity) {
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity, VoltageInitParametersEntity voltageInitParametersEntity, SecurityAnalysisParametersEntity securityAnalysisParametersEntity
+    ) {
         return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
             .networkId("netId")
             .networkUuid(networkUuid)
@@ -77,7 +79,19 @@ public final class TestUtils {
             .loadFlowParameters(loadFlowParametersEntity)
             .shortCircuitParameters(shortCircuitParametersEntity)
             .voltageInitParameters(voltageInitParametersEntity)
+                .securityAnalysisParameters(securityAnalysisParametersEntity)
             .build();
+    }
+
+    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat, String loadflowProvider, LoadFlowParametersEntity loadFlowParametersEntity, ShortCircuitParametersEntity shortCircuitParametersEntity, SecurityAnalysisParametersEntity securityAnalysisParametersEntity) {
+        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat(caseFormat).caseUuid(caseUuid)
+                .networkId("netId")
+                .networkUuid(networkUuid)
+                .loadFlowProvider(loadflowProvider)
+                .loadFlowParameters(loadFlowParametersEntity)
+                .shortCircuitParameters(shortCircuitParametersEntity)
+                .securityAnalysisParameters(securityAnalysisParametersEntity)
+                .build();
     }
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadFlowProvider) {
@@ -109,11 +123,10 @@ public final class TestUtils {
             .modificationGroupUuid(UUID.randomUUID())
             .variantId(UUID.randomUUID().toString())
             .reportUuid(reportUuid)
-            .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-            .loadFlowResult(null)
+            .loadFlowResultUuid(UUID.randomUUID())
             .securityAnalysisResultUuid(UUID.randomUUID())
             .sensitivityAnalysisResultUuid(UUID.randomUUID())
-            .buildStatus(BuildStatus.NOT_BUILT)
+            .nodeBuildStatus(NodeBuildStatus.from(BuildStatus.NOT_BUILT))
             .children(Collections.emptyList()).build();
     }
 

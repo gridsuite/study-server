@@ -43,8 +43,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
     public static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
     public static final String UPDATE_TYPE_LINE = "line";
-    public static final String UPDATE_TYPE_LOADFLOW = "loadflow";
+    public static final String UPDATE_TYPE_LOADFLOW_RESULT = "loadflowResult";
     public static final String UPDATE_TYPE_LOADFLOW_STATUS = "loadflow_status";
+    public static final String UPDATE_TYPE_LOADFLOW_FAILED = "loadflow_failed";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";

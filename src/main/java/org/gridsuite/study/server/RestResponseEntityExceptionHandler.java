@@ -59,6 +59,7 @@ public class RestResponseEntityExceptionHandler {
             case DELETE_NODE_FAILED:
             case DELETE_STUDY_FAILED:
             case GET_MODIFICATIONS_FAILED:
+            case GET_NETWORK_ELEMENT_FAILED:
             case SENSITIVITY_ANALYSIS_ERROR:
             case NODE_BUILD_ERROR:
             case URI_SYNTAX:
@@ -73,6 +74,8 @@ public class RestResponseEntityExceptionHandler {
             case UNKNOWN_ACTION_TYPE:
             case MISSING_PARAMETER:
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getType());
+            case LOADFLOW_ERROR:
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

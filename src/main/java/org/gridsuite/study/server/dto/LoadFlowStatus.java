@@ -13,5 +13,6 @@ public enum LoadFlowStatus {
     NOT_DONE,
     RUNNING,
     CONVERGED,
-    DIVERGED
+    DIVERGED,
+    FAILED
 }

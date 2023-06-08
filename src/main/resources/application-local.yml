@@ -56,3 +56,5 @@ gridsuite:
       base-uri: http://localhost:5036
     voltage-init-server:
       base-uri: http://localhost:5038
+
+

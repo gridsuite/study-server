@@ -7,10 +7,8 @@
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 
 import java.util.HashSet;
@@ -35,23 +33,21 @@ public class NetworkModificationNode extends AbstractNode {
     private String variantId;
 
     @Builder.Default
-    Set<UUID> modificationsToExclude = new HashSet<>();
+    private Set<UUID> modificationsToExclude = new HashSet<>();
 
-    LoadFlowStatus loadFlowStatus;
+    private UUID loadFlowResultUuid;
 
-    LoadFlowResult loadFlowResult;
+    private UUID shortCircuitAnalysisResultUuid;
 
-    UUID shortCircuitAnalysisResultUuid;
+    private UUID voltageInitResultUuid;
 
-    UUID voltageInitResultUuid;
+    private UUID securityAnalysisResultUuid;
 
-    UUID securityAnalysisResultUuid;
+    private UUID sensitivityAnalysisResultUuid;
 
-    UUID sensitivityAnalysisResultUuid;
+    private UUID dynamicSimulationResultUuid;
 
-    UUID dynamicSimulationResultUuid;
-
-    BuildStatus buildStatus;
+    private NodeBuildStatus nodeBuildStatus;
 
     @Override
     public NodeType getType() {

@@ -13,11 +13,14 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.security.SecurityAnalysisParameters;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SecurityAnalysisParametersInfos;
+import org.gridsuite.study.server.dto.SecurityAnalysisParametersValues;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
+import org.gridsuite.study.server.repository.SecurityAnalysisParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -51,6 +54,12 @@ public class SecurityAnalysisService {
     private String securityAnalysisServerBaseUri;
 
     private final NetworkModificationTreeService networkModificationTreeService;
+
+    private static final double DEFAULT_FLOW_PROPORTIONAL_THRESHOLD = 0.1; // meaning 10.0 %
+    private static final double DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD = 0.01; // meaning 1.0 %
+    private static final double DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD = 0.01; // meaning 1.0 %
+    private static final double DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD = 1.0; // 1.0 kV
+    private static final double DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD = 1.0; // 1.0 kV
 
     @Autowired
     public SecurityAnalysisService(@Value("${gridsuite.services.security-analysis-server.base-uri:http://security-analysis-server/}") String securityAnalysisServerBaseUri,
@@ -185,6 +194,48 @@ public class SecurityAnalysisService {
         if (sas == SecurityAnalysisStatus.RUNNING) {
             throw new StudyException(SECURITY_ANALYSIS_RUNNING);
         }
+    }
+
+    public static SecurityAnalysisParametersEntity toEntity(SecurityAnalysisParametersValues parameters) {
+        Objects.requireNonNull(parameters);
+        return new SecurityAnalysisParametersEntity(parameters.getLowVoltageAbsoluteThreshold(), parameters.getLowVoltageProportionalThreshold(), parameters.getHighVoltageAbsoluteThreshold(), parameters.getHighVoltageProportionalThreshold(), parameters.getFlowProportionalThreshold());
+    }
+
+    public static SecurityAnalysisParametersValues fromEntity(SecurityAnalysisParametersEntity entity) {
+        Objects.requireNonNull(entity);
+        return SecurityAnalysisParametersValues.builder()
+                .lowVoltageAbsoluteThreshold(entity.getLowVoltageAbsoluteThreshold())
+                .lowVoltageProportionalThreshold(entity.getLowVoltageProportionalThreshold())
+                .highVoltageAbsoluteThreshold(entity.getHighVoltageAbsoluteThreshold())
+                .highVoltageProportionalThreshold(entity.getHighVoltageProportionalThreshold())
+                .flowProportionalThreshold(entity.getFlowProportionalThreshold())
+                .build();
+    }
+
+    public static SecurityAnalysisParametersValues getDefaultSecurityAnalysisParametersValues() {
+        return SecurityAnalysisParametersValues.builder()
+                .lowVoltageAbsoluteThreshold(DEFAULT_LOW_VOLTAGE_ABSOLUTE_THRESHOLD)
+                .lowVoltageProportionalThreshold(DEFAULT_LOW_VOLTAGE_PROPORTIONAL_THRESHOLD)
+                .highVoltageAbsoluteThreshold(DEFAULT_HIGH_VOLTAGE_ABSOLUTE_THRESHOLD)
+                .highVoltageProportionalThreshold(DEFAULT_HIGH_VOLTAGE_PROPORTIONAL_THRESHOLD)
+                .flowProportionalThreshold(DEFAULT_FLOW_PROPORTIONAL_THRESHOLD)
+                .build();
+    }
+
+    public static SecurityAnalysisParameters toSecurityAnalysisParameters(SecurityAnalysisParametersEntity entity) {
+        if (entity == null) {
+            return SecurityAnalysisParameters.load();
+        }
+        SecurityAnalysisParameters.IncreasedViolationsParameters increasedViolationsParameters = new SecurityAnalysisParameters.IncreasedViolationsParameters();
+        increasedViolationsParameters.setFlowProportionalThreshold(entity.getFlowProportionalThreshold());
+        increasedViolationsParameters.setLowVoltageAbsoluteThreshold(entity.getLowVoltageAbsoluteThreshold());
+        increasedViolationsParameters.setLowVoltageProportionalThreshold(entity.getLowVoltageProportionalThreshold());
+        increasedViolationsParameters.setHighVoltageAbsoluteThreshold(entity.getHighVoltageAbsoluteThreshold());
+        increasedViolationsParameters.setHighVoltageProportionalThreshold(entity.getHighVoltageProportionalThreshold());
+        SecurityAnalysisParameters securityAnalysisParameters = new SecurityAnalysisParameters();
+        securityAnalysisParameters.setIncreasedViolationsParameters(increasedViolationsParameters);
+
+        return securityAnalysisParameters;
     }
 
 }
