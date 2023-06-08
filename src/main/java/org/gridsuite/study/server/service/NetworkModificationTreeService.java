@@ -379,8 +379,7 @@ public class NetworkModificationTreeService {
                 NetworkModificationNode model = (NetworkModificationNode) sourceNode;
                 UUID modificationGroupToDuplicateId = model.getModificationGroupUuid();
                 model.setModificationGroupUuid(newModificationGroupId);
-                model.setBuildStatusGlobal(BuildStatus.NOT_BUILT);
-                model.setBuildStatusLocal(BuildStatus.NOT_BUILT);
+                model.setNodeBuildStatus(BuildStatus.NOT_BUILT);
                 model.setReportUuid(newReportUuid);
                 model.setLoadFlowStatus(LoadFlowStatus.NOT_DONE);
                 model.setLoadFlowResult(null);
@@ -407,8 +406,7 @@ public class NetworkModificationTreeService {
                 .name("N1")
                 .variantId(FIRST_VARIANT_ID)
                 .loadFlowStatus(LoadFlowStatus.NOT_DONE)
-                .buildStatusGlobal(BuildStatus.BUILT)
-                .buildStatusLocal(BuildStatus.BUILT)
+                .nodeBuildStatus(new NodeBuildStatus(BuildStatus.BUILT))
                 .build();
         createNode(studyEntity.getId(), rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
     }
@@ -680,7 +678,7 @@ public class NetworkModificationTreeService {
             if (modificationNode.getModificationsToExclude() != null) {
                 buildInfos.addModificationsToExclude(modificationNode.getModificationsToExclude());
             }
-            if (!modificationNode.getBuildStatusGlobal().isBuilt()) {
+            if (!modificationNode.getNodeBuildStatus().isBuilt()) {
                 buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), modificationNode.getId().toString());
                 getBuildInfos(nodeEntity.getParentNode(), buildInfos);
             } else {

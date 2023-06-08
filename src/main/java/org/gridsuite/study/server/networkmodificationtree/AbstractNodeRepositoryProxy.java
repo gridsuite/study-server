@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeInfoRepository;
 import org.gridsuite.study.server.utils.PropertyUtils;
@@ -155,6 +156,12 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         var persistedNode = getNode(node.getId());
         /* using only DTO values not jpa Entity */
         PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
+
+        //since the build status is contained in a POJO for clarity reasons in the dto as oposed to two distincts fields in the entity we have to manually handle the mapping
+        if (persistedNode instanceof NetworkModificationNode) {
+            ((NetworkModificationNode) persistedNode).setNodeBuildStatus(((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusGlobal(), ((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusLocal());
+        }
+
         var entity = toEntity(persistedNode);
         entity.markNotNew();
         nodeInfoRepository.save(entity);

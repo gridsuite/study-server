@@ -363,7 +363,7 @@ public class NetworkModificationTreeTest {
         List<AbstractNode> children = root.getChildren();
         assertEquals(1, children.size());
         NetworkModificationNode networkModificationNode = (NetworkModificationNode) children.get(0);
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationNode.getBuildStatusGlobal());
+        assertEquals(false, networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals(LoadFlowStatus.NOT_DONE, networkModificationNode.getLoadFlowStatus());
         assertEquals("not_built", networkModificationNode.getName());
         assertEquals("not built node", networkModificationNode.getDescription());
@@ -375,7 +375,7 @@ public class NetworkModificationTreeTest {
         children = root.getChildren();
         assertEquals(1, children.size());
         networkModificationNode = (NetworkModificationNode) children.get(0);
-        assertEquals(BuildStatus.BUILT, networkModificationNode.getBuildStatusGlobal());
+        assertEquals(true, networkModificationNode.getNodeBuildStatus().isBuilt());
         assertEquals(LoadFlowStatus.CONVERGED, networkModificationNode.getLoadFlowStatus());
         assertEquals("built", networkModificationNode.getName());
         assertEquals("built node", networkModificationNode.getDescription());
@@ -435,7 +435,7 @@ public class NetworkModificationTreeTest {
 
         assertEquals("n1", n1.getName());
         assertEquals("zzz", n1.getDescription());
-        assertEquals(BuildStatus.NOT_BUILT, n1.getBuildStatusGlobal());
+        assertEquals(false, n1.getNodeBuildStatus().isBuilt());
         assertEquals(n1.getId(), n1Infos.getId());
         assertEquals(MODIFICATION_GROUP_UUID, n1Infos.getModificationGroupUuid());
         assertEquals(VARIANT_ID, n1Infos.getVariantId());
@@ -901,8 +901,7 @@ public class NetworkModificationTreeTest {
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
-            .buildStatusGlobal(buildStatus)
-            .buildStatusLocal(buildStatus)
+            .nodeBuildStatus(new NodeBuildStatus(buildStatus))
             .children(Collections.emptyList()).build();
     }
 
@@ -945,7 +944,7 @@ public class NetworkModificationTreeTest {
         assertEquals(expectedModificationNode.getSecurityAnalysisResultUuid(), currentModificationNode.getSecurityAnalysisResultUuid());
         assertEquals(expectedModificationNode.getSensitivityAnalysisResultUuid(), currentModificationNode.getSensitivityAnalysisResultUuid());
         assertEquals(expectedModificationNode.getShortCircuitAnalysisResultUuid(), currentModificationNode.getShortCircuitAnalysisResultUuid());
-        assertEquals(expectedModificationNode.getBuildStatusGlobal(), currentModificationNode.getBuildStatusGlobal());
+        assertEquals(expectedModificationNode.getNodeBuildStatus(), currentModificationNode.getNodeBuildStatus());
     }
 
     @Test
