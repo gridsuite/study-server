@@ -205,6 +205,7 @@ public class NetworkMapTest {
 
         //get data info of an unknown load
         getNetworkElementInfosNotFound(studyNameUserIdUuid, rootNodeUuid, "LOAD", "LIST", "UnknownLoadId");
+        getNetworkElementInfosWithError(studyNameUserIdUuid, rootNodeUuid, "LOAD", "LIST", "UnknownLoadId");
     }
 
     @Test
@@ -263,7 +264,8 @@ public class NetworkMapTest {
 
         //get the hvdc lines ids of a network
         String hvdcLineIdsAsString = List.of("hvdc-line1", "hvdc-line2", "hvdc-line3").toString();
-        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", hvdcLineIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", List.of(), hvdcLineIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", List.of("S1"), hvdcLineIdsAsString);
     }
 
     @Test
@@ -278,10 +280,12 @@ public class NetworkMapTest {
         //get the 2wt map data info of a network
         String twoWindingsTransformerDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
         getNetworkEquipmentInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", TWO_WINDINGS_TRANSFORMER_ID_1, twoWindingsTransformerDataAsString);
+        getNetworkEquipmentInfosNotFound(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "Unknown2wtId");
+        getNetworkEquipmentInfosWithError(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "Unknown2wtId");
 
         //get the 2wt ids of a network
         String twtIdsAsString = List.of("twt1", "twt2", "twt3").toString();
-        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", twtIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", List.of(), twtIdsAsString);
     }
 
     @Test
@@ -316,7 +320,7 @@ public class NetworkMapTest {
 
         //get the substation ids of a network
         String substationIdsAsString = List.of("substation1", "substation2", "substation3").toString();
-        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", substationIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", List.of(), substationIdsAsString);
     }
 
     @Test
@@ -500,11 +504,14 @@ public class NetworkMapTest {
     }
 
     @SneakyThrows
-    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNodeUuid, String elementType, String responseBody) {
+    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNodeUuid, String elementType, List<String> substationsIds, String responseBody) {
         UUID stubUuid = wireMockUtils.stubNetworkElementsIdsGet(NETWORK_UUID_STRING, elementType, responseBody);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid, rootNodeUuid)
-                        .queryParam(QUERY_PARAM_EQUIPMENT_TYPE, elementType)
-                )
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid, rootNodeUuid)
+                .queryParam(QUERY_PARAM_EQUIPMENT_TYPE, elementType);
+        if (!substationsIds.isEmpty()) {
+            mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
+        }
+        MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
         wireMockUtils.verifyNetworkElementsIdsGet(stubUuid, NETWORK_UUID_STRING, elementType);
@@ -558,6 +565,17 @@ public class NetworkMapTest {
     }
 
     @SneakyThrows
+    private void getNetworkElementInfosWithError(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementInfosGetWithError(NETWORK_UUID_STRING, elementType, infoType, elementId);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
+                        .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                        .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                )
+                .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
+        wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
+    }
+
+    @SneakyThrows
     private MvcResult getNetworkEquipmentInfos(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId, String responseBody) {
         wireMockUtils.stubNetworkEquipmentInfosGet(NETWORK_UUID_STRING, infoTypePath, equipmentId, responseBody);
         UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGet(NETWORK_UUID_STRING, infoTypePath, equipmentId, responseBody);
@@ -567,6 +585,25 @@ public class NetworkMapTest {
         wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
 
         return mvcResult;
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkEquipmentInfosNotFound(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId) {
+        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGetNotFound(NETWORK_UUID_STRING, infoTypePath, equipmentId);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
+                .andExpect(status().isNotFound())
+                .andReturn();
+        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private void getNetworkEquipmentInfosWithError(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId) {
+        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGetWithError(NETWORK_UUID_STRING, infoTypePath, equipmentId);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
+                .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
+        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
     }
 
     private void cleanDB() {

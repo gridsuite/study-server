@@ -28,12 +28,11 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.EQUIPMENT_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class NetworkMapService {
-
-    static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
 
     static final String QUERY_PARAM_LINE_ID = "lineId";
 
@@ -77,7 +76,7 @@ public class NetworkMapService {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(EQUIPMENT_NOT_FOUND);
             } else {
-                throw e;
+                throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
             }
         }
     }
@@ -128,7 +127,7 @@ public class NetworkMapService {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(EQUIPMENT_NOT_FOUND);
             } else {
-                throw e;
+                throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
             }
         }
         return equipmentMapData;

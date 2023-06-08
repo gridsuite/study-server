@@ -42,6 +42,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_ELEMENT_TYPE = "elementType";
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
     public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
+    public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
