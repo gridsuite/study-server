@@ -11,22 +11,18 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.GEO_DATA_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_LINE_ID;
-import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_SUBSTATION_ID;
-
-import java.util.List;
-import java.util.UUID;
-
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.service.NetworkMapService.QUERY_PARAM_LINE_ID;
 
 @Service
 public class GeoDataService {

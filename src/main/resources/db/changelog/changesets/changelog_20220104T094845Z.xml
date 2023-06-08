@@ -1,0 +1,15 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-3.10.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.10.xsd" logicalFilePath="db/changelog/changesets/changelog_2022-01-04T09:48:45Z.xml">
+    <changeSet author="lecuyerfra (generated)" id="1641289734066-1">
+        <addColumn tableName="network_modification_node_info">
+            <column name="build_status" type="varchar(255)"/>
+        </addColumn>
+        <addNotNullConstraint tableName="network_modification_node_info" columnName="build_status" defaultNullValue="NOT_BUILT"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1641289734066-2">
+        <addColumn tableName="root_node_info">
+            <column name="build_status" type="varchar(255)"/>
+        </addColumn>
+        <addNotNullConstraint tableName="network_modification_node_info" columnName="build_status" defaultNullValue="NOT_BUILT"/>
+    </changeSet>
+</databaseChangeLog>

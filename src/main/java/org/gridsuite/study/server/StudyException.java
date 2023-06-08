@@ -55,6 +55,7 @@ public class StudyException extends RuntimeException {
         UNKNOWN_NOTIFICATION_TYPE,
         BAD_MODIFICATION_TYPE,
         GET_MODIFICATIONS_FAILED,
+        GET_NETWORK_ELEMENT_FAILED,
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
         MISSING_PARAMETER,
@@ -64,6 +65,7 @@ public class StudyException extends RuntimeException {
         GENERATOR_SCALING_FAILED,
         URI_SYNTAX,
         TIME_SERIES_BAD_TYPE,
+        FILTERS_NOT_FOUND,
     }
 
     private final Type type;

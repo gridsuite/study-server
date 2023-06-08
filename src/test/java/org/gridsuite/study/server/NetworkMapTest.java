@@ -13,6 +13,7 @@ package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.SneakyThrows;
@@ -30,6 +31,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkMapService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.ShortCircuitService;
+import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -48,12 +50,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -84,8 +89,7 @@ public class NetworkMapTest {
     private static final String VOLTAGE_LEVEL_ID = "VOLTAGE_LEVEL_ID";
     private static final String VOLTAGE_LEVELS_EQUIPMENTS_JSON = "[{\"voltageLevel\":{\"id\":\"V1\",\"name\":\"VLGEN\",\"substationId\":\"P1\",\"nominalVoltage\":24,\"topologyKind\":\"BUS_BREAKER\"},\"equipments\":[{\"id\":\"GEN\",\"name\":\"GEN\",\"type\":\"GENERATOR\"},{\"id\":\"GEN2\",\"name\":\"GEN2\",\"type\":\"GENERATOR\"},{\"id\":\"LCC1\",\"name\":\"LCC1\",\"type\":\"HVDC_CONVERTER_STATION\"},{\"id\":\"SVC1\",\"name\":\"SVC1\",\"type\":\"STATIC_VAR_COMPENSATOR\"},{\"id\":\"NGEN_NHV1\",\"name\":\"NGEN_NHV1\",\"type\":\"TWO_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT\",\"name\":\"TWT\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT21\",\"name\":\"TWT21\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT32\",\"name\":\"TWT32\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"DL1\",\"name\":\"DL1\",\"type\":\"DANGLING_LINE\"},{\"id\":\"LINE3\",\"name\":\"LINE3\",\"type\":\"LINE\"}]}]";
     private static final String VOLTAGE_LEVEL_EQUIPMENTS_JSON = "[{\"id\":\"GEN\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"GEN2\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"LCC1\",\"name\":\"LCC1\",\"type\":\"HVDC_CONVERTER_STATION\"},{\"id\":\"SVC1\",\"name\":\"SVC1\",\"type\":\"STATIC_VAR_COMPENSATOR\"},{\"id\":\"NGEN_NHV1\",\"name\":null,\"type\":\"TWO_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT\",\"name\":\"TWT\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT21\",\"name\":\"TWT21\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT32\",\"name\":\"TWT32\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"DL1\",\"name\":\"DL1\",\"type\":\"DANGLING_LINE\"},{\"id\":\"LINE3\",\"name\":null,\"type\":\"LINE\"}]";
-    private static final String VOLTAGE_LEVEL_TOPOLOGY_JSON = "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":0.0,\"topologyKind\":\"NODE_BREAKER\"}]";
-    private static final String EQUIPMENTS_IDS_ENDPOINT = "/equipments-ids";
+
     @Value("${loadflow.default-provider}")
     String defaultLoadflowProvider;
 
@@ -93,6 +97,10 @@ public class NetworkMapTest {
     private MockMvc mockMvc;
 
     private MockWebServer server;
+
+    private WireMockServer wireMockServer;
+
+    private WireMockUtils wireMockUtils;
 
     @Autowired
     private ObjectMapper mapper;
@@ -113,8 +121,12 @@ public class NetworkMapTest {
     public void setup() throws IOException {
         server = new MockWebServer();
 
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
+        wireMockUtils = new WireMockUtils(wireMockServer);
+
         // Start the server.
         server.start();
+        wireMockServer.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
@@ -129,26 +141,10 @@ public class NetworkMapTest {
             IdentifiableInfos.builder().id("BUSBAR_SECTION_1").name("BUSBAR_SECTION_1").build(),
             IdentifiableInfos.builder().id("BUSBAR_SECTION_2").name("BUSBAR_SECTION_2").build()));
 
-        String loadDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
-        String lineDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
-        String hvdcLineDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id(HVDC_LINE_ID_1).name("HVDC_LINE_NAME_1").build());
         String generatorDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(GENERATOR_ID_1).name("GENERATOR_NAME_1").build());
         String shuntCompensatorDataAsString = mapper.writeValueAsString(
                 IdentifiableInfos.builder().id(SHUNT_COMPENSATOR_ID_1).name("SHUNT_COMPENSATOR_NAME_1").build());
-        String twoWindingsTransformerDataAsString = mapper.writeValueAsString(
-                IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
-        String twtIdsAsString = List.of("twt1", "twt2", "twt3").toString();
-        String voltageLevelDataAsString = mapper.writeValueAsString(List.of(
-                IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build()));
-        String voltageLevelIdsAsString = List.of("voltageLevel1", "voltageLevel2", "voltageLevel3").toString();
-        String substationDataAsString = mapper.writeValueAsString(List.of(
-                IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
-        String substationIdsAsString = List.of("substation1", "substation2", "substation3").toString();
-        String hvdcLineIdsAsString = List.of("hvdc-line1", "hvdc-line2", "hvdc-line3").toString();
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -167,53 +163,12 @@ public class NetworkMapTest {
                         return new MockResponse().setResponseCode(200).setBody(busbarSectionsDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/loads/" + LOAD_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(loadDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/lines/" + LINE_ID_1:
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/branch-or-3wt/" + LINE_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/hvdc-lines/" + HVDC_LINE_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(hvdcLineDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/generators/" + GENERATOR_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(generatorDataAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/shunt-compensators/" + SHUNT_COMPENSATOR_ID_1:
                         return new MockResponse().setResponseCode(200).setBody(shuntCompensatorDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/2-windings-transformers/" + TWO_WINDINGS_TRANSFORMER_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(twoWindingsTransformerDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + EQUIPMENTS_IDS_ENDPOINT + "?equipmentType=TWO_WINDINGS_TRANSFORMER":
-                        return new MockResponse().setResponseCode(200).setBody(twtIdsAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/substations/" + SUBSTATION_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(substationDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + EQUIPMENTS_IDS_ENDPOINT + "?equipmentType=SUBSTATION":
-                        return new MockResponse().setResponseCode(200).setBody(substationIdsAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + EQUIPMENTS_IDS_ENDPOINT + "?equipmentType=HVDC_LINE":
-                        return new MockResponse().setResponseCode(200).setBody(hvdcLineIdsAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1:
-                        return new MockResponse().setResponseCode(200).setBody(voltageLevelDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/ids":
-                        return new MockResponse().setResponseCode(200).setBody(voltageLevelIdsAsString)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels-equipments":
@@ -224,21 +179,6 @@ public class NetworkMapTest {
                         return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVEL_EQUIPMENTS_JSON)
                                 .addHeader("Content-Type", "application/json; charset=utf-8");
 
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels-topology":
-                        return new MockResponse().setResponseCode(200).setBody(VOLTAGE_LEVEL_TOPOLOGY_JSON)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-substations":
-                        return new MockResponse().setResponseCode(200).setBody(substationDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-lines":
-                        return new MockResponse().setResponseCode(200).setBody(lineDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
-
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/map-hvdc-lines":
-                        return new MockResponse().setResponseCode(200).setBody(hvdcLineDataAsString)
-                                .addHeader("Content-Type", "application/json; charset=utf-8");
                     default:
                         LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                         return new MockResponse().setResponseCode(418).setBody("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
@@ -252,52 +192,48 @@ public class NetworkMapTest {
     @SneakyThrows
     @Test
     public void testGetLoadMapServer() {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the load map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/loads/{loadId}", studyNameUserIdUuid,
-                rootNodeUuid, LOAD_ID_1)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-        assertTrue(
-                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/loads/%s", NETWORK_UUID_STRING, LOAD_ID_1)));
+        String loadDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(LOAD_ID_1).name("LOAD_NAME_1").build());
+        getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "LIST", LOAD_ID_1, loadDataAsString);
+
+        //get data info of an unknown load
+        getNetworkElementInfosNotFound(studyNameUserIdUuid, rootNodeUuid, "LOAD", "LIST", "UnknownLoadId");
+        getNetworkElementInfosWithError(studyNameUserIdUuid, rootNodeUuid, "LOAD", "LIST", "UnknownLoadId");
     }
 
     @Test
     public void testGetLineMapServer() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the line map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/lines/{lineId}", studyNameUserIdUuid,
-                        rootNodeUuid, LINE_ID_1))
-            .andExpectAll(
-                    status().isOk(),
-                    content().contentType(MediaType.APPLICATION_JSON));
-        assertTrue(
-                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/lines/%s", NETWORK_UUID_STRING, LINE_ID_1)));
+        String lineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
+        getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "LIST", LINE_ID_1, lineDataAsString);
     }
 
     @Test
     public void testGetHvdcLineMapServer() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the hvdc line map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/hvdc-lines/{hvdcLineId}", studyNameUserIdUuid,
-                        rootNodeUuid, HVDC_LINE_ID_1))
-                .andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON));
-        assertTrue(
-                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/hvdc-lines/%s", NETWORK_UUID_STRING, HVDC_LINE_ID_1)));
+        String hvdcLineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(HVDC_LINE_ID_1).name("HVDC_LINE_NAME_1").build());
+        getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "LIST", HVDC_LINE_ID_1, hvdcLineDataAsString);
     }
 
     @Test
@@ -319,45 +255,37 @@ public class NetworkMapTest {
 
     @Test
     public void testGetHvdcLinesMapServer() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the hvdc lines ids of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids",
-                studyNameUserIdUuid, rootNodeUuid).queryParam("equipmentType", "HVDC_LINE")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/equipments-ids?equipmentType=" + "HVDC_LINE", NETWORK_UUID_STRING)));
+        String hvdcLineIdsAsString = List.of("hvdc-line1", "hvdc-line2", "hvdc-line3").toString();
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", List.of(), hvdcLineIdsAsString);
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", List.of("S1"), hvdcLineIdsAsString);
     }
 
     @Test
     public void testGet2wtMapServer() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the 2wt map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/2-windings-transformers/{2wtId}",
-                        studyNameUserIdUuid, rootNodeUuid, TWO_WINDINGS_TRANSFORMER_ID_1)).andExpectAll(
-                                status().isOk(),
-                                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/2-windings-transformers/%s",
-                NETWORK_UUID_STRING, TWO_WINDINGS_TRANSFORMER_ID_1)));
+        String twoWindingsTransformerDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
+        getNetworkEquipmentInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", TWO_WINDINGS_TRANSFORMER_ID_1, twoWindingsTransformerDataAsString);
+        getNetworkEquipmentInfosNotFound(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "Unknown2wtId");
+        getNetworkEquipmentInfosWithError(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "Unknown2wtId");
 
         //get the 2wt ids of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids",
-                studyNameUserIdUuid, rootNodeUuid).queryParam("equipmentType", "TWO_WINDINGS_TRANSFORMER")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/equipments-ids?equipmentType=" + "TWO_WINDINGS_TRANSFORMER",
-                NETWORK_UUID_STRING)));
+        String twtIdsAsString = List.of("twt1", "twt2", "twt3").toString();
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", List.of(), twtIdsAsString);
     }
 
     @Test
@@ -379,58 +307,38 @@ public class NetworkMapTest {
 
     @Test
     public void testGetSubstationMapServer() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the substation map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/substations/{substationId}",
-                studyNameUserIdUuid, rootNodeUuid, SUBSTATION_ID_1)).andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/substations/%s", NETWORK_UUID_STRING, SUBSTATION_ID_1)));
+        String substationDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
+        getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "LIST", SUBSTATION_ID_1, substationDataAsString);
 
         //get the substation ids of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids",
-                studyNameUserIdUuid, rootNodeUuid).queryParam("equipmentType", "SUBSTATION")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/equipments-ids?equipmentType=" + "SUBSTATION", NETWORK_UUID_STRING)));
+        String substationIdsAsString = List.of("substation1", "substation2", "substation3").toString();
+        getNetworkElementsIds(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", List.of(), substationIdsAsString);
     }
 
     @Test
     public void testGetVoltageLevelsMapServer() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the voltage level map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}",
-                        studyNameUserIdUuid, rootNodeUuid, VL_ID_1)).andExpectAll(
-                                status().isOk(),
-                                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/voltage-levels/%s", NETWORK_UUID_STRING, VL_ID_1)));
-
-        //get the voltage level ids of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels/ids",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/voltage-levels/ids", NETWORK_UUID_STRING)));
+        String voltageLevelDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(VL_ID_1).name("VL_NAME_1").build()));
+        getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "LIST", VL_ID_1, voltageLevelDataAsString);
     }
 
     @Test
-    public void testGetVoltageLevelsAdnEquipments() throws Exception {
+    public void testGetVoltageLevelsAndEquipments() throws Exception {
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -448,19 +356,15 @@ public class NetworkMapTest {
 
     @Test
     public void testGetVoltageLevelsTopology() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the voltage levels and its equipments
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/voltage-levels-topology",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/voltage-levels-topology", NETWORK_UUID_STRING)));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "LIST", List.of(), "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":0.0,\"topologyKind\":\"NODE_BREAKER\"}]");
     }
 
     @Test
@@ -482,70 +386,59 @@ public class NetworkMapTest {
 
     @Test
     public void testGetMapSubstations() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the substations with it's voltage levels
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-substations",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/map-substations", NETWORK_UUID_STRING)));
+        String substationDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(SUBSTATION_ID_1).name("SUBSTATION_NAME_1").build()));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", List.of(), substationDataAsString);
     }
 
     @Test
     public void testGetMapLines() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the lines
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-lines",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/map-lines", NETWORK_UUID_STRING)));
+        String lineDataAsString = mapper.writeValueAsString(List.of(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build()));
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", List.of(), lineDataAsString);
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LINE", "MAP", List.of("S1"), lineDataAsString);
     }
 
     @Test
     public void testGetMapHvdcLines() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         //create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         //get the lines
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/map-hvdc-lines",
-                studyNameUserIdUuid, rootNodeUuid)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON));
-
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/map-hvdc-lines", NETWORK_UUID_STRING)));
+        String hvdcLineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(HVDC_LINE_ID_1).name("HVDC_LINE_NAME_1").build());
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", List.of(), hvdcLineDataAsString);
     }
 
     @Test
     public void testGetBranchOr3WTMapServer() throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
         // Create study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
 
         // Get the line / 2WT / 3WT map data info of a network
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}", studyNameUserIdUuid,
-                        rootNodeUuid, LINE_ID_1))
-                .andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON));
-        assertTrue(
-                TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/branch-or-3wt/%s", NETWORK_UUID_STRING, LINE_ID_1)));
+        String lineDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(LINE_ID_1).name("LINE_NAME_1").build());
+        getNetworkEquipmentInfos(studyNameUserIdUuid, rootNodeUuid, "branch-or-3wt", LINE_ID_1, lineDataAsString);
     }
 
     @Test
@@ -595,7 +488,7 @@ public class NetworkMapTest {
             .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
             .build();
         ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, "", defaultLoadflowProvider, defaultLoadflowParametersEntity, defaultShortCircuitParametersEntity, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity, null);
         return study;
@@ -608,6 +501,109 @@ public class NetworkMapTest {
                     .andReturn()
                     .getResponse()
                     .getContentAsString(), new TypeReference<>() { });
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNodeUuid, String elementType, List<String> substationsIds, String responseBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementsIdsGet(NETWORK_UUID_STRING, elementType, responseBody);
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid, rootNodeUuid)
+                .queryParam(QUERY_PARAM_EQUIPMENT_TYPE, elementType);
+        if (!substationsIds.isEmpty()) {
+            mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
+        }
+        MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
+                .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkElementsIdsGet(stubUuid, NETWORK_UUID_STRING, elementType);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, List<String> substationsIds, String responseBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementsInfosGet(NETWORK_UUID_STRING, elementType, infoType, responseBody);
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNodeUuid)
+                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                .queryParam(QUERY_PARAM_INFO_TYPE, infoType);
+        if (!substationsIds.isEmpty()) {
+            mockHttpServletRequestBuilder.queryParam(QUERY_PARAM_SUBSTATIONS_IDS, substationsIds.stream().toArray(String[]::new));
+        }
+        MvcResult mvcResult = mockMvc.perform(mockHttpServletRequestBuilder)
+                .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkElementsInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkElementInfos(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId, String responseBody) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementInfosGet(NETWORK_UUID_STRING, elementType, infoType, elementId, responseBody);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
+                        .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                        .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkElementInfosNotFound(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementInfosGetNotFound(NETWORK_UUID_STRING, elementType, infoType, elementId);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
+                        .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                        .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                )
+                .andExpect(status().isNotFound())
+                .andReturn();
+        wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private void getNetworkElementInfosWithError(UUID studyUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId) {
+        UUID stubUuid = wireMockUtils.stubNetworkElementInfosGetWithError(NETWORK_UUID_STRING, elementType, infoType, elementId);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNodeUuid, elementId)
+                        .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                        .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                )
+                .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
+        wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkEquipmentInfos(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId, String responseBody) {
+        wireMockUtils.stubNetworkEquipmentInfosGet(NETWORK_UUID_STRING, infoTypePath, equipmentId, responseBody);
+        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGet(NETWORK_UUID_STRING, infoTypePath, equipmentId, responseBody);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
+                .andExpect(status().isOk())
+                .andReturn();
+        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private MvcResult getNetworkEquipmentInfosNotFound(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId) {
+        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGetNotFound(NETWORK_UUID_STRING, infoTypePath, equipmentId);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
+                .andExpect(status().isNotFound())
+                .andReturn();
+        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
+
+        return mvcResult;
+    }
+
+    @SneakyThrows
+    private void getNetworkEquipmentInfosWithError(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId) {
+        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGetWithError(NETWORK_UUID_STRING, infoTypePath, equipmentId);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
+                .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
+        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
     }
 
     private void cleanDB() {
