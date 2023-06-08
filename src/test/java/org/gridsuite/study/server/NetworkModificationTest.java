@@ -2270,7 +2270,7 @@ public class NetworkModificationTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)));
 
         // Mark the node 3 status as built
-        modificationNode3.setBuildStatus(BuildStatus.BUILT);
+        modificationNode3.setBuildStatusGlobal(BuildStatus.BUILT);
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode3, userId);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         output.receive(TIMEOUT, studyUpdateDestination);
@@ -2288,7 +2288,7 @@ public class NetworkModificationTest {
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatus(modificationNode3Uuid));
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(modificationNode3Uuid));
         wireMockUtils.verifyNetworkModificationPost(stubUuid, jsonCreateLoadInfos, NETWORK_UUID_STRING);
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
