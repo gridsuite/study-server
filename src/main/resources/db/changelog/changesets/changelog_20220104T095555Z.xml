@@ -1,0 +1,9 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-3.10.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.10.xsd" logicalFilePath="db/changelog/changesets/changelog_2022-01-04T09:55:55Z.xml">
+    <changeSet author="hedhiliabd (generated)" id="1641290164524-1">
+        <dropColumn columnName="IS_PRIVATE" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="hedhiliabd (generated)" id="1641290164524-2">
+        <dropColumn columnName="IS_PRIVATE" tableName="STUDY_CREATION_REQUEST"/>
+    </changeSet>
+</databaseChangeLog>

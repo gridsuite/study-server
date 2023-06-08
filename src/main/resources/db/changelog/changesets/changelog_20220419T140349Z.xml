@@ -1,0 +1,30 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd" logicalFilePath="db/changelog/changesets/changelog_2022-04-19T14:03:49Z.xml">
+    <changeSet author="lecuyerfra (generated)" id="1650377061543-3">
+        <addColumn tableName="network_modification_node_info">
+            <column name="build_status" type="varchar(255)"/>
+        </addColumn>
+        <addNotNullConstraint tableName="network_modification_node_info" columnName="build_status" defaultNullValue="NOT_BUILT"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1650377061543-4">
+        <addColumn tableName="network_modification_node_info">
+            <column name="load_flow_result_entity_id" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1650377061543-5">
+        <addColumn tableName="network_modification_node_info">
+            <column name="load_flow_status" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1650377061543-6">
+        <addColumn tableName="network_modification_node_info">
+            <column name="security_analysis_result_uuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1650377061543-7">
+        <dropTable tableName="MODEL_INFO"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1650377061543-2">
+        <addForeignKeyConstraint baseColumnNames="load_flow_result_entity_id" baseTableName="network_modification_node_info" constraintName="loadFlowResult_id_fk" referencedColumnNames="id" referencedTableName="load_flow_result"/>
+    </changeSet>
+</databaseChangeLog>

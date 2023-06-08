@@ -1,0 +1,27 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd" logicalFilePath="db/changelog/changesets/changelog_2022-07-13T10:38:44Z.xml">
+    <changeSet author="garnierlar (generated)" id="1657708812103-4">
+        <createTable tableName="report_usage">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="report_usagePK"/>
+            </column>
+            <column name="report_id" type="UUID"/>
+            <column name="build_node_id" type="UUID"/>
+            <column name="definition_node_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="garnierlar (generated)" id="1657708812103-5">
+        <createIndex indexName="ReportUsage_user_idx" tableName="report_usage">
+            <column name="build_node_id"/>
+        </createIndex>
+        <createIndex indexName="ReportUsage_used_idx" tableName="report_usage">
+            <column name="report_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="garnierlar (generated)" id="1657708812103-6">
+        <addForeignKeyConstraint baseColumnNames="build_node_id" baseTableName="report_usage" constraintName="build_node_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
+    </changeSet>
+    <changeSet author="garnierlar (generated)" id="1657708812103-7">
+        <addForeignKeyConstraint baseColumnNames="definition_node_id" baseTableName="report_usage" constraintName="def_node_fk_constraint" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
