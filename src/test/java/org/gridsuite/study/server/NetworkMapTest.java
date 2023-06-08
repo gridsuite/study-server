@@ -275,8 +275,8 @@ public class NetworkMapTest {
 
         //get the 2wt map data info of a network
         String twoWindingsTransformerDataAsString = mapper.writeValueAsString(IdentifiableInfos.builder().id(TWO_WINDINGS_TRANSFORMER_ID_1).name("2WT_NAME_1").build());
-        getNetworkEquipmentInfosNotFound(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "Unknown2wtId");
-        getNetworkEquipmentInfosWithError(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "Unknown2wtId");
+        getNetworkElementInfosNotFound(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "LIST", "Unknown2wtId");
+        getNetworkElementInfosWithError(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "LIST", "Unknown2wtId");
         getNetworkElementInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "LIST", TWO_WINDINGS_TRANSFORMER_ID_1, twoWindingsTransformerDataAsString);
 
         //get the 2wt ids of a network
@@ -577,25 +577,6 @@ public class NetworkMapTest {
         wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
 
         return mvcResult;
-    }
-
-    @SneakyThrows
-    private MvcResult getNetworkEquipmentInfosNotFound(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId) {
-        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGetNotFound(NETWORK_UUID_STRING, infoTypePath, equipmentId);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
-                .andExpect(status().isNotFound())
-                .andReturn();
-        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
-
-        return mvcResult;
-    }
-
-    @SneakyThrows
-    private void getNetworkEquipmentInfosWithError(UUID studyUuid, UUID rootNodeUuid, String infoTypePath, String equipmentId) {
-        UUID stubUuid = wireMockUtils.stubNetworkEquipmentInfosGetWithError(NETWORK_UUID_STRING, infoTypePath, equipmentId);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-map/{infoTypePath}/{equipmentId}", studyUuid, rootNodeUuid, infoTypePath, equipmentId))
-                .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
-        wireMockUtils.verifyNetworkEquipmentInfosGet(stubUuid, NETWORK_UUID_STRING, infoTypePath, equipmentId);
     }
 
     private void cleanDB() {

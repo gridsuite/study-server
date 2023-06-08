@@ -38,8 +38,8 @@ import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.utils.MatcherJson;
-import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.*;
+//import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -421,37 +421,37 @@ public class SingleLineDiagramTest {
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", List.of(), "[]");
 
         //get the 2 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "MAP", List.of(), "[]");
 
         //get the 3 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", "MAP", List.of(), "[]");
 
         //get the generators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", "MAP", List.of(), "[]");
 
         //get the batteries map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", "MAP", List.of(), "[]");
 
         //get the dangling lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", "MAP", List.of(), "[]");
 
         //get the hvdc lines map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", List.of(), "[]");
 
         //get the lcc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", "MAP", List.of(), "[]");
 
         //get the vsc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", "MAP", List.of(), "[]");
 
         //get the loads map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "MAP", List.of(), "[]");
 
         //get the shunt compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", "MAP", List.of(), "[]");
 
         //get the static var compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", "MAP", "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", "MAP", List.of(), "[]");
 
         //get the voltage levels map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", List.of(), "[]");
