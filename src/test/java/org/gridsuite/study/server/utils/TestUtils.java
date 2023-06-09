@@ -81,29 +81,6 @@ public final class TestUtils {
             .build();
     }
 
-    public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, ImportParametersEntity importParametersEntity) {
-        LoadFlowParametersEntity loadFlowParametersEntity = LoadFlowParametersEntity.builder()
-                .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)
-                .balanceType(LoadFlowParameters.BalanceType.PROPORTIONAL_TO_GENERATION_P_MAX)
-                .connectedComponentMode(LoadFlowParameters.ConnectedComponentMode.MAIN)
-                .readSlackBus(true)
-                .distributedSlack(true)
-                .dcUseTransformerRatio(true)
-                .hvdcAcEmulation(true)
-                .dcPowerFactor(0.9)
-                .build();
-        ShortCircuitParametersEntity defaultShortCircuitParametersEntity = ShortCircuitService.toEntity(ShortCircuitService.getDefaultShortCircuitParameters());
-        return StudyEntity.builder().id(UUID.randomUUID()).caseFormat("xiidm").caseUuid(caseUuid)
-                .caseName("caseName")
-                .networkId("netId")
-                .networkUuid(networkUuid)
-                .loadFlowProvider("defaultProvider")
-                .loadFlowParameters(loadFlowParametersEntity)
-                .shortCircuitParameters(defaultShortCircuitParametersEntity)
-                .importParameters(importParametersEntity)
-                .build();
-    }
-
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, String loadFlowProvider) {
         LoadFlowParametersEntity loadFlowParametersEntity = LoadFlowParametersEntity.builder()
             .voltageInitMode(LoadFlowParameters.VoltageInitMode.UNIFORM_VALUES)

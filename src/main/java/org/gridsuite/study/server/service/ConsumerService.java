@@ -13,6 +13,7 @@ import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import org.apache.logging.log4j.util.Strings;
 import org.gridsuite.study.server.dto.CaseImportReceiver;
+import org.gridsuite.study.server.dto.ImportParametersInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -306,9 +307,9 @@ public class ConsumerService {
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, Object> importParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
-            Map<String, String> importParametersAsStrings = new HashMap<>();
+            ImportParametersInfos importParametersInfos = null;
             if (importParameters != null) {
-                importParametersAsStrings = importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString()));
+                importParametersInfos = new ImportParametersInfos(importParameters.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toString())));
             }
             NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
 
@@ -333,7 +334,7 @@ public class ConsumerService {
                     ShortCircuitParameters shortCircuitParameters = ShortCircuitService.getDefaultShortCircuitParameters();
                     DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
                     VoltageInitParametersInfos voltageInitParametersInfos = VoltageInitService.getDefaultVoltageInitParameters();
-                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(voltageInitParametersInfos), new ImportParametersEntity(null, importParametersAsStrings), importReportUuid);
+                    studyService.insertStudy(studyUuid, userId, networkInfos, caseFormat, caseUuid, caseName, LoadflowService.toEntity(loadFlowParameters, List.of()), ShortCircuitService.toEntity(shortCircuitParameters), DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper), VoltageInitService.toEntity(voltageInitParametersInfos), StudyService.toEntity(importParametersInfos), importReportUuid);
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
