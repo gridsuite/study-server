@@ -16,7 +16,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.repository.ImportParametersEntity;
 import org.gridsuite.study.server.repository.LoadFlowParametersEntity;
 import org.gridsuite.study.server.repository.ShortCircuitParametersEntity;
 import org.gridsuite.study.server.repository.StudyEntity;

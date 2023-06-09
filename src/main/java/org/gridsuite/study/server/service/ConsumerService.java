@@ -21,7 +21,6 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.voltageinit.VoltageInitParametersInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.ImportParametersEntity;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
