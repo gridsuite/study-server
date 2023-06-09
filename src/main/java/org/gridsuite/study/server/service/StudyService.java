@@ -921,13 +921,23 @@ public class StudyService {
 
     public SecurityAnalysisParametersValues getSecurityAnalysisParametersValues(UUID studyUuid) {
         return studyRepository.findById(studyUuid)
-                .map(studyEntity -> studyEntity.getSecurityAnalysisParameters() != null ? SecurityAnalysisService.fromEntity(studyEntity.getSecurityAnalysisParameters()) : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues())
+                .map(studyEntity -> studyEntity.getSecurityAnalysisParameters() != null ? formattedSecurityAnalysisParametersValues(SecurityAnalysisService.fromEntity(studyEntity.getSecurityAnalysisParameters()), true) : formattedSecurityAnalysisParametersValues(SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues(), true))
                 .orElse(null);
+    }
+
+    public SecurityAnalysisParametersValues formattedSecurityAnalysisParametersValues(SecurityAnalysisParametersValues values, boolean isFromEntity) {
+        return SecurityAnalysisParametersValues.builder()
+                .lowVoltageAbsoluteThreshold(values.getLowVoltageAbsoluteThreshold())
+                .lowVoltageProportionalThreshold(isFromEntity ? values.getLowVoltageProportionalThreshold() * 100 : values.getLowVoltageProportionalThreshold() / 100)
+                .highVoltageAbsoluteThreshold(values.getHighVoltageAbsoluteThreshold())
+                .highVoltageProportionalThreshold(isFromEntity ? values.getHighVoltageProportionalThreshold() * 100 : values.getHighVoltageProportionalThreshold() / 100)
+                .flowProportionalThreshold(isFromEntity ? values.getFlowProportionalThreshold() * 100 : values.getFlowProportionalThreshold() / 100)
+                .build();
     }
 
     @Transactional
     public void setSecurityAnalysisParametersValues(UUID studyUuid, SecurityAnalysisParametersValues parameters, String userId) {
-        updateSecurityAnalysisParameters(studyUuid, SecurityAnalysisService.toEntity(parameters != null ? parameters : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()));
+        updateSecurityAnalysisParameters(studyUuid, SecurityAnalysisService.toEntity(parameters != null ? formattedSecurityAnalysisParametersValues(parameters, false) : SecurityAnalysisService.getDefaultSecurityAnalysisParametersValues()));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
