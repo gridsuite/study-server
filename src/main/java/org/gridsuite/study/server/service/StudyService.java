@@ -316,7 +316,7 @@ public class StudyService {
     }
 
     public static ImportParametersInfos fromEntity(ImportParametersEntity importParametersEntity) {
-        return new ImportParametersInfos(importParametersEntity.getParameters());
+        return new ImportParametersInfos(importParametersEntity == null ? Map.of() : importParametersEntity.getParameters());
     }
 
     @Transactional(readOnly = true)
