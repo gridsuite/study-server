@@ -46,6 +46,22 @@ public class WireMockUtils {
         ).getId();
     }
 
+    public UUID stubNetworkElementInfosGetNotFound(String networkUuid, String elementType, String infoType, String elementId) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
+                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+                .willReturn(WireMock.notFound())
+        ).getId();
+    }
+
+    public UUID stubNetworkElementInfosGetWithError(String networkUuid, String elementType, String infoType, String elementId) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
+                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+        ).getId();
+    }
+
     public void verifyNetworkElementInfosGet(UUID stubUuid, String networkUuid, String elementType, String infoType, String elementId) {
         verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId, Map.of(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType), QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
     }
@@ -97,6 +113,18 @@ public class WireMockUtils {
     public UUID stubNetworkEquipmentInfosGet(String networkUuid, String infoTypePath, String equipmentId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId))
                 .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public UUID stubNetworkEquipmentInfosGetNotFound(String networkUuid, String infoTypePath, String equipmentId) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId))
+                .willReturn(WireMock.notFound())
+        ).getId();
+    }
+
+    public UUID stubNetworkEquipmentInfosGetWithError(String networkUuid, String infoTypePath, String equipmentId) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId))
+                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
         ).getId();
     }
 
