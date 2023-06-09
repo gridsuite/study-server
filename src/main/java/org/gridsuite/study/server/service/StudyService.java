@@ -312,7 +312,7 @@ public class StudyService {
     }
 
     public static ImportParametersEntity toEntity(ImportParametersInfos importParametersInfos) {
-        return new ImportParametersEntity(null, importParametersInfos != null ? importParametersInfos.getParameters() : Map.of());
+        return new ImportParametersEntity(null, importParametersInfos == null ? Map.of() : importParametersInfos.getParameters());
     }
 
     public static ImportParametersInfos fromEntity(ImportParametersEntity importParametersEntity) {
