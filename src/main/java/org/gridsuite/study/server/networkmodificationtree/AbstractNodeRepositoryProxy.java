@@ -158,7 +158,7 @@ public abstract class AbstractNodeRepositoryProxy<NodeInfoEntity extends Abstrac
         PropertyUtils.copyNonNullProperties(node, persistedNode, authorizedNullProperties);
 
         //since the build status is contained in a POJO for clarity reasons in the dto as oposed to two distincts fields in the entity we have to manually handle the mapping
-        if (persistedNode instanceof NetworkModificationNode) {
+        if (persistedNode instanceof NetworkModificationNode && ((NetworkModificationNode) node).getNodeBuildStatus() != null) {
             ((NetworkModificationNode) persistedNode).setNodeBuildStatus(((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusGlobal(), ((NetworkModificationNode) node).getNodeBuildStatus().getBuildStatusLocal());
         }
 
