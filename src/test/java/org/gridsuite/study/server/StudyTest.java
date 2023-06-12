@@ -1869,10 +1869,10 @@ public class StudyTest {
                         && nodeEntity.getParentNode().getIdNode().equals(node4.getId()))
                 .count());
 
-        //node3 should be built
-        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(node3.getId()));
-        //duplicated node3 should now be not built
-        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(nodesAfterDuplication.get(2)));
+        //node2 should be built
+        assertEquals(BuildStatus.BUILT, networkModificationTreeService.getBuildStatusGlobal(node2.getId()));
+        //duplicated node2 should now be not built
+        assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getBuildStatusGlobal(nodesAfterDuplication.get(1)));
 
         //try copy non existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +

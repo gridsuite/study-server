@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.powsybl.loadflow.LoadFlowResult;
 import lombok.*;
@@ -51,6 +52,7 @@ public class NetworkModificationNode extends AbstractNode {
 
     UUID dynamicSimulationResultUuid;
 
+    @JsonProperty
     NodeBuildStatus nodeBuildStatus;
 
     @Override
@@ -58,10 +60,12 @@ public class NetworkModificationNode extends AbstractNode {
         return NodeType.NETWORK_MODIFICATION;
     }
 
+    @JsonIgnore
     public void setNodeBuildStatus(BuildStatus buildStatus) {
         this.nodeBuildStatus = new NodeBuildStatus(buildStatus);
     }
 
+    @JsonIgnore
     public void setNodeBuildStatus(BuildStatus buildStatusGlobal, BuildStatus buildStatusLocal) {
         this.nodeBuildStatus = new NodeBuildStatus(buildStatusGlobal, buildStatusLocal);
     }

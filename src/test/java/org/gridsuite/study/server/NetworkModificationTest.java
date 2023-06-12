@@ -2224,7 +2224,7 @@ public class NetworkModificationTest {
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", BuildStatus.BUILT, userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2", BuildStatus.NOT_BUILT, userId);
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2", BuildStatus.BUILT, userId);
         UUID modificationNode2Uuid = modificationNode2.getId();
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 3", BuildStatus.BUILT, userId);
         UUID modificationNode3Uuid = modificationNode3.getId();

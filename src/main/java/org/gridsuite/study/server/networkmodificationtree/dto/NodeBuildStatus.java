@@ -1,5 +1,6 @@
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -26,6 +27,7 @@ public class NodeBuildStatus {
      */
     BuildStatus buildStatusLocal;
 
+    @JsonIgnore
     public boolean isBuilt() {
         return buildStatusGlobal.isBuilt() && buildStatusLocal.isBuilt();
     }
