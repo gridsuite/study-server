@@ -421,37 +421,37 @@ public class SingleLineDiagramTest {
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SUBSTATION", "MAP", List.of(), "[]");
 
         //get the 2 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "2-windings-transformers", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "TWO_WINDINGS_TRANSFORMER", "MAP", List.of(), "[]");
 
         //get the 3 windings transformers map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "3-windings-transformers", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "THREE_WINDINGS_TRANSFORMER", "MAP", List.of(), "[]");
 
         //get the generators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "generators", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "GENERATOR", "MAP", List.of(), "[]");
 
         //get the batteries map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "batteries", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "BATTERY", "MAP", List.of(), "[]");
 
         //get the dangling lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "dangling-lines", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "DANGLING_LINE", "MAP", List.of(), "[]");
 
         //get the hvdc lines map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "HVDC_LINE", "MAP", List.of(), "[]");
 
         //get the lcc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "lcc-converter-stations", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LCC_CONVERTER_STATION", "MAP", List.of(), "[]");
 
         //get the vsc converter stations map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "vsc-converter-stations", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VSC_CONVERTER_STATION", "MAP", List.of(), "[]");
 
         //get the loads map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "LOAD", "MAP", List.of(), "[]");
 
         //get the shunt compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "shunt-compensators", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "SHUNT_COMPENSATOR", "MAP", List.of(), "[]");
 
         //get the static var compensators map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "static-var-compensators", "MAP", List.of(), "[]");
+        getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "STATIC_VAR_COMPENSATOR", "MAP", List.of(), "[]");
 
         //get the voltage levels map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, rootNodeUuid, "VOLTAGE_LEVEL", "MAP", List.of(), "[]");
